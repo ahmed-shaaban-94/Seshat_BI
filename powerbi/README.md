@@ -21,10 +21,16 @@ in **PBIP** (Power BI Project) format — plain-text TMDL/PBIR that git can diff
 
 ## Rules
 
-- Connect to the analytics DB via **parameters** (host/db/user/password/sslmode
-  from `.env`), never a baked-in connection string.
+- Connect to the analytics DB via **parameters**, never a baked-in connection
+  string. Credentials live in the Power BI **gateway**, not in the model or `.env`.
 - Read from the `marts` schema, not `raw`.
 - Measures `PascalCase` with display folders; one semantic model per subject area.
+
+## Connection flow
+
+The repo treats the Power BI bridge/gateway as configured **outside git**. For the
+expected connection contract, parameter naming, and the manual gateway setup steps,
+see [`../docs/powerbi-connection.md`](../docs/powerbi-connection.md).
 
 ## Windows gotchas
 
