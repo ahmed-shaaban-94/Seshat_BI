@@ -28,9 +28,10 @@ in **PBIP** (Power BI Project) format — plain-text TMDL/PBIR that git can diff
 
 ## Connection flow
 
-The repo treats the Power BI bridge/gateway as configured **outside git**. For the
-expected connection contract, parameter naming, and the manual gateway setup steps,
-see [`../docs/powerbi-connection.md`](../docs/powerbi-connection.md).
+The repo treats the Power BI **gateway** (the cloud refresh path) as configured
+**outside git**. For the expected connection contract, parameter naming, the manual
+gateway setup steps, and how the local **Power BI Desktop Bridge** differs from the
+gateway, see [`../docs/powerbi-connection.md`](../docs/powerbi-connection.md).
 
 ## Windows gotchas
 
