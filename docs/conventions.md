@@ -22,5 +22,5 @@
 ## Git
 
 - Commit messages: `<type>: <description>` where type ∈
-  `{feat, fix, refactor, docs, chore, perf}`.
+  `{feat, fix, refactor, docs, chore}`.
 - `core.autocrlf=true`; line endings governed by `.gitattributes`.

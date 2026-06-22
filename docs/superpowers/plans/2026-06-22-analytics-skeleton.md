@@ -67,10 +67,15 @@ Expected output: `true`
 
 Run:
 ```bash
-git check-attr text -- powerbi/Sample.SemanticModel/definition/model.tmdl
+git check-attr text eol -- powerbi/Sample.SemanticModel/definition/model.tmdl
 ```
-Expected output (path need not exist — check-attr reads rules, not files):
-`powerbi/Sample.SemanticModel/definition/model.tmdl: text: auto`
+Expected output (path need not exist — check-attr reads rules, not files). The
+specific `*.tmdl` rule overrides the general `* text=auto`, so `text` resolves to
+`set`, not `auto`:
+```
+powerbi/Sample.SemanticModel/definition/model.tmdl: text: set
+powerbi/Sample.SemanticModel/definition/model.tmdl: eol: crlf
+```
 
 - [ ] **Step 4: Commit**
 
