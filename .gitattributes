@@ -1,0 +1,17 @@
+# Normalize line endings; Power BI Desktop writes CRLF for PBIP text files.
+# Store LF in the repo, check out CRLF on Windows so diffs stay clean.
+* text=auto
+
+*.tmdl   text eol=crlf
+*.pbir   text eol=crlf
+*.pbism  text eol=crlf
+*.json   text eol=crlf
+*.sql    text eol=lf
+*.md     text eol=lf
+*.py     text eol=lf
+
+# Binary artifacts — never normalize.
+*.pbix   binary
+*.abf    binary
+*.png    binary
+*.svg    text eol=lf
