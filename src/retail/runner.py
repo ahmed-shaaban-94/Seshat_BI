@@ -31,8 +31,7 @@ def _git_ls_files(repo_root: Path) -> tuple[str, ...]:
         return ()
     if result.returncode != 0:
         raise RuntimeError(
-            f"git ls-files failed (exit {result.returncode}): "
-            f"{result.stderr.strip()}"
+            f"git ls-files failed (exit {result.returncode}): {result.stderr.strip()}"
         )
     # git ls-files already emits forward slashes; split on newlines, drop blanks.
     return tuple(line for line in result.stdout.splitlines() if line)

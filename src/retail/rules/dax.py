@@ -50,7 +50,7 @@ def d1_pascalcase_measures(ctx: RuleContext) -> Iterable[Finding]:
                     rule_id="D1",
                     severity=Severity.ERROR,
                     message=(
-                        f"Measure '{m.name}' is not PascalCase" " (^[A-Z][A-Za-z0-9]*$)"
+                        f"Measure '{m.name}' is not PascalCase (^[A-Z][A-Za-z0-9]*$)"
                     ),
                     locator=f"{rel}:{m.line}",
                 )

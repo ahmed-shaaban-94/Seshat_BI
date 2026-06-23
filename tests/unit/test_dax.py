@@ -332,8 +332,7 @@ def test_d7_exempts_tests_prefix(tmp_path: Path) -> None:
     dest = tmp_path / rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmdl_body = (
-        "table T\n\tmeasure YTD = TOTALYTD([Revenue], T[Date])\n"
-        "\t\tdisplayFolder: TI\n"
+        "table T\n\tmeasure YTD = TOTALYTD([Revenue], T[Date])\n\t\tdisplayFolder: TI\n"
     )
     dest.write_text(tmdl_body, encoding="utf-8")
     ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
