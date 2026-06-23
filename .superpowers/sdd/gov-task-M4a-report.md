@@ -193,3 +193,68 @@ confirming the `tests/` exemption in `iter_model_files` works correctly.
 
 4. **D6/D7/D8/C1 fixture files** — `bad_relationships.tmdl`, `bad_ti_no_marker.tmdl`,
    `bad_source_bronze.tmdl` are already written and parseable; M4b can use them as-is.
+
+---
+
+## Review fixes (post-review, applied 2026-06-24)
+
+Coordinator review: Spec PASS, Quality Approved with 1 Important (I-1) + 1 minor (m-2).
+
+### I-1 — D2 guard must be `is None`, not falsiness
+
+**Change:** `src/retail/rules/dax.py` D2 guard `if not m.display_folder:` →
+`if m.display_folder is None:`. A falsy check would also flag an explicitly
+empty-string displayFolder, which is a different state than a missing line.
+
+**Covering tests** (`tests/unit/test_dax.py`):
+- `test_d2_passes_non_empty_folder` — a present, non-empty displayFolder passes.
+- `test_d2_does_not_flag_explicitly_empty_folder` — a constructed `TmdlMeasure`
+  with `display_folder=""` is NOT flagged (monkeypatched, since the parser regex
+  never yields `""` from real TMDL text). This test fails under the old
+  `not m.display_folder` operator and passes under `is None`, locking the contract.
+- `test_d2_flags_missing_folder` (existing) — a `None` displayFolder IS flagged.
+
+### m-2 — Tighten partition/source capture regex
+
+**Change:** `src/retail/tmdl.py` partition/source header match
+`re.match(r"(source|partition)\b", stripped) and "=" in stripped` →
+`re.match(r"(source\s*=|partition\s+\S+\s*=)", stripped)`. The old `\b` form
+wrongly matched lines like `source.alias = ...` (the `.` creates a word
+boundary). The anchored form requires a real `source =` / `partition <name> =`
+assignment header. Behavior for legitimate partition source blocks is unchanged.
+
+**Covering test** (`tests/unit/test_tmdl.py`):
+- `test_parse_tmdl_does_not_capture_source_like_property` — a table-level
+  `source.alias = legacy_value` line is NOT captured as a partition source;
+  exactly one source (the real `source =` block, containing `gold.fct_sales`)
+  is captured. Verified the old regex matched `source.foo = bar` while the new
+  one does not.
+
+`normalize_measure_body` and D4 lexing left AS-IS (reviewer confirmed correct).
+
+### Verification after fixes
+
+```
+$ python -m pytest -m unit -q
+116 passed in 4.96s
+
+$ python -m ruff check src tests
+All checks passed!
+
+$ python -m black --check src tests
+All done! 25 files would be left unchanged.
+
+$ python -c "import retail.rules; from retail.registry import all_rules; print(len(all_rules()))"
+18
+
+$ retail check --repo .
+[error] P2 commit subject must match '<type>: <desc>' ... (test: add passing+failing TMDL fixtures for D-rules)
+[error] P2 commit subject must match '<type>: <desc>' ... (test: isolate M3 SQL-rule tests via tmp_path; annotate _is_guarded)
+[error] P2 commit subject must match '<type>: <desc>' ... (test: add hand-authored golden PBIP fixture and TMDL parser smoke test)
+# Only grandfathered P2 (test: prefix) findings — ZERO D1-D5 findings (tests/ exemption holds)
+
+$ git status --porcelain
+# (clean after commit)
+```
+
+Suite grew 113 → 116 (+3 covering tests). all_rules() still 18.

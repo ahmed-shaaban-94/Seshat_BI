@@ -12,6 +12,7 @@ from retail.rules.dax import (
     d4_divide_not_slash,
     d5_explicit_aggregation,
 )
+from retail.tmdl import TmdlMeasure
 
 pytestmark = pytest.mark.unit
 
@@ -71,6 +72,53 @@ def test_d2_flags_missing_folder(tmp_path: Path) -> None:
     assert findings[0].rule_id == "D2"
     assert findings[0].severity is Severity.ERROR
     assert "Revenue" in findings[0].message
+
+
+def test_d2_passes_non_empty_folder(tmp_path: Path) -> None:
+    """A measure with a present, non-empty displayFolder passes (is None == False)."""
+    rel = "Model.SemanticModel/definition/tables/T.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        "table T\n\tmeasure Revenue = SUM(T[Amount])\n\t\tdisplayFolder: KPIs\n",
+        encoding="utf-8",
+    )
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(d2_display_folder(ctx)) == []
+
+
+def test_d2_does_not_flag_explicitly_empty_folder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Contract: D2 guards on `is None`, not falsiness.
+
+    An empty-string displayFolder (`""`) is a *different* state than a missing
+    line (`None`). D2 must flag only `None`. Because the parser never yields
+    `""` from TMDL text (its regex requires a non-empty value), this exercises
+    the rule directly with a constructed measure to lock the is-None contract:
+    a falsy-but-not-None folder must NOT be flagged.
+    """
+    from retail.rules import dax as dax_mod
+    from retail.tmdl import TmdlTable
+
+    empty_folder_table = TmdlTable(
+        name="T",
+        measures=(
+            TmdlMeasure(
+                name="Revenue", expression="SUM(T[Amount])", display_folder="", line=2
+            ),
+        ),
+        columns=(),
+        partition_sources=(),
+        annotations=(),
+        line=1,
+    )
+    monkeypatch.setattr(
+        dax_mod, "iter_model_files", lambda ctx, suffix: iter([("T.tmdl", "x")])
+    )
+    monkeypatch.setattr(dax_mod, "parse_tmdl", lambda text: empty_folder_table)
+    ctx = RuleContext(repo_root=Path("."), tracked_files=())
+    assert list(d2_display_folder(ctx)) == []
 
 
 # ---------------------------------------------------------------------------

@@ -50,13 +50,19 @@ def d1_pascalcase_measures(ctx: RuleContext) -> Iterable[Finding]:
 
 @register("D2", "Each measure must have a displayFolder")
 def d2_display_folder(ctx: RuleContext) -> Iterable[Finding]:
-    """Flag any measure that is missing a ``displayFolder`` property."""
+    """Flag any measure that has NO ``displayFolder`` property line.
+
+    Contract: a missing ``displayFolder`` line is parsed as ``None`` — that is
+    the violation. An explicitly empty displayFolder (``displayFolder:``) is a
+    different state and is NOT flagged here (the ``is None`` guard documents
+    this distinction).
+    """
     for rel, text in iter_model_files(ctx, ".tmdl"):
         table = parse_tmdl(text)
         if table is None:
             continue
         for m in table.measures:
-            if not m.display_folder:
+            if m.display_folder is None:
                 yield Finding(
                     rule_id="D2",
                     severity=Severity.ERROR,

@@ -179,3 +179,31 @@ def test_parse_tmdl_golden_fixture_smoke() -> None:
     assert any(m.name == "TotalSales" for m in table.measures)
     # Should capture the partition source body
     assert len(table.partition_sources) >= 1
+
+
+SOURCE_LIKE_PROPERTY_TMDL = """table Sales
+\tsource.alias = legacy_value
+
+\tpartition Sales = m
+\t\tsource =
+\t\t\tlet
+\t\t\t\tData = Value.NativeQuery(Src, "SELECT * FROM gold.fct_sales")
+\t\t\tin
+\t\t\t\tData
+"""
+
+
+def test_parse_tmdl_does_not_capture_source_like_property() -> None:
+    """A table-level line that merely starts with 'source' followed by a
+    non-word char (e.g. ``source.alias = ...``) is NOT a partition source
+    block; only a real ``source =`` / ``partition <name> =`` header is
+    captured (m-2 regex tightening — the old ``\\b``-anchored form wrongly
+    matched ``source.alias = ...``).
+    """
+    table = parse_tmdl(SOURCE_LIKE_PROPERTY_TMDL)
+    assert table is not None
+    # Exactly one partition source captured (the real ``source =`` block),
+    # not the ``source.alias = legacy_value`` property line.
+    assert len(table.partition_sources) == 1
+    assert "gold.fct_sales" in table.partition_sources[0]
+    assert "legacy_value" not in table.partition_sources[0]

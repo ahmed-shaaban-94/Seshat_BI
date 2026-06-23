@@ -297,7 +297,10 @@ def parse_tmdl(text: str) -> TmdlTable | None:
             continue
 
         # --- partition / source block (raw M body for D8) ---
-        if re.match(r"(source|partition)\b", stripped) and "=" in stripped:
+        # Require a real assignment header: ``source =`` or ``partition <name> =``.
+        # The anchored form avoids matching column-property lines such as
+        # ``source_type = ...`` that merely start with the word "source".
+        if re.match(r"(source\s*=|partition\s+\S+\s*=)", stripped):
             body = [stripped.split("=", 1)[1].strip()]
             j = i + 1
             while j < n and (not lines[j].strip() or _indent(lines[j]) > ind):
