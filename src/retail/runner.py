@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from . import rules as _rules  # noqa: F401  (imported for the registration side effect)
 from .core import Finding, RegisteredRule, RuleContext, Severity
 
 
