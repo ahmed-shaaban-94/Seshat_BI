@@ -1,4 +1,4 @@
-"""Unit tests for DAX/TMDL rules D1-D5 (M4a)."""
+"""Unit tests for DAX/TMDL rules D1-D8 and C1."""
 
 from pathlib import Path
 
@@ -6,11 +6,15 @@ import pytest
 
 from retail.core import RuleContext, Severity
 from retail.rules.dax import (
+    c1_parameterized_connection,
     d1_pascalcase_measures,
     d2_display_folder,
     d3_no_duplicate_logic,
     d4_divide_not_slash,
     d5_explicit_aggregation,
+    d6_no_bidir_relationships,
+    d7_ti_needs_date_marker,
+    d8_gold_only_sourcing,
 )
 from retail.tmdl import TmdlMeasure
 
@@ -218,3 +222,255 @@ def test_d5_exempts_tests_prefix(tmp_path: Path) -> None:
     )
     ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
     assert list(d5_explicit_aggregation(ctx)) == []
+
+
+# ---------------------------------------------------------------------------
+# D6 — no bidirectional relationships
+# ---------------------------------------------------------------------------
+
+
+def _ctx_rel(tmp_path: Path, fixture: str) -> RuleContext:
+    """Stage a relationship fixture under a SemanticModel definition path."""
+    rel = "Model.SemanticModel/definition/relationships.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        (FIXTURES / fixture).read_text(encoding="utf-8-sig"), encoding="utf-8"
+    )
+    return RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+
+
+def test_d6_flags_both_directions(tmp_path: Path) -> None:
+    findings = list(
+        d6_no_bidir_relationships(_ctx_rel(tmp_path, "bad_relationships.tmdl"))
+    )
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D6"
+    assert findings[0].severity is Severity.ERROR
+    assert "bothDirections" in findings[0].message
+    assert "Sales_Date" in findings[0].message
+
+
+def test_d6_passes_single_direction(tmp_path: Path) -> None:
+    findings = list(
+        d6_no_bidir_relationships(_ctx_rel(tmp_path, "clean_relationships.tmdl"))
+    )
+    assert findings == []
+
+
+def test_d6_locator_includes_line_number(tmp_path: Path) -> None:
+    findings = list(
+        d6_no_bidir_relationships(_ctx_rel(tmp_path, "bad_relationships.tmdl"))
+    )
+    assert ":" in findings[0].locator
+    line = int(findings[0].locator.split(":")[-1])
+    assert line >= 1
+
+
+def test_d6_exempts_tests_prefix(tmp_path: Path) -> None:
+    """Relationships files under tests/ must be exempted."""
+    rel = "tests/fixtures/X.SemanticModel/definition/relationships.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        "relationship R\n\tcrossFilteringBehavior: bothDirections\n",
+        encoding="utf-8",
+    )
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(d6_no_bidir_relationships(ctx)) == []
+
+
+# ---------------------------------------------------------------------------
+# D7 — time-intelligence requires a date-table marker
+# ---------------------------------------------------------------------------
+
+
+def _ctx_two(tmp_path: Path, fixture_a: str, fixture_b: str) -> RuleContext:
+    """Stage two TMDL fixtures in the same model definition directory."""
+    rel_a = "Model.SemanticModel/definition/tables/SalesTable.tmdl"
+    rel_b = "Model.SemanticModel/definition/tables/DateTable.tmdl"
+    for rel, fixture in ((rel_a, fixture_a), (rel_b, fixture_b)):
+        dest = tmp_path / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(
+            (FIXTURES / fixture).read_text(encoding="utf-8-sig"), encoding="utf-8"
+        )
+    return RuleContext(repo_root=tmp_path, tracked_files=(rel_a, rel_b))
+
+
+def test_d7_flags_ti_without_marker(tmp_path: Path) -> None:
+    """TI function present, no date-table marker anywhere → D7 fires."""
+    ctx = _ctx(tmp_path, "bad_ti_no_marker.tmdl")
+    findings = list(d7_ti_needs_date_marker(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D7"
+    assert findings[0].severity is Severity.ERROR
+    assert "PBI_DateTable" in findings[0].message
+
+
+def test_d7_passes_with_marker_in_same_table(tmp_path: Path) -> None:
+    """TI function in the same table that has the marker → no finding."""
+    ctx = _ctx(tmp_path, "clean_date.tmdl")
+    assert list(d7_ti_needs_date_marker(ctx)) == []
+
+
+def test_d7_passes_with_marker_in_different_table(tmp_path: Path) -> None:
+    """TI in Sales table, marker in Date table → no finding (model-level rule)."""
+    ctx = _ctx_two(tmp_path, "bad_ti_no_marker.tmdl", "clean_date.tmdl")
+    assert list(d7_ti_needs_date_marker(ctx)) == []
+
+
+def test_d7_passes_no_ti_no_marker(tmp_path: Path) -> None:
+    """No TI functions at all → no finding even if marker is absent."""
+    ctx = _ctx(tmp_path, "clean_sales.tmdl")
+    assert list(d7_ti_needs_date_marker(ctx)) == []
+
+
+def test_d7_exempts_tests_prefix(tmp_path: Path) -> None:
+    """TMDL files under tests/ are exempted — the golden fixture must not trigger D7."""
+    rel = "tests/fixtures/X.SemanticModel/definition/tables/T.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmdl_body = (
+        "table T\n\tmeasure YTD = TOTALYTD([Revenue], T[Date])\n"
+        "\t\tdisplayFolder: TI\n"
+    )
+    dest.write_text(tmdl_body, encoding="utf-8")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(d7_ti_needs_date_marker(ctx)) == []
+
+
+# ---------------------------------------------------------------------------
+# D8 — gold-only sourcing
+# ---------------------------------------------------------------------------
+
+
+def _ctx_m(tmp_path: Path, fixture: str) -> RuleContext:
+    """Stage a table TMDL fixture (with M partition source) in a model path."""
+    rel = "Model.SemanticModel/definition/tables/SalesTable.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        (FIXTURES / fixture).read_text(encoding="utf-8-sig"), encoding="utf-8"
+    )
+    return RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+
+
+def test_d8_flags_bronze_in_native_sql(tmp_path: Path) -> None:
+    """bronze inside a NativeQuery string literal must be detected."""
+    ctx = _ctx_m(tmp_path, "bad_source_bronze.tmdl")
+    findings = list(d8_gold_only_sourcing(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D8"
+    assert findings[0].severity is Severity.ERROR
+    assert "bronze" in findings[0].message
+
+
+def test_d8_passes_gold_source(tmp_path: Path) -> None:
+    ctx = _ctx_m(tmp_path, "clean_gold_source.tmdl")
+    assert list(d8_gold_only_sourcing(ctx)) == []
+
+
+def _write_m_source(tmp_path: Path, rel: str, schema: str) -> None:
+    """Write a minimal table TMDL with a NativeQuery sourcing ``schema``."""
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    sql = f"SELECT * FROM {schema}.obj"
+    lines = [
+        "table T",
+        "\tpartition T = m",
+        "\t\tsource =",
+        "\t\t\tlet",
+        "\t\t\t\tSrc = PostgreSQL.Database(S, D),",
+        f'\t\t\t\tData = Value.NativeQuery(Src, "{sql}")',
+        "\t\t\tin",
+        "\t\t\t\tData",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+
+
+def test_d8_flags_non_gold_schemas(tmp_path: Path) -> None:
+    """Each of raw, marts, silver triggers D8."""
+    for schema in ("raw", "marts", "silver"):
+        rel = "Model.SemanticModel/definition/tables/T.tmdl"
+        _write_m_source(tmp_path, rel, schema)
+        ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+        findings = list(d8_gold_only_sourcing(ctx))
+        assert len(findings) >= 1, f"Expected finding for schema={schema}"
+        assert findings[0].rule_id == "D8"
+
+
+def test_d8_exempts_tests_prefix(tmp_path: Path) -> None:
+    """TMDL files under tests/ are exempted."""
+    rel = "tests/fixtures/X.SemanticModel/definition/tables/T.tmdl"
+    _write_m_source(tmp_path, rel, "bronze")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(d8_gold_only_sourcing(ctx)) == []
+
+
+# ---------------------------------------------------------------------------
+# C1 — parameterized connection
+# ---------------------------------------------------------------------------
+
+
+def test_c1_flags_string_host(tmp_path: Path) -> None:
+    ctx = _ctx_m(tmp_path, "bad_c1_string_host.tmdl")
+    findings = list(c1_parameterized_connection(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "C1"
+    assert findings[0].severity is Severity.ERROR
+    assert "string literal" in findings[0].message
+
+
+def test_c1_passes_parameterized(tmp_path: Path) -> None:
+    ctx = _ctx_m(tmp_path, "clean_gold_source.tmdl")
+    assert list(c1_parameterized_connection(ctx)) == []
+
+
+def test_c1_flags_string_db_arg(tmp_path: Path) -> None:
+    """Second argument as a string literal must also be flagged."""
+    rel = "Model.SemanticModel/definition/tables/T.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "table T",
+        "\tpartition T = m",
+        "\t\tsource =",
+        "\t\t\tlet",
+        '\t\t\t\tSrc = PostgreSQL.Database(ServerParam, "mydb"),',
+        '\t\t\t\tData = Value.NativeQuery(Src, "SELECT 1")',
+        "\t\t\tin",
+        "\t\t\t\tData",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    findings = list(c1_parameterized_connection(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "C1"
+
+
+def test_c1_does_not_flag_native_query_string(tmp_path: Path) -> None:
+    """The SQL string in Value.NativeQuery must NOT trigger C1."""
+    ctx = _ctx_m(tmp_path, "clean_gold_source.tmdl")
+    assert list(c1_parameterized_connection(ctx)) == []
+
+
+def test_c1_exempts_tests_prefix(tmp_path: Path) -> None:
+    rel = "tests/fixtures/X.SemanticModel/definition/tables/T.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "table T",
+        "\tpartition T = m",
+        "\t\tsource =",
+        "\t\t\tlet",
+        '\t\t\t\tSrc = PostgreSQL.Database("myhost", DbParam)',
+        "\t\t\tin",
+        "\t\t\t\tSrc",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(c1_parameterized_connection(ctx)) == []

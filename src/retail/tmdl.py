@@ -33,9 +33,11 @@ PUBLIC API (consumed by D1-D8 rules and by M4b):
   - TmdlRelationship(name, cross_filtering_behavior, line)
   - TmdlTable(name, measures, columns, partition_sources, annotations, line)
   - TmdlModel(tables, relationships)
+  - MSource(text, locator)
   - parse_tmdl(text: str) -> TmdlTable | None
   - parse_relationships(text: str) -> tuple[TmdlRelationship, ...]
   - iter_model_files(ctx: RuleContext, suffix: str) -> Iterable[tuple[str, str]]
+  - iter_m_sources(repo_root: Path, tracked_files: tuple[str, ...]) -> Iterable[MSource]
   - normalize_measure_body(expression: str) -> str
   - top_level_blocks(text: str) -> list[str]   (M0 regression anchor — kept intact)
   - DATE_TABLE_MARKER: str
@@ -404,6 +406,93 @@ def normalize_measure_body(expression: str) -> str:
 # ---------------------------------------------------------------------------
 # Legacy API kept intact (M0 regression anchor)
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class MSource:
+    """A raw M source block extracted from a TMDL model file.
+
+    Attributes:
+        text: the full raw M block text (multi-line, original whitespace preserved).
+        locator: "repo_relative_path" — no line number (block spans multiple lines).
+    """
+
+    text: str
+    locator: str
+
+
+def iter_m_sources(
+    repo_root: Path, tracked_files: tuple[str, ...]
+) -> Iterable[MSource]:
+    """Yield every M partition-source block and shared-expression block.
+
+    Walks all tracked TMDL files inside ``*.SemanticModel/definition/``
+    (case-insensitive suffix match for ``.tmdl``). Files under ``tests/``
+    are exempted (same policy as :func:`iter_model_files`).
+
+    Captures two block types:
+
+    * **Partition sources** — ``source =`` or ``partition <name> =`` blocks
+      inside a table file.
+    * **Shared expressions** — top-level ``expression <name> = …`` blocks
+      (Power BI shared M expressions / named ranges).
+
+    This is intentionally independent of ``TmdlTable.partition_sources`` which
+    collapses each source to a single joined string — here we need the
+    multi-line raw body to run ``stale_schema_tokens`` over string literals
+    embedded in the M code (D8) and to inspect ``.Database(`` call arguments
+    (C1).
+    """
+    for rel in tracked_files:
+        if rel.startswith("tests/"):
+            continue
+        if ".SemanticModel/definition/" not in rel:
+            continue
+        if not rel.lower().endswith(".tmdl"):
+            continue
+        path = repo_root / Path(rel)
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except OSError:
+            continue
+        lines = text.splitlines()
+        n = len(lines)
+        i = 0
+        while i < n:
+            raw = lines[i]
+            stripped = raw.strip()
+            ind = _indent(raw)
+
+            # Partition source block: ``source =`` or ``partition <name> =``
+            if re.match(r"(source\s*=|partition\s+\S+\s*=)", stripped):
+                body_lines = [stripped.split("=", 1)[1].strip()]
+                j = i + 1
+                while j < n and (not lines[j].strip() or _indent(lines[j]) > ind):
+                    body_lines.append(lines[j])
+                    j += 1
+                yield MSource(
+                    text="\n".join(body_lines).strip(),
+                    locator=rel,
+                )
+                i = j
+                continue
+
+            # Shared expression block: top-level ``expression <name> = …``
+            if re.match(r"expression\s+\S", stripped) and ind == 0:
+                first = stripped.split("=", 1)[1].strip() if "=" in stripped else ""
+                body_lines = [first]
+                j = i + 1
+                while j < n and (not lines[j].strip() or _indent(lines[j]) > 0):
+                    body_lines.append(lines[j])
+                    j += 1
+                yield MSource(
+                    text="\n".join(body_lines).strip(),
+                    locator=rel,
+                )
+                i = j
+                continue
+
+            i += 1
 
 
 def top_level_blocks(text: str) -> list[str]:

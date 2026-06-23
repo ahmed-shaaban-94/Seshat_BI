@@ -1,4 +1,4 @@
-"""DAX/TMDL rules (D1-D5). D6-D8 and C1 will be added in M4b.
+"""DAX/TMDL rules (D1-D8, C1).
 
 Rules registered here:
   D1 - Measure names must be PascalCase (^[A-Z][A-Za-z0-9]*$)
@@ -6,6 +6,10 @@ Rules registered here:
   D3 - No duplicated measure logic (exact normalized-body collision)
   D4 - Use DIVIDE() not the bare / operator
   D5 - WARNING: numeric column summarizeBy != none
+  D6 - No bidirectional relationships (crossFilteringBehavior: bothDirections)
+  D7 - Time-intelligence requires a date-table marker
+  D8 - Partitions must source from gold schema only
+  C1 - Connection must use parameter identifiers, not string literals
 """
 
 from __future__ import annotations
@@ -15,7 +19,16 @@ from typing import Iterable
 
 from ..core import Finding, RuleContext, Severity
 from ..registry import register
-from ..tmdl import iter_model_files, normalize_measure_body, parse_tmdl
+from ..sql import stale_schema_tokens
+from ..tmdl import (
+    DATE_TABLE_MARKER,
+    TI_TRIGGER_FUNCTIONS,
+    iter_m_sources,
+    iter_model_files,
+    normalize_measure_body,
+    parse_relationships,
+    parse_tmdl,
+)
 
 # ---------------------------------------------------------------------------
 # D1 — PascalCase measure names
@@ -178,3 +191,201 @@ def d5_explicit_aggregation(ctx: RuleContext) -> Iterable[Finding]:
                     ),
                     locator=f"{rel}:{c.line}",
                 )
+
+
+# ---------------------------------------------------------------------------
+# D6 — no bidirectional relationships
+# ---------------------------------------------------------------------------
+
+
+@register("D6", "No bidirectional relationships")
+def d6_no_bidir_relationships(ctx: RuleContext) -> Iterable[Finding]:
+    """Flag any relationship with ``crossFilteringBehavior: bothDirections``.
+
+    Bidirectional cross-filtering is a common performance pitfall and can cause
+    ambiguous filter contexts. All relationships should use single-direction
+    (the default) unless explicitly reviewed and overridden.
+
+    Uses ``parse_relationships`` on every TMDL file; table files return an
+    empty tuple and are harmlessly skipped.
+    """
+    for rel, text in iter_model_files(ctx, ".tmdl"):
+        for relationship in parse_relationships(text):
+            if relationship.cross_filtering_behavior == "bothDirections":
+                yield Finding(
+                    rule_id="D6",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Relationship '{relationship.name}' uses"
+                        " crossFilteringBehavior: bothDirections;"
+                        " use single-direction instead"
+                    ),
+                    locator=f"{rel}:{relationship.line}",
+                )
+
+
+# ---------------------------------------------------------------------------
+# D7 — time-intelligence requires a date-table marker
+# ---------------------------------------------------------------------------
+
+_TI_IDENT = re.compile(r"[A-Za-z_]\w*")
+
+
+@register("D7", "Time-intelligence requires a date-table marker")
+def d7_ti_needs_date_marker(ctx: RuleContext) -> Iterable[Finding]:
+    """Flag if any measure uses a time-intelligence function but no table carries
+    the date-table annotation marker.
+
+    This is a *model-level* rule: it scans all TMDL files first and yields at
+    most one finding (a missing marker affects the whole model, not one file).
+
+    Detection:
+    - Strip comments and string literals from each measure expression, then
+      tokenize identifiers, uppercase, and intersect with ``TI_TRIGGER_FUNCTIONS``.
+    - Separately check every table's ``annotations`` for ``DATE_TABLE_MARKER``.
+    """
+    any_ti_use = False
+    any_date_marker = False
+    ti_locator = ""
+
+    for rel, text in iter_model_files(ctx, ".tmdl"):
+        table = parse_tmdl(text)
+        if table is None:
+            continue
+        # Check for date-table marker in annotations
+        for ann in table.annotations:
+            if ann.strip() == DATE_TABLE_MARKER:
+                any_date_marker = True
+
+        # Check for TI function usage in measures
+        for m in table.measures:
+            cleaned = _strip_dax_comments_and_strings(m.expression)
+            idents = {tok.upper() for tok in _TI_IDENT.findall(cleaned)}
+            if idents & TI_TRIGGER_FUNCTIONS:
+                any_ti_use = True
+                if not ti_locator:
+                    ti_locator = f"{rel}:{m.line}"
+
+    if any_ti_use and not any_date_marker:
+        yield Finding(
+            rule_id="D7",
+            severity=Severity.ERROR,
+            message=(
+                "Model uses time-intelligence functions but no table carries"
+                f" '{DATE_TABLE_MARKER}'"
+            ),
+            locator=ti_locator,
+        )
+
+
+# ---------------------------------------------------------------------------
+# D8 — gold-only sourcing
+# ---------------------------------------------------------------------------
+
+# Regex to extract the bodies of double-quoted M string literals.
+_M_STRING_LITERAL = re.compile(r'"([^"]*)"')
+
+
+def _extract_m_string_bodies(m_text: str) -> list[str]:
+    """Return the text contents of all double-quoted string literals in ``m_text``.
+
+    Used to expose SQL embedded in ``Value.NativeQuery(_, "SELECT … FROM schema.obj")``
+    to ``stale_schema_tokens``, which would otherwise strip those strings.
+    """
+    return _M_STRING_LITERAL.findall(m_text)
+
+
+@register("D8", "Partitions must source from gold schema only")
+def d8_gold_only_sourcing(ctx: RuleContext) -> Iterable[Finding]:
+    """Flag any M partition source or shared expression that references a
+    non-gold schema token (raw, marts, bronze, silver).
+
+    Two scan passes per source block:
+    1. Scan the outer M text directly (catches bare ``Schema="bronze"`` style
+       tokens in schema-qualifying positions).
+    2. Scan the bodies of all double-quoted string literals (catches
+       ``Value.NativeQuery(Src, "SELECT * FROM bronze.obj")`` style).
+
+    Both passes reuse ``stale_schema_tokens`` from ``retail.sql``.
+    """
+    for msrc in iter_m_sources(ctx.repo_root, ctx.tracked_files):
+        emitted = False
+        # Pass 1: outer M text
+        for token, _line in stale_schema_tokens(msrc.text):
+            yield Finding(
+                rule_id="D8",
+                severity=Severity.ERROR,
+                message=(
+                    f"Partition source references non-gold schema '{token}';"
+                    " all sources must use the gold schema"
+                ),
+                locator=msrc.locator,
+            )
+            emitted = True
+            break  # one finding per source block (outer pass)
+
+        if emitted:
+            continue
+
+        # Pass 2: string literal bodies (SQL in NativeQuery / Value.NativeQuery)
+        for body in _extract_m_string_bodies(msrc.text):
+            hits = stale_schema_tokens(body)
+            if hits:
+                yield Finding(
+                    rule_id="D8",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Partition source native SQL references non-gold schema"
+                        f" '{hits[0][0]}';"
+                        " all sources must use the gold schema"
+                    ),
+                    locator=msrc.locator,
+                )
+                break  # one finding per source block (string pass)
+
+
+# ---------------------------------------------------------------------------
+# C1 — parameterized connection (no string literals for server/db)
+# ---------------------------------------------------------------------------
+
+# Match PostgreSQL.Database(…) or Sql.Database(…) — captures the argument list.
+_DB_CALL = re.compile(
+    r"(?:PostgreSQL|Sql|Oracle|MySQL|AzureSQL)\.Database\s*\(([^)]*)\)",
+    re.IGNORECASE,
+)
+
+# A string literal argument: starts with " (with optional leading whitespace).
+_STRING_ARG = re.compile(r'^\s*"')
+
+
+@register("C1", "Connection must use parameter identifiers, not string literals")
+def c1_parameterized_connection(ctx: RuleContext) -> Iterable[Finding]:
+    """Flag any ``.Database(…)`` call whose first or second argument is a
+    string literal rather than a parameter identifier.
+
+    Examples:
+    - ``PostgreSQL.Database(Server, Database)`` → PASS (identifiers)
+    - ``PostgreSQL.Database("myhost", "mydb")`` → FAIL
+    - ``PostgreSQL.Database(Server, "mydb")`` → FAIL
+
+    Only the ``.Database(…)`` constructor arguments are inspected; other
+    string literals in the same block (e.g. a native SQL query) are ignored.
+    """
+    for msrc in iter_m_sources(ctx.repo_root, ctx.tracked_files):
+        for match in _DB_CALL.finditer(msrc.text):
+            args_raw = match.group(1)
+            # Split on the first comma to get the host and database args.
+            parts = args_raw.split(",", 1)
+            for part in parts[:2]:
+                if _STRING_ARG.match(part):
+                    yield Finding(
+                        rule_id="C1",
+                        severity=Severity.ERROR,
+                        message=(
+                            "Connection uses a string literal for server/database;"
+                            " use Power BI parameters instead"
+                            f" (found: {match.group(0)!r})"
+                        ),
+                        locator=msrc.locator,
+                    )
+                    break  # one finding per .Database() call
