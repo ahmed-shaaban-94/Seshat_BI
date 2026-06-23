@@ -3,7 +3,13 @@ from pathlib import Path
 import pytest
 
 from retail.core import RuleContext, Severity
-from retail.rules.sql import s1_snake_case_identifiers, s2_medallion_schemas
+from retail.rules.sql import (
+    s1_snake_case_identifiers,
+    s2_medallion_schemas,
+    s3_vw_prefix,
+    s4a_migration_numbering,
+    s4b_guard_form,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -12,6 +18,14 @@ FIXTURES = Path(__file__).parent.parent / "fixtures" / "sql"
 
 def _ctx(*rel: str) -> RuleContext:
     return RuleContext(repo_root=FIXTURES, tracked_files=tuple(rel))
+
+
+def _stage(name: str) -> str:
+    (FIXTURES / "warehouse").mkdir(exist_ok=True)
+    (FIXTURES / "warehouse" / name).write_text(
+        (FIXTURES / name).read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return f"warehouse/{name}"
 
 
 def test_s1_passes_snake_case() -> None:
@@ -62,17 +76,6 @@ def test_s2_exempts_warehouse_readme() -> None:
     assert list(s2_medallion_schemas(ctx)) == []
 
 
-from retail.rules.sql import s3_vw_prefix
-
-
-def _stage(name: str) -> str:
-    (FIXTURES / "warehouse").mkdir(exist_ok=True)
-    (FIXTURES / "warehouse" / name).write_text(
-        (FIXTURES / name).read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    return f"warehouse/{name}"
-
-
 def test_s3_passes_prefixed_views() -> None:
     ctx = _ctx(_stage("pass_s3_vw.sql"))
     assert list(s3_vw_prefix(ctx)) == []
@@ -85,9 +88,6 @@ def test_s3_flags_unprefixed_view() -> None:
     assert findings[0].rule_id == "S3"
     assert findings[0].severity is Severity.ERROR
     assert findings[0].locator == "warehouse/fail_s3_no_prefix.sql:1"
-
-
-from retail.rules.sql import s4a_migration_numbering
 
 
 def test_s4a_passes_contiguous_unique() -> None:
@@ -122,3 +122,20 @@ def test_s4a_flags_duplicate() -> None:
     )
     findings = list(s4a_migration_numbering(ctx))
     assert any("duplicate" in f.message for f in findings)
+
+
+def test_s4b_passes_guarded_forms() -> None:
+    ctx = _ctx(_stage("pass_s4b_guarded.sql"))
+    assert list(s4b_guard_form(ctx)) == []
+
+
+def test_s4b_warns_on_bare_create_and_alter() -> None:
+    ctx = _ctx(_stage("fail_s4b_bare.sql"))
+    findings = list(s4b_guard_form(ctx))
+    assert len(findings) == 2
+    assert all(f.rule_id == "S4b" for f in findings)
+    assert all(f.severity is Severity.WARNING for f in findings)
+    assert {f.locator for f in findings} == {
+        "warehouse/fail_s4b_bare.sql:1",
+        "warehouse/fail_s4b_bare.sql:2",
+    }

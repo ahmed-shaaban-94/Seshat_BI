@@ -95,9 +95,7 @@ _MIGRATION_NAME = re.compile(r"^\d{4}_.+\.sql$")
 def s4a_migration_numbering(ctx: RuleContext) -> list[Finding]:
     findings: list[Finding] = []
     migrations = [
-        rel
-        for rel in iter_sql_files(ctx)
-        if rel.startswith("warehouse/migrations/")
+        rel for rel in iter_sql_files(ctx) if rel.startswith("warehouse/migrations/")
     ]
     numbers: dict[int, str] = {}
     for rel in migrations:
@@ -107,7 +105,9 @@ def s4a_migration_numbering(ctx: RuleContext) -> list[Finding]:
                 Finding(
                     rule_id="S4a",
                     severity=Severity.ERROR,
-                    message=f"migration filename {name!r} must match ^\\d{{4}}_.+\\.sql$",
+                    message=(
+                        f"migration filename {name!r} must match" r" ^\d{4}_.+\.sql$"
+                    ),
                     locator=rel,
                 )
             )
