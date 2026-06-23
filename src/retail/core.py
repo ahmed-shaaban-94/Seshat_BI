@@ -28,6 +28,18 @@ class RuleContext:
     commit_message: str | None = None
 
 
+# Single source of truth for the committed-test-fixture exemption.
+# tests/ holds intentionally non-conforming fixtures (golden PBIP with planted
+# violations, absolute/byConnection .pbir, test *.sql) that exist to exercise
+# the rules; they are not the live model, so the file-scanning rules skip them.
+# Centralized here so future file-scanning rules inherit one consistent rule.
+# NOTE: C2's content scan uses a *broader* exclusion (docs/, .superpowers/,
+# .example as well) and intentionally does NOT route through this predicate.
+def is_test_path(path: str) -> bool:
+    """True if ``path`` (repo-relative POSIX) is a committed test fixture."""
+    return path.startswith("tests/")
+
+
 # A rule is a pure function: context in, findings out. No side effects.
 Rule = Callable[[RuleContext], Iterable[Finding]]
 

@@ -51,7 +51,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from .core import RuleContext
+from .core import RuleContext, is_test_path
 
 DATE_TABLE_MARKER = "annotation PBI_DateTable = true"
 # Pinned to the table-level marker literal M0 captured from a real
@@ -373,7 +373,7 @@ def iter_model_files(ctx: RuleContext, suffix: str) -> Iterable[tuple[str, str]]
     tolerant).
     """
     for rel in ctx.tracked_files:
-        if rel.startswith("tests/"):
+        if is_test_path(rel):
             continue
         if ".SemanticModel/definition/" in rel and rel.endswith(suffix):
             text = (ctx.repo_root / Path(rel)).read_text(encoding="utf-8-sig")
@@ -444,7 +444,7 @@ def iter_m_sources(
     (C1).
     """
     for rel in tracked_files:
-        if rel.startswith("tests/"):
+        if is_test_path(rel):
             continue
         if ".SemanticModel/definition/" not in rel:
             continue

@@ -6,14 +6,21 @@ import json
 import re
 from typing import Any, Iterable
 
-from ..core import Finding, RuleContext, Severity
+from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
 
 _ABSOLUTE = re.compile(r"^(?:[A-Za-z]:|\\|/)")
 
 
 def _iter_pbir_files(ctx: RuleContext) -> list[str]:
-    return [p for p in ctx.tracked_files if p.endswith(".Report/definition.pbir")]
+    # Skip committed test fixtures (tests/fixtures/pbir/*) — they deliberately
+    # carry absolute / byConnection references to exercise R1 and are not the
+    # live report. Same exemption as the TMDL/SQL/P1 file-scanning rules.
+    return [
+        p
+        for p in ctx.tracked_files
+        if p.endswith(".Report/definition.pbir") and not is_test_path(p)
+    ]
 
 
 @register("R1", "PBIR model reference must be relative")
