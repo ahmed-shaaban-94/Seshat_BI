@@ -1261,12 +1261,13 @@ their regexes to these. If a fixture edit drops one, tests/unit/test_tmdl.py fai
   - implicit aggregation:       ``summarizeBy: sum``
   - gold-only M source schema:  ``Schema="gold"``
   - parameterized M source:     ``PostgreSQL.Database(Server, Database)``  (identifiers)
-  - date-table marker:          ``dataCategory: Time``  on the Date[Date] column
-    *** PROVISIONAL ***  The exact "Mark as Date Table" TMDL literal is NOT yet
-    confirmed against a real Power BI capture. The pbip-workflow skill and spec §5.2
-    (D7 note) / §13 both flag that it may be a TABLE-level annotation, not the
-    column-level ``dataCategory: Time`` alone. RE-VERIFY against the real PBIP captured
-    in Task M0.3 before M4 builds D7; update this literal and the M0.2 assertion.
+  - date-table marker:          ``annotation PBI_DateTable = true``  (table-level)
+    *** PROVISIONAL ***  This is the table-level annotation form that M4.1's
+    ``DATE_TABLE_MARKER`` constant consumes, used here so M0 and M4 agree. The exact
+    "Mark as Date Table" TMDL literal is NOT yet confirmed against a real Power BI
+    capture (spec §5.2 D7 note / §13 flag it may differ). RE-VERIFY against the real
+    PBIP captured in Task M0.3 before M4 builds D7. If the captured real fixture shows
+    a different marker literal, update BOTH M0 and M4.1's DATE_TABLE_MARKER together.
 """
 
 from __future__ import annotations
@@ -1425,7 +1426,7 @@ def test_model_pins_provisional_date_table_marker() -> None:
     # PROVISIONAL marker (spec §5.2 D7 / §13). Re-verify against the real PBIP from
     # Task M0.3 before M4 builds D7; if the real literal differs, update fixture + assert.
     text = _MODEL.read_text(encoding="utf-8")
-    assert "dataCategory: Time" in text
+    assert "annotation PBI_DateTable = true" in text
 
 
 @pytest.mark.unit
@@ -1475,7 +1476,7 @@ table Sales
 		formatString: #,0
 
 table Date
-	dataCategory: Time
+	annotation PBI_DateTable = true
 
 	column Date
 		dataType: dateTime
@@ -1560,8 +1561,8 @@ anchors. Per-rule pass/fail fixtures live with the rules, not here.
 
 The pinned literals are listed in `src/retail/tmdl.py`'s module docstring. If you edit
 this fixture and a pinned token disappears, `tests/unit/test_tmdl.py` fails — that is
-the anchor doing its job. The date-table marker (`dataCategory: Time`) is **PROVISIONAL**
-until replaced by a real Power BI capture (see Task M0.3).
+the anchor doing its job. The date-table marker (`annotation PBI_DateTable = true`) is
+**PROVISIONAL** until replaced by a real Power BI capture (see Task M0.3).
 ```
 
 - [ ] **Step 7: Run the smoke test to pass**
@@ -3250,7 +3251,7 @@ S1 flags declaration-position identifiers that are not `snake_case` (quoted/brac
       )
       ctx = _ctx("warehouse/fail_s2_create_schema_raw.sql")
       findings = list(s2_medallion_schemas(ctx))
-      assert {f.message.split()[0] for f in findings}  # non-empty
+      assert len(findings) >= 1
       assert any("raw" in f.message for f in findings)
       assert all(f.rule_id == "S2" for f in findings)
       assert all(f.severity is Severity.ERROR for f in findings)
@@ -3626,9 +3627,6 @@ Bare `CREATE`/`ALTER` outside the accepted guarded forms (`CREATE TABLE … IF N
   def s4b_guard_form(ctx: RuleContext) -> list[Finding]:
       findings: list[Finding] = []
       for rel in iter_sql_files(ctx):
-          if not rel.startswith("warehouse/migrations/"):
-              # apply broadly to all warehouse SQL; migrations are the prime case
-              pass
           toks = [t for t in tokenize_sql(_read(ctx, rel)) if t.text]
           for idx, tok in enumerate(toks):
               if tok.text.upper() not in ("CREATE", "ALTER"):
@@ -4244,7 +4242,7 @@ def d2_display_folder(ctx: RuleContext) -> Iterable[Finding]:
                     locator=f"{rel}:{m.line}",
                 )
 ```
-  Add `src/retail/rules/__init__.py` if not present (empty file).
+  `src/retail/rules/__init__.py` already exists from M1.6 with `from . import dax, git_meta, pbir, sql` — do NOT recreate or empty it; the @register side-effect imports must stay. This task only ADDS rule functions to dax.py.
 - [ ] **Step 5: Run to pass.** `pytest -m unit tests/unit/test_dax.py -v` → all D1/D2 tests PASS.
 - [ ] **Step 6: Commit.** `black src/retail/rules/dax.py tests/unit/test_dax.py && ruff check src/retail/rules/dax.py tests/unit/test_dax.py && pytest -m unit tests/unit/test_dax.py -v` then `git add src/retail/rules/dax.py tests/unit/test_dax.py tests/fixtures/tmdl/bad_no_folder.tmdl && git commit -m "feat: add D1 PascalCase and D2 displayFolder measure rules"`
 
