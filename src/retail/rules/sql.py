@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 
 from ..core import Finding, RuleContext, Severity
 from ..registry import register
-from ..sql import iter_sql_files, stale_schema_tokens, tokenize_sql
+from ..sql import SqlToken, iter_sql_files, stale_schema_tokens, tokenize_sql
 
 _SNAKE = re.compile(r"^[a-z_][a-z0-9_]*$")
 # quoted/bracketed identifier in a declaration position
@@ -142,7 +142,7 @@ def s4a_migration_numbering(ctx: RuleContext) -> list[Finding]:
     return findings
 
 
-def _is_guarded(toks: list, idx: int) -> bool:
+def _is_guarded(toks: list[SqlToken], idx: int) -> bool:
     """True if the CREATE/ALTER/DROP at toks[idx] is an accepted guarded form."""
     verb = toks[idx].text.upper()
     # window of the next few keyword tokens, upper-cased

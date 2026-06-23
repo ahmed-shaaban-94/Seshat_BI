@@ -155,3 +155,78 @@ The harness-staged copies written by tests into `tests/fixtures/sql/warehouse/` 
 3. **Black Python 3.14 parse warning.** Black emits `Warning: Python 3.13 cannot parse code formatted for Python 3.14` during `--check`. This is a black version mismatch warning, not an error; all files pass. Acceptable for current machine setup.
 
 4. **`_is_guarded(toks: list, ...)` bare `list` annotation.** This is the verbatim brief code; ruff does not flag it under current config. Left as-is per instruction.
+
+---
+
+## POST-REVIEW FIX (2026-06-24) — test-staging defect
+
+**Coordinator review flagged the test-staging pattern (concerns #1 and #2 above) as an Important defect that must be fixed before M3 is accepted.** Both concerns are now resolved.
+
+### The defect
+
+The M3 SQL-rule tests staged fixture `.sql` files into the **real** repo tree at
+`tests/fixtures/sql/warehouse/` via `mkdir`/`write_text`, which:
+- (a) left **untracked** files after `pytest` (`git status` showed `?? tests/fixtures/sql/warehouse/`), breaking CI clean-tree checks; and
+- (b) created a hidden **ordering dependency**: `test_s2_passes_raw_amount_column` read a file staged by `test_s1_passes_snake_case`, so it would fail under `pytest-randomly`/`xdist` or if run in isolation.
+
+### The fix
+
+Rewrote `tests/unit/test_sql.py` to stage every fixture into a **per-test `tmp_path`**:
+- New `_stage(tmp_path, name)` copies the canonical fixture content (still read-only from the tracked flat files under `tests/fixtures/sql/*.sql`) into `tmp_path/warehouse/<name>.sql` and returns the repo-relative path.
+- `_ctx(tmp_path, *rel)` builds `RuleContext(repo_root=tmp_path, tracked_files=...)`. Since every SQL rule reads `iter_sql_files(ctx)` (from `ctx.tracked_files`) and then `ctx.repo_root / rel`, pointing `repo_root` at `tmp_path` and listing the staged paths in `tracked_files` fully isolates each test.
+- Removed all `mkdir`/`write_text` into the real `FIXTURES` tree. `FIXTURES` is now used only as a read-only content source.
+- Every test takes the `tmp_path` fixture and is fully independent — `test_s2_passes_raw_amount_column` stages its own `pass_s1_s2.sql`. All original assertions (rule_id, severity, locator, message) and all positive+negative cases retained verbatim.
+- S4a tests need no staging (S4a inspects filenames only, never reads file contents) — they pass synthetic `warehouse/migrations/*.sql` paths directly in `tracked_files`.
+
+Also cleaned the already-polluted tree: `rm -rf tests/fixtures/sql/warehouse` (it was never committed — `git ls-files` confirmed only the flat fixtures were tracked, so no `git rm` needed).
+
+### Minors applied
+
+- `src/retail/rules/sql.py`: `_is_guarded(toks: list, ...)` → `_is_guarded(toks: list[SqlToken], ...)`; added `SqlToken` to the `from ..sql import ...` line. (Concern #4 resolved.)
+- S4b CREATE/ALTER-only scope left unchanged; `_is_guarded`'s DROP handling retained as instructed.
+
+### Verification commands + output
+
+`pytest-randomly` / `pytest-forked` / `pytest-xdist` are **not installed** on this
+machine (`pytest 8.4.2`, no randomizer/forked plugins). Independence was therefore
+proven by (1) running the full suite twice, (2) running the formerly-coupled
+`test_s2_passes_raw_amount_column` standalone, and (3) running a hand-picked
+reverse-order subset.
+
+```
+=== RUN 1: full unit suite ===
+90 passed in 3.58s
+
+=== RUN 2: full unit suite (repeat) ===
+90 passed in 4.07s
+
+=== RUN 3: test_s2_passes_raw_amount_column standalone (was coupled to S1) ===
+1 passed in 0.14s
+
+=== Reverse-order subset (s4b, then s2, then s1) ===
+3 passed in 0.13s
+
+=== git status --porcelain (after all test runs — NO tests/fixtures/sql pollution) ===
+ M src/retail/rules/sql.py
+ M tests/unit/test_sql.py
+
+=== ruff check src tests ===
+All checks passed!
+
+=== black --check src tests ===
+All done! 24 files would be left unchanged.
+
+=== retail check --repo . ===
+[error] P2 commit subject must match '<type>: <desc>' (feat|fix|refactor|docs|chore) (test: add hand-authored golden PBIP fixture and TMDL parser smoke test)
+exit=1   # the single grandfathered P2 finding — unchanged
+```
+
+`git status --porcelain` shows only the two intentional modified files and **no
+untracked `tests/fixtures/sql/` pollution** — the clean-tree defect is gone.
+
+### Residual concern
+
+No randomizer plugin is installed, so independence is demonstrated rather than
+enforced by a shuffled run. The new design has zero cross-test state (each test
+owns its `tmp_path`), so this is a tooling gap, not a correctness risk. Installing
+`pytest-randomly` in CI would make the guarantee automatic.
