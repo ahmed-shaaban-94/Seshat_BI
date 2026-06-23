@@ -434,6 +434,60 @@ def test_d8_flags_bronze_in_shared_expression(tmp_path: Path) -> None:
     assert "bronze" in findings[0].message
 
 
+def _write_schema_option(tmp_path: Path, rel: str, schema: str) -> None:
+    """Write a table TMDL whose M source uses the ``[Schema="<schema>"]`` option."""
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "table T",
+        "\tpartition T = m",
+        "\t\tsource =",
+        "\t\t\tlet",
+        f'\t\t\t\tSrc = PostgreSQL.Database(Server, Db, [Schema="{schema}"]),',
+        '\t\t\t\tData = Value.NativeQuery(Src, "SELECT * FROM fct_x")',
+        "\t\t\tin",
+        "\t\t\t\tData",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+
+
+def test_d8_flags_schema_option_bronze(tmp_path: Path) -> None:
+    """D8 must flag the M connection option [Schema="bronze"].
+
+    tokenize_sql strips string-literal contents, so the bare `bronze` inside
+    `[Schema="bronze"]` is invisible to the stale_schema_tokens passes — the
+    dedicated Schema= pass must catch it.
+    """
+    rel = "Model.SemanticModel/definition/tables/T.tmdl"
+    _write_schema_option(tmp_path, rel, "bronze")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    findings = list(d8_gold_only_sourcing(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D8"
+    assert findings[0].severity is Severity.ERROR
+    assert "bronze" in findings[0].message
+
+
+def test_d8_passes_schema_option_gold(tmp_path: Path) -> None:
+    """[Schema="gold"] must PASS — gold is the allowed schema."""
+    rel = "Model.SemanticModel/definition/tables/T.tmdl"
+    _write_schema_option(tmp_path, rel, "gold")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    assert list(d8_gold_only_sourcing(ctx)) == []
+
+
+def test_d8_flags_all_stale_schema_options(tmp_path: Path) -> None:
+    """Each of bronze, silver, raw, marts as a Schema= option triggers D8."""
+    for schema in ("bronze", "silver", "raw", "marts"):
+        rel = "Model.SemanticModel/definition/tables/T.tmdl"
+        _write_schema_option(tmp_path, rel, schema)
+        ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+        findings = list(d8_gold_only_sourcing(ctx))
+        assert len(findings) == 1, f"Expected one finding for Schema={schema}"
+        assert findings[0].rule_id == "D8"
+
+
 # ---------------------------------------------------------------------------
 # C1 — parameterized connection
 # ---------------------------------------------------------------------------

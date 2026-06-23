@@ -285,6 +285,12 @@ def d7_ti_needs_date_marker(ctx: RuleContext) -> Iterable[Finding]:
 # Regex to extract the bodies of double-quoted M string literals.
 _M_STRING_LITERAL = re.compile(r'"([^"]*)"')
 
+# Regex for the M connection option ``[Schema="<value>"]`` / ``Schema = "<value>"``.
+_M_SCHEMA_OPTION = re.compile(r'Schema\s*=\s*"([^"]+)"', re.IGNORECASE)
+
+# Non-gold schema tokens (mirrors retail.sql._SCHEMA_TOKENS).
+_STALE_SCHEMAS = frozenset({"bronze", "silver", "raw", "marts"})
+
 
 def _extract_m_string_bodies(m_text: str) -> list[str]:
     """Return the text contents of all double-quoted string literals in ``m_text``.
@@ -300,48 +306,68 @@ def d8_gold_only_sourcing(ctx: RuleContext) -> Iterable[Finding]:
     """Flag any M partition source or shared expression that references a
     non-gold schema token (raw, marts, bronze, silver).
 
-    Two scan passes per source block:
-    1. Scan the outer M text directly (catches bare ``Schema="bronze"`` style
-       tokens in schema-qualifying positions).
-    2. Scan the bodies of all double-quoted string literals (catches
-       ``Value.NativeQuery(Src, "SELECT * FROM bronze.obj")`` style).
+    Three scan strategies per source block (de-duplicated by token):
+    1. Outer M text via ``stale_schema_tokens`` — catches schema-qualifying
+       positions (``FROM bronze.x``, ``bronze.obj``, ``CREATE SCHEMA bronze``).
+    2. Double-quoted string-literal bodies via ``stale_schema_tokens`` — catches
+       SQL embedded in ``Value.NativeQuery(Src, "SELECT * FROM bronze.obj")``;
+       ``tokenize_sql`` strips string contents so the raw text alone misses it.
+    3. The M connection option ``[Schema="bronze"]`` via ``_M_SCHEMA_OPTION`` —
+       a lone ``"bronze"`` body has no qualifying predecessor, so strategies 1
+       and 2 both miss it, yet the spec lists M ``Schema="…"`` as a
+       schema-qualifying position D8 MUST flag.
 
-    Both passes reuse ``stale_schema_tokens`` from ``retail.sql``.
+    Strategies 1 and 2 reuse ``stale_schema_tokens`` from ``retail.sql``.
+    A given (locator, schema-token) is reported at most once per block.
     """
     for msrc in iter_m_sources(ctx.repo_root, ctx.tracked_files):
-        emitted = False
-        # Pass 1: outer M text
+        seen: set[str] = set()  # schema tokens already reported for this block
+
+        # Strategy 1: outer M text
         for token, _line in stale_schema_tokens(msrc.text):
-            yield Finding(
-                rule_id="D8",
-                severity=Severity.ERROR,
-                message=(
-                    f"Partition source references non-gold schema '{token}';"
-                    " all sources must use the gold schema"
-                ),
-                locator=msrc.locator,
-            )
-            emitted = True
-            break  # one finding per source block (outer pass)
-
-        if emitted:
-            continue
-
-        # Pass 2: string literal bodies (SQL in NativeQuery / Value.NativeQuery)
-        for body in _extract_m_string_bodies(msrc.text):
-            hits = stale_schema_tokens(body)
-            if hits:
+            if token not in seen:
+                seen.add(token)
                 yield Finding(
                     rule_id="D8",
                     severity=Severity.ERROR,
                     message=(
-                        f"Partition source native SQL references non-gold schema"
-                        f" '{hits[0][0]}';"
+                        f"Partition source references non-gold schema '{token}';"
                         " all sources must use the gold schema"
                     ),
                     locator=msrc.locator,
                 )
-                break  # one finding per source block (string pass)
+
+        # Strategy 2: string literal bodies (SQL in NativeQuery / Value.NativeQuery)
+        for body in _extract_m_string_bodies(msrc.text):
+            for token, _line in stale_schema_tokens(body):
+                if token not in seen:
+                    seen.add(token)
+                    yield Finding(
+                        rule_id="D8",
+                        severity=Severity.ERROR,
+                        message=(
+                            "Partition source native SQL references non-gold"
+                            f" schema '{token}';"
+                            " all sources must use the gold schema"
+                        ),
+                        locator=msrc.locator,
+                    )
+
+        # Strategy 3: M connection option ``[Schema="bronze"]``
+        for value in _M_SCHEMA_OPTION.findall(msrc.text):
+            token = value.lower()
+            if token in _STALE_SCHEMAS and token not in seen:
+                seen.add(token)
+                yield Finding(
+                    rule_id="D8",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Partition source uses non-gold schema option"
+                        f' Schema="{value}";'
+                        " all sources must use the gold schema"
+                    ),
+                    locator=msrc.locator,
+                )
 
 
 # ---------------------------------------------------------------------------
