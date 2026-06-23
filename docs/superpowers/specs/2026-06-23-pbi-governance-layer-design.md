@@ -221,24 +221,45 @@ domain. These are the spec for `retail check`.
 
 ## 9. The shippable unit (this pass)
 
-A `retail/` Python package providing a `retail check` command. Decomposed into **ordered
-milestones along the parser-surface cut** so each checker builds and tests independently —
-the runner contract first, so every rule plugs into a stable interface:
+A `retail/` Python package providing a `retail check` command. **The checker package has
+NO runtime dependency on `pbi-cli`** — it parses committed files and git metadata, so it
+runs anywhere with plain Python and no Power BI Desktop. `pbi-cli` is only touched by the
+deferred live surface (L1) and D-orchestration. (The shippable core sits *beside* pbi-cli
+checking the same files, not *on top of* it — do not add a `pbi-cli` dependency to this
+package.) Decomposed into **ordered milestones along the parser-surface cut** so each
+checker builds and tests independently — the runner contract first:
 
+0. **Golden PBIP fixture + parser search-first** *(gates all model rules — do this first)*.
+   The repo has **zero committed PBIP today**, so D1–D8, R1, and C1 are currently specified
+   against an *assumed* TMDL/PBIR/M token shape (this caveat is not D7-only — it applies to
+   every model-layer rule). Before pinning any model-rule pattern: (a) generate one real
+   PBIP (`pbi report create` + a minimal semantic model, or Save-as-PBIP from Desktop once),
+   commit it as a **golden fixture**, and pin every model token (`byPath.path`,
+   `crossFilteringBehavior: bothDirections`, `Schema="…"`, `summarizeBy`, the date-table
+   marker, the C1 parameter-default position) against the *observed* literals; (b)
+   **search-first**: confirm whether a pure-Python TMDL/PBIR parser exists before
+   hand-rolling a lexer (TOM reads TMDL but only via the Windows/.NET live path, which
+   defeats CI — so it's not an option for the static checker).
 1. **Runner contract + package skeleton** — the rule-registry/runner: each rule declares an
    `id`, `severity` (`error`/`warning`/`info`), a `locator` emitter, and a finding message;
    the runner aggregates findings and sets the exit code (non-zero iff any `error`).
 2. **Git-metadata rules** — C2, G1, G2, G5, P1, P2 (operate on `git ls-files` /
-   `check-ignore` / `log`, not file contents).
+   `check-ignore` / `log`, not file contents). *These 8 have real artifacts to check today.*
 3. **SQL rules** — S1, S2, S3, S4a, S4b (lexer over `warehouse/**/*.sql`).
-4. **TMDL + M rules** — D1–D8, C1 (TMDL block parser + M/native-SQL source parser).
-5. **PBIR rule** — R1 (PBIR JSON).
+4. **TMDL + M rules** — D1–D8, C1 (TMDL block parser + M/native-SQL source parser; needs
+   the milestone-0 fixture).
+5. **PBIR rule** — R1 (PBIR JSON; needs the milestone-0 fixture).
 6. **C-seam** — pre-commit hook + CI workflow stub that run `retail check`.
 7. **D-seam** — point the `powerbi-analyst` agent at the checker, and author a new
    `retail-govern` skill. **Bounded scope:** the skill *references/invokes the checker and
    its rule ids only* — **NO orchestration or self-heal**, which remain the deferred D work.
 8. **Doc reconciliation** (see §12) — fix stale `marts` references so S2/D8 are green on the
    current repo; this is a *deliverable*, not incidental.
+
+**Build all 22 rules this pass.** Spec 2 (medallion warehouse) is imminent, so the SQL +
+model rules (milestones 3–5) will have real `gold` SQL and a `.pbip` to gate within weeks —
+they are built now, not deferred. *(Had Spec 2 been months out, the immediately-live subset
+would be milestones 1–2 + C2 only, deferring 3–5 with the fixture. It is not.)*
 
 Per-rule acceptance: each rule has a passing and a failing fixture and emits its locator +
 rule id on violation. Warnings (S4b, D5) do not fail the build.
@@ -303,8 +324,11 @@ how `retail check` would flag the repo's own docs on day one.
   artifacts**, superseded (this spec's header says so). Not rewritten; out of the content scan.
 
 ## 13. Other open items (for the implementation plan)
+- **Golden PBIP fixture first** (§9 milestone 0) — *all* model rules (D1–D8, R1, C1), not
+  just D7, are pinned against an assumed format until a real PBIP is captured and committed.
+  This was the key finding of the external (advisor) review; it gates milestones 4–5.
 - **D7/L1 split** confirmed: ship the static date-marker conjunct; defer contiguity to a
-  documented live seam. Pin the "Mark as Date Table" TMDL literal from a real fixture first.
+  documented live seam. Pin the "Mark as Date Table" TMDL literal from the milestone-0 fixture.
 - **Secret-scan recall** is best-effort by nature — document the limitation; don't claim
   completeness.
 - Also reconcile the `powerbi-analyst` agent prompt and `pbip-workflow` skill, which state
