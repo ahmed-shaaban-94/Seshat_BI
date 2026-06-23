@@ -1,11 +1,13 @@
 """M1.7: mode-aware build_context + the two new CLI flags."""
 
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from retail.cli import _build_parser
 from retail.runner import build_context
+from tests.unit._gitfix import make_git_repo
 
 pytestmark = pytest.mark.unit
 
@@ -145,4 +147,90 @@ def test_main_missing_commit_msg_file_exits_1_with_message(
 # Imported at module scope after monkeypatch targets above are defined; aliased
 # so the patch sites (retail.cli.build_context / retail.cli.run) are the ones
 # main() actually calls.
-from retail.cli import main as main_under_test  # noqa: E402
+from retail.cli import main as main_under_test  # noqa: E402, I001
+
+
+# ---------------------------------------------------------------------------
+# M6 follow-up: end-to-end --commit-range -> git path (P2).
+# This integration path (CLI flag -> build_context -> P2 -> git log) was never
+# tested before; the verbatim-range bug ("base..HEAD..HEAD") survived because
+# no test drove the actual flag through to git.
+# ---------------------------------------------------------------------------
+
+
+def _commit(repo: Path, message: str) -> None:
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", message],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _rev_parse(repo: Path, ref: str) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", ref],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def test_main_commit_range_e2e_flags_bad_subject_in_range(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Real repo, real CLI flag, real git: a bad subject inside the supplied
+    # VERBATIM range must be flagged by P2 (non-zero exit), and the verbatim
+    # range must not be mangled into "<base>..HEAD..HEAD" (git error 128).
+    repo = make_git_repo(tmp_path)
+    _commit(repo, "feat: base")
+    base = _rev_parse(repo, "HEAD")
+    _commit(repo, "fix: good change")
+    _commit(repo, "bad subject here")
+
+    rc = main_under_test(
+        ["check", "--repo", str(repo), "--commit-range", f"{base}..HEAD"]
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 1  # the bad subject makes P2 an ERROR -> non-zero exit
+    assert "P2" in out
+    assert "bad subject here" in out
+
+
+def test_main_commit_range_e2e_good_range_no_p2_finding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A range whose every subject conforms yields no P2 finding for those
+    # subjects (proving P2 scans exactly the supplied range, verbatim).
+    repo = make_git_repo(tmp_path)
+    _commit(repo, "feat: base")
+    base = _rev_parse(repo, "HEAD")
+    _commit(repo, "fix: good change one")
+    _commit(repo, "docs: good change two")
+
+    main_under_test(["check", "--repo", str(repo), "--commit-range", f"{base}..HEAD"])
+    out = capsys.readouterr().out
+
+    # No P2 finding should mention these conforming subjects.
+    assert "fix: good change one" not in out
+    assert "docs: good change two" not in out
+
+
+def test_main_commit_range_e2e_malformed_range_no_traceback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A malformed range must surface as a clean P2 ERROR finding, never a
+    # RuntimeError traceback escaping to the user.
+    repo = make_git_repo(tmp_path)
+    _commit(repo, "feat: base")
+
+    bad_range = "no-such-ref-aaa..no-such-ref-bbb"
+    rc = main_under_test(["check", "--repo", str(repo), "--commit-range", bad_range])
+    out = capsys.readouterr().out
+
+    assert rc == 1
+    assert "P2" in out
+    assert bad_range in out
+    assert "Traceback" not in out

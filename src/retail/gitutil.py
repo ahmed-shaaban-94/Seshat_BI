@@ -31,8 +31,14 @@ def git_check_ignore(repo_root: Path, path: str) -> bool:
     raise RuntimeError(f"git check-ignore error ({result.returncode}): {result.stderr}")
 
 
-def git_log_subjects(repo_root: Path, base_ref: str) -> list[str]:
-    out = git_output(
-        repo_root, "log", "--no-merges", f"{base_ref}..HEAD", "--format=%s"
-    )
+def git_log_subjects(repo_root: Path, range_expr: str) -> list[str]:
+    """Return the commit subjects in ``range_expr`` (excluding merges).
+
+    ``range_expr`` is used VERBATIM as the git-log revision range
+    (e.g. ``"origin/main..HEAD"`` or ``"HEAD~20..HEAD"``) — the caller owns
+    range construction. Raises ``RuntimeError`` (via :func:`git_output`) if git
+    rejects the range, so a malformed range surfaces to the caller rather than
+    silently no-op'ing.
+    """
+    out = git_output(repo_root, "log", "--no-merges", range_expr, "--format=%s")
     return [line for line in out.splitlines() if line]

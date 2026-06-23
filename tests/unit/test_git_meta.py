@@ -244,8 +244,9 @@ def test_p2_flags_bad_subject(tmp_path: Path) -> None:
 
     repo = make_git_repo(tmp_path)
     base = _build_p2_history(repo)
-    # CI mode: scope P2 to a commit range via the contract field (no env var).
-    ctx = dataclasses.replace(context_for(repo), commit_range=base)
+    # CI mode: --commit-range is a VERBATIM revision range (contract v2),
+    # e.g. "origin/main..HEAD"; here "<base-sha>..HEAD".
+    ctx = dataclasses.replace(context_for(repo), commit_range=f"{base}..HEAD")
     findings = list(rule_p2_commit_subjects(ctx))
     assert len(findings) == 1
     assert findings[0].rule_id == "P2"
@@ -304,7 +305,7 @@ def test_p2_exempts_merge_commits(tmp_path: Path) -> None:
         check=True,
         capture_output=True,
     )
-    ctx = dataclasses.replace(context_for(repo), commit_range=base)
+    ctx = dataclasses.replace(context_for(repo), commit_range=f"{base}..HEAD")
     assert list(rule_p2_commit_subjects(ctx)) == []
 
 

@@ -8,9 +8,16 @@ from retail import cli, registry
 
 @pytest.fixture(autouse=True)
 def _clear_registry():
+    # Start each of these tests from an empty registry, then RESTORE the real
+    # registered rules on teardown. Without the restore, the global
+    # registry._RULES stays empty for every test that runs after this module,
+    # so any later test that drives the real main()->all_rules() path (e.g. the
+    # P2 --commit-range e2e tests) silently sees zero rules. A test that mutates
+    # global state must put it back.
+    saved = list(registry._RULES)
     registry._RULES.clear()
     yield
-    registry._RULES.clear()
+    registry._RULES[:] = saved  # in-place restore preserves list identity
 
 
 def _init_repo(tmp_path: Path) -> None:

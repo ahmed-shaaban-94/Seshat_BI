@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from .. import gitutil
-from ..core import Finding, RuleContext, Severity
+from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
 
 # ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ def rule_p1_layout(ctx: RuleContext) -> Iterable[Finding]:
         # Committed test fixtures (e.g. tests/fixtures/golden_pbip/*.pbip and any
         # test *.sql) are not the live model and must not be forced under
         # powerbi/ or warehouse/. Skip them before the production-layout checks.
-        if path.startswith("tests/"):
+        if is_test_path(path):
             continue
         if _is_pbip_signature(path) and not path.startswith("powerbi/"):
             findings.append(
@@ -191,25 +191,37 @@ def rule_g2_definition_committed(ctx: RuleContext) -> Iterable[Finding]:
 # ---------------------------------------------------------------------------
 
 SUBJECT_RE = re.compile(r"^(feat|fix|refactor|docs|chore): .+")
-# TODO: HEAD~20 silently no-ops on repos with <20 commits (git_log_subjects
-# returns an empty list rather than raising). Acceptable for the local fallback
-# mode; CI mode supplies an explicit commit_range.
-DEFAULT_BASE_REF = "HEAD~20"
+# Local-fallback range. HEAD~20 silently no-ops on repos with <20 commits
+# (git_log_subjects returns an empty list rather than raising). Acceptable for
+# the local fallback mode; CI mode supplies an explicit --commit-range.
+DEFAULT_RANGE = "HEAD~20..HEAD"
 
 
 @register("P2", "commit-message convention")
 def rule_p2_commit_subjects(ctx: RuleContext) -> Iterable[Finding]:
     # Source the subjects to validate from the contract-v2 invocation fields:
     #   commit-msg-hook mode -> the single incoming message;
-    #   CI mode             -> every subject in the supplied commit range;
-    #   local fallback      -> the last DEFAULT_BASE_REF..HEAD commits.
+    #   CI mode             -> every subject in the supplied commit range,
+    #                          used VERBATIM (e.g. "origin/main..HEAD");
+    #   local fallback       -> the last DEFAULT_RANGE commits.
     if ctx.commit_message is not None:
         subjects = [ctx.commit_message.splitlines()[0] if ctx.commit_message else ""]
     else:
-        base_ref = (
-            ctx.commit_range if ctx.commit_range is not None else DEFAULT_BASE_REF
-        )
-        subjects = gitutil.git_log_subjects(ctx.repo_root, base_ref)
+        # --commit-range is a full revision range; never append "..HEAD".
+        range_expr = ctx.commit_range if ctx.commit_range is not None else DEFAULT_RANGE
+        try:
+            subjects = gitutil.git_log_subjects(ctx.repo_root, range_expr)
+        except RuntimeError as exc:
+            # A malformed/empty range must surface as a clean ERROR Finding, not
+            # a traceback (the runner does not wrap rules in try/except).
+            return [
+                Finding(
+                    rule_id="P2",
+                    severity=Severity.ERROR,
+                    message=f"could not read commit range {range_expr!r}: {exc}",
+                    locator=range_expr,
+                )
+            ]
     findings: list[Finding] = []
     for subject in subjects:
         if not SUBJECT_RE.match(subject):
