@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import retail.rules  # noqa: F401  (import for side effects: fires every @register)
@@ -51,11 +52,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "check":
         commit_message: str | None = None
         if args.commit_msg_file is not None:
-            # git's COMMIT_EDITMSG ends in a trailing newline — strip it so the
-            # message passed to rules is the bare text.
-            commit_message = (
-                Path(args.commit_msg_file).read_text(encoding="utf-8").rstrip("\n")
-            )
+            try:
+                raw = Path(args.commit_msg_file).read_text(encoding="utf-8")
+            except FileNotFoundError:
+                print(
+                    f"error: commit message file not found: {args.commit_msg_file}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            # git's COMMIT_EDITMSG ends in a trailing newline (\r\n on Windows) —
+            # strip it so the message passed to rules is the bare text.
+            commit_message = raw.rstrip("\r\n")
 
         ctx = build_context(
             Path(args.repo),

@@ -3,16 +3,23 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from . import rules as _rules  # noqa: F401  (imported for the registration side effect)
 from .core import Finding, RegisteredRule, RuleContext, Severity
+
+# git's "not a git repository" sentinel exit code (the expected non-repo case).
+_GIT_NOT_A_REPO = 128
 
 
 def _git_ls_files(repo_root: Path) -> tuple[str, ...]:
     """Return repo-relative POSIX paths for every tracked file.
 
-    Returns an empty tuple when ``repo_root`` is not a git repository (e.g.
-    in unit tests that call ``build_context`` on a bare tmp dir) rather than
-    raising ``CalledProcessError``.
+    Dispatches on the git exit code so a governance gate never passes
+    vacuously on a broken git:
+
+    * ``0``   -> the tracked-file list.
+    * ``128`` -> ``repo_root`` is not a git repository (e.g. a bare tmp dir in
+      tests); return ``()`` — the expected non-repo case.
+    * any other non-zero code -> ``RuntimeError`` so CI misconfiguration fails
+      LOUD (red) rather than silently green.
     """
     result = subprocess.run(
         ["git", "ls-files"],
@@ -20,8 +27,13 @@ def _git_ls_files(repo_root: Path) -> tuple[str, ...]:
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0:
+    if result.returncode == _GIT_NOT_A_REPO:
         return ()
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"git ls-files failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
     # git ls-files already emits forward slashes; split on newlines, drop blanks.
     return tuple(line for line in result.stdout.splitlines() if line)
 

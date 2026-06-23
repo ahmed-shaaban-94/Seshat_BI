@@ -100,6 +100,48 @@ def test_main_commit_range_flag_threads_through(
     assert captured["commit_message"] is None
 
 
+def test_main_commit_msg_file_strips_crlf(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # On Windows, COMMIT_EDITMSG can end in \r\n — rstrip must drop both, not
+    # leave a trailing \r on the message.
+    msg_file = tmp_path / "COMMIT_EDITMSG"
+    msg_file.write_bytes(b"feat: windows line ending\r\n")
+
+    captured: dict[str, object] = {}
+
+    def fake_build_context(repo_root, commit_range=None, commit_message=None):
+        captured["commit_message"] = commit_message
+        from retail.core import RuleContext
+
+        return RuleContext(repo_root=repo_root, tracked_files=())
+
+    monkeypatch.setattr("retail.cli.build_context", fake_build_context)
+    monkeypatch.setattr("retail.cli.run", lambda rules, ctx: 0)
+
+    rc = main_under_test(["check", "--commit-msg-file", str(msg_file)])
+
+    assert rc == 0
+    assert captured["commit_message"] == "feat: windows line ending"
+
+
+def test_main_missing_commit_msg_file_exits_1_with_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A nonexistent --commit-msg-file must exit 1 with a readable message, not a
+    # raw FileNotFoundError traceback.
+    missing = tmp_path / "does-not-exist"
+    monkeypatch.setattr("retail.cli.run", lambda rules, ctx: 0)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main_under_test(["check", "--commit-msg-file", str(missing)])
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "commit message file not found" in err
+    assert str(missing) in err
+
+
 # Imported at module scope after monkeypatch targets above are defined; aliased
 # so the patch sites (retail.cli.build_context / retail.cli.run) are the ones
 # main() actually calls.

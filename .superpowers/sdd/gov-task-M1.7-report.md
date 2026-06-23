@@ -178,3 +178,100 @@ The original M1.5 `cli.py` did not import `retail.rules` (registration side effe
 1. **Silent "all clear" on broken git**: `_git_ls_files` now returns `()` on ANY non-zero git exit (not just "not a git repository"). If git is unavailable or broken in CI, `build_context` will succeed with zero tracked files, and git-aware rules will silently produce no findings — a false "all clear" for the gate. In production this only affects a mis-configured CI environment (valid `repo_root` always has git), but it is worth documenting.
 
 2. **Duplicate `retail.rules` import**: Both `runner.py` and `cli.py` now import `retail.rules` for the registration side effect. This is harmless but redundant — ideally one import site owns it. Suggest consolidating to `cli.py` only in a future cleanup (since `runner.py` is the lower-level module and should not depend on the rules package).
+
+---
+
+## Review Fixes (post-acceptance review round)
+
+The reviewer rated the self-flagged `_git_ls_files` swallow-all-failures issue as
+CRITICAL. The following 4 items were fixed. (Both concerns from the section above
+are now resolved by fixes #1 and #4 respectively.)
+
+### Fix #1 [CRITICAL] — `_git_ls_files` dispatches on returncode
+
+`src/retail/runner.py` — replaced the blanket `if returncode != 0: return ()`
+with a three-way dispatch:
+
+- `0` -> tracked-file tuple (unchanged).
+- `128` (new module constant `_GIT_NOT_A_REPO`) -> `()` (expected non-repo / bare
+  tmp-dir case the tests rely on).
+- any OTHER non-zero -> `raise RuntimeError(f"git ls-files failed (exit {rc}): {stderr}")`
+  so CI misconfiguration fails LOUD (red), never silent green.
+
+`build_context(tmp_path)` on a bare dir still works (hits the 128 path -> `()`).
+
+### Fix #2 [IMPORTANT] — missing `--commit-msg-file` exits 1 cleanly
+
+`src/retail/cli.py` — wrapped `Path(...).read_text()` in `try/except
+FileNotFoundError`; on miss, prints `error: commit message file not found: <path>`
+to **stderr** and `sys.exit(1)` (no raw traceback). Added `import sys`.
+
+### Fix #3 [MINOR] — strip `\r\n` not just `\n`
+
+`src/retail/cli.py` — changed `.rstrip("\n")` to `.rstrip("\r\n")` so a Windows
+`COMMIT_EDITMSG` (`\r\n`) leaves no trailing `\r` on `commit_message`.
+
+### Fix #4 [MINOR] — remove rules import from runner.py (composition-root decision)
+
+`src/retail/runner.py` — removed `from . import rules as _rules`. The low-level
+runner no longer depends on the rules package; `import retail.rules` lives only in
+`cli.py` (the composition root). `all_rules()` is still populated when the CLI
+runs. Verified: importing `retail.runner` alone no longer pulls in `retail.rules`.
+
+### Covering tests (one-line result each)
+
+| Fix | Test | Result |
+|-----|------|--------|
+| #1 (128 -> ()) | `test_runner.py::test_git_ls_files_returns_empty_on_not_a_repo` | PASS |
+| #1 (non-128 -> raise) | `test_runner.py::test_git_ls_files_raises_on_non_128_failure` | PASS |
+| #2 (missing file -> exit 1) | `test_cli_context.py::test_main_missing_commit_msg_file_exits_1_with_message` | PASS |
+| #3 (CRLF strip) | `test_cli_context.py::test_main_commit_msg_file_strips_crlf` | PASS |
+| #4 (runner no rules dep) | `test_runner.py::test_importing_runner_does_not_import_rules_package` | PASS |
+
+### Commands run + output
+
+**Targeted (M1.7 + runner):**
+
+```
+$ python -m pytest tests/unit/test_cli_context.py tests/unit/test_runner.py -v
+...
+tests/unit/test_cli_context.py::test_main_commit_msg_file_strips_crlf PASSED
+tests/unit/test_cli_context.py::test_main_missing_commit_msg_file_exits_1_with_message PASSED
+tests/unit/test_runner.py::test_git_ls_files_returns_empty_on_not_a_repo PASSED
+tests/unit/test_runner.py::test_git_ls_files_raises_on_non_128_failure PASSED
+tests/unit/test_runner.py::test_importing_runner_does_not_import_rules_package PASSED
+16 passed in 0.28s
+```
+
+**Full unit suite:**
+
+```
+$ python -m pytest -m unit -q
+...............................                                          [100%]
+src\retail\cli.py    32   1  97%
+src\retail\runner.py 24   0 100%
+TOTAL               101   1  99%
+31 passed in 0.39s
+```
+
+(Was 26 passed pre-review; +5 new tests = 31. No regressions.)
+
+**Lint + format:**
+
+```
+$ python -m ruff check src/retail/cli.py src/retail/runner.py tests/unit/test_cli_context.py tests/unit/test_runner.py
+All checks passed!
+$ python -m black --check src/retail/cli.py src/retail/runner.py tests/unit/test_cli_context.py tests/unit/test_runner.py
+All done! (4 files would be left unchanged)
+```
+
+### Remaining concern
+
+`raw.rstrip("\r\n")` (fix #3) also strips a trailing `\r` mid-context-edge-case
+only at the very end of the message — this is the intended behavior for git's
+`COMMIT_EDITMSG` and matches the original `\n` strip's intent. No further concern.
+Fix #1's `RuntimeError` propagates uncaught out of `build_context`/`main` (no
+`try/except SystemExit` for it in `main`), so a genuine git misconfiguration
+surfaces as a Python traceback with non-zero exit — loud and red, as required.
+If a cleaner CI message is later desired, `main` could catch `RuntimeError` and
+`sys.exit(1)` with a one-liner, but that was not in scope for this review round.
