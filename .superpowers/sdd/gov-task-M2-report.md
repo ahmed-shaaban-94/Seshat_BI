@@ -133,4 +133,53 @@ All 8 git-meta rule IDs present in `all_rules()`.
 
 2. **Black Python 3.14 warning:** `black --check` emits a warning about Python 3.13 vs. 3.14 target version. All files pass; this is a version-mismatch warning, not a failure.
 
-3. **P2 fallback range:** `DEFAULT_BASE_REF = "HEAD~20"` — on a repo with fewer than 20 commits, git returns `fatal: bad revision 'HEAD~20..HEAD'` silently via the `git_log_subjects` function (git returns an empty list). This is safe — no crash — but the local fallback will silently no-op on shallow repos. Acceptable per spec.
+3. **P2 fallback range:** `DEFAULT_BASE_REF = "HEAD~20"` — on a repo with fewer than 20 commits, git returns `fatal: bad revision 'HEAD~20..HEAD'` silently via the `git_log_subjects` function (git returns an empty list). This is safe — no crash — but the local fallback will silently no-op on shallow repos. Acceptable per spec. (A `# TODO` documenting this was added at the constant in the post-review fix round below.)
+
+---
+
+## POST-REVIEW FIX ROUND (2026-06-24)
+
+Review verdict: **Spec PASS / Quality Approved.** Three approved fixes applied.
+
+### Fixes Applied
+
+| # | Fix | Covering test(s) | Result |
+|---|---|---|---|
+| 1 | `rule_p1_layout` now `continue`s on `tests/`-prefixed paths before the PBIP and `.sql` checks; production `powerbi/`/`warehouse/` checks still apply to all non-`tests/` paths. | `test_p1_exempts_pbip_under_tests`, `test_p1_still_flags_pbip_outside_powerbi_and_tests`, `test_p1_exempts_sql_under_tests`, `test_p1_still_flags_sql_outside_warehouse_and_tests` (4 new) | PASS — fixture P1 findings gone |
+| 2 | Renamed `g3_no_bom` → `rule_g3_no_bom` (id "G3" and title unchanged); updated import + 3 call sites in test file. | Existing G3 tests (`test_g3_*`) updated to new name | PASS |
+| 3 | Added `# TODO` at `DEFAULT_BASE_REF = "HEAD~20"` documenting silent no-op on repos with <20 commits. | (comment-only) | N/A |
+
+### Commands + Output
+
+```
+$ python -m pytest -m unit -q
+......................................................................   [100%]
+70 passed in 4.95s          (was 66; +4 new P1 tests)
+src\retail\rules\git_meta.py     162      7    96%
+(total)                          290     10    97%
+
+$ python -m ruff check src tests
+All checks passed!
+
+$ python -m black --check src tests
+All done! 21 files would be left unchanged.
+(benign Python 3.13-vs-3.14 target warning only)
+```
+
+### Post-Fix `retail check --repo .` Output (COMPLETE)
+
+```
+[error] P2 commit subject must match '<type>: <desc>' (feat|fix|refactor|docs|chore) (test: add hand-authored golden PBIP fixture and TMDL parser smoke test)
+[error] C2 possible committed connection string / secret (tests/unit/test_git_meta.py:343)
+[error] C2 possible committed connection string / secret (tests/unit/test_git_meta.py:370)
+[error] C2 possible committed connection string / secret (tests/unit/test_git_meta.py:374)
+```
+
+- **The 4× P1 findings on `tests/fixtures/golden_pbip/` are GONE** — fix #1 confirmed.
+- **P2** still reports the historical `test:` commit — separate branch-hygiene item, left per instructions.
+- **3× C2** findings on `tests/unit/test_git_meta.py` are NEW IN THIS REPORT but PRE-EXISTING in behavior. Verified via `git stash` against the committed `c39a9bf` state: the same three hits were present (at lines 307/334/338, shifted to 343/370/374 by the +4 P1 tests). They were absent from the *original* report's retail-check section only because that capture was taken **pre-commit, while `test_git_meta.py` was still untracked** (`git ls-files` did not yet include it, so C2 did not scan it). The two report sections are reconciled by this timing, not contradictory.
+- C2 is firing **correctly**: the test file legitimately contains realistic endpoint literals (`db-prod-01.db.ondigitalocean.com`, `postgresql://…@…`) that are verbatim from the brief and load-bearing for `test_c2_flags_real_endpoint_in_scanned_file`. They must NOT be edited (would break the test) and C2 behavior must NOT change (out of scope). Recorded, not fixed — per the original task's "record findings, do not fix" guidance.
+
+### New Concern (M8 reconciliation, not implemented here)
+
+4. **C2 likely warrants a `tests/` exemption symmetric to the P1 one added in fix #1.** C2's content scan currently flags its own tracked test fixtures that contain intentional endpoint literals. The clean long-term fix is to extend C2's scan-exclusion (currently `docs/` + `*.example`) to also skip `tests/`. Out of scope this round (C2 behavior frozen); flagged for M8.

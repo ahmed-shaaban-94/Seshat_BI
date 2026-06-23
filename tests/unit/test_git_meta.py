@@ -10,10 +10,10 @@ from retail.core import RuleContext, Severity
 from retail.rules.git_meta import (
     _read_leading_bytes,
     check_gitattributes_eol,
-    g3_no_bom,
     rule_c2_no_committed_secrets,
     rule_g1_gitignore_correctness,
     rule_g2_definition_committed,
+    rule_g3_no_bom,
     rule_g5_path_length,
     rule_p1_layout,
     rule_p2_commit_subjects,
@@ -94,6 +94,42 @@ def test_p1_flags_missing_required_dir() -> None:
     findings = list(rule_p1_layout(ctx))
     assert any(f.locator == "powerbi/README.md" for f in findings)
     assert all(f.severity is Severity.ERROR for f in findings)
+
+
+@pytest.mark.unit
+def test_p1_exempts_pbip_under_tests() -> None:
+    # A committed test fixture .pbip under tests/ is NOT the live model -> skipped.
+    tracked = GOOD_LAYOUT + ("tests/fixtures/golden_pbip/RetailGold.pbip",)
+    ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)
+    locators = {f.locator for f in rule_p1_layout(ctx)}
+    assert "tests/fixtures/golden_pbip/RetailGold.pbip" not in locators
+
+
+@pytest.mark.unit
+def test_p1_still_flags_pbip_outside_powerbi_and_tests() -> None:
+    # A .pbip outside both powerbi/ and tests/ IS still flagged.
+    tracked = GOOD_LAYOUT + ("reports/Sales.pbip",)
+    ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)
+    locators = {f.locator for f in rule_p1_layout(ctx)}
+    assert "reports/Sales.pbip" in locators
+
+
+@pytest.mark.unit
+def test_p1_exempts_sql_under_tests() -> None:
+    # A .sql under tests/ is NOT forced under warehouse/ -> skipped.
+    tracked = GOOD_LAYOUT + ("tests/fixtures/seed.sql",)
+    ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)
+    locators = {f.locator for f in rule_p1_layout(ctx)}
+    assert "tests/fixtures/seed.sql" not in locators
+
+
+@pytest.mark.unit
+def test_p1_still_flags_sql_outside_warehouse_and_tests() -> None:
+    # A .sql outside both warehouse/ and tests/ IS still flagged.
+    tracked = GOOD_LAYOUT + ("scripts/adhoc.sql",)
+    ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)
+    locators = {f.locator for f in rule_p1_layout(ctx)}
+    assert "scripts/adhoc.sql" in locators
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +433,7 @@ def test_read_leading_bytes_short_file_returns_fewer(tmp_path: Path) -> None:
 def test_g3_flags_tmdl_with_bom(tmp_path: Path) -> None:
     _write(tmp_path / "withbom.tmdl", BOM, "table Sales")
     ctx = RuleContext(repo_root=tmp_path, tracked_files=("withbom.tmdl",))
-    findings = list(g3_no_bom(ctx))
+    findings = list(rule_g3_no_bom(ctx))
     assert len(findings) == 1
     f = findings[0]
     assert f.rule_id == "G3"
@@ -409,7 +445,7 @@ def test_g3_flags_tmdl_with_bom(tmp_path: Path) -> None:
 def test_g3_passes_tmdl_without_bom(tmp_path: Path) -> None:
     _write(tmp_path / "clean.tmdl", b"", "table Sales")
     ctx = RuleContext(repo_root=tmp_path, tracked_files=("clean.tmdl",))
-    assert list(g3_no_bom(ctx)) == []
+    assert list(rule_g3_no_bom(ctx)) == []
 
 
 @pytest.mark.unit
@@ -418,7 +454,7 @@ def test_g3_ignores_non_target_extension_with_bom(tmp_path: Path) -> None:
     # *.tmdl/*.pbir/*.json/*.pbism. This keeps the extension filter load-bearing.
     _write(tmp_path / "ddl.sql", BOM, "select 1")
     ctx = RuleContext(repo_root=tmp_path, tracked_files=("ddl.sql",))
-    assert list(g3_no_bom(ctx)) == []
+    assert list(rule_g3_no_bom(ctx)) == []
 
 
 # ---------------------------------------------------------------------------

@@ -66,6 +66,11 @@ def rule_p1_layout(ctx: RuleContext) -> Iterable[Finding]:
                 )
             )
     for path in ctx.tracked_files:
+        # Committed test fixtures (e.g. tests/fixtures/golden_pbip/*.pbip and any
+        # test *.sql) are not the live model and must not be forced under
+        # powerbi/ or warehouse/. Skip them before the production-layout checks.
+        if path.startswith("tests/"):
+            continue
         if _is_pbip_signature(path) and not path.startswith("powerbi/"):
             findings.append(
                 Finding(
@@ -186,6 +191,9 @@ def rule_g2_definition_committed(ctx: RuleContext) -> Iterable[Finding]:
 # ---------------------------------------------------------------------------
 
 SUBJECT_RE = re.compile(r"^(feat|fix|refactor|docs|chore): .+")
+# TODO: HEAD~20 silently no-ops on repos with <20 commits (git_log_subjects
+# returns an empty list rather than raising). Acceptable for the local fallback
+# mode; CI mode supplies an explicit commit_range.
 DEFAULT_BASE_REF = "HEAD~20"
 
 
@@ -366,7 +374,7 @@ def _read_leading_bytes(path: Path, count: int = 3) -> bytes:
 
 
 @register("G3", "UTF-8 without BOM")
-def g3_no_bom(ctx: RuleContext) -> Iterable[Finding]:
+def rule_g3_no_bom(ctx: RuleContext) -> Iterable[Finding]:
     """Flag any committed TMDL/PBIR/JSON/PBISM file beginning with a UTF-8 BOM."""
     for rel in ctx.tracked_files:
         if not rel.lower().endswith(_G3_SUFFIXES):
