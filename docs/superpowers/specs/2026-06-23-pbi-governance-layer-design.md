@@ -49,7 +49,7 @@ lives. The leap is from **prose that asks nicely** (today's `powerbi-analyst.md`
       (THE SHIPPABLE UNIT)   │ retail check             │ retail validate │   (ship A)
                              │ parses committed text    │ wraps pbi-cli   │
                              │ TMDL / PBIR / SQL / git   │ needs Desktop   │
-                             │ 22 rules, CI-able         │ 1 rule, local   │
+                             │ 23 rules, CI-able         │ 1 rule, local   │
                              │ NO pbi-cli, NO model      │ [DEFERRED]      │
                              └──────────┬────────────────┴─────────────────┘
                                     │ engine for D's authoring + the live check
@@ -78,7 +78,10 @@ Every convention is sorted by **what a checker can *see***:
 > So even "real DAX validity" is a *live* concern. The static surface relies on parsing
 > committed TMDL text directly, never on `pbi-cli`.
 
-## 5. Static rule catalog (the shippable core — 22 rules)
+## 5. Static rule catalog (the shippable core — 23 rules)
+
+> Count: S1·S2·S3·S4a·S4b (5) + D1–D8 (8) + R1 (1) + C1·C2 (2) + G1–G5 (5) + P1·P2 (2) = **23**.
+> (Was "22" in an earlier draft, before the adversarial review split S4 into S4a + S4b.)
 
 Each rule names the committed artifact it parses and the violation signal. Grouped by
 domain. These are the spec for `retail check`.
@@ -256,7 +259,7 @@ checker builds and tests independently — the runner contract first:
 8. **Doc reconciliation** (see §12) — fix stale `marts` references so S2/D8 are green on the
    current repo; this is a *deliverable*, not incidental.
 
-**Build all 22 rules this pass.** Spec 2 (medallion warehouse) is imminent, so the SQL +
+**Build all 23 rules this pass.** Spec 2 (medallion warehouse) is imminent, so the SQL +
 model rules (milestones 3–5) will have real `gold` SQL and a `.pbip` to gate within weeks —
 they are built now, not deferred. *(Had Spec 2 been months out, the immediately-live subset
 would be milestones 1–2 + C2 only, deferring 3–5 with the fixture. It is not.)*
@@ -281,7 +284,7 @@ CI enforcement tuning, full D orchestration ("build the report" end-to-end), aut
 
 ## 11. Success criteria
 - `retail check` runs with **no `pbi-cli` and no Power BI Desktop**, on any OS, in CI.
-- Each of the **22 static rules** has a stable id, a unit test with a passing **and** a
+- Each of the **23 static rules** has a stable id, a unit test with a passing **and** a
   failing fixture, and emits its **rule id + most specific locator** on violation —
   `file:line` for in-file violations; otherwise a file path, git ref, or commit SHA (the
   git-metadata rules C2/G1/G2/G5/P2 have no natural line number).
