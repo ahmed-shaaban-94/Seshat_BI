@@ -251,6 +251,12 @@ CI enforcement tuning, full D orchestration ("build the report" end-to-end), aut
 - Auto-fixing violations (detect first; fix later).
 - Real `gold`-schema SQL content or actual `.pbip` projects beyond what the repo already has.
 - Orchestrator / contract-boundary integration.
+- **The medallion warehouse itself** — the `bronze`→`silver`→`gold` transformations
+  (cleaning, typing, mart-building SQL) are a **separate product** (future *Spec 2 —
+  Medallion Warehouse*). This governance layer only *verifies* the contract that warehouse
+  produces (D8: the model reads `gold`; S1–S4: medallion naming) — it does not *build* the
+  layers. `pipelines/load_bronze.py` (the bronze load) already exists; silver/gold SQL is
+  Spec 2's job, built later under this gate. Build order: **this spec first, Spec 2 next.**
 
 ## 11. Success criteria
 - `retail check` runs with **no `pbi-cli` and no Power BI Desktop**, on any OS, in CI.
