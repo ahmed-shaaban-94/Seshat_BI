@@ -409,6 +409,31 @@ def test_d8_exempts_tests_prefix(tmp_path: Path) -> None:
     assert list(d8_gold_only_sourcing(ctx)) == []
 
 
+def test_d8_flags_bronze_in_shared_expression(tmp_path: Path) -> None:
+    """D8 must detect stale schemas in top-level shared expression blocks."""
+    # Shared expressions live at indent 0 in a TMDL model definition file,
+    # not inside a table block. iter_m_sources must walk these too.
+    rel = "Model.SemanticModel/definition/expressions.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    sql = "SELECT * FROM bronze.stg_sales"
+    lines = [
+        "expression SharedQuery =",
+        "\tlet",
+        "\t\tSrc = PostgreSQL.Database(S, D),",
+        f'\t\tData = Value.NativeQuery(Src, "{sql}")',
+        "\tin",
+        "\t\tData",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+    findings = list(d8_gold_only_sourcing(ctx))
+    assert len(findings) >= 1
+    assert findings[0].rule_id == "D8"
+    assert "bronze" in findings[0].message
+
+
 # ---------------------------------------------------------------------------
 # C1 — parameterized connection
 # ---------------------------------------------------------------------------
