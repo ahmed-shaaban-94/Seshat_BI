@@ -26,17 +26,390 @@ their regexes to these. If a fixture edit drops one, tests/unit/test_tmdl.py fai
     capture (spec §5.2 D7 note / §13 flag it may differ). RE-VERIFY against the real
     PBIP captured in Task M0.3 before M4 builds D7. If the captured real fixture shows
     a different marker literal, update BOTH M0 and M4.1's DATE_TABLE_MARKER together.
+
+PUBLIC API (consumed by D1-D8 rules and by M4b):
+  - TmdlMeasure(name, expression, display_folder, line)
+  - TmdlColumn(name, data_type, summarize_by, line)
+  - TmdlRelationship(name, cross_filtering_behavior, line)
+  - TmdlTable(name, measures, columns, partition_sources, annotations, line)
+  - TmdlModel(tables, relationships)
+  - parse_tmdl(text: str) -> TmdlTable | None
+  - parse_relationships(text: str) -> tuple[TmdlRelationship, ...]
+  - iter_model_files(ctx: RuleContext, suffix: str) -> Iterable[tuple[str, str]]
+  - normalize_measure_body(expression: str) -> str
+  - top_level_blocks(text: str) -> list[str]   (M0 regression anchor — kept intact)
+  - DATE_TABLE_MARKER: str
+  - TI_TRIGGER_FUNCTIONS: frozenset[str]
 """
 
 from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
+
+from .core import RuleContext
+
+DATE_TABLE_MARKER = "annotation PBI_DateTable = true"
+# Pinned to the table-level marker literal M0 captured from a real
+# "Mark as Date Table" PBIP. M4 consumes this single constant; if M0's
+# observed literal differs, only this line changes (single source of truth,
+# per spec §9.0 / §13). Column-level `dataCategory: Time` alone is NOT the
+# marker (spec line 135).
+
+TI_TRIGGER_FUNCTIONS = frozenset(
+    {
+        "TOTALYTD",
+        "TOTALQTD",
+        "TOTALMTD",
+        "DATESYTD",
+        "DATESQTD",
+        "DATESMTD",
+        "SAMEPERIODLASTYEAR",
+        "DATEADD",
+        "DATESINPERIOD",
+        "DATESBETWEEN",
+        "PARALLELPERIOD",
+        "PREVIOUSYEAR",
+        "PREVIOUSQUARTER",
+        "PREVIOUSMONTH",
+        "PREVIOUSDAY",
+        "NEXTYEAR",
+        "NEXTQUARTER",
+        "NEXTMONTH",
+        "NEXTDAY",
+        "OPENINGBALANCEMONTH",
+        "OPENINGBALANCEQUARTER",
+        "OPENINGBALANCEYEAR",
+        "CLOSINGBALANCEMONTH",
+        "CLOSINGBALANCEQUARTER",
+        "CLOSINGBALANCEYEAR",
+        "STARTOFYEAR",
+        "STARTOFQUARTER",
+        "STARTOFMONTH",
+        "ENDOFYEAR",
+        "ENDOFQUARTER",
+        "ENDOFMONTH",
+        "FIRSTDATE",
+        "LASTDATE",
+    }
+)
+
+
+@dataclass(frozen=True)
+class TmdlMeasure:
+    """A parsed DAX measure block inside a table.
+
+    Attributes:
+        name: measure name (stripped of quotes).
+        expression: RAW body text (comments + strings intact) for D4 lexing.
+        display_folder: value of ``displayFolder:`` property, or None.
+        line: 1-based line number of the ``measure`` header line.
+    """
+
+    name: str
+    expression: str
+    display_folder: str | None
+    line: int
+
+
+@dataclass(frozen=True)
+class TmdlColumn:
+    """A parsed column block inside a table.
+
+    Attributes:
+        name: column name (stripped of quotes).
+        data_type: value of ``dataType:`` property, or None.
+        summarize_by: value of ``summarizeBy:`` property, or None.
+        line: 1-based line number of the ``column`` header line.
+    """
+
+    name: str
+    data_type: str | None
+    summarize_by: str | None
+    line: int
+
+
+@dataclass(frozen=True)
+class TmdlRelationship:
+    """A parsed relationship block.
+
+    Attributes:
+        name: relationship name.
+        cross_filtering_behavior: value of ``crossFilteringBehavior:`` or None.
+        line: 1-based line number of the ``relationship`` header line.
+    """
+
+    name: str
+    cross_filtering_behavior: str | None
+    line: int
+
+
+@dataclass(frozen=True)
+class TmdlTable:
+    """A fully parsed TMDL table block.
+
+    Attributes:
+        name: table name.
+        measures: all ``measure`` blocks found.
+        columns: all ``column`` blocks found.
+        partition_sources: RAW M source body texts (for D8).
+        annotations: raw ``annotation <name> = <value>`` lines (for D7 marker).
+        line: 1-based line number of the ``table`` header.
+    """
+
+    name: str
+    measures: tuple[TmdlMeasure, ...]
+    columns: tuple[TmdlColumn, ...]
+    partition_sources: tuple[str, ...]
+    annotations: tuple[str, ...]
+    line: int
+
+
+@dataclass(frozen=True)
+class TmdlModel:
+    """Parsed representation of a full semantic model (all tables + relationships).
+
+    Attributes:
+        tables: all parsed tables.
+        relationships: all parsed relationships.
+    """
+
+    tables: tuple[TmdlTable, ...]
+    relationships: tuple[TmdlRelationship, ...]
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _indent(line: str) -> int:
+    """Return the number of leading TAB characters (TMDL uses tab indentation)."""
+    n = 0
+    for ch in line:
+        if ch == "\t":
+            n += 1
+        else:
+            break
+    return n
+
+
+def _strip_bom(text: str) -> str:
+    """Strip a UTF-8 BOM if present (fallback for non-utf-8-sig opens)."""
+    return text.lstrip("﻿")
+
+
+# ---------------------------------------------------------------------------
+# Public parsing functions
+# ---------------------------------------------------------------------------
+
+
+def parse_tmdl(text: str) -> TmdlTable | None:
+    """Parse a single TMDL *table* file's text and return a :class:`TmdlTable`.
+
+    Returns ``None`` if the file does not contain a top-level ``table`` block
+    (e.g. ``relationships.tmdl``, ``model.tmdl`` header-only files).
+
+    The parser is indentation-driven (TMDL uses tabs). It captures:
+    - All ``measure`` blocks at indent level 1 (name, expression, displayFolder).
+    - All ``column`` blocks at indent level 1 (name, dataType, summarizeBy).
+    - All ``partition/source`` blocks (raw M body for D8).
+    - All ``annotation`` lines at indent level <= 1 (raw text for D7).
+    """
+    lines = _strip_bom(text).splitlines()
+    table_name: str | None = None
+    table_line = 0
+
+    # Find the top-level ``table <name>`` header.
+    for i, raw in enumerate(lines, start=1):
+        m = re.match(r"table\s+('?)(?P<name>[^'\n]+?)\1\s*$", raw.strip())
+        if raw and _indent(raw) == 0 and m:
+            table_name = m.group("name")
+            table_line = i
+            break
+
+    if table_name is None:
+        return None
+
+    measures: list[TmdlMeasure] = []
+    columns: list[TmdlColumn] = []
+    sources: list[str] = []
+    annotations: list[str] = []
+
+    n = len(lines)
+    i = 0
+    while i < n:
+        raw = lines[i]
+        stripped = raw.strip()
+        ind = _indent(raw)
+
+        # --- measure block ---
+        mm = re.match(
+            r"measure\s+('?)(?P<name>[^'=]+?)\1\s*=\s*(?P<expr>.*)$", stripped
+        )
+        if mm and ind == 1:
+            name = mm.group("name").strip()
+            expr_parts = [mm.group("expr").rstrip()]
+            df: str | None = None
+            j = i + 1
+            while j < n and (not lines[j].strip() or _indent(lines[j]) > ind):
+                child = lines[j].strip()
+                dfm = re.match(r"displayFolder:\s*(?P<v>.+)$", child)
+                if dfm:
+                    df = dfm.group("v").strip()
+                elif child and not re.match(r"\w+:\s", child):
+                    # continuation of a multi-line expression
+                    expr_parts.append(child)
+                j += 1
+            measures.append(
+                TmdlMeasure(
+                    name=name,
+                    expression=" ".join(expr_parts).strip(),
+                    display_folder=df,
+                    line=i + 1,
+                )
+            )
+            i = j
+            continue
+
+        # --- column block ---
+        cm = re.match(r"column\s+('?)(?P<name>[^'\n]+?)\1\s*$", stripped)
+        if cm and ind == 1:
+            name = cm.group("name").strip()
+            dt: str | None = None
+            sb: str | None = None
+            j = i + 1
+            while j < n and (not lines[j].strip() or _indent(lines[j]) > ind):
+                child = lines[j].strip()
+                d = re.match(r"dataType:\s*(?P<v>.+)$", child)
+                s = re.match(r"summarizeBy:\s*(?P<v>.+)$", child)
+                if d:
+                    dt = d.group("v").strip()
+                if s:
+                    sb = s.group("v").strip()
+                j += 1
+            columns.append(
+                TmdlColumn(name=name, data_type=dt, summarize_by=sb, line=i + 1)
+            )
+            i = j
+            continue
+
+        # --- partition / source block (raw M body for D8) ---
+        if re.match(r"(source|partition)\b", stripped) and "=" in stripped:
+            body = [stripped.split("=", 1)[1].strip()]
+            j = i + 1
+            while j < n and (not lines[j].strip() or _indent(lines[j]) > ind):
+                if lines[j].strip():
+                    body.append(lines[j].strip())
+                j += 1
+            sources.append(" ".join(p for p in body if p).strip())
+            i = j
+            continue
+
+        # --- annotation lines ---
+        if re.match(r"annotation\s+.+", stripped) and ind <= 1:
+            annotations.append(stripped)
+
+        i += 1
+
+    return TmdlTable(
+        name=table_name,
+        measures=tuple(measures),
+        columns=tuple(columns),
+        partition_sources=tuple(sources),
+        annotations=tuple(annotations),
+        line=table_line,
+    )
+
+
+def parse_relationships(text: str) -> tuple[TmdlRelationship, ...]:
+    """Parse a ``relationships.tmdl`` file and return all relationship blocks.
+
+    Each top-level ``relationship <name>`` block is captured with its
+    ``crossFilteringBehavior`` property (or ``None`` if absent).
+    """
+    lines = _strip_bom(text).splitlines()
+    rels: list[TmdlRelationship] = []
+    n = len(lines)
+    i = 0
+    while i < n:
+        stripped = lines[i].strip()
+        rm = re.match(r"relationship\s+('?)(?P<name>[^'\n]+?)\1\s*$", stripped)
+        if rm and _indent(lines[i]) == 0:
+            name = rm.group("name").strip()
+            cfb: str | None = None
+            j = i + 1
+            while j < n and (not lines[j].strip() or _indent(lines[j]) > 0):
+                c = re.match(r"crossFilteringBehavior:\s*(?P<v>.+)$", lines[j].strip())
+                if c:
+                    cfb = c.group("v").strip()
+                j += 1
+            rels.append(
+                TmdlRelationship(name=name, cross_filtering_behavior=cfb, line=i + 1)
+            )
+            i = j
+            continue
+        i += 1
+    return tuple(rels)
+
+
+def iter_model_files(ctx: RuleContext, suffix: str) -> Iterable[tuple[str, str]]:
+    """Yield ``(repo_relative_path, text)`` for TMDL model definition files.
+
+    Scans ``ctx.tracked_files`` for paths containing
+    ``*.SemanticModel/definition/`` and ending with ``suffix``
+    (e.g. ``".tmdl"``). Files under ``tests/`` are **exempted** so that the
+    M0 golden fixture's intentional violation content does not trigger rules
+    when running against the real repo.
+
+    Reads files from ``ctx.repo_root`` using ``encoding="utf-8-sig"`` (BOM-
+    tolerant).
+    """
+    for rel in ctx.tracked_files:
+        if rel.startswith("tests/"):
+            continue
+        if ".SemanticModel/definition/" in rel and rel.endswith(suffix):
+            text = (ctx.repo_root / Path(rel)).read_text(encoding="utf-8-sig")
+            yield rel, text
+
+
+def normalize_measure_body(expression: str) -> str:
+    """Normalize a measure expression for duplicate-detection (D3).
+
+    Steps:
+    1. Strip ``/* */`` block comments.
+    2. Strip ``//`` line comments.
+    3. Collapse runs of whitespace to a single space.
+    4. Strip spaces around punctuation (``( ) [ ] , = + - * /``) so that
+       ``SUM( Sales[Amount] )`` and ``SUM(Sales[Amount])`` canonicalize to
+       the same string.
+    5. Lowercase and trim.
+
+    The result is used as a hash key; two measures with the same normalized
+    body are flagged as duplicates by D3.
+    """
+    no_block = re.sub(r"/\*.*?\*/", " ", expression, flags=re.DOTALL)
+    no_line = re.sub(r"//[^\n]*", " ", no_block)
+    collapsed = re.sub(r"\s+", " ", no_line).strip().lower()
+    # Strip optional spaces around punctuation characters.
+    collapsed = re.sub(r"\s*([(),\[\]=+\-*/])\s*", r"\1", collapsed)
+    return collapsed
+
+
+# ---------------------------------------------------------------------------
+# Legacy API kept intact (M0 regression anchor)
+# ---------------------------------------------------------------------------
 
 
 def top_level_blocks(text: str) -> list[str]:
     """Return the stripped header line of each indentation-level-0 block, in order.
 
     A "top-level block" is any non-blank line that starts at column 0 (no leading
-    whitespace) and is not a continuation. This is the smallest honest slice of the
-    hand-rolled parser; M4 extends it with nested-block descent.
+    whitespace) and is not a continuation. This is the M0 regression anchor — tests
+    in ``tests/unit/test_tmdl.py`` assert specific values observed in the golden
+    fixture. Do NOT modify the return type or semantics.
     """
     headers: list[str] = []
     for raw_line in text.splitlines():
