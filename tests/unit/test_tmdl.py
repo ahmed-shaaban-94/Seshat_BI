@@ -5,9 +5,13 @@ import pytest
 
 from retail.tmdl import top_level_blocks
 
-GOLDEN_PBIP_ROOT = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "golden_pbip"
+GOLDEN_PBIP_ROOT = (
+    Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "golden_pbip"
+)
 _MODEL = GOLDEN_PBIP_ROOT / "RetailGold.SemanticModel" / "definition" / "model.tmdl"
-_RELS = GOLDEN_PBIP_ROOT / "RetailGold.SemanticModel" / "definition" / "relationships.tmdl"
+_RELS = (
+    GOLDEN_PBIP_ROOT / "RetailGold.SemanticModel" / "definition" / "relationships.tmdl"
+)
 _PBIR = GOLDEN_PBIP_ROOT / "RetailGold.Report" / "definition.pbir"
 
 
@@ -39,7 +43,8 @@ def test_model_pins_gold_schema_and_parameterized_source() -> None:
 @pytest.mark.unit
 def test_model_pins_provisional_date_table_marker() -> None:
     # PROVISIONAL marker (spec §5.2 D7 / §13). Re-verify against the real PBIP from
-    # Task M0.3 before M4 builds D7; if the real literal differs, update fixture + assert.
+    # Task M0.3 before M4 builds D7; if the real literal differs, update fixture +
+    # assert.
     text = _MODEL.read_text(encoding="utf-8")
     assert "annotation PBI_DateTable = true" in text
 
@@ -53,7 +58,8 @@ def test_relationships_pins_bothdirections() -> None:
 
 @pytest.mark.unit
 def test_pbir_is_bom_tolerant_and_uses_relative_bypath() -> None:
-    # Contract: PBIR opened encoding="utf-8-sig" (BOM-tolerant). R1 anchor: byPath relative.
+    # Contract: PBIR opened encoding="utf-8-sig" (BOM-tolerant). R1 anchor: byPath
+    # relative.
     data = json.loads(_PBIR.read_text(encoding="utf-8-sig"))
     path = data["datasetReference"]["byPath"]["path"]
     assert path == "../RetailGold.SemanticModel"
