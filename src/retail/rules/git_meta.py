@@ -253,8 +253,16 @@ MUST_BE_EMPTY = (
 )
 
 
+# Path prefixes excluded from the C2 CONTENT regex scan. tests/ holds fixtures
+# that intentionally contain secret-LOOKING literals to exercise the scanner,
+# and .superpowers/ holds SDD scratch/reports that quote those fixtures; neither
+# is tracked source that could leak a real secret. (Scope: content scan only —
+# the .env and .env.example sub-checks are unaffected.)
+_C2_SCAN_EXCLUDED_PREFIXES = ("docs/", "tests/", ".superpowers/")
+
+
 def _scan_excluded(path: str) -> bool:
-    return path.startswith("docs/") or path.endswith(".example")
+    return path.startswith(_C2_SCAN_EXCLUDED_PREFIXES) or path.endswith(".example")
 
 
 def _check_env_file(ctx: RuleContext) -> list[Finding]:

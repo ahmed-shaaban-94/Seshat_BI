@@ -379,6 +379,23 @@ def test_c2_skips_docs_and_example_files(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_c2_skips_tests_path_fixtures(tmp_path: Path) -> None:
+    # Test fixtures under tests/ intentionally carry secret-LOOKING literals to
+    # exercise the scanner itself; the C2 content scan must not flag them.
+    repo = make_git_repo(tmp_path)
+    _seed_c2_repo(repo)
+    fixtures = repo / "tests" / "unit"
+    fixtures.mkdir(parents=True)
+    (fixtures / "test_scanner.py").write_text(
+        "BAD = 'host = db-prod-01.db.ondigitalocean.com'\n"
+        "URI = 'postgresql://user:pw@real-host.db.ondigitalocean.com/db'\n",
+        encoding="utf-8",
+    )
+    commit_all(repo, "test: add scanner fixtures")
+    assert list(rule_c2_no_committed_secrets(context_for(repo))) == []
+
+
+@pytest.mark.unit
 def test_c2_flags_tracked_env(tmp_path: Path) -> None:
     repo = make_git_repo(tmp_path)
     _seed_c2_repo(repo)

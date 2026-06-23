@@ -182,4 +182,55 @@ All done! 21 files would be left unchanged.
 
 ### New Concern (M8 reconciliation, not implemented here)
 
-4. **C2 likely warrants a `tests/` exemption symmetric to the P1 one added in fix #1.** C2's content scan currently flags its own tracked test fixtures that contain intentional endpoint literals. The clean long-term fix is to extend C2's scan-exclusion (currently `docs/` + `*.example`) to also skip `tests/`. Out of scope this round (C2 behavior frozen); flagged for M8.
+4. **C2 likely warrants a `tests/` exemption symmetric to the P1 one added in fix #1.** C2's content scan currently flags its own tracked test fixtures that contain intentional endpoint literals. The clean long-term fix is to extend C2's scan-exclusion (currently `docs/` + `*.example`) to also skip `tests/`. Out of scope this round (C2 behavior frozen); flagged for M8. **[RESOLVED in the C2 fix round below.]**
+
+---
+
+## POST-REVIEW FIX ROUND 2 — C2 content-scan `tests/` + `.superpowers/` exemption (2026-06-24)
+
+Applies the symmetric exemption flagged as concern #4 above, approved for this round.
+
+### Fix Applied
+
+Extended **only** the C2 CONTENT/regex scan's exclusion predicate. The `_scan_excluded(path)` helper (used solely by `_scan_contents`, the postgres-URI / `*.db.ondigitalocean.com` regex scan over tracked files) now skips paths under `tests/`, `.superpowers/`, and `docs/`, or ending in `.example`. Consolidated into `_C2_SCAN_EXCLUDED_PREFIXES = ("docs/", "tests/", ".superpowers/")`.
+
+**Preserved unchanged** (verified — `_scan_excluded` is not referenced by either):
+- `_check_env_file` — `.env` gitignored-AND-untracked assertion: unchanged.
+- `_check_env_example` — six `ANALYTICS_DB_*` keys present + HOST/NAME/USER/PASSWORD empty: unchanged.
+
+Rationale: `tests/` holds fixtures that intentionally contain secret-LOOKING literals to exercise the scanner; `.superpowers/` holds SDD scratch/reports quoting those fixtures. Neither is tracked source that could leak a real secret.
+
+### Covering Tests + Results
+
+| Test | Purpose | Result |
+|---|---|---|
+| `test_c2_skips_tests_path_fixtures` (NEW) | A `tests/`-path file with a real endpoint + postgres URI is NOT flagged | PASS |
+| `test_c2_flags_real_endpoint_in_scanned_file` (kept) | Positive case still fires — uses repo-root `config.txt` (not under any exempt dir) | PASS |
+| `test_c2_clean_repo_passes`, `test_c2_ignores_angle_bracket_placeholder_in_scanned_file`, `test_c2_skips_docs_and_example_files`, `test_c2_flags_tracked_env`, `test_c2_flags_env_example_with_filled_secret` | Other C2 sub-checks unchanged | PASS |
+
+### Commands + Output
+
+```
+$ python -m pytest -m unit -q
+.......................................................................  [100%]
+71 passed in 5.34s          (was 70; +1 new C2 test)
+src\retail\rules\git_meta.py     163      7    96%
+(total)                          291     10    97%
+
+$ python -m ruff check src tests
+All checks passed!
+
+$ python -m black --check src tests
+All done! 21 files would be left unchanged.   (benign 3.13-vs-3.14 target warning only)
+```
+
+### Final `retail check --repo .` Output
+
+```
+[error] P2 commit subject must match '<type>: <desc>' (feat|fix|refactor|docs|chore) (test: add hand-authored golden PBIP fixture and TMDL parser smoke test)
+```
+
+- **The 3× C2 findings on `tests/unit/test_git_meta.py` are GONE** — C2 fix confirmed.
+- **Exactly one finding remains:** the P2 historical `test:` commit — the pre-baseline branch-hygiene item, decided at final review to leave. (Exit code 1 reflects this single ERROR; expected.)
+
+No new concerns. Concern #4 above is now resolved.
