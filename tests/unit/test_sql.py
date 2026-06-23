@@ -60,3 +60,28 @@ def test_s2_flags_create_schema_raw() -> None:
 def test_s2_exempts_warehouse_readme() -> None:
     ctx = _ctx("warehouse/README.md")  # not a .sql -> never scanned
     assert list(s2_medallion_schemas(ctx)) == []
+
+
+from retail.rules.sql import s3_vw_prefix
+
+
+def _stage(name: str) -> str:
+    (FIXTURES / "warehouse").mkdir(exist_ok=True)
+    (FIXTURES / "warehouse" / name).write_text(
+        (FIXTURES / name).read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    return f"warehouse/{name}"
+
+
+def test_s3_passes_prefixed_views() -> None:
+    ctx = _ctx(_stage("pass_s3_vw.sql"))
+    assert list(s3_vw_prefix(ctx)) == []
+
+
+def test_s3_flags_unprefixed_view() -> None:
+    ctx = _ctx(_stage("fail_s3_no_prefix.sql"))
+    findings = list(s3_vw_prefix(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "S3"
+    assert findings[0].severity is Severity.ERROR
+    assert findings[0].locator == "warehouse/fail_s3_no_prefix.sql:1"
