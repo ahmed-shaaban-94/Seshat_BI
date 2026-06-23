@@ -85,3 +85,40 @@ def test_s3_flags_unprefixed_view() -> None:
     assert findings[0].rule_id == "S3"
     assert findings[0].severity is Severity.ERROR
     assert findings[0].locator == "warehouse/fail_s3_no_prefix.sql:1"
+
+
+from retail.rules.sql import s4a_migration_numbering
+
+
+def test_s4a_passes_contiguous_unique() -> None:
+    ctx = _ctx(
+        "warehouse/migrations/0001_init.sql",
+        "warehouse/migrations/0002_add_sales.sql",
+    )
+    assert list(s4a_migration_numbering(ctx)) == []
+
+
+def test_s4a_flags_bad_name() -> None:
+    ctx = _ctx("warehouse/migrations/1_init.sql")
+    findings = list(s4a_migration_numbering(ctx))
+    assert any(f.rule_id == "S4a" for f in findings)
+    assert all(f.severity is Severity.ERROR for f in findings)
+    assert all(":" not in f.locator.rsplit(".sql", 1)[-1] for f in findings)
+
+
+def test_s4a_flags_gap() -> None:
+    ctx = _ctx(
+        "warehouse/migrations/0001_init.sql",
+        "warehouse/migrations/0003_skip.sql",
+    )
+    findings = list(s4a_migration_numbering(ctx))
+    assert any("gap" in f.message or "contiguous" in f.message for f in findings)
+
+
+def test_s4a_flags_duplicate() -> None:
+    ctx = _ctx(
+        "warehouse/migrations/0001_init.sql",
+        "warehouse/migrations/0001_again.sql",
+    )
+    findings = list(s4a_migration_numbering(ctx))
+    assert any("duplicate" in f.message for f in findings)
