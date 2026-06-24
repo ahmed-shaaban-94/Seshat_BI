@@ -115,3 +115,11 @@ Principle VIII. In this mode:
 - Live half (after silver/gold exist): the `retail-validate` skill.
 - A filled instance: `docs/worked-examples/c086-pharmacy.md` (an example, never
   the universal schema).
+
+## Orchestration
+
+When a table is being driven end-to-end, the `retail-orchestrate` conductor skill
+sequences this verb with the others and runs the self-heal loop against the gate
+exit code. This skill stays single-purpose: it does its job and STOPS. The loop
+(run gate -> classify findings -> auto-fix mechanical / HARD-STOP judgment calls ->
+re-run) lives ONLY in `retail-orchestrate`, never here.

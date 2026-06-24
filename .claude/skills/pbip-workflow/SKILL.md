@@ -113,3 +113,11 @@ Because measures are TMDL text, review them like code:
 - Is logic duplicated across measures that should share a base measure?
 - Did a relationship flip to bidirectional (a common source of wrong totals)?
 - Is any connection string or secret accidentally committed instead of parameterized?
+
+## Orchestration
+
+When a table is being driven end-to-end, the `retail-orchestrate` conductor skill
+sequences this verb with the others and runs the self-heal loop against the gate
+exit code. This skill stays single-purpose: it does its job and STOPS. The loop
+(run gate -> classify findings -> auto-fix mechanical / HARD-STOP judgment calls ->
+re-run) lives ONLY in `retail-orchestrate`, never here.

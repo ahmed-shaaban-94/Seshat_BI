@@ -85,3 +85,11 @@ confirm green is the user's next call, not a loop this skill performs.
 - Principle VIII (static-first, live deferred): `.specify/memory/constitution.md`.
 - The static sibling: the `retail-govern` skill.
 - The blank the run fills: `templates/reconciliation-report.md`.
+
+## Orchestration
+
+When a table is being driven end-to-end, the `retail-orchestrate` conductor skill
+sequences this verb with the others and runs the self-heal loop against the gate
+exit code. This skill stays single-purpose: it does its job and STOPS. The loop
+(run gate -> classify findings -> auto-fix mechanical / HARD-STOP judgment calls ->
+re-run) lives ONLY in `retail-orchestrate`, never here.
