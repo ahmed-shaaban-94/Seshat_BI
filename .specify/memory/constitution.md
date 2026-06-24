@@ -1,6 +1,30 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.5.0 -> 1.6.0 (amendment 2026-06-24, readiness roadmap)
+Amendment rationale (1.6.0, MINOR -- new supporting section, NO principle
+                added/removed/redefined, no gate weakened): the Tower BI
+                Readiness System is recognized as the operating SPINE inside the
+                kit -- a stage/state model (Source -> Mapping -> Silver -> Gold ->
+                Semantic Model -> Dashboard -> Publish) that REINFORCES existing
+                principles (I Agent-First, IV Source-Mapping-Before-Silver, V
+                Agent-Stops-at-Judgment-Calls, VIII Static-First) by organizing
+                their existing gates into tracked readiness state with explicit
+                status + evidence + blockers (NEVER a fabricated confidence
+                number; numeric scores optional/deferred until scoring rules are
+                defined). It adds NO new gate and changes NO compliance posture:
+                the source-mapping gate, retail check, and retail validate are
+                unchanged. The product identity is unchanged -- "Tower BI Agent
+                Kit" remains the product; the readiness system is its spine.
+                Added: the "Readiness System (the operating spine)" supporting
+                section. Dependent artifacts: docs/roadmap/roadmap.md (new),
+                docs/readiness/* (new), docs/architecture/readiness-pipeline.md
+                (new), templates/readiness-* (new), AGENTS.md (new), README.
+                Docs-only; no code; retail check stays green. NOTE: pre-existing
+                stale counts in this file ("26 rules") are from prior slices; the
+                live count is 27 (G6 added). Not corrected here to avoid scope
+                creep beyond the roadmap; flagged for a follow-up patch.
+
 Version change: 1.4.0 -> 1.5.0 (amendment 2026-06-24, ADR 0003)
 Amendment rationale (1.5.0, MINOR -- resolves a deferred open decision, no
                 principle redefined): per-table mapping artifacts now live in
@@ -410,6 +434,38 @@ it free. This ratifies the hard rules in the repo `CLAUDE.md`.
   expression, not a competing copy. A conflict between this file and a cited
   artifact is a defect in this file, to be reconciled by amendment.
 
+## Readiness System (the operating spine)
+
+The **Tower BI Readiness System** is the operating spine inside the kit. It is a
+stage/state model, NOT a new gate and NOT a new principle -- it organizes the
+gates these principles already define into tracked readiness state.
+
+- The spine tracks seven stages per source/table/report: Source Ready ->
+  Mapping Ready -> Silver Ready -> Gold Ready -> Semantic Model Ready ->
+  Dashboard Ready -> Publish Ready. A stage is entered only when the prior stage
+  is `pass`.
+- Each stage records explicit `status` (`not_started` | `blocked` | `warning` |
+  `pass`) + `evidence[]` + `blocking_reasons[]`. A `pass` MUST carry evidence.
+  Readiness MUST NOT be expressed as a fabricated confidence number; any numeric
+  score is OPTIONAL and DEFERRED until scoring rules are defined, and MUST cite
+  the evidence it derives from.
+- The spine REINFORCES existing principles; it weakens none:
+  Principle I (the agent reads readiness state to choose the next allowed action;
+  the gate exit code is still the authority), Principle IV (Mapping Ready is the
+  source-mapping gate; no silver before it is `pass`), Principle V (a stage's
+  approval is a named human action the agent cannot self-grant), Principle VIII
+  (Gold Ready requires the live `retail validate`; static `retail check` exit 0
+  is necessary, not sufficient).
+- The spine adds NO new gate: each stage's gate is an EXISTING check
+  (`retail check`, `retail validate`, or an artifact review). `pbi-cli` / PBIP
+  automation remains a later adapter (Principle II), gated on Semantic Model
+  Ready -- it is not entered earlier.
+- Authoritative artifacts: `docs/readiness/readiness-model.md` (the model),
+  `docs/readiness/readiness-pipeline.md` (the sequence), the seven
+  `docs/readiness/<stage>-ready.md` docs, `docs/roadmap/roadmap.md` (the feature
+  sequence), and `docs/architecture/readiness-pipeline.md` (the spine on the
+  stack). This Constitution is their expression, not a competing copy.
+
 ## Scope Boundaries
 
 This is the Phase 0/1 foundation. It deliberately stops at architecture, spec,
@@ -476,4 +532,4 @@ Phase 0/1 feature spec); `docs/superpowers/specs/2026-06-23-pbi-governance-layer
 
 ---
 
-**Version**: 1.5.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24
+**Version**: 1.6.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24
