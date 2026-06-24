@@ -260,6 +260,9 @@ and refuses to author any silver.
 - **Readiness-status record** (one per table, from `templates/readiness-status.yaml`):
   the seeded state the wizard writes -- `source_ready` + `mapping_ready` statuses,
   evidence, blockers, `current_stage`, `next_action`. No fake confidence number.
+  **Canonical filled location: `mappings/<table>/readiness-status.yaml`** (ADR 0004;
+  co-located with the mapping artifacts per ADR 0003, spans all seven stages). The
+  wizard is the FIRST writer of this file -- it seeds the ratified path, not a default.
 - **The five mapping artifacts** (`mappings/<table>/`): produced by the delegated
   `source-mapping` leg -- `source-profile.md`, `source-map.yaml`, `assumptions.md`,
   `unresolved-questions.md`, `reconciliation-report.md`.
