@@ -1,7 +1,11 @@
-# ── Power BI Project (PBIP) — Microsoft official baseline ──
-# Local workspace settings (can carry connection context) and local data cache.
-**/.pbi/localSettings.json
-**/.pbi/cache.abf
+# ── Power BI Project (PBIP) ──
+# Microsoft's exact baseline is **/.pbi/localSettings.json + **/.pbi/cache.abf.
+# We deliberately ignore the WHOLE .pbi/ folder: every file under it is
+# machine-local editor/workspace state (localSettings.json can carry connection
+# context; cache.abf is the local data cache; editorSettings.json is local IDE
+# state) -- none are model source. The model-as-code lives under definition/,
+# which stays tracked. NEVER ignore definition/.
+**/.pbi/
 
 # ── Secrets ──
 .env
