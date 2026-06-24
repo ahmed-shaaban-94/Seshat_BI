@@ -80,3 +80,11 @@ Report the failing ids, their locators, and the one fix each needs. Hand DAX/PBI
 fixes to the `powerbi-analyst` agent; SQL fixes belong in `warehouse/`. Then **stop** —
 re-running `retail check` to confirm green is the user's (or agent's) next call, not an
 automated loop this skill performs.
+
+## Orchestration
+
+When a table is being driven end-to-end, the `retail-orchestrate` conductor skill
+sequences this verb with the others and runs the self-heal loop against the gate
+exit code. This skill stays single-purpose: it does its job and STOPS. The loop
+(run gate -> classify findings -> auto-fix mechanical / HARD-STOP judgment calls ->
+re-run) lives ONLY in `retail-orchestrate`, never here.
