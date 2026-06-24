@@ -237,8 +237,9 @@ proposing a different PK or declaring a lower grain on its own.
   candidate PK or grain on the human's behalf. It surfaces and stops.
 - **FR-009**: The grain-confidence card is emitted in a shape that can be recorded as
   the Mapping Ready stage's `evidence[]` / `blocking_reasons[]` in the readiness
-  status (`templates/readiness-status.yaml`) -- it reinforces the spine, adding no
-  new state field. If a numeric `score` field is ever shown it MUST be marked
+  status -- read/written at the canonical `mappings/<table>/readiness-status.yaml`
+  (ADR 0004), shaped to `templates/readiness-status.yaml`. It reinforces the spine,
+  adding no new state field. If a numeric `score` field is ever shown it MUST be marked
   OPTIONAL and cite the evidence it derives from (default: omit it).
 - **FR-010**: All examples and placeholders are GENERIC (hard rule #7 / Principle
   VII): no C086/pharmacy specifics (no billing codes, segment names, insurance/PII
