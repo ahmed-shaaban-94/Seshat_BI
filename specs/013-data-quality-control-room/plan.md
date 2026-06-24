@@ -72,7 +72,7 @@ multi-table acceptance replay. No code, no migrations, no schema change.
 | V -- Agent Stops at Judgment Calls | blockers/approvals are named-human actions | PASS -- read-only; never clears a blocker, never self-assigns an owner, surfaces conflicts rather than resolving them (FR-006, FR-011). |
 | VI -- Defaults Then Deviations | RC defaults unchanged | PASS -- not touched. |
 | VII -- C086 Is An Example | generic templates only | PASS -- skill + template are generic; C086 cited as a filled instance, never baked in (FR-002, SC-001). |
-| VIII -- Static-First, Live Deferred | NO new validator; live run is the human's call | PASS (load-bearing) -- adds NO rule (count stays 26) and NO validator; shows RECORDED live results and marks stale ones "not run since <date>" rather than running them (FR-003, FR-010, SC-002). |
+| VIII -- Static-First, Live Deferred | NO new validator; live run is the human's call | PASS (load-bearing) -- adds NO rule (count unchanged) and NO validator; shows RECORDED live results and marks stale ones "not run since <date>" rather than running them (FR-003, FR-010, SC-002). |
 | IX -- Secrets & Reproducibility | no secrets; UTF-8 no BOM; short paths | PASS -- no DSN, no `.env` read; artifacts ASCII/UTF-8 no BOM; short paths. |
 | Roadmap rule 8 (docs/templates first) | automate only after artifacts prove useful | PASS -- ships a template + skill, not a code reporter (the CLI is DEFERRED). |
 | Roadmap rule 9 / readiness "No fake confidence" | explicit status + evidence + blockers, never a score | PASS (load-bearing) -- refuses to emit a confidence/health score; measured counts + four statuses only (FR-007, SC-004). |
@@ -120,7 +120,7 @@ src/retail/validate.py               # the live surface -- NOT modified (no new 
 (`SKILL.md` + the template) plus an `## Orchestration` pointer wired into
 `retail-orchestrate`. No `src/retail/` change, no migration, no new dependency. This is
 the same minimal footprint features 005/006 used and is what keeps SC-002 true (rule
-count 26, `dependencies = []`, suite green).
+count unchanged, `dependencies = []`, suite green).
 
 ## Design notes (the load-bearing decisions)
 

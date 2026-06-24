@@ -34,7 +34,7 @@ This is the load-bearing constraint, stated up front so the spec cannot drift:
   `retail validate` ERRORs, and the per-table `data-issues.md` / `blocking-reasons.md`
   / `readiness-status.yaml` rows. Adding a validator here would violate roadmap rule 8
   (docs/templates first), constitution Principle VIII (static-now / live-deferred; the
-  rule set is fixed at 26), and YAGNI. (See "Aggregates, never re-derives".)
+  rule set is unchanged), and YAGNI. (See "Aggregates, never re-derives".)
 - **It is read-only.** It never edits a per-table artifact, never clears a blocker,
   never writes a `pass`, never runs SQL, never opens a DB connection. It reads the
   committed per-table evidence (and optionally an interpreted gate run the human
