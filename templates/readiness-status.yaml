@@ -9,6 +9,11 @@
 #   is in the seven readiness stages, with EVIDENCE and BLOCKERS -- never a fake
 #   confidence number. The agent reads this to decide the single next allowed action.
 #
+# WHERE THE FILLED COPY LIVES (canonical -- ADR 0004)
+#   mappings/<table>/readiness-status.yaml  -- co-located with the table's mapping
+#   artifacts (ADR 0003). The file spans ALL SEVEN stages despite the mappings/
+#   name; it is named by-table, not by-stage. See docs/decisions/0004-readiness-status-location.md.
+#
 # THE FOUR STATUSES (per stage): not_started | blocked | warning | pass
 #   - pass MUST carry evidence[]; a pass with no evidence is a defect.
 #   - blocked MUST carry blocking_reasons[].
