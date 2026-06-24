@@ -1,0 +1,105 @@
+# =============================================================================
+# readiness-status.yaml  --  the machine-readable STATE of the readiness spine
+# =============================================================================
+# Tower BI Agent Kit -- Tower BI Readiness System (the operating spine).
+# See: docs/readiness/readiness-model.md (the model), readiness-pipeline.md (stages).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. One file per source/table/report records where it
+#   is in the seven readiness stages, with EVIDENCE and BLOCKERS -- never a fake
+#   confidence number. The agent reads this to decide the single next allowed action.
+#
+# THE FOUR STATUSES (per stage): not_started | blocked | warning | pass
+#   - pass MUST carry evidence[]; a pass with no evidence is a defect.
+#   - blocked MUST carry blocking_reasons[].
+#   - warning is advanced-with-a-recorded-issue (a static WARN, an accepted deviation).
+#   - A stage is entered only when the prior stage is pass (readiness-pipeline.md).
+#
+# NO FAKE CONFIDENCE
+#   Prefer the four explicit statuses + evidence + blockers. A numeric `score` is
+#   OPTIONAL and DEFERRED -- scoring rules are not defined yet. If present, mark it
+#   optional and cite the evidence it derives from. Do NOT emit a number that reads
+#   as confidence.
+#
+# C086 IS A FILLED INSTANCE, NEVER THE SCHEMA
+#   Values below are obvious placeholders. Do not copy any worked-example specifics.
+# =============================================================================
+
+# --- identity ---------------------------------------------------------------
+table: "<schema>.<table>"            # e.g. silver.<table_id>; the thing being readied
+source_id: "<source_id>"             # stable short id (matches mappings/<table>/)
+source_family: "<source_system>"     # e.g. example_erp / example_pos
+
+# --- where we are -----------------------------------------------------------
+current_stage: "<stage_key>"         # one of: source_ready | mapping_ready |
+                                     #   silver_ready | gold_ready |
+                                     #   semantic_model_ready | dashboard_ready |
+                                     #   publish_ready
+mapping_version: "<n>"               # the source-map.yaml version this status reflects
+
+# --- the seven stages -------------------------------------------------------
+# Each stage: status (required) + evidence[] (required for pass) +
+#   blocking_reasons[] (required for blocked). Keep evidence to committed paths
+#   or check-run identifiers. Optional per stage: warnings[], score (DEFERRED).
+stages:
+
+  source_ready:
+    status: "not_started"            # not_started | blocked | warning | pass
+    evidence: []                     # e.g. ["mappings/<table>/source-profile.md"]
+    blocking_reasons: []
+
+  mapping_ready:
+    status: "not_started"
+    evidence: []                     # source-map.yaml, assumptions.md, unresolved-questions.md (CLEARED)
+    blocking_reasons: []
+
+  silver_ready:
+    status: "not_started"
+    evidence: []                     # warehouse/migrations/NNNN_create_silver_<table>.sql + retail check exit 0
+    blocking_reasons: []
+
+  gold_ready:
+    status: "not_started"
+    evidence: []                     # gold star migration + filled reconciliation-report.md + retail validate exit 0
+    blocking_reasons: []
+
+  semantic_model_ready:
+    status: "not_started"
+    evidence: []                     # PBIP model + metric contracts + retail check (D/C/R/G6) exit 0
+    blocking_reasons: []
+
+  dashboard_ready:
+    status: "not_started"
+    evidence: []                     # report designed against approved metric contracts
+    blocking_reasons: []
+
+  publish_ready:
+    status: "not_started"
+    evidence: []                     # BI handoff pack + publish approval
+    blocking_reasons: []
+
+# --- cross-cutting evidence + blockers (roll-up, optional) ------------------
+evidence: []                         # any repo-wide evidence not tied to one stage
+blocking_reasons: []                 # the top blockers across stages (mirrors current_stage)
+
+# --- approvals (named human sign-offs; the agent cannot self-grant) ---------
+approvals: []
+  # - stage: "mapping_ready"
+  #   owner: "<analyst | governance | data_owner>"
+  #   at: "<YYYY-MM-DD>"             # quoted so it is not auto-typed as a date
+
+# --- the single next allowed action -----------------------------------------
+next_action: "<one concrete next step, e.g. 'resolve open grain question in mappings/<table>/unresolved-questions.md'>"
+
+# --- audit ------------------------------------------------------------------
+last_checked_at: "<YYYY-MM-DD>"      # quoted
+checked_by: "<agent | person>"
+
+# --- OPTIONAL / DEFERRED: numeric score -------------------------------------
+# Scoring rules are NOT defined yet. Leave absent. If a future feature defines
+# them, a score MUST be optional and MUST cite the evidence it derives from --
+# never a standalone number that reads as confidence.
+# score:
+#   value: <deferred>
+#   derived_from: []                 # the evidence the score is computed from
+#   rules: "docs/readiness/<scoring-rules-doc>.md"   # must exist before a score is emitted

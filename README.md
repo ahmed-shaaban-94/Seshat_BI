@@ -16,6 +16,8 @@ Building a new retail mart? Copy the pattern in `docs/worked-examples/c086-pharm
 | `templates/` | Generic source-mapping-gate blanks (profile, map, assumptions, questions, reconciliation). |
 | `mappings/` | Per-table **filled** mapping artifacts, one folder per table (`mappings/<table>/`). See [ADR 0003](docs/decisions/0003-mapping-artifact-location.md). |
 | `docs/` | Design specs, conventions, data dictionary, decisions (ADRs), worked examples. |
+| `docs/readiness/` | The **Tower BI Readiness System** -- the stage/state spine (model, pipeline, 7 stage docs). |
+| `docs/roadmap/` | The product roadmap (identity, six layers, the feature sequence 005-016). |
 
 ## Architecture
 
@@ -35,6 +37,20 @@ DigitalOcean PostgreSQL
    `powerbi/`. See `powerbi/README.md`.
 3. **For SQL:** add schema/marts/migrations under `warehouse/`. See
    `warehouse/README.md`.
+
+## Product direction (Tower BI Readiness System)
+
+The product is the **Tower BI Agent Kit** (agent-first); its operating spine is the
+**Tower BI Readiness System** -- seven readiness stages (Source -> Mapping -> Silver
+-> Gold -> Semantic Model -> Dashboard -> Publish), each tracked with explicit
+`status + evidence + blockers` (never a fake confidence score). The agent reads
+readiness state to decide the one next allowed action; `retail check` /
+`retail validate` are gates it calls, not the product.
+
+- Roadmap + feature sequence (005-016): [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+- The spine: [`docs/readiness/readiness-model.md`](docs/readiness/readiness-model.md)
+- How it sits on the kit: [`docs/architecture/readiness-pipeline.md`](docs/architecture/readiness-pipeline.md)
+- Agent operating rules: [`AGENTS.md`](AGENTS.md)
 
 ## Conventions
 

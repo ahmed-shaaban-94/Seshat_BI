@@ -82,10 +82,20 @@ These are deferred **by design** (constitution v1.1.0; research.md Q-1..Q-4). Th
 here so the boundary is explicit, and each is a candidate next feature spec:
 
 - **(DONE in feature 002) Resolve the D-namespace collision** -- ADR defaults renamed `D1-D16` -> `RC1-RC16`; checker keeps `D1-D8`. Unblocks wiring any ADR default into `retail check`.
-- **(future) Decide per-table mapping-artifact location** (`mappings/<table>/` vs alongside migration vs `docs/`).
-- **(future) Layer-D agent orchestration** -- the runtime that drives the playbook and self-heals against the gate.
-- **(future) `retail validate` live-surface spec** -- implement the live-validator categories (needs a live DB harness).
-- **(future) Next worked example** -- run a new retail table end to end through the kit (exercises every template).
+- **(DONE -- ADR 0003) Per-table mapping-artifact location** -- resolved to `mappings/<table>/`.
+- **(DONE -- spec 005) Layer-D agent orchestration** -- the `retail-orchestrate` conductor (agent-as-runtime) drives the verbs and self-heals against the gate.
+- **(DONE -- feature 004 + spec 006) `retail validate` live surface** -- the four checks shipped; the builder authors silver/gold; the live run ran read-only against the c086 warehouse.
+- **(DONE -- spec 006) Next worked example plumbing** -- `mappings/c086/` is the first filled mapping instance; the c086 replay proved the builder.
+
+## Post-001 roadmap (Feature 005+) -- planning pointer
+
+The product direction now organizes future work around the **Tower BI Readiness
+System** (the operating spine). The full feature sequence (005-016, each mapped to
+a readiness stage) lives in **`docs/roadmap/roadmap.md`**; the stage model is in
+`docs/readiness/`. **Feature 005 (Retail Readiness Model)** is the next executable
+slice -- this roadmap-alignment update authors its docs/templates; it does NOT
+claim 005 is implemented as runtime code. Dashboard (F011) and pbi-cli/PBIP (F016)
+work is explicitly later and gated.
 
 ---
 
