@@ -134,8 +134,12 @@ here (reversible) and recorded in the decision record:
 
 ### Phase 1 -- design (the skill + checklist shape)
 
-- **SKILL.md** frontmatter (name + a precise `description` that triggers on
-  "onboard a new table" / "walk a table from source to map"), then: scope boundary
+- **SKILL.md** frontmatter (name + a precise `description` that triggers on the
+  end-to-end STAGE-TRANSITION WALK + readiness-status bookkeeping -- e.g. "walk a new
+  table from Source Ready through Mapping Ready, seeding its readiness-status" -- and
+  NOT on bare "map this table" / "profile this table", which remain `source-mapping`'s
+  triggers. The wizard SEQUENCES and delegates to `source-mapping`; their descriptions
+  must not collide at routing time.), then: scope boundary
   (read first) -> run-state-from-disk rule -> Stage 1 (profile, PROPOSE semantics)
   -> Stage 2 (delegate to `source-mapping`) -> readiness-status bookkeeping -> the
   four human-seam HARD-STOP table -> the Mapping-Ready terminal + next-action ->

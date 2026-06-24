@@ -201,8 +201,8 @@ and refuses to author any silver.
 - **FR-001**: Add `.claude/skills/<wizard-skill-name>/SKILL.md` (ASCII, UTF-8 no
   BOM, valid frontmatter) describing the agent-first onboarding workflow. No new
   Python, no `.sql`, no CLI subcommand, no codegen.
-- **FR-002**: Add a committed onboarding CHECKLIST (under `docs/readiness/` or
-  `templates/`) enumerating the Source-Ready -> Mapping-Ready steps and their
+- **FR-002**: Add a committed onboarding CHECKLIST (`docs/readiness/onboarding-checklist.md`,
+  beside the stage docs it mirrors) enumerating the Source-Ready -> Mapping-Ready steps and their
   definition-of-done, so the journey is reviewable as text first (hard rule #8).
 - **FR-003**: The wizard MUST compute current state from disk first (presence of
   `mappings/<table>/`, the artifacts, and `Gate status`) and resume rather than
@@ -255,7 +255,7 @@ and refuses to author any silver.
 
 - **Onboarding wizard skill** (`.claude/skills/<wizard-skill-name>/SKILL.md`): the
   agent-first Source -> Mapping workflow; the agent is the runtime.
-- **Onboarding checklist** (committed under `docs/readiness/` or `templates/`): the
+- **Onboarding checklist** (committed at `docs/readiness/onboarding-checklist.md`): the
   text-first, reviewable definition-of-done for each stage transition.
 - **Readiness-status record** (one per table, from `templates/readiness-status.yaml`):
   the seeded state the wizard writes -- `source_ready` + `mapping_ready` statuses,
