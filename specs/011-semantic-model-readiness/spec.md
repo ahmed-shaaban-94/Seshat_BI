@@ -169,8 +169,10 @@ collapse the gate.
   BOM, valid frontmatter). No new Python, no new `retail check` rule, no CLI
   subcommand.
 - **FR-002**: The skill MUST refuse to evaluate unless the prior stage (Gold Ready)
-  is `pass` -- it reads the readiness status (`templates/readiness-status.yaml`
-  instance) and emits `not_started` + STOPS otherwise (hard gate; Principle VIII).
+  is `pass` -- it reads the readiness status at the canonical
+  `mappings/<table>/readiness-status.yaml` (ADR 0004; shaped to
+  `templates/readiness-status.yaml`) and emits `not_started` + STOPS otherwise
+  (hard gate; Principle VIII).
 - **FR-003**: The skill MUST run `retail check` over the committed PBIP model and
   treat any D1-D8 (TMDL/DAX), C1 (connection params), R1 (relative reference), or G6
   (no real host) finding as a `blocking_reason`. It cites the `retail check` exit
