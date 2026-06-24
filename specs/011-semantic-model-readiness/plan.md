@@ -94,10 +94,10 @@ one model at this volume.
 
 ```text
 specs/011-semantic-model-readiness/
-├── spec.md              # Feature specification (done)
-├── plan.md              # This file
-├── tasks.md            # Task breakdown (/speckit-tasks output)
-└── analysis.md          # Cross-artifact analysis findings (/speckit-analyze output)
+  spec.md         # Feature specification (done)
+  plan.md         # This file
+  tasks.md        # Task breakdown (/speckit-tasks output)
+  analysis.md     # Cross-artifact analysis findings (/speckit-analyze output)
 ```
 
 No `research.md`, `data-model.md`, `contracts/`, or `quickstart.md` are produced:
@@ -108,23 +108,19 @@ procedure + the stage doc it implements.
 ### Source Code (repository root)
 
 ```text
-.claude/skills/
-└── retail-semantic-check/
-    └── SKILL.md                      # NEW: the read-only Stage-5 checking verb
+.claude/skills/retail-semantic-check/SKILL.md   # NEW: read-only Stage-5 checking verb
 
-.claude/skills/retail-orchestrate/
-└── SKILL.md                          # EDIT: reference retail-semantic-check at the
-                                      #       Phase-7 model [SEAM] row
+.claude/skills/retail-orchestrate/SKILL.md      # EDIT: reference retail-semantic-check
+                                                #       at the Phase-7 model [SEAM] row
 
-docs/readiness/
-└── semantic-model-ready.md           # READ-ONLY authority (already exists); the
-                                      #   skill cross-links it, does not edit it
+docs/readiness/semantic-model-ready.md          # READ-ONLY authority (already exists);
+                                                #   skill cross-links it, does not edit it
 
 # Reused unchanged (called, not modified):
-src/retail/rules/dax.py               # D1-D8 (measures, relationships, date marker)
-src/retail/rules/pbir.py              # C1 (connection params), R1 (relative ref)
-src/retail/rules/g6.py                # G6 (no real host in PBIP parameters)
-powerbi/Retailgold.SemanticModel/     # the model under check (read-only fixture)
+src/retail/rules/dax.py                # D1-D8 (measures, relationships, date marker)
+src/retail/rules/pbir.py               # C1 (connection params), R1 (relative ref)
+src/retail/rules/g6.py                 # G6 (no real host in PBIP parameters)
+powerbi/Retailgold.SemanticModel/      # the model under check (read-only fixture)
 templates/readiness-status.yaml       # the verdict shape the skill emits
 ```
 
