@@ -206,7 +206,8 @@ owner (analyst / governance / data-owner).
 
 ### User Story 3 - Drift outcome wires cleanly into the readiness spine (Priority: P2)
 
-A filled drift report updates the table's `readiness-status.yaml`: it sets the
+A filled drift report updates the table's `readiness-status.yaml` (canonical path
+`mappings/<table>/readiness-status.yaml`, ADR 0004): it sets the
 `source_ready` stage status, lists the drift report under `evidence[]`, populates
 `blocking_reasons[]` from the fatal classes, and -- if any stage was downstream of
 the drifted source -- records that those stages must be RE-checked (a drift at
