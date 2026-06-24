@@ -56,7 +56,7 @@ property is "CI-able with no live DB/Desktop/network" -- a static checker, not a
 CLI installer, no new warehouse tables, no DB writes, no moved docs (constitution Scope
 Boundaries). Templates MUST stay generic (no C086 specifics baked in -- Principle VII).
 
-**Scale/Scope**: 8 foundation files (1,838 lines), 5 reusable templates, 1 worked example
+**Scale/Scope**: 8 foundation files (1,861 lines), 5 reusable templates, 1 worked example
 cited (C086, 246,916 silver rows). Generalizes to every future retail source table.
 
 ## Constitution Check

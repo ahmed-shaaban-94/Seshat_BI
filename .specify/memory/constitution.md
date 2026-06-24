@@ -13,9 +13,11 @@ Amendment rationale (1.1.0, MINOR -- scope expansion, no compliance-posture
                 init (verified byte-identical to commit 7a691e0). No principle
                 is added, removed, or redefined. Dependent artifacts updated:
                 Scope Boundaries clause (this file), spec Assumptions
-                (specs/001-retail-bi-agent-kit/spec.md). CLAUDE.md received an
-                additive SPECKIT pointer block from the init (not a constitution
-                edit).
+                (specs/001-retail-bi-agent-kit/spec.md), and the architecture doc
+                Sec 8 (docs/architecture/tower-bi-agent-kit.md -- aligned in the
+                same /speckit-analyze remediation pass that surfaced the omission).
+                CLAUDE.md received an additive SPECKIT pointer block from the init
+                (not a constitution edit).
 
 Version change: none -> 1.0.0 (initial ratification)
 Bump rationale: Initial ratification of the Tower BI Agent Kit Constitution.
@@ -370,9 +372,13 @@ into compliance before merge.
   existing principle that does not change prior compliance posture.
 - PATCH: clarifications, wording fixes, non-semantic edits.
 
-**Compliance review**: a lightweight review of constitution adherence SHOULD
-occur at the close of each slice (the next being the resolution of the
-D-namespace collision and the `retail validate` live-surface spec). Findings
+**Compliance review**: a review of constitution adherence SHOULD occur at the
+close of each slice -- concretely, the shape this slice used: a multi-criterion
+adversarial review (Spec-Kit format, terminology, leakage, scope, contradictions,
+mapping-mandatory, stop-and-ask) plus deterministic checks (ASCII/UTF-8-no-BOM,
+YAML validity, cross-link existence, principle-numbering consistency), and a
+`/speckit-analyze` cross-artifact pass. The next slice being the resolution of the
+D-namespace collision and the `retail validate` live-surface spec. Findings
 feed back into amendments.
 
 **See also**: `docs/architecture/tower-bi-agent-kit.md` (the engineering

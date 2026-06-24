@@ -67,7 +67,7 @@ logic), citing C086 as a filled instance.
 - [X] T017 [P] Generate `research.md` (design decisions D-001..D-006; the four deferred items recorded as deferred-by-design, NOT resolved)
 - [X] T018 [P] Generate `data-model.md` (the five mapping-gate artifacts as a document model) and `quickstart.md` (how a new table flows through the kit)
 - [X] T019 Run the adversarial review (7 gates) + deterministic checks (ASCII, YAML, cross-links, principle renumber) over all foundation files -- 9 findings applied/triaged
-- [ ] T020 Commit the plan artifacts (plan/research/data-model/quickstart/tasks + CLAUDE.md plan pointer) on `main` and push *(awaiting authorization, like prior commits)*
+- [X] T020 Commit the plan artifacts (plan/research/data-model/quickstart/tasks) on `main` and push -- done in commit `4bd7081`. *(The "CLAUDE.md plan pointer" here is the `<!-- SPECKIT START -->` marker block that `specify init` created and `/speckit-plan` updates to reference the plan path -- a standard Spec-Kit mechanism, in scope as part of running the chain. It is NOT the constitution-at-a-glance pointer the constitution Sync Impact Report marks out-of-scope; those are different blocks.)*
 
 ## Phase 7: Polish & cross-cutting
 

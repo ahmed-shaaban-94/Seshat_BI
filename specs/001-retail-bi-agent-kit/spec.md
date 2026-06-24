@@ -91,9 +91,8 @@ points and feeds the review gate. No build is run.
    gate must resolve, including the foundation-level open decisions carried from the
    architecture doc.
 3. **Given** the `unresolved-questions.md` template, **When** a reviewer reads it,
-   **Then** it enumerates the agent's stop-and-ask decision classes (business-rollup
-   mappings, PII publish-safety, grain ambiguity, sentinel-vs-null, and any
-   build-blocking question), each with a "who must answer" authority column
+   **Then** it enumerates the agent's stop-and-ask decision classes (the set defined
+   canonically in constitution Principle V), each with a "who must answer" authority column
    (analyst / governance / data-owner), and marks the build blocked until each is
    answered -- so the agent cannot decide these alone.
 
@@ -210,10 +209,10 @@ instance. No validator and no DB are run.
   templates MUST cross-link to each other and to the existing authoritative docs (medallion
   playbook, cleaning-defaults ADR, governance design spec, worked example) so a reviewer can
   read all eight foundation files as one coherent set.
-- **FR-011**: The five templates MUST map 1:1 to the playbook phases they formalize:
-  `source-profile.md` = Phase 1; `source-map.yaml` = Phase 2.0-2.5 / 2.7-2.8;
-  `assumptions.md` = Phase 2 + Phase 3; `unresolved-questions.md` = Phase 2 decision points +
-  Phase 4 review gate; `reconciliation-report.md` = Phase 5/6 validation gates.
+- **FR-011**: The five templates MUST map 1:1 to the playbook phases they formalize, per
+  the canonical mapping in **constitution Principle IV** (the single normative source for
+  the template-to-phase assignment). This requirement references that mapping rather than
+  re-enumerating it, so a phase reassignment is a one-file edit in Principle IV.
 - **FR-012**: The foundation MUST flag, and MUST NOT resolve or rename, the `D`-namespace
   collision: the cleaning-defaults ADR numbers cleaning/modeling defaults `D1-D16`, while
   the governance checker numbers TMDL/DAX rules `D1-D8`. [NEEDS CLARIFICATION: the two
@@ -230,13 +229,13 @@ instance. No validator and no DB are run.
   open. [NEEDS CLARIFICATION: the deferred live-validator categories need their own spec
   before any implementation; not specified in this slice.]
 - **FR-016**: The foundation MUST encode an agent **stop-and-ask duty**: the agent MUST NOT
-  decide alone -- and MUST record an open question in `unresolved-questions.md` -- for
-  business-rollup / segment mappings (analyst-supplied, never invented), PII publish-safety
-  (governance sign-off), grain ambiguity, sentinel-vs-null choices, and any build-blocking
-  unresolved question. No `silver.*` SQL is written while a build-blocking question is open.
-  The `unresolved-questions.md` template MUST enumerate these decision classes and mark the
-  build blocked until each is answered by its named owner (analyst / governance / data-owner).
-  This is a settled rule (constitution Principle V), not an open item.
+  decide alone -- and MUST record an open question in `unresolved-questions.md` -- for the
+  judgment-call decision classes enumerated in **constitution Principle V** (the single
+  normative source for that list). No `silver.*` SQL is written while a build-blocking
+  question is open. The `unresolved-questions.md` template MUST enumerate those classes and
+  mark the build blocked until each is answered by its named owner (analyst / governance /
+  data-owner). This requirement references Principle V rather than re-listing the classes, so
+  adding/removing a class is a one-file edit. This is a settled rule, not an open item.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -277,9 +276,11 @@ templates (FR-002) and to the playbook phases (FR-011).
 - **SC-001**: Every new table brought into the warehouse has a committed source map that is
   reviewed and approved before its first `silver.*` migration is written (the mapping-gate
   rule is stated and ratified in the foundation; measured per-table once the kit is in use).
-- **SC-002**: Zero domain-specific tokens appear in `templates/` -- a text scan of the five
-  templates finds no pharmacy (or other domain) codes, segment names, or PII field names;
-  all such specifics appear only in cited worked examples.
+- **SC-002**: No domain specifics are baked into `templates/` **as schema** -- a review of
+  the five templates finds no domain-specific codes, segment-value names, or PII field names
+  used as the template's own structure. Worked-example citations by name and explicit
+  do-not-copy warnings are expected (Principle VII) and are excluded from the scan; all real
+  domain specifics appear only in cited worked examples.
 - **SC-003**: The eight foundation files (architecture doc, constitution, this spec, and the
   five templates) cross-link as a set: each links to the others and to the existing
   authoritative docs by file path, and a reviewer can traverse the set without a missing
@@ -288,8 +289,8 @@ templates (FR-002) and to the playbook phases (FR-011).
   cleaning default, or settled design decision restated, renamed, or forked -- every such
   item is referenced by path to its authoritative source.
 - **SC-005**: The five templates map 1:1 onto the five mapping-gate artifacts and onto the
-  playbook phases they formalize (Phase 1; Phase 2.0-2.5/2.7-2.8; Phase 2+3; Phase 2 decision
-  points + Phase 4; Phase 5/6), with no orphan template and no unmapped artifact.
+  playbook phases they formalize **per the canonical mapping in constitution Principle IV**,
+  with no orphan template and no unmapped artifact.
 - **SC-006**: Exactly the four named open items carry `[NEEDS CLARIFICATION]` -- the
   `D`-namespace collision, the per-table mapping-artifact location, the agent orchestration
   shape, and the `retail validate` live-surface spec -- and no settled North-Star constraint

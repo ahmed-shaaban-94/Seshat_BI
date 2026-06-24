@@ -176,8 +176,12 @@ This Phase 0/1 foundation deliberately stops at architecture + spec + templates:
 
 - **No validator scripts** -- categories documented only (Sec 7).
 - **No `pbi-cli` integration** -- placed as the later adapter (Sec 4), not wired.
-- **No CLI installer**, no Spec-Kit extension/preset/bundle -- the `.specify/memory/`
-  constitution is created; the rest of a Spec-Kit init is **not** scaffolded.
+- **No CLI installer**, no Spec-Kit preset or custom bundle.
+  *(Aligned with constitution v1.1.0, 2026-06-24)* Spec-Kit IS now initialized
+  (`specify init --here --integration claude --script ps`): `.specify/templates/`,
+  `.specify/scripts/powershell/`, and the `speckit-*` skills back the spec -> plan ->
+  tasks chain. Presets, custom bundles, and the bring-your-own extensions surface
+  beyond the default init remain out of scope.
 - **No new warehouse tables**, **no DB writes**, **no moving existing docs.**
 - **No implementation beyond architecture/spec/templates.**
 

@@ -22,9 +22,9 @@
 ### D-002: Gold-only, Postgres-first medallion (no Parquet-first)
 - **Decision**: `bronze -> silver -> gold`; Power BI reads `gold` only; no DuckDB/Parquet
   -first ADR or gold-as-Parquet materialization in the MVP.
-- **Rationale**: a single downstream read surface keeps the BI contract narrow; Power BI
-  Import mode already caches columnar at refresh (VertiPaq), so a Parquet copy of `gold`
-  would be a redundant second source of truth.
+- **Rationale**: a single downstream read surface keeps the BI contract narrow; the
+  VertiPaq / redundant-second-source-of-truth rationale for rejecting a Parquet copy of
+  `gold` lives canonically in **constitution Principle III** (cited, not reproduced here).
 - **Alternatives rejected**: Power BI reading `silver`/`bronze` (couples reports to
   ungoverned state); gold-as-Parquet (two columnar copies of one truth).
 - **Source**: governance spec decision #3; constitution Principle III; the Parquet question
