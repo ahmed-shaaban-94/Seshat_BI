@@ -32,11 +32,11 @@ def test_profile_discovers_columns_and_counts_rows() -> None:
 
     runner = FakeRunner(
         [
-            [("net_amt",), ("prod_cat",)],   # information_schema.columns -> 2 cols
-            [(100,)],                         # row count
-            [(0, 50)],                        # net_amt: 0 missing, 50 distinct
-            [(8, 12)],                        # prod_cat: 8 missing, 12 distinct
-            [(100, 100, 0)],                  # pk proof: total, distinct, null
+            [("net_amt",), ("prod_cat",)],  # information_schema.columns -> 2 cols
+            [(100,)],  # row count
+            [(0, 50)],  # net_amt: 0 missing, 50 distinct
+            [(8, 12)],  # prod_cat: 8 missing, 12 distinct
+            [(100, 100, 0)],  # pk proof: total, distinct, null
         ]
     )
     result = profile(runner, "bronze.demo_orders", ("order_no", "line_no"))
@@ -53,10 +53,10 @@ def test_missingness_uses_empty_or_null_not_is_null_alone() -> None:
     # COUNT those '' rows; IS NULL alone would (wrongly) report 0 missing.
     runner = FakeRunner(
         [
-            [("city",)],          # one column
-            [(200,)],             # 200 rows
-            [(30, 5)],            # city: 30 ''OR NULL missing, 5 distinct
-            [(200, 200, 0)],      # pk proof
+            [("city",)],  # one column
+            [(200,)],  # 200 rows
+            [(30, 5)],  # city: 30 ''OR NULL missing, 5 distinct
+            [(200, 200, 0)],  # pk proof
         ]
     )
     result = profile(runner, "bronze.demo", ("id",))
@@ -71,9 +71,7 @@ def test_missingness_uses_empty_or_null_not_is_null_alone() -> None:
 def test_pk_proof_unique_when_distinct_equals_total_and_no_nulls() -> None:
     from retail.profile import profile
 
-    runner = FakeRunner(
-        [[("id",)], [(100,)], [(0, 100)], [(100, 100, 0)]]
-    )
+    runner = FakeRunner([[("id",)], [(100,)], [(0, 100)], [(100, 100, 0)]])
     pk = profile(runner, "bronze.demo", ("id",)).pk
     assert pk.is_unique is True
 
