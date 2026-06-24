@@ -300,9 +300,9 @@ dictionary that lists a column not in the deployed table, or omits one, FAILS).
 - **Publish approval is recorded in `readiness-status.yaml` `approvals[]`.** This
   reuses the existing approval mechanism (publish-ready.md "Required owner");
   no new approval store is introduced. (Auto-decision.)
-- **The reconciliation evidence is the existing `reconciliation-report.md`** from
-  stage 4 / feature 004; the pack references the FILLED instance, it does not
-  re-run validation. (Auto-decision.)
+- **The reconciliation evidence is the FILLED `mappings/<table>/reconciliation-report.md`
+  instance** from stage 4 / feature 004 (NOT the blank `templates/` template); the pack
+  references that filled instance, it does not re-run validation. (Auto-decision.)
 - **Out of scope (this slice):** publishing/deployment, pbi-cli/PBIP authoring,
   Fabric, a new validator or `retail check` rule, automated approval, and any
   scoring/confidence number (rules #6, #8, #9; constitution Scope Boundaries).
