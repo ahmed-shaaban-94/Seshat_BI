@@ -46,10 +46,13 @@ C086 is the first filled instance of the other templates (Principle VII; hard ru
 - **Roadmap entry:** F007 "Business Meaning Registry + Arabic Retail Dictionary",
   Layer 2 (Source Intelligence), advances **Source Ready** (`docs/roadmap/roadmap.md`,
   the "Now" table). (Numbering note: the roadmap lists this as F007; this spec is
-  filed in `specs/008-business-meaning-registry/` because feature directory numbers are
-  allocated per-branch and the F007 directory slot was taken by an earlier parallel
-  slice. The roadmap F-number and the spec directory number intentionally differ here;
-  the roadmap row, not the directory number, is authoritative for sequence.)
+  filed in `specs/008-business-meaning-registry/` because this batch was drafted from
+  the next free on-disk slot (`specs/` already held 001-006), giving a consistent
+  **spec-dir = roadmap-F + 1** offset across the whole batch (007=F006 ... 016=F015).
+  There is no `specs/007-*` on `main` -- the offset is the cause, not a "taken slot".
+  The roadmap F-number and the spec directory number intentionally differ here; the
+  roadmap row, not the directory number, is authoritative for sequence. See the
+  numbering-offset note in `docs/roadmap/roadmap.md`.)
 - **Readiness stage advanced:** Source Ready (stage 1 of 7). This feature does NOT
   add a new stage, a new gate, or a new principle. It gives the EXISTING Source Ready
   stage a reusable artifact shape for the semantic-proposal half of its work
