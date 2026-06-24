@@ -34,5 +34,6 @@ unless explicitly requested. Add the seam, not the implementation.
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+shell commands, and other important information, read the current plan:
+`specs/001-retail-bi-agent-kit/plan.md`
 <!-- SPECKIT END -->
