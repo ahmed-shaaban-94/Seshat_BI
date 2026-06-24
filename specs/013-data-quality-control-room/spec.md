@@ -11,7 +11,8 @@
 ## Why this feature exists
 
 The kit already records data-quality findings and process blockers PER TABLE -- in
-each table's `data-issues.md`, `blocking-reasons.md`, and `readiness-status.yaml`.
+each table's `data-issues.md`, `blocking-reasons.md`, and `readiness-status.yaml`
+(the last at the canonical `mappings/<table>/readiness-status.yaml`, ADR 0004).
 What it lacks is the one-screen answer to "across EVERY table, what is broken, how
 badly, and what is the next blocker to clear?" Today a human would open N per-table
 files and reconcile them by hand. This feature is that consolidated view: a
