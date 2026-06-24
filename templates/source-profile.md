@@ -56,7 +56,7 @@ from the profiling pass.
 > A faithful landing loader that writes `'' if value is None` makes
 > `COUNT(*) WHERE col IS NULL` return `0` for every column -- a false "no missing data."
 > The `Missingness` cell must report the `'' OR NULL` count (and `%`). This is ADR 0002
-> **D5** and playbook Appendix A trap #1.
+> **RC5** and playbook Appendix A trap #1.
 
 | Column | Type as landed | Missingness (`'' OR NULL`, count / %) | Distinct cardinality | Candidate key? | Notes |
 |--------|----------------|----------------------------------------|----------------------|----------------|-------|
@@ -70,11 +70,11 @@ from the profiling pass.
   `source-map.yaml`, not here.
 - *Missingness* -- always the `'' OR NULL` measure (see trap above), with both count and `%`.
 - *Distinct cardinality* -- `COUNT(DISTINCT trim(col))`; flags single-value columns
-  (drop candidates, ADR 0002 **D3**) and code/label fan-out.
+  (drop candidates, ADR 0002 **RC3**) and code/label fan-out.
 - *Candidate key?* -- whether this column (alone or in a composite) is a candidate for the
   grain PK; the verification numbers go in the **Candidate grain & PK** section below.
 - *Notes* -- redundancy / derivability vs another column, leading zeros (forces `TEXT`,
-  **D7**), parse failures, anything a keep/drop/rename/type decision will hinge on.
+  **RC7**), parse failures, anything a keep/drop/rename/type decision will hinge on.
 
 ---
 
@@ -86,17 +86,17 @@ row-level rate, do not assume.
 
 - **Code <-> label pairs.** `<column-code>` <-> `<column-label>`: is it 1:1 on the data?
   Measured rate: `<N>` / `<N>` rows consistent (`<%>`). *(If 1:1, the code half is a drop
-  candidate per D3 unless it is a stable join key.)*
+  candidate per RC3 unless it is a stable join key.)*
 - **Dimension fan-out (`id -> name` 1:1?).** `<id-column>` -> `<name-column>`: one name
   per id? Violations: `<N>` ids map to `>1` name. *(A fan-out > 1:1 changes how the
   dimension is built.)*
 - **Hierarchy nesting.** `<parent>` / `<child>` levels: clean tree, or does a child
   appear under multiple parents? Multi-parent rows measured: `<N>`. *(Not a clean tree
-  -> flat denormalized levels later, ADR 0002 D12 -- a Phase 2.8 decision, recorded in
+  -> flat denormalized levels later, ADR 0002 RC12 -- a Phase 2.8 decision, recorded in
   `source-map.yaml`.)*
 - **Returns population & how it is identified.** Identified from the **authoritative
   column** `<column>` (a billing / transaction-type code), **not** the sign of a measure.
-  Returns rows: `<N>` / `<N>` (`<%>`). *(Playbook 2.6 / ADR 0002 D8: the measure sign
+  Returns rows: `<N>` / `<N>` (`<%>`). *(Playbook 2.6 / ADR 0002 RC8: the measure sign
   alone misses zero-value and edge-case returns.)*
 - **Encoding corruption.** Display columns with garbage / mixed-encoding characters:
   `<column(s)>`, affected rows `<N>`. *(Driver for the encoding-fix step in the silver
@@ -111,14 +111,14 @@ row-level rate, do not assume.
 - **Money-relationship checks (derive, never assume).** If the source carries multiple
   money columns (e.g. a gross / net / tax / discount set), compute the row-level identity
   rate rather than trusting the names. `<column> == <column> + <column>` holds on `<N>` /
-  `<N>` rows (`<%>`). *(Keep independent measures per ADR 0002 D9; do not collapse them on
+  `<N>` rows (`<%>`). *(Keep independent measures per ADR 0002 RC9; do not collapse them on
   a name-based assumption.)*
 
 ---
 
 ## Candidate grain & candidate PK
 
-State the grain **first** (playbook Phase 2.0 / ADR 0002 **D1**: model at the lowest grain
+State the grain **first** (playbook Phase 2.0 / ADR 0002 **RC1**: model at the lowest grain
 the source provides -- you can roll up later, never down) and verify the candidate PK is
 unique **on the data**.
 
@@ -131,8 +131,8 @@ unique **on the data**.
   - `COUNT(DISTINCT pk)  = <N>`   *(must equal `COUNT(*)` for the PK to hold)*
   - `NULLs in PK columns = <N>`   *(must be `0`)*
 
-> **Forward seam to the silver build (ADR 0002 D2).** What is recorded here is the
-> candidate PK on the **landed** data. D2 requires the PK to be **re-verified on the
+> **Forward seam to the silver build (ADR 0002 RC2).** What is recorded here is the
+> candidate PK on the **landed** data. RC2 requires the PK to be **re-verified on the
 > TRANSFORMED output** during the silver build (Phase 5) -- `TRIM`/cast can collapse two
 > raw-distinct keys or null a key. This profile establishes the candidate; the silver
 > migration must re-prove it. Do not treat landed uniqueness as final.
@@ -178,11 +178,11 @@ attribute / degenerate dim). This profile is its evidence base.
 - **Method:** `docs/medallion-playbook.md` -- Phase 1 (Connect & profile) and Appendix A
   (the reusable trap-checklist: missingness `'' OR NULL`, derive from data not names,
   candidate keys verified on data, cross-file drift, returns from the authoritative column).
-- **Defaults:** `docs/decisions/0002-retail-cleaning-defaults.md` -- **D1** (lowest grain),
-  **D2** (verify PK on transformed data), **D5** (`'' -> NULL`; missingness as `'' OR NULL`).
-  *(Namespace note: these are ADR 0002 cleaning defaults; distinct from the governance
-  checker's own `D1-D8` TMDL/DAX rules. Same `D` prefix, two namespaces -- flagged, not
-  resolved here.)*
+- **Defaults:** `docs/decisions/0002-retail-cleaning-defaults.md` -- **RC1** (lowest grain),
+  **RC2** (verify PK on transformed data), **RC5** (`'' -> NULL`; missingness as `'' OR NULL`).
+  *(Namespace note: these are ADR 0002 cleaning defaults `RC*`; distinct from the
+  governance checker's own `D1-D8` TMDL/DAX rules. Distinct prefixes, no collision --
+  disambiguated in feature 002.)*
 - **Architecture:** `docs/architecture/tower-bi-agent-kit.md` Sec 5 -- the source-mapping
   gate and how the five templates map to playbook phases.
 - **Worked example (a filled instance):** `docs/worked-examples/c086-pharmacy.md` --

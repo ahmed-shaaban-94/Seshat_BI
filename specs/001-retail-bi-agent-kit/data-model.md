@@ -28,12 +28,12 @@
   rename_to, silver_type, missing_policy, pii, gold_placement); `gold_star` (fact +
   measures; dimensions with `_sk` + `-1` unknown member; degenerate dims; `generate_series`
   date dim); `derived_columns` (e.g. `is_return` from the authoritative column).
-- **Formalizes**: playbook Phase 2.0-2.5 + 2.7-2.8; ADR D7/D14.
+- **Formalizes**: playbook Phase 2.0-2.5 + 2.7-2.8; ADR RC7/RC14.
 - **Validation**: must be valid YAML; `gold_placement` dim references must resolve to a
   `gold_star.dimensions` entry; `meta.grain` == `fact.grain`.
 
 ### 3. Assumptions record  (`templates/assumptions.md`)
-- **Represents**: which ADR 0002 D1-D16 defaults were adopted as-is vs deviated from.
+- **Represents**: which ADR 0002 RC1-RC16 defaults were adopted as-is vs deviated from.
 - **Key fields**: per-default adopted flag; per-deviation (ADR id, alternative ruling,
   **triggering data fact**, where recorded). Integrity rule: a `deviated` row MUST have a
   triggering data fact (a deviation without one is a defect).
@@ -54,7 +54,7 @@
   (contiguous, spans every real date); orphan-FK count (0; rows on each `-1` member as a
   DQ signal); cross-layer measure reconciliation (source->silver->gold, penny-exact, every
   measure); per-category + overall verdict.
-- **Formalizes**: playbook Phase 5/6; ADR D2/D15/D16. Belongs to the deferred
+- **Formalizes**: playbook Phase 5/6; ADR RC2/RC15/RC16. Belongs to the deferred
   `retail validate` surface (Principle VIII).
 - **Filled by**: a read-only live run (C086 = 246,916 rows, penny-exact across 5 measures
   -- cited instance).

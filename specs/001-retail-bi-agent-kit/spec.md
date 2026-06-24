@@ -150,7 +150,7 @@ instance. No validator and no DB are run.
   placeholders only and live in `templates/`; filled instances (e.g. C086) live in
   `docs/worked-examples/` and are cited, never merged back into the templates.
 - What happens to the two conflicting `D` numbering schemes? The cleaning-defaults ADR
-  numbers defaults `D1-D16`; the governance checker numbers TMDL/DAX rules `D1-D8`. The
+  numbers defaults `RC1-RC16`; the governance checker numbers TMDL/DAX rules `D1-D8`. The
   collision is flagged wherever it is relevant and is left unresolved by design in this
   slice (see clarifications below).
 
@@ -213,11 +213,13 @@ instance. No validator and no DB are run.
   the canonical mapping in **constitution Principle IV** (the single normative source for
   the template-to-phase assignment). This requirement references that mapping rather than
   re-enumerating it, so a phase reassignment is a one-file edit in Principle IV.
-- **FR-012**: The foundation MUST flag, and MUST NOT resolve or rename, the `D`-namespace
-  collision: the cleaning-defaults ADR numbers cleaning/modeling defaults `D1-D16`, while
-  the governance checker numbers TMDL/DAX rules `D1-D8`. [NEEDS CLARIFICATION: the two
-  `D` namespaces must be disambiguated before any ADR default is wired into `retail check`;
-  disambiguation is a named later slice, intentionally unresolved here.]
+- **FR-012**: The foundation MUST flag, and (in *this* slice) MUST NOT resolve or rename, the
+  `D`-namespace collision: the cleaning-defaults ADR originally numbered defaults `D1-D16`
+  (now `RC1-RC16`), while the governance checker numbers TMDL/DAX rules `D1-D8`. [NEEDS
+  CLARIFICATION: the two `D` namespaces must be disambiguated before any ADR default is wired
+  into `retail check`; this was a named later slice -- **resolved in feature 002** (ADR ->
+  `RC*`, checker keeps `D*`). The marker is retained as 001's slice record; 001 itself
+  deferred it.]
 - **FR-013**: The foundation MUST keep the **per-table location of mapping artifacts** open.
   [NEEDS CLARIFICATION: where committed mapping artifacts live per table -- a
   `mappings/<table>/` directory vs alongside the silver migration vs under `docs/` -- is not
@@ -331,7 +333,7 @@ templates (FR-002) and to the playbook phases (FR-011).
 - **Method:** `docs/medallion-playbook.md` -- the 7-phase interactive method this gate
   formalizes.
 - **Defaults:** `docs/decisions/0002-retail-cleaning-defaults.md` -- the cleaning/modeling
-  defaults (`D1-D16`) the assumptions record diffs against.
+  defaults (`RC1-RC16`) the assumptions record diffs against.
 - **Governance design:** `docs/superpowers/specs/2026-06-23-pbi-governance-layer-design.md`
   -- the A->C->D design (depend-not-fork; gold-only).
 - **Worked example:** `docs/worked-examples/c086-pharmacy.md` and

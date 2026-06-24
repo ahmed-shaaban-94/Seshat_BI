@@ -17,7 +17,7 @@
 
 This report documents the **LIVE acceptance gates** for a medallion table: the checks that
 can only be proven against a *running* database, not from committed text. They correspond
-to the playbook's **Phase 5/6 validation gates** and to ADR 0002 defaults **D2, D15, D16**
+to the playbook's **Phase 5/6 validation gates** and to ADR 0002 defaults **RC2, RC15, RC16**
 (`docs/decisions/0002-retail-cleaning-defaults.md`).
 
 > **These four categories are the DEFERRED LIVE surface.** They are the seed for a future
@@ -27,10 +27,10 @@ to the playbook's **Phase 5/6 validation gates** and to ADR 0002 defaults **D2, 
 > below. The static, CI-able governance gate is the separate, already-shipped `retail check`
 > (23 rules, `src/retail/`); it does **not** cover these -- these need the data.
 
-> **Namespace note (flagged, not resolved):** the ADR ids cited here (`D2`, `D15`, `D16`)
-> are **ADR 0002 cleaning/modeling defaults** and are unrelated to the governance checker's
-> `D1-D8` TMDL/DAX rule namespace. Same `D` prefix, two namespaces. Do not rename either;
-> disambiguation is a named open decision (architecture doc Sec 9).
+> **Namespace note (disambiguated -- feature 002):** the ADR ids cited here (`RC2`, `RC15`,
+> `RC16`) are **ADR 0002 cleaning/modeling defaults** ("retail cleaning"), distinct from the
+> governance checker's `D1-D8` TMDL/DAX rules. Distinct prefixes, no collision: a cleaning
+> default reads `RC<n>`, a checker rule reads `D<n>`.
 
 ---
 
@@ -52,11 +52,11 @@ to the playbook's **Phase 5/6 validation gates** and to ADR 0002 defaults **D2, 
 
 ---
 
-## 1. PK uniqueness (ADR D2)
+## 1. PK uniqueness (ADR RC2)
 
 **Gate:** the silver table's row count equals the count of distinct primary-key tuples, and
 there are **zero NULL PK** values. Verify on the *transformed* (silver) rows, not the raw
-source -- TRIM/cast can collapse or null keys (ADR D2; playbook Phase 5).
+source -- TRIM/cast can collapse or null keys (ADR RC2; playbook Phase 5).
 
 | Check | Expected | Observed |
 |-------|----------|----------|
@@ -70,11 +70,11 @@ source -- TRIM/cast can collapse or null keys (ADR D2; playbook Phase 5).
 
 ---
 
-## 2. Date-dim coverage (ADR D15)
+## 2. Date-dim coverage (ADR RC15)
 
 **Gate:** the gold date dimension is a **contiguous generated calendar** (built from a
 `generate_series` over the full span, never `SELECT DISTINCT date`) that spans **every** real
-date present in the fact, with **zero** real dates missing from the calendar (ADR D15;
+date present in the fact, with **zero** real dates missing from the calendar (ADR RC15;
 playbook Phase 6).
 
 | Check | Expected | Observed |
@@ -86,20 +86,20 @@ playbook Phase 6).
 
 **Result:** calendar spans every `<date_column>`, contiguous, `0` missing -> **`<PASS|FAIL>`**.
 
-> Note: the *pattern* half of D15 (generate_series vs distinct) is statically checkable from
+> Note: the *pattern* half of RC15 (generate_series vs distinct) is statically checkable from
 > the migration SQL and is a future `retail check` candidate; the *coverage* half here is the
 > live half and cannot be proven from text (worked example sections 7-8).
 
 ---
 
-## 3. Orphan FKs (ADR D16)
+## 3. Orphan FKs (ADR RC16)
 
 **Gate:** **zero hard orphan FKs** across all dimensions -- every fact FK resolves to a real
-dimension surrogate key. The gold star's `-1` unknown-member pattern (ADR D14) absorbs
+dimension surrogate key. The gold star's `-1` unknown-member pattern (ADR RC14) absorbs
 unresolved keys *without* creating an orphan, so a clean migration with FK constraints added
 after load implies 0 hard orphans. Separately, count the rows landing on each `-1` unknown
 member: those are **not** orphans, but they are a **data-quality signal** worth surfacing to
-the analyst (ADR D16; playbook Phase 6).
+the analyst (ADR RC16; playbook Phase 6).
 
 | Dimension | Hard orphan FKs (expected `0`) | Rows on `-1` unknown member (DQ signal) |
 |-----------|--------------------------------|-----------------------------------------|
@@ -116,11 +116,11 @@ the analyst (ADR D16; playbook Phase 6).
 
 ---
 
-## 4. Cross-layer measure reconciliation (ADR D16)
+## 4. Cross-layer measure reconciliation (ADR RC16)
 
 **Gate:** every measure total matches **to the penny** across layers -- source -> silver ->
 gold (-> BI). Reconcile **every** measure, not a sample; a single-cent drift is a FAIL to be
-explained, not rounded away (ADR D16; playbook Phase 5/6). Include the BI column once an
+explained, not rounded away (ADR RC16; playbook Phase 5/6). Include the BI column once an
 Import-mode model exists; until then it may be left `<n/a>`.
 
 | Measure | Source | Silver | Gold | BI | Match? |
@@ -142,15 +142,15 @@ Import-mode model exists; until then it may be left `<n/a>`.
 
 | Category | ADR | Playbook | Result |
 |----------|-----|----------|--------|
-| 1. PK uniqueness | D2 | Phase 5 | `<PASS|FAIL>` |
-| 2. Date-dim coverage | D15 | Phase 6 | `<PASS|FAIL>` |
-| 3. Orphan FKs | D16 | Phase 6 | `<PASS|FAIL>` |
-| 4. Cross-layer reconciliation | D16 | Phase 5/6 | `<PASS|FAIL>` |
+| 1. PK uniqueness | RC2 | Phase 5 | `<PASS|FAIL>` |
+| 2. Date-dim coverage | RC15 | Phase 6 | `<PASS|FAIL>` |
+| 3. Orphan FKs | RC16 | Phase 6 | `<PASS|FAIL>` |
+| 4. Cross-layer reconciliation | RC16 | Phase 5/6 | `<PASS|FAIL>` |
 
 **Overall:** **`<PASS|FAIL>`** -- `<one-line summary; e.g. "all four live gates pass; N DQ
 signals noted for analyst follow-up" or "FAIL on category X, see notes">`.
 
-> A FAIL here blocks "build done." Per ADR D16 the build is not declared complete until
+> A FAIL here blocks "build done." Per ADR RC16 the build is not declared complete until
 > 0 orphan FKs and penny-exact cross-layer totals are proven on the live data.
 
 ---
@@ -159,8 +159,8 @@ signals noted for analyst follow-up" or "FAIL on category X, see notes">`.
 
 - **Method:** `docs/medallion-playbook.md` -- Phase 5 (build silver) and Phase 6 (build gold);
   the validation gates these four categories enforce.
-- **Defaults:** `docs/decisions/0002-retail-cleaning-defaults.md` -- D2 (PK on transformed
-  data), D15 (contiguous generated date dim), D16 (cross-layer reconciliation + 0 orphan FKs).
+- **Defaults:** `docs/decisions/0002-retail-cleaning-defaults.md` -- RC2 (PK on transformed
+  data), RC15 (contiguous generated date dim), RC16 (cross-layer reconciliation + 0 orphan FKs).
 - **Architecture:** `docs/architecture/tower-bi-agent-kit.md` -- Sec 5 (this template is the
   Phase 5/6 artifact of the source-mapping gate), Sec 7 (LIVE validator categories / the deferred
   `retail validate` surface).

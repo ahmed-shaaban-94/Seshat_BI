@@ -20,7 +20,7 @@ product -- the **Tower BI Agent Kit** -- and add one new load-bearing rule: a so
 be profiled and mapped into committed, reviewed artifacts **before any `silver.*` SQL is
 written** (the source-mapping gate). The technical approach is documentation + generic
 templates layered over existing, committed machinery (`retail check`'s 23-rule static
-core, the 7-phase medallion playbook, ADR 0002's D1-D16 defaults, the C086 worked
+core, the 7-phase medallion playbook, ADR 0002's RC1-RC16 defaults, the C086 worked
 example) -- referenced, never re-implemented or re-decided.
 
 ## Technical Context
@@ -71,7 +71,7 @@ cited (C086, 246,916 silver rows). Generalizes to every future retail source tab
 | III | Medallion, Postgres-First, Gold-Only | Architecture + constitution state `bronze->silver->gold`, Power BI reads `gold` only, no Parquet-first ADR. No data touched this slice. | PASS |
 | IV | Source Mapping Before Silver | The gate is the feature's core (FR-001, US1); stated as mandatory in architecture Sec 5, constitution IV, spec FR-001. | PASS (this slice defines it) |
 | V | Agent Stops at Judgment Calls | Encoded in constitution V + spec FR-016 + `unresolved-questions.md` (the five decision classes, who-must-answer column). | PASS |
-| VI | Defaults Then Deviations | `assumptions.md` records D1-D16 adopted-vs-deviated with triggering data fact; references ADR 0002 by path, does not restate. | PASS |
+| VI | Defaults Then Deviations | `assumptions.md` records RC1-RC16 adopted-vs-deviated with triggering data fact; references ADR 0002 by path, does not restate. | PASS |
 | VII | C086 Is An Example, Not The Schema | Verified: zero pharmacy specifics in template bodies; C086 cited as a filled instance only (SC-002). | PASS |
 | VIII | Static-First Governance, Live Deferred | `reconciliation-report.md` documents live-validator categories only; no validator logic written (FR-005). | PASS |
 | IX | Secrets and Reproducibility | No secrets in any file; `.env` gitignored; ASCII no-BOM; <=200-char paths; numbered idempotent migrations referenced. | PASS |
@@ -104,7 +104,7 @@ machinery it references. The real tree:
 docs/
 |-- architecture/tower-bi-agent-kit.md     # the agent-first map (keystone)
 |-- medallion-playbook.md                  # the 7-phase method (referenced)
-|-- decisions/0002-retail-cleaning-defaults.md   # D1-D16 (referenced)
+|-- decisions/0002-retail-cleaning-defaults.md   # RC1-RC16 (referenced)
 `-- worked-examples/c086-pharmacy.md        # the first filled instance (cited)
 
 .specify/

@@ -78,7 +78,7 @@ NOT become a divergent source of truth).
 
 | ID | Open question | Why deferred | Owner / next step |
 |----|---------------|--------------|-------------------|
-| Q-1 | **D-namespace collision** -- ADR 0002 `D1-D16` vs checker `D1-D8` | Renaming touches multiple committed artifacts; must be disambiguated *before* wiring any ADR default into `retail check`, not as a side effect of this slice. | A dedicated rename slice (e.g. ADR `D*`->`RC*`). |
+| Q-1 | **D-namespace collision** -- ADR 0002 (then `D1-D16`) vs checker `D1-D8` | Renaming touches multiple committed artifacts; must be disambiguated *before* wiring any ADR default into `retail check`, not as a side effect of this slice. | **RESOLVED in feature 002** -- ADR renamed to `RC1-RC16`; checker keeps `D1-D8`. (Recorded here as 001's deferral; 001 itself did not do it.) |
 | Q-2 | **Per-table mapping-artifact location** -- `mappings/<table>/` vs alongside the migration vs `docs/` | No table has run through the kit yet; deciding the directory before the first real use is premature. | Decide at the first table build; templates currently note links re-point on copy. |
 | Q-3 | **Agent orchestration shape** (Layer D) -- which agent/skill drives the playbook and self-heals against the gate | Designed as a seam; the runtime is a later slice and depends on the kit being exercised. | A Layer-D orchestration slice. |
 | Q-4 | **`retail validate` live-surface spec** | The live-validator categories are documented (D-005) but their implementation needs its own spec + a live DB harness. | A `retail validate` feature spec. |

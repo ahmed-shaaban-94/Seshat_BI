@@ -47,7 +47,7 @@ agent's stop-and-ask boundaries are encoded.
 (+ triggering data fact) and `unresolved-questions.md` enumerates the stop-and-ask classes
 with a who-must-answer owner.
 
-- [X] T011 [P] [US2] Author `templates/assumptions.md` (D1-D16 adopted-vs-deviated; deviation requires a triggering data fact; references ADR 0002 by path)
+- [X] T011 [P] [US2] Author `templates/assumptions.md` (RC1-RC16 adopted-vs-deviated; deviation requires a triggering data fact; references ADR 0002 by path)
 - [X] T012 [P] [US2] Author `templates/unresolved-questions.md` (build-blocking questions; who-must-answer column; the five stop-and-ask decision classes)
 - [X] T013 [US2] Encode the agent stop-and-ask duty as a constitution principle (V. Agent Stops at Judgment Calls) and a functional requirement (spec FR-016) + US2 acceptance scenario -- *(added by the v1.0.0 adversarial review, Gate 7)*
 
@@ -81,7 +81,7 @@ logic), citing C086 as a filled instance.
 These are deferred **by design** (constitution v1.1.0; research.md Q-1..Q-4). They are named
 here so the boundary is explicit, and each is a candidate next feature spec:
 
-- **(future) Resolve the D-namespace collision** (ADR `D1-D16` vs checker `D1-D8`) -- before wiring any ADR default into `retail check`.
+- **(DONE in feature 002) Resolve the D-namespace collision** -- ADR defaults renamed `D1-D16` -> `RC1-RC16`; checker keeps `D1-D8`. Unblocks wiring any ADR default into `retail check`.
 - **(future) Decide per-table mapping-artifact location** (`mappings/<table>/` vs alongside migration vs `docs/`).
 - **(future) Layer-D agent orchestration** -- the runtime that drives the playbook and self-heals against the gate.
 - **(future) `retail validate` live-surface spec** -- implement the live-validator categories (needs a live DB harness).

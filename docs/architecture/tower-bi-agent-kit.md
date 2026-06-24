@@ -50,15 +50,16 @@ to re-describe or re-decide them:
 |-------------------|------------|-----------------|
 | **`retail check`** (`src/retail/`, 23 static rules) | The shippable governance core -- stdlib-only, CI-able, parses committed TMDL/PBIR/SQL/git text. No `pbi-cli`, no Desktop, no network. | **The enforced gate (Layer A, static surface).** Already on `main`. |
 | **`docs/medallion-playbook.md`** (7 phases) | The interactive cleaning method: connect & profile -> grain-first cleaning decisions -> ruleset -> review gate -> build silver -> build gold -> data dictionary. | **The process the agent runs.** The source-mapping gate (Sec 5) formalizes its early phases. |
-| **`docs/decisions/0002-retail-cleaning-defaults.md`** (D1-D16) | The reusable cleaning/modeling defaults: grain, PII, types, returns, star schema, contiguous date dim, reconciliation. | **The default rulings** every new table starts from. The constitution ratifies their *spirit* as principles. |
+| **`docs/decisions/0002-retail-cleaning-defaults.md`** (RC1-RC16) | The reusable cleaning/modeling defaults: grain, PII, types, returns, star schema, contiguous date dim, reconciliation. | **The default rulings** every new table starts from. The constitution ratifies their *spirit* as principles. |
 | **`docs/worked-examples/c086-pharmacy.md`** + `c086-adr0002-compliance.md` | The first validated medallion table: 16/16 ADR-default PASS after live DB validation across 246,916 silver rows. | **The first worked example** -- a *filled instance* of every template, cited, never the schema itself. |
 | **`docs/superpowers/specs/2026-06-23-pbi-governance-layer-design.md`** | The A->C->D governance design (depend-not-fork, gold-only, static-now/live-deferred). | **The design of Layer A.** This architecture sits one level up: it adds the agent framing and the source-mapping gate on top. |
 | **`pbi-cli`** (PyPI, via `pipx`, unforked) | A maximally-capable but opinion-less Power BI semantic-model tool. | **The later ENGINE adapter** for the Power BI build step -- not the core. |
 
-> **Naming note (inherited, unresolved by design):** ADR 0002 numbers its cleaning
-> defaults **D1-D16**; the governance checker numbers its TMDL/DAX rules **D1-D8**. Same
-> `D` prefix, two namespaces. This collision is **flagged, not resolved** here (resolving
-> it is a named next slice -- Sec 8). No rule is renamed in this document.
+> **Naming note (disambiguated -- feature 002):** ADR 0002 numbers its cleaning defaults
+> **RC1-RC16** ("retail cleaning"); the governance checker numbers its TMDL/DAX rules
+> **D1-D8**. Distinct prefixes, distinct namespaces -- no collision. (Historically the ADR
+> also used `D`; it was renamed to `RC*` because the checker ids live in code; see the
+> owning ADR and constitution v1.2.0.)
 
 ## 4. The stack (D -> C -> A -> ENGINE -> substrate)
 
@@ -187,9 +188,9 @@ This Phase 0/1 foundation deliberately stops at architecture + spec + templates:
 
 ## 9. Open decisions (carried to `unresolved-questions`)
 
-1. **D-namespace collision** (ADR `D1-D16` vs checker `D1-D8`) -- must be disambiguated
-   before any ADR default is wired into `retail check`. (Flagged across all docs;
-   unresolved by instruction.)
+1. **D-namespace collision** -- **RESOLVED (feature 002).** ADR cleaning defaults renamed to
+   `RC1-RC16`; the checker keeps `D1-D8`. Distinct prefixes, no collision; the prerequisite
+   for wiring any ADR default into `retail check` is now met.
 2. **Where the mapping artifacts live per table** -- a `mappings/<table>/` directory vs
    alongside the migration vs in `docs/`. (Not decided in this slice.)
 3. **Agent orchestration shape** (Layer D) -- which agent/skill drives the playbook, and

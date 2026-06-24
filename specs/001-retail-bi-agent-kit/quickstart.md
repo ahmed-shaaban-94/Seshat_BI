@@ -28,10 +28,10 @@ cardinality, candidate-key uniqueness on the data, returns population, encoding/
 Fill the source map -- **grain and PK first** (they become non-droppable), then per-column
 keep/drop/rename/type/PII/gold-placement, then the `gold_star` (1 fact at the grain;
 conformed dims with `_sk` + a `-1` unknown member; degenerate dims; a `generate_series`
-date dim). Start from the **ADR 0002 D1-D16 defaults** -- record only deviations.
+date dim). Start from the **ADR 0002 RC1-RC16 defaults** -- record only deviations.
 
 ### Step 3 -- Record decisions  (`assumptions.md` + `unresolved-questions.md`)
-- `assumptions.md`: mark each D1-D16 default adopted vs deviated; every deviation needs its
+- `assumptions.md`: mark each RC1-RC16 default adopted vs deviated; every deviation needs its
   **triggering data fact**.
 - `unresolved-questions.md`: log every build-blocking question the agent **cannot decide
   alone** -- business-rollup mappings (analyst MUST supply; never invented), PII

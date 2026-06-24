@@ -1,6 +1,20 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.1.0 -> 1.2.0 (amendment 2026-06-24, feature 002)
+Amendment rationale (1.2.0, MINOR -- terminology disambiguation, no principle
+                added/removed/redefined): the ADR 0002 cleaning/modeling defaults
+                were renamed from D1-D16 to RC1-RC16 ("retail cleaning") to end
+                the D-namespace collision with the governance checker's D1-D8
+                TMDL/DAX rules. The checker IDs are unchanged (they live in code);
+                only the ADR/docs namespace moved. Dependent artifacts updated:
+                Principle VI (cleaning-defaults cited as RC*), Principle VIII (the
+                23-rules note clarifies D1-D8 is the checker namespace), the owning
+                ADR (docs/decisions/0002-retail-cleaning-defaults.md), the C086
+                compliance matrix + worked example, the five templates, and the
+                feature-001 artifacts. Verification: retail check still reports 23
+                rules; the 187-test suite stays green (no code touched).
+
 Version change: 1.0.0 -> 1.1.0 (amendment 2026-06-24)
 Amendment rationale (1.1.0, MINOR -- scope expansion, no compliance-posture
                 change to any principle): Spec-Kit was initialized into the
@@ -25,7 +39,8 @@ Bump rationale: Initial ratification of the Tower BI Agent Kit Constitution.
                 as non-negotiable principles, decisions already shipped on
                 main: the 23-rule static governance core (src/retail/), the
                 7-phase medallion playbook, the ADR 0002 cleaning/modeling
-                defaults (D1-D16), the C086 worked example, and the A->C->D
+                defaults (then D1-D16; renamed to RC1-RC16 in v1.2.0), the
+                C086 worked example, and the A->C->D
                 governance design (depend-not-fork, gold-only). Where a
                 principle could read as a fresh ruling, it cites the
                 already-committed artifact it is the expression of.
@@ -61,12 +76,11 @@ doc the others are the expression of):
   done (this slice)      templates/reconciliation-report.md        (mapping-gate artifact; Principle VIII live category)
   deferred (future amend) CLAUDE.md (repo)                         (a constitution-at-a-glance pointer is OUT OF SCOPE for this docs/templates slice; add by amendment later)
 
-Follow-up TODOs (recorded; not resolved in this ratification):
-  - D-namespace collision: ADR 0002 numbers cleaning/modeling defaults
-    D1-D16; the static checker numbers its TMDL/DAX rules D1-D8. Same D
-    prefix, two namespaces. Flagged here and across the kit docs;
-    deliberately NOT resolved and nothing renamed. Must be disambiguated
-    before any ADR default is wired into retail check.
+Follow-up TODOs (recorded at v1.0.0):
+  - D-namespace collision: ADR 0002 cleaning/modeling defaults vs the static
+    checker's TMDL/DAX rules D1-D8. RESOLVED in v1.2.0 (feature 002): the ADR
+    namespace was renamed to RC1-RC16; the checker keeps D1-D8. This was the
+    disambiguation required before any ADR default is wired into retail check.
   - Where per-table mapping artifacts live (mappings/<table>/ vs alongside
     the migration vs docs/) is undecided (architecture doc, Open decision 2).
   - Layer D agent orchestration shape is a seam, not a runtime, in this slice
@@ -220,7 +234,7 @@ analyst decide") and its Phase 2 decision points, and is realized by the
 Start from the rulings already made; record only what you change.
 
 - Every new table MUST start from the ADR 0002 cleaning/modeling defaults
-  (D1-D16): lowest grain, PK verified on transformed data, drop no-signal
+  (RC1-RC16): lowest grain, PK verified on transformed data, drop no-signal
   columns, PII removed early, `''` -> NULL, sentinels only on grouping dims,
   exact NUMERIC money/qty with leading-zero IDs kept TEXT, returns from the
   authoritative column, independent money measures, unified encodings, rollups
@@ -233,11 +247,12 @@ Start from the rulings already made; record only what you change.
   that justified it. Review then sees only what changed.
 - A deviation without a recorded triggering data fact is a defect. Defaults
   MUST NOT be silently overridden.
-- D-namespace collision (flagged, NOT resolved here): ADR 0002 numbers these
-  cleaning/modeling defaults D1-D16, while the static checker (Principle VIII)
-  numbers its TMDL/DAX rules D1-D8. Same D prefix, two distinct namespaces.
-  This is flagged across the kit and MUST NOT be silently conflated; nothing is
-  renamed in this ratification.
+- D-namespace disambiguation (RESOLVED, feature 002, constitution v1.2.0): ADR
+  0002 cleaning/modeling defaults are now numbered RC1-RC16 ("retail cleaning"),
+  while the static checker (Principle VIII) keeps its TMDL/DAX rules D1-D8. The
+  two namespaces no longer collide -- a cleaning default reads RC<n>, a checker
+  rule reads D<n>. The ADR namespace was renamed (not the checker's) because the
+  checker IDs live in code; see docs/decisions/0002-retail-cleaning-defaults.md.
 
 **Rationale**: Re-deriving grain, type, and star-schema decisions per table is
 how an analytics codebase accumulates the unreviewed drift this kit exists to
@@ -274,7 +289,7 @@ Ship the static core; defer live validation to a named later surface.
   ships now (src/retail/; governance spec, static surface).
 - The 23 rules span the namespaces S1, S2, S3, S4a, S4b; D1-D8; R1; C1, C2;
   G1-G5; P1, P2. (The checker's D1-D8 is a DISTINCT namespace from ADR 0002's
-  D1-D16; see Principle VI.)
+  cleaning defaults, which are now RC1-RC16; see Principle VI.)
 - LIVE validators (PK uniqueness on materialized rows, date-dim coverage, zero
   orphan FKs, penny-exact cross-layer measure reconciliation) are DEFERRED to a
   later `retail validate` surface (architecture North-Star correction #6,
@@ -385,9 +400,9 @@ feed back into amendments.
 expression of these principles); `specs/001-retail-bi-agent-kit/spec.md` (the
 Phase 0/1 feature spec); `docs/superpowers/specs/2026-06-23-pbi-governance-layer-design.md`
 (the A->C->D governance design); `docs/medallion-playbook.md` (the method);
-`docs/decisions/0002-retail-cleaning-defaults.md` (the defaults, D1-D16);
+`docs/decisions/0002-retail-cleaning-defaults.md` (the defaults, RC1-RC16);
 `docs/worked-examples/c086-pharmacy.md` (the first filled instance).
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24
+**Version**: 1.2.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24

@@ -1,7 +1,7 @@
 # Assumptions -- `<table-id>`
 
 > **Template.** A generic, per-table record of which ADR 0002 cleaning/modeling
-> defaults (`D1`-`D16`) this table **adopted as-is** versus **deviated from**. It is
+> defaults (`RC1`-`RC16`) this table **adopted as-is** versus **deviated from**. It is
 > the engineering expression of the constitution principle **"Defaults Then
 > Deviations"** (`.specify/memory/constitution.md`): start from the shared rulings,
 > document only what changed and why.
@@ -22,7 +22,7 @@
 
 **Where this sits in the data flow:** `source-profile.md` (evidence) +
 `source-map.yaml` (decisions) `->` **`assumptions.md`** (which ADR defaults held, which
-were overridden). The 16 rows below are exactly the ADR 0002 defaults `D1`-`D16`.
+were overridden). The 16 rows below are exactly the ADR 0002 defaults `RC1`-`RC16`.
 
 ---
 
@@ -34,22 +34,22 @@ only** -- no per-table specifics; the triggering data lives in `source-profile.m
 
 | ADR id | Default summary (generic ruling) | Adopted? | Note |
 |--------|----------------------------------|----------|------|
-| D1  | Model at the lowest grain the source provides; decide grain first. | `[OK]` | |
-| D2  | Verify the PK on the data, and re-verify on the transformed output. | `[OK]` | |
-| D3  | Drop no-signal columns (100%-empty, single-value, verified dup, code half of a 1:1 code/label pair). | `[OK]` | |
-| D4  | Remove PII/sensitive data before the BI layer, decided early (not at review). | `[OK]` | |
-| D5  | Treat the empty string as missing: `''` `->` NULL first; measure missingness as `'' OR NULL`. | `[OK]` | |
-| D6  | Fill policy: NULL for unknown facts; sentinel only on grouping dims, after a no-collision check. | `[OK]` | |
-| D7  | Money/qty `->` exact `NUMERIC`; dates `->` `DATE`; leading-zero IDs/codes stay `TEXT`. | `[OK]` | |
-| D8  | Keep returns; derive `is_return` from the authoritative type column, never the measure sign. | `[OK]` | |
-| D9  | Keep the independent money measures (gross/net/tax/discount); drop only true duplicates. | `[OK]` | |
-| D10 | Unify categorical encodings to one standard; keep the original code if it is a stable join key. | `[OK]` | |
-| D11 | Add business rollups only from an analyst-supplied mapping; never invent the mapping. | `[OK]` | |
-| D12 | Model a non-tree hierarchy as flat denormalized levels, not a snowflake. | `[OK]` | |
-| D13 | Materialize silver as a TABLE via an idempotent numbered migration; transform order is load-bearing. | `[OK]` | |
-| D14 | Gold is a Kimball star: surrogate `_sk` keys, `-1` unknown member + FK `COALESCE`, degenerate dims. | `[OK]` | |
-| D15 | Date dimension is a contiguous generated calendar over the full span (never `SELECT DISTINCT date`). | `[OK]` | |
-| D16 | Reconcile measure totals at every layer and assert 0 orphan FKs before declaring the build done. | `[OK]` | |
+| RC1  | Model at the lowest grain the source provides; decide grain first. | `[OK]` | |
+| RC2  | Verify the PK on the data, and re-verify on the transformed output. | `[OK]` | |
+| RC3  | Drop no-signal columns (100%-empty, single-value, verified dup, code half of a 1:1 code/label pair). | `[OK]` | |
+| RC4  | Remove PII/sensitive data before the BI layer, decided early (not at review). | `[OK]` | |
+| RC5  | Treat the empty string as missing: `''` `->` NULL first; measure missingness as `'' OR NULL`. | `[OK]` | |
+| RC6  | Fill policy: NULL for unknown facts; sentinel only on grouping dims, after a no-collision check. | `[OK]` | |
+| RC7  | Money/qty `->` exact `NUMERIC`; dates `->` `DATE`; leading-zero IDs/codes stay `TEXT`. | `[OK]` | |
+| RC8  | Keep returns; derive `is_return` from the authoritative type column, never the measure sign. | `[OK]` | |
+| RC9  | Keep the independent money measures (gross/net/tax/discount); drop only true duplicates. | `[OK]` | |
+| RC10 | Unify categorical encodings to one standard; keep the original code if it is a stable join key. | `[OK]` | |
+| RC11 | Add business rollups only from an analyst-supplied mapping; never invent the mapping. | `[OK]` | |
+| RC12 | Model a non-tree hierarchy as flat denormalized levels, not a snowflake. | `[OK]` | |
+| RC13 | Materialize silver as a TABLE via an idempotent numbered migration; transform order is load-bearing. | `[OK]` | |
+| RC14 | Gold is a Kimball star: surrogate `_sk` keys, `-1` unknown member + FK `COALESCE`, degenerate dims. | `[OK]` | |
+| RC15 | Date dimension is a contiguous generated calendar over the full span (never `SELECT DISTINCT date`). | `[OK]` | |
+| RC16 | Reconcile measure totals at every layer and assert 0 orphan FKs before declaring the build done. | `[OK]` | |
 
 **Integrity invariant (the rule a reviewer checks):** every row marked `[x]` above
 **must** have a matching entry in **Deviations** below, and every adopted row stays
@@ -57,13 +57,12 @@ only** -- no per-table specifics; the triggering data lives in `source-profile.m
 with no deviation entry (or vice versa), the document is inconsistent and the review
 gate should reject it.
 
-> **D-namespace collision (flagged, not resolved).** The `D1`-`D16` ids in this table
-> are **ADR 0002 cleaning/modeling defaults**. The `retail check` governance checker
-> also uses a `D` prefix for its TMDL/DAX rules `D1`-`D8` -- a **different namespace**.
-> Same prefix, two meanings. This collision is flagged across the kit and left
-> unresolved here by design (disambiguating it is a named next slice; see the
-> architecture doc Sec. 8/9). **Rename nothing.** When this file says `D7`, it means the
-> ADR default, not the checker rule.
+> **Namespace note (disambiguated).** The `RC1`-`RC16` ids in this table are **ADR 0002
+> cleaning/modeling defaults** ("retail cleaning"). The `retail check` governance checker
+> uses a separate `D1`-`D8` for its TMDL/DAX rules -- **distinct prefixes, distinct
+> namespaces**, no collision. (Historically the ADR also used `D`; it was renamed to `RC*`
+> in feature 002 because the checker ids live in code.) When this file says `RC7`, it
+> means the ADR cleaning default; a checker rule would read `D7`. The two are unambiguous.
 
 ---
 
@@ -131,7 +130,7 @@ A reviewer reads all of the kit's templates and docs as one set:
   `templates/unresolved-questions.md` (Phase 2 decision points + Phase 4 gate),
   `templates/reconciliation-report.md` (Phase 5/6 live acceptance).
 - **Defaults this file checks against:** `docs/decisions/0002-retail-cleaning-defaults.md`
-  (`D1`-`D16`).
+  (`RC1`-`RC16`).
 - **Constitution principle realized:** "Defaults Then Deviations" in
   `.specify/memory/constitution.md`.
 - **Architecture:** `docs/architecture/tower-bi-agent-kit.md`.

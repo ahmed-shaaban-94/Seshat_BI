@@ -224,7 +224,7 @@ Parquet. Power BI connects to Postgres gold in **Import mode** (VertiPaq caches 
 at refresh, so reports are fast regardless of source format; a Parquet copy would be a
 redundant second source of truth). Add a Parquet export only later if a non-Power-BI columnar
 consumer, a volume problem, or an immutable-snapshot need appears — never as a default. This
-matches the shipped governance rule **D8** ("Power BI reads `gold`"): one canonical gold.
+matches the shipped governance rule **RC8** ("Power BI reads `gold`"): one canonical gold.
 
 - One fact at the silver grain + conformed dimensions (one per business entity).
 - Surrogate `_sk` keys; keep natural keys as attributes.
