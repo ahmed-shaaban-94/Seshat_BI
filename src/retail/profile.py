@@ -17,9 +17,25 @@ candidate PK), so it MUST NOT be routed through validate_targets.load_targets.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .validate import QueryRunner
+
+_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
+
+
+def _safe_identifier(name: str) -> str:
+    """Reject anything that is not a plain (optionally dotted) SQL identifier.
+
+    profile.py interpolates table/column names into SQL text (identifiers cannot
+    be bound as query params). The runner is read-only, but a crafted name must
+    not be able to break out of the identifier position. Allow letters, digits,
+    underscore, and dots between parts; reject everything else.
+    """
+    if not _IDENT_RE.match(name):
+        raise ValueError(f"unsafe SQL identifier: {name!r}")
+    return name
 
 
 @dataclass(frozen=True)
@@ -65,6 +81,7 @@ def profile(
     runner: QueryRunner, table: str, candidate_pk: tuple[str, ...]
 ) -> ProfileResult:
     """Profile ``table`` mechanically. Read-only; one pass of simple aggregates."""
+    table = _safe_identifier(table)
     columns = _discover_columns(runner, table)
 
     row_rows = runner.run(f"SELECT count(*) FROM {table}")
@@ -72,6 +89,7 @@ def profile(
 
     col_profiles: list[ColumnProfile] = []
     for col in columns:
+        col = _safe_identifier(col)
         # Missingness is ''OR NULL, NEVER IS NULL alone (RC5 / the load-bearing
         # trap): a faithful landing writes '' for None, so IS NULL reports 0.
         stat = runner.run(
@@ -89,8 +107,9 @@ def profile(
             )
         )
 
-    pk_cols = ", ".join(candidate_pk)
-    null_pred = " OR ".join(f"{c} IS NULL" for c in candidate_pk)
+    validated_pk = tuple(_safe_identifier(c) for c in candidate_pk)
+    pk_cols = ", ".join(validated_pk)
+    null_pred = " OR ".join(f"{c} IS NULL" for c in validated_pk)
     pk_rows = runner.run(
         f"SELECT count(*), count(DISTINCT ({pk_cols})), "
         f"count(*) FILTER (WHERE {null_pred}) FROM {table}"

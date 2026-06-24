@@ -90,11 +90,22 @@ def test_pk_proof_not_unique_when_duplicates_or_nulls() -> None:
     assert profile(nulls, "bronze.demo", ("id",)).pk.is_unique is False
 
 
+def test_profile_rejects_unsafe_table_name() -> None:
+    from retail.profile import profile
+
+    runner = FakeRunner([])
+    with pytest.raises(ValueError, match="unsafe SQL identifier"):
+        profile(runner, "public.x; DROP TABLE users", ("id",))
+
+
 def test_profile_imports_without_psycopg2() -> None:
     import importlib
+    import sys
 
     # If psycopg2 were imported at module scope this would already have failed at
     # the test's `from retail.profile import profile`. Re-import to lock it in.
+    # The guard relies on profile.py's module-scope import path being driver-free,
+    # so importing it must not pull psycopg2 into sys.modules.
     mod = importlib.import_module("retail.profile")
     assert hasattr(mod, "profile")
-    assert "psycopg2" not in repr(getattr(mod, "__dict__", {}).get("profile"))
+    assert "psycopg2" not in sys.modules
