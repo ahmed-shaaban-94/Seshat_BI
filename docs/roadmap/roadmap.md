@@ -61,6 +61,15 @@ The kit's surfaces, top (what the user touches) to bottom (later adapter):
 Each feature advances a readiness stage. **Feature 005 is the next executable
 slice.** Dashboard and pbi-cli/PBIP work are explicitly **later and gated**.
 
+> **Numbering note (spec-dir vs roadmap F-number).** The roadmap F-number is the
+> authoritative sequence id. Spec *directory* numbers under `specs/` are allocated
+> from the next free on-disk slot when drafted, so they can differ from the F-number.
+> The features F006-F015 were batch-drafted into `specs/007-016/` (which already held
+> 001-006), giving a consistent **spec-dir = roadmap-F + 1** offset for that batch:
+> 007=F006, 008=F007, 009=F008, 010=F009, 011=F010, 012=F011, 013=F012, 014=F013,
+> 015=F014, 016=F015. When a `specs/0NN-*` directory and a roadmap F-number disagree,
+> the roadmap row wins; each spec's own header states both numbers.
+
 ### Now
 
 | Feature | Name | Layer | Advances stage | One-line scope |
