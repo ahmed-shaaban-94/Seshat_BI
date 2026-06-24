@@ -20,6 +20,12 @@ dev = [
     "black>=24.0",
     "pyyaml>=6",
 ]
+# `db` extra: the optional DB driver for `retail validate`'s LIVE run. NOT in
+# `dev` -- so CI installs no driver, which keeps the static core stdlib-only AND
+# proves (by the suite passing) that the validate logic is driver-free.
+db = [
+    "psycopg2-binary>=2.9",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/retail"]

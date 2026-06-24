@@ -84,7 +84,7 @@ is the foundation that already ships; D is the new primary surface this kit is n
      (the enforced gate --   | retail check             | retail validate        |    (already on main)
       THE SHIPPED UNIT)      | 26 rules over committed  | wraps a live DB/Desktop |
                              | TMDL / PBIR / SQL / git   | for PK/coverage/recon  |
-                             | stdlib-only, CI-able      | [DEFERRED -- see Sec 7]|
+                             | stdlib-only, CI-able      | [BUILT; live run later] |
                              +-----------+--------------+------------------------+
                                  | the agent (D) authors against, the engine executes
                                  v
@@ -165,13 +165,18 @@ governance spec (Sec 4):
   **S5** enforces RC7 type discipline, **S6** enforces RC14 star-structure (`-1` member),
   **S7** enforces RC15 (`generate_series` date-dim). Each is a SQL-family rule that cites
   its RC default.
-- **LIVE validators** -- provable only against a running database/model; the deferred
-  `retail validate` surface. Categories: **PK uniqueness** on materialized rows,
-  **date-dim coverage** (calendar spans every real date), **0 orphan FKs**, and
-  **cross-layer measure reconciliation** (source -> silver -> gold -> BI, to the penny).
+- **LIVE validators** -- provable only against a running database; the
+  `retail validate` surface (feature 004, **built + fixture-tested**;
+  `src/retail/validate.py`). Checks: **PK uniqueness** on materialized rows (RC2),
+  **date-dim coverage** (calendar spans every real date, RC15), **0 orphan FKs**
+  (RC16), and **cross-layer measure reconciliation** (silver -> gold, to the penny,
+  RC16). They run over a driver-free `QueryRunner` Protocol; the psycopg2 driver is
+  an optional extra imported lazily, so the static core stays stdlib-only. Connection
+  is host-agnostic (any Postgres via DSN).
 
-No validator is implemented here. The categories above are the seed for a later
-`retail validate` spec.
+The validator **surface is built**; the remaining deferred step is the **live run**
+against a real DB (needs the optional `db` extra + credentials). Other engines and
+local-file sources are explicitly out of scope (Postgres-first) -- future specs.
 
 ## 8. Out of scope for this slice (explicit boundaries)
 
@@ -197,8 +202,10 @@ This Phase 0/1 foundation deliberately stops at architecture + spec + templates:
    alongside the migration vs in `docs/`. (Not decided in this slice.)
 3. **Agent orchestration shape** (Layer D) -- which agent/skill drives the playbook, and
    how it self-heals against the gate. (Designed as a seam; the runtime is a later slice.)
-4. **`retail validate` live surface** -- the deferred validator categories (Sec 7) need their
-   own spec before implementation.
+4. **`retail validate` live surface** -- **BUILT (feature 004).** The four checks +
+   host-agnostic Postgres connection are implemented and fixture-tested; the **live run**
+   against a real DB (+ per-table target sourcing from `source-map.yaml`) is the remaining
+   deferred step. Other DB engines and local-file sources are deferred future specs.
 
 ## 10. See also
 

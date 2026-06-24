@@ -1,6 +1,27 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.3.0 -> 1.4.0 (amendment 2026-06-24, feature 004)
+Amendment rationale (1.4.0, MINOR -- new supporting surface, no principle
+                redefined): the `retail validate` LIVE-validator surface is now
+                BUILT and fixture-tested (was "deferred / categories only").
+                src/retail/validate.py adds four checks -- PK uniqueness (RC2),
+                date coverage (RC15 live half), 0 orphan FKs (RC16), penny-exact
+                reconciliation (RC16) -- over a driver-free QueryRunner Protocol,
+                ERROR severity (proven defects, vs static WARNINGs). The DB driver
+                (psycopg2) is an OPTIONAL extra imported LAZILY only in the CLI
+                validate handler, so the static core stays stdlib-only
+                (dependencies = []). Connection is host-agnostic: any Postgres via
+                DSN (local/remote/DO/other); other engines + local files are
+                explicitly DEFERRED (Postgres-first, Principle III). The remaining
+                deferred step is the LIVE RUN against a real DB (needs the `db`
+                extra + creds). Principle VIII updated ("deferred" -> "built; live
+                run deferred"). Verification: 219 unit tests green; retail check
+                still 26 rules + exit 0; psycopg2 NOT imported by retail.cli or
+                retail.validate (guard tests); C2 confirmed the new code carries no
+                committed DSN. Dependent docs: architecture Sec 7/8, the
+                reconciliation-report template.
+
 Version change: 1.2.0 -> 1.3.0 (amendment 2026-06-24, feature 003)
 Amendment rationale (1.3.0, MINOR -- new supporting rules, no principle
                 redefined): three SQL-family checker rules were added that
@@ -312,12 +333,23 @@ Ship the static core; defer live validation to a named later surface.
   (S5 -> RC7 type discipline, S6 -> RC14 gold -1 unknown member, S7 -> RC15
   contiguous date dim); they cite the RC default but keep a checker-namespace id.
 - LIVE validators (PK uniqueness on materialized rows, date-dim coverage, zero
-  orphan FKs, penny-exact cross-layer measure reconciliation) are DEFERRED to a
-  later `retail validate` surface (architecture North-Star correction #6,
-  section 7). This slice documents their CATEGORIES only and MUST NOT implement
-  validator logic.
-- `reconciliation-report.md` is the committed BLANK that a future live run fills;
-  authoring it now does not constitute implementing a live validator.
+  orphan FKs, penny-exact cross-layer measure reconciliation) live in the
+  `retail validate` surface. As of v1.4.0 (feature 004) that surface is **BUILT
+  and fixture-tested** (src/retail/validate.py: four checks over a driver-free
+  `QueryRunner` Protocol, ERROR severity for proven defects). The **live run**
+  against a real database is the remaining deferred step (needs the optional `db`
+  extra + credentials). The DB driver (psycopg2) is OPTIONAL and imported LAZILY
+  only in the validate handler, so the static core's import path stays driver-free.
+- Connection is host-agnostic: any Postgres (local / remote / DigitalOcean /
+  other) via a DSN from env. Other engines and local files are explicitly out of
+  scope (Postgres-first, Principle III) -- deferred to future specs.
+- Severity asymmetry (intentional): static rules WARN (suspect patterns with ADR
+  "override when" clauses); live checks ERROR (proven defects). Suspect -> WARN,
+  proven -> ERROR.
+- `reconciliation-report.md` is the committed BLANK the live run fills. Its
+  reconciliation check is the live complement of S7: S7 proves dim_date is BUILT
+  from generate_series (pattern); validate proves the calendar SPANS the data
+  (coverage) -- the two halves of RC15.
 
 **Rationale**: A static checker that needs nothing but committed text runs in CI
 on every commit and never depends on a live database or a desktop being up;
@@ -426,4 +458,4 @@ Phase 0/1 feature spec); `docs/superpowers/specs/2026-06-23-pbi-governance-layer
 
 ---
 
-**Version**: 1.3.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24
+**Version**: 1.4.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24

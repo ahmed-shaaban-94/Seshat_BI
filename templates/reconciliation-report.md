@@ -20,11 +20,13 @@ can only be proven against a *running* database, not from committed text. They c
 to the playbook's **Phase 5/6 validation gates** and to ADR 0002 defaults **RC2, RC15, RC16**
 (`docs/decisions/0002-retail-cleaning-defaults.md`).
 
-> **These four categories are the DEFERRED LIVE surface.** They are the seed for a future
-> `retail validate` command (architecture doc Sec 7; worked example Sec 8). **No validator is
-> implemented in this slice** -- this template documents the *categories* only. Today the run
-> is performed by hand (a read-only analyst/agent session) and the results are pasted in
-> below. The static, CI-able governance gate is the separate, already-shipped `retail check`
+> **These four categories are the LIVE surface, now implemented as `retail validate`**
+> (feature 004; `src/retail/validate.py`): PK uniqueness (RC2), date coverage (RC15),
+> 0 orphan FKs (RC16), penny-exact reconciliation (RC16). The checks are built + fixture-
+> tested; the **live run** against a real DB (needs the optional `db` extra + read-only
+> credentials) is the remaining deferred step. Until that run is wired per table, results
+> may be filled by a read-only analyst/agent session and pasted in below. The static,
+> CI-able governance gate is the separate, already-shipped `retail check`
 > (23 rules, `src/retail/`); it does **not** cover these -- these need the data.
 
 > **Namespace note (disambiguated -- feature 002):** the ADR ids cited here (`RC2`, `RC15`,
