@@ -376,6 +376,7 @@ gold_star:
         - "product_brand"
         - "product_group"
         - "product_cluster"
+        - "business_segment"             # RC11 rollup (derived) lands on dim_product
 
     - name: "dim_customer"
       surrogate_key: "customer_sk"
@@ -398,6 +399,7 @@ gold_star:
       attributes:
         - "billing_type"                 # Arabic -> English (RC10)
         - "billing_type_code"            # authoritative Z-code (join key)
+        - "is_return"                    # RC8 derived flag also lands on dim_billing_type (bool_or)
 
     - name: "dim_branch"
       surrogate_key: "branch_sk"

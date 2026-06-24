@@ -66,8 +66,8 @@ field into two sources of truth. You may READ `Gate status`; you may not write
 |-------|-----------|--------------|----------------------------------------|------|
 | 1-4 Profile -> map -> stop-and-ask | **source-mapping** | (artifact review) | `Gate status: CLEARED`, zero open rows | gate |
 | GATE Mapping approval | (read state) | -- | reviewer set `Gate status: CLEARED` | silver |
-| 5 Build silver | **[SEAM -- silver/gold builder; needs its own spec; NO warehouse writes this slice]** | `retail check` | exit 0 | gold |
-| 6 Build gold (star) | **[SEAM -- same builder seam]** | `retail check` | exit 0 | validate |
+| 5 Build silver | **retail-build-warehouse** (authors the silver `.sql`) -> then **[SEAM: a human APPLIES the SQL; execution is the deferred DB-write seam]** | `retail check` | exit 0 | gold |
+| 6 Build gold (star) | **retail-build-warehouse** (authors the gold star `.sql`) -> then **[SEAM: human applies]** | `retail check` | exit 0 | validate |
 | ACCEPT Live validate | **retail-validate** | `retail validate --source-map mappings/<table>/source-map.yaml` | exit 0 (or deferred-boundary report) | PBIP |
 | 7 Build Power BI model | **pbip-workflow** + `powerbi-analyst` agent | `retail check` | exit 0 | done |
 | PBIP build engine | **[SEAM -- pbi-cli deferred adapter, Principle II]** | -- | -- | -- |
