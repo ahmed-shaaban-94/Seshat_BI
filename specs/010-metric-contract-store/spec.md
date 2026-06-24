@@ -52,7 +52,7 @@ requirement of this feature (see Scope boundary below).
 
 Per roadmap hard rule #8 ("Docs/templates/checklists first; automate only after
 artifacts prove useful") and Principle VIII (static-first; the shippable core is
-already the 26-rule checker -- this feature adds NO rule), this feature ships as
+already the existing `retail check` -- this feature adds NO rule), this feature ships as
 **templates + docs only**:
 
 - A generic metric-contract TEMPLATE (`templates/metric-contract.yaml`) -- the
