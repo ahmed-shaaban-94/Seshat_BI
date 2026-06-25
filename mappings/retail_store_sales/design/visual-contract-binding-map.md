@@ -56,10 +56,12 @@ None. All 5 approved contracts are bound to at least one visual on the page.
 
 ## Review sign-off (Principle V -- the reviewer's action, NOT the skill's)
 
-- reviewer (BI report owner): `<name>`   # to be filled by the reviewer
-- decision: `<approved | changes requested>`
-- at: `<YYYY-MM-DD>`
+- reviewer (BI report owner): `data_owner` (the user, acting as BI report owner)
+- decision: `approved`
+- at: `2026-06-25`
 
-> Until the reviewer records sign-off here AND an `approvals[]` entry in
-> `readiness-status.yaml`, `dashboard_ready` stays `warning` (the design exists and is
-> reviewable, but not approved). The skill does NOT self-grant `pass`.
+> Sign-off recorded 2026-06-25: the BI report owner reviewed this binding map (10
+> visuals, all bound 1:1 to approved contracts, zero orphans, the v04 discount caveat
+> noted) and approved the design. `dashboard_ready` is promoted to `pass` with a
+> matching `approvals[]` entry in `readiness-status.yaml`. (Recorded by the reviewer,
+> not self-granted by the skill.)
