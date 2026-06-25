@@ -137,6 +137,43 @@ For EACH PascalCase measure in the model:
 - **Ambiguous mapping** (a measure name that does not map cleanly to a contract key)
   -> HARD-STOP and raise it for a human; never guess a match.
 
+### 4b. Contract<->DAX drift (L3 -- the measure's LOGIC matches its contract)
+
+Binding (step 4) proves a measure maps to an approved contract; it does NOT prove the
+DAX LOGIC matches the contract's approved definition. A measure can bind to its
+contract and still compute the WRONG number (the 50.37-vs-33.55 class: a denominator
+over all transactions when the contract rules known-status only). `retail check` (D-rules)
+sees only form; nothing else sees a wrong denominator. L3 closes that gap.
+
+For each measure whose contract carries an optional machine-readable `definition`
+block, invoke the drift checker (a lazy module -- it reads YAML, so it is NOT part of
+the `retail check` core; mirrors `validate_targets`):
+
+```python
+from retail.metric_drift import load_definition, check_measure_drift
+defn = load_definition("mappings/<table>/metrics/<Measure>.yaml")  # None if no block
+verdict = check_measure_drift(<the measure's DAX body from the TMDL>, defn)
+# verdict.status in {pass, drift, escalate, skip}
+```
+
+Map the per-measure status to this stage:
+
+- **pass** -> the DAX denominator filter-set matches the contract; record as `evidence[]`.
+- **drift** -> a recognized mismatch (wrong/missing/extra denominator filter, wrong
+  column) -> `blocked` with the measure named ("DAX denominator drifts from the
+  approved contract definition"). The fix is a human Desktop edit (re-save the PBIP) or
+  a contract correction -- never self-applied here.
+- **escalate** -> the DAX uses a predicate spelling the checker does not recognize, is
+  not a DIVIDE ratio, or is unparseable -> HARD-STOP and raise it for a human; NEVER
+  guess pass or drift (the contract -- not the DAX shape -- is the sole arbiter; an
+  unrecognized form is a human judgment call, Principle V).
+- **skip** -> the contract has no `definition` block yet -> no L3 finding (binding from
+  step 4 still governs). Backward-compatible; contracts adopt the block incrementally.
+
+The contract is the SOLE arbiter of the correct denominator direction. NEVER infer the
+intended denominator from the DAX or the prose (an inference can be inverted -- it has
+been). Only the structured `definition` decides; absent it, L3 stays silent (skip).
+
 ### 5. Verdict
 Combine into EXACTLY ONE status, shaped to `templates/readiness-status.yaml`, with
 `evidence[]` (committed files + the `retail check` run) and `blocking_reasons[]`:
@@ -144,9 +181,9 @@ Combine into EXACTLY ONE status, shaped to `templates/readiness-status.yaml`, wi
 | Verdict | When |
 |---------|------|
 | `not_started` | step 1 failed (Gold Ready not `pass`) |
-| `blocked` | any step-2/3 finding, OR any unmatched/unapproved measure, OR store absent |
-| `warning` | `retail check` clean + binding satisfied, but a non-fatal recorded item (e.g. an accepted display-folder deviation); never auto-promotes |
-| `pass` | steps 2-4 ALL clear AND every measure binds to an approved contract AND owner approval is recorded as `evidence[]` |
+| `blocked` | any step-2/3 finding, OR any unmatched/unapproved measure, OR store absent, OR an L3 `drift` (step 4b: DAX denominator contradicts the contract definition) |
+| `warning` | `retail check` clean + binding satisfied, but a non-fatal recorded item (e.g. an accepted display-folder deviation), OR an L3 `escalate` left for human classification; never auto-promotes |
+| `pass` | steps 2-4(+4b) ALL clear AND every measure binds to an approved contract AND owner approval is recorded as `evidence[]` (any measure with a `definition` block is L3 `pass` or `skip`; none `drift`/`escalate`) |
 
 A `pass` MUST carry evidence; never fabricate a confidence number (roadmap rule #9 --
 the four explicit statuses + evidence + blockers are the only vocabulary). Then STOP.

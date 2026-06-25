@@ -21,6 +21,22 @@ binds_to:
     - "transaction_id"
   pii_sensitive: false
 
+# Machine-readable definition (L3 contract<->DAX drift check, src/retail/metric_drift.py).
+# Same-shape collision with DiscountedTransactionRate: both have a wrapped CALCULATE
+# denominator, but this one filters on total_spent (not discount_applied). The checker
+# asserts the DAX denominator is aligned to the numerator's row-set (non-NULL
+# total_spent, 11,971) -- a denominator filtered on the WRONG column is drift.
+definition:
+  additive: false
+  numerator:
+    aggregation: sum
+    filter: []                  # SUM(total_spent); NULLs ignored by SUM, no row filter
+  denominator:
+    aggregation: count_rows
+    filter:
+      - column: total_spent
+        op: is_not_null         # aligned to the numerator's row-set (NOT all txns)
+
 readiness:
   status: "pass"
   evidence:
