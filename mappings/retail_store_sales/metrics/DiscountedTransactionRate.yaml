@@ -28,6 +28,24 @@ binds_to:
     - "transaction_id"
   pii_sensitive: false
 
+# Machine-readable definition (L3 contract<->DAX drift check, src/retail/metric_drift.py).
+# The CONTRACT is the sole arbiter of the denominator direction -- the checker asserts
+# the DAX denominator applies exactly this filter-set. Per the Q2 ruling, the
+# denominator is KNOWN-STATUS (discount_applied IS NOT NULL = 8,376), NOT all
+# transactions -- that is the 50.37% approved metric, not the 33.55% floor.
+definition:
+  additive: false
+  numerator:
+    aggregation: count_rows
+    filter:
+      - column: discount_applied
+        op: is_true
+  denominator:
+    aggregation: count_rows
+    filter:
+      - column: discount_applied
+        op: is_not_null         # known-status; the bug was an EMPTY filter (all txns)
+
 readiness:
   status: "pass"
   evidence:
