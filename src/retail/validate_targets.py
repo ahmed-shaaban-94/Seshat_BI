@@ -24,6 +24,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .identifiers import validate_identifier, validate_qualified_identifier
 from .validate import (
     DateCoverageTarget,
     OrphanTarget,
@@ -41,6 +42,19 @@ def _require(mapping: dict[str, Any], key: str, ctx: str) -> Any:
     return mapping[key]
 
 
+def _require_identifier(mapping: dict[str, Any], key: str, ctx: str) -> str:
+    return validate_identifier(_require(mapping, key, ctx), context=f"{ctx}.{key}")
+
+
+def _require_identifier_tuple(
+    mapping: dict[str, Any], key: str, ctx: str
+) -> tuple[str, ...]:
+    value = _require(mapping, key, ctx)
+    if isinstance(value, str) or not isinstance(value, list | tuple):
+        raise ValueError(f"source-map.yaml: '{key}' in {ctx} must be a list")
+    return tuple(validate_identifier(item, context=f"{ctx}.{key}") for item in value)
+
+
 def _gold_qualify(name: str) -> str:
     """Qualify a gold_star object name to the `gold` schema if it has no schema.
 
@@ -52,7 +66,21 @@ def _gold_qualify(name: str) -> str:
     so a star sharing the `gold` schema can disambiguate with a suffixed, qualified
     name. Both the bare convention (c086) and the qualified convention work.
     """
-    return name if "." in name else f"gold.{name}"
+    name = validate_qualified_identifier(
+        name,
+        context="gold_star object name",
+        min_parts=1,
+        max_parts=2,
+    )
+    if "." not in name:
+        return f"gold.{name}"
+    return validate_qualified_identifier(
+        name,
+        context="gold_star object name",
+        min_parts=2,
+        max_parts=2,
+        allowed_schemas={"gold"},
+    )
 
 
 def load_targets(path: Path | str) -> ValidationTargets:
@@ -68,11 +96,16 @@ def load_targets(path: Path | str) -> ValidationTargets:
     if not path.exists():
         raise FileNotFoundError(f"source-map.yaml not found: {path}")
 
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except OSError as exc:
+        raise ValueError(f"source-map.yaml: could not read {path}: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise ValueError(f"source-map.yaml: invalid YAML in {path}: {exc}") from exc
 
     meta = _require(data, "meta", "top level")
-    table_id = _require(meta, "table_id", "meta")
-    pk_columns = tuple(_require(meta, "primary_key", "meta"))
+    table_id = _require_identifier(meta, "table_id", "meta")
+    pk_columns = _require_identifier_tuple(meta, "primary_key", "meta")
     silver = f"silver.{table_id}"
 
     star = _require(data, "gold_star", "top level")
@@ -81,13 +114,13 @@ def load_targets(path: Path | str) -> ValidationTargets:
     # check SQL (which uses the name verbatim) resolves. Already-qualified names pass
     # through unchanged. See _gold_qualify.
     fact_name = _gold_qualify(_require(fact, "name", "gold_star.fact"))
-    measures = tuple(_require(fact, "measures", "gold_star.fact"))
+    measures = _require_identifier_tuple(fact, "measures", "gold_star.fact")
 
     dims = _require(star, "dimensions", "gold_star")
     fks: list[tuple[str, str, str]] = []
     for dim in dims:
         dim_name = _gold_qualify(_require(dim, "name", "gold_star.dimensions[]"))
-        sk = _require(dim, "surrogate_key", f"dimension {dim_name}")
+        sk = _require_identifier(dim, "surrogate_key", f"dimension {dim_name}")
         # RC14: fact FK column == dim surrogate key; join dim.<sk> = fct.<sk>.
         fks.append((sk, dim_name, sk))
 
@@ -95,7 +128,7 @@ def load_targets(path: Path | str) -> ValidationTargets:
     date_dim_name = _gold_qualify(
         _require(date_dim, "name", "gold_star.date_dimension")
     )
-    date_sk = _require(date_dim, "surrogate_key", "gold_star.date_dimension")
+    date_sk = _require_identifier(date_dim, "surrogate_key", "gold_star.date_dimension")
 
     return ValidationTargets(
         pk=PkTarget(table=silver, pk_columns=pk_columns),

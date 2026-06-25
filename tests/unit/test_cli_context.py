@@ -347,3 +347,61 @@ def test_validate_source_map_no_creds_errors_clearly(
     err = capsys.readouterr().err
     assert rc == 1
     assert "no database connection" in err.lower()
+
+
+def test_validate_source_map_yaml_error_is_clean_cli_message(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setattr("retail.cli._ensure_driver", lambda: True)
+    monkeypatch.setattr(
+        "retail.cli._load_targets",
+        lambda path: (_ for _ in ()).throw(ValueError("invalid YAML in source-map")),
+    )
+
+    rc = main_under_test(["validate", "--source-map", "mappings/t/source-map.yaml"])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "could not load source-map" in err
+    assert "invalid YAML" in err
+    assert "Traceback" not in err
+
+
+def test_validate_db_boundary_error_is_clean_cli_message(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setattr("retail.cli._ensure_driver", lambda: True)
+
+    from retail.validate import (
+        DateCoverageTarget,
+        OrphanTarget,
+        PkTarget,
+        ReconcileTarget,
+        ValidationTargets,
+    )
+
+    fake_targets = ValidationTargets(
+        pk=PkTarget(table="silver.t", pk_columns=("a",)),
+        date_coverage=DateCoverageTarget(
+            fact="gold.f",
+            fact_date="date_sk",
+            date_dim="gold.dim_date",
+            dim_date="date_sk",
+        ),
+        orphans=OrphanTarget(fact="gold.f", fks=()),
+        reconcile=ReconcileTarget(silver="silver.t", gold="gold.f", measures=()),
+    )
+    monkeypatch.setattr("retail.cli._load_targets", lambda path: fake_targets)
+    monkeypatch.setattr(
+        "retail.cli._make_runner",
+        lambda dsn: (_ for _ in ()).throw(RuntimeError(f"cannot connect to {dsn}")),
+    )
+
+    rc = main_under_test(["validate", "--source-map", "mappings/t/source-map.yaml"])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "live validation failed at the DB boundary" in err
+    assert "<redacted DSN>" in err
+    assert "postgresql://u:p@h:5432/db" not in err
+    assert "Traceback" not in err

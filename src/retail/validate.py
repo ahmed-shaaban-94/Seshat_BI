@@ -26,9 +26,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Mapping, Protocol
-from urllib.parse import quote
+from urllib.parse import quote as _url_quote
 
 from .core import Finding, Severity
+from .identifiers import quote_identifier, quote_qualified_identifier
 
 
 class QueryRunner(Protocol):
@@ -82,9 +83,9 @@ def resolve_dsn(env: Mapping[str, str]) -> str | None:
     sslmode = env.get("ANALYTICS_DB_SSLMODE", "")
 
     # userinfo: user[:password]  (percent-encode so special chars are DSN-safe)
-    userinfo = quote(user, safe="")
+    userinfo = _url_quote(user, safe="")
     if password:
-        userinfo += ":" + quote(password, safe="")
+        userinfo += ":" + _url_quote(password, safe="")
 
     hostport = host + (f":{port}" if port else "")
     # Assemble the scheme as a separate token so this source file never contains a
@@ -130,17 +131,29 @@ class ReconcileTarget:
     measures: tuple[str, ...]
 
 
-def _qualify(cols: tuple[str, ...]) -> str:
-    return ", ".join(cols)
+def _sql_identifier(name: str, *, context: str) -> str:
+    return quote_identifier(name, context=context)
+
+
+def _sql_table(name: str, *, context: str) -> str:
+    return quote_qualified_identifier(name, context=context, min_parts=1, max_parts=2)
+
+
+def _qualify(cols: tuple[str, ...], *, context: str) -> str:
+    return ", ".join(_sql_identifier(col, context=context) for col in cols)
 
 
 def check_pk_uniqueness(runner: QueryRunner, target: PkTarget) -> list[Finding]:
     """RC2: row count == distinct-PK count, and 0 NULL PK, on the transformed table."""
-    pk = _qualify(target.pk_columns)
-    null_pred = " OR ".join(f"{c} IS NULL" for c in target.pk_columns)
+    table = _sql_table(target.table, context="validate PK table")
+    pk = _qualify(target.pk_columns, context="validate PK column")
+    null_pred = " OR ".join(
+        f"{_sql_identifier(c, context='validate PK column')} IS NULL"
+        for c in target.pk_columns
+    )
     sql = (
         f"SELECT count(*), count(DISTINCT ({pk})), "
-        f"count(*) FILTER (WHERE {null_pred}) FROM {target.table}"
+        f"count(*) FILTER (WHERE {null_pred}) FROM {table}"
     )
     rows = runner.run(sql)
     if not rows:
@@ -184,9 +197,12 @@ def check_date_coverage(
     """RC15 (live half): every distinct fact date exists in the date dimension."""
     sql = (
         f"SELECT count(*) FROM ("
-        f"SELECT DISTINCT {target.fact_date} AS d FROM {target.fact}"
-        f") f LEFT JOIN {target.date_dim} d ON d.{target.dim_date} = f.d "
-        f"WHERE d.{target.dim_date} IS NULL AND f.d IS NOT NULL"
+        f"SELECT DISTINCT {_sql_identifier(target.fact_date, context='fact date')} "
+        f"AS d FROM {_sql_table(target.fact, context='fact table')}"
+        f") f LEFT JOIN {_sql_table(target.date_dim, context='date dimension')} d "
+        f"ON d.{_sql_identifier(target.dim_date, context='date dimension key')} = f.d "
+        f"WHERE d.{_sql_identifier(target.dim_date, context='date dimension key')} "
+        f"IS NULL AND f.d IS NOT NULL"
     )
     rows = runner.run(sql)
     missing = rows[0][0] if rows else 0
@@ -211,9 +227,12 @@ def check_orphan_fks(runner: QueryRunner, target: OrphanTarget) -> list[Finding]
     findings: list[Finding] = []
     for fk_col, dim_table, dim_pk in target.fks:
         sql = (
-            f"SELECT count(*) FROM {target.fact} f "
-            f"LEFT JOIN {dim_table} d ON d.{dim_pk} = f.{fk_col} "
-            f"WHERE d.{dim_pk} IS NULL AND f.{fk_col} IS NOT NULL"
+            f"SELECT count(*) FROM {_sql_table(target.fact, context='fact table')} f "
+            f"LEFT JOIN {_sql_table(dim_table, context='dimension table')} d "
+            f"ON d.{_sql_identifier(dim_pk, context='dimension PK')} = "
+            f"f.{_sql_identifier(fk_col, context='fact FK')} "
+            f"WHERE d.{_sql_identifier(dim_pk, context='dimension PK')} IS NULL "
+            f"AND f.{_sql_identifier(fk_col, context='fact FK')} IS NOT NULL"
         )
         rows = runner.run(sql)
         orphans = rows[0][0] if rows else 0
@@ -246,8 +265,10 @@ def check_reconciliation(runner: QueryRunner, target: ReconcileTarget) -> list[F
     findings: list[Finding] = []
     for measure in target.measures:
         sql = (
-            f"SELECT (SELECT sum({measure}) FROM {target.silver}), "
-            f"(SELECT sum({measure}) FROM {target.gold})"
+            f"SELECT (SELECT sum({_sql_identifier(measure, context='measure')}) "
+            f"FROM {_sql_table(target.silver, context='silver table')}), "
+            f"(SELECT sum({_sql_identifier(measure, context='measure')}) "
+            f"FROM {_sql_table(target.gold, context='gold fact')})"
         )
         rows = runner.run(sql)
         if not rows:
