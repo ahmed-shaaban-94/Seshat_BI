@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from retail.metric_drift import Verdict, check_measure_drift
+
+pytestmark = pytest.mark.unit
 
 # The two ratio measures, VERBATIM from the committed TMDL (gold fct_sales_rss.tmdl).
 # Both have a wrapped CALCULATE denominator; they differ only in the filter column --
@@ -132,8 +132,8 @@ def test_unrecognized_predicate_escalates() -> None:
     """
     unknown = (
         "DIVIDE(CALCULATE([TransactionCount], 'gold fct_sales_rss'[discount_applied] "
-        "= TRUE()), CALCULATE([TransactionCount], 'gold fct_sales_rss'[discount_applied]"
-        " <> BLANK()))"
+        "= TRUE()), CALCULATE([TransactionCount], "
+        "'gold fct_sales_rss'[discount_applied] <> BLANK()))"
     )
     v = check_measure_drift(unknown, DEF_DISCOUNTED)
     assert v.status == "escalate", v
@@ -203,7 +203,7 @@ def test_importing_retail_rules_does_not_pull_metric_drift() -> None:
     gate and a future maintainer could wire it into the registry, reopening the hole.
 
     Import retail.rules in a CLEAN subprocess and assert retail.metric_drift is absent
-    from sys.modules. A subprocess is used so prior test imports don't pollute the check.
+    from sys.modules (a subprocess so prior test imports don't pollute the check).
     """
     import subprocess
     import sys

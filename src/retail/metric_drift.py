@@ -47,7 +47,8 @@ class Verdict:
     status:
       pass     -- the DAX denominator filter-set matches the contract definition.
       drift    -- a recognized mismatch (wrong/missing/extra filter, wrong column/op).
-      escalate -- the DEFAULT for anything not confidently recognized (raise to a human).
+      escalate -- the DEFAULT for anything not confidently recognized (raise to a
+                  human).
       skip     -- the contract has no `definition` block to check against.
     """
 
@@ -57,7 +58,7 @@ class Verdict:
 
 @dataclass(frozen=True)
 class Filter:
-    """A normalized denominator/numerator filter predicate: a column + a recognized op."""
+    """A normalized filter predicate (denominator/numerator): column + recognized op."""
 
     column: str
     op: str  # "is_not_null" | "is_true" (the recognized-op whitelist)
@@ -144,10 +145,10 @@ def _outer_call(expr: str, func: str) -> str | None:
 def _normalize_denominator(expr: str) -> tuple[str, list[str]] | None:
     """Reduce a denominator expression to (base_measure_ref, [predicate_texts]).
 
-    Handles:
-      [Measure]                       -> ("[Measure]", [])            # bare = no filter
-      CALCULATE([Measure])            -> ("[Measure]", [])            # SYNTACTIC empty wrapper = bare
-      CALCULATE([Measure], p1, p2)    -> ("[Measure]", ["p1","p2"])   # wrapped + filters
+    Handles (right-hand side is the returned tuple):
+      [Measure]                    -> ("[Measure]", [])           # bare = no filter
+      CALCULATE([Measure])         -> ("[Measure]", [])           # empty wrapper = bare
+      CALCULATE([Measure], p1, p2) -> ("[Measure]", ["p1","p2"]) # wrapped + filters
 
     Returns None if the shape is not one of these (caller escalates). Only a SYNTACTIC
     empty CALCULATE is collapsed; a semantic no-op like CALCULATE([M], TRUE()) keeps its
@@ -259,9 +260,9 @@ def load_definition(contract_path: str) -> dict[str, Any] | None:
     Lazy `import yaml` (dev/optional dep) -- this is the ONLY place yaml is touched, and
     this module is never in the `retail check` core import chain (the stdlib invariant).
     """
-    import yaml  # lazy: dev/optional dep, kept out of the retail check core chain
-
     from pathlib import Path
+
+    import yaml  # lazy: dev/optional dep, kept out of the retail check core chain
 
     data = yaml.safe_load(Path(contract_path).read_text(encoding="utf-8")) or {}
     return data.get("definition")
