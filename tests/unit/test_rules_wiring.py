@@ -51,6 +51,9 @@ EXPECTED_RULE_IDS = frozenset(
         "D6",
         "D7",
         "D8",  # TMDL/DAX
+        "D9",  # TMDL/DAX hygiene: no hardcoded date literals
+        "D10",  # TMDL/DAX hygiene: no FILTER(ALL(...)) anti-pattern
+        "D11",  # TMDL/DAX hygiene: every measure documented (///)
         "R1",  # PBIR
         "C1",
         "C2",  # connection/secrets
