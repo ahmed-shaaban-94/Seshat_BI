@@ -33,7 +33,9 @@ ONE approved contract (the binding map is the sign-off artifact).
 - **Visual type fits the contract grain** (F011A): additive measure at a point ->
   card; over time -> line; by a dimension -> bar/column; row-level/Top-N -> table.
 - **v04 / DiscountedTransactionRate carries the caveat** (a footnote on the card):
-  counts unknown-status as not-discounted -> a floor (33.55%), not the true rate.
+  the APPROVED rate is known-status (50.37% = discounted / known status); 33.39% of
+  transactions have unknown status (excluded), and the floor (unknowns as
+  not-discounted) is 33.55%.
 
 ## See also
 

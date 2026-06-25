@@ -20,11 +20,11 @@ publish, no execution adapter (F016 owns live publish/refresh). ASCII, UTF-8 no 
 | # | Section | Points at (existing artifact) | Resolved? |
 |---|---------|-------------------------------|-----------|
 | a | Metric contracts (stage 5, approved) | `../metrics/*.yaml` (5 contracts, all `pass`, owner-approved 2026-06-25) | yes |
-| b | Readiness scorecard | `../readiness-status.yaml` (all 7 stages pass; publish approved 2026-06-25) | yes |
-| c | Reconciliation evidence (stage 4) | `../reconciliation-report.md` (FILLED, PASS: penny-exact, 0 orphans) | yes |
+| b | Readiness scorecard | `../readiness-status.yaml` (stages 1-6 pass; publish_ready = warning, re-approval pending after the discount-rate correction) | yes |
+| c | Reconciliation evidence (stage 4) | `../reconciliation-report.md` (silver<->gold, PASS) + `../reconciliation-bronze-to-gold.md` (bronze->gold tie + grain uniqueness, PASS) | yes |
 | d | Known data issues / caveats | `../data-issues`-equivalent + `../assumptions.md` (composed below) | yes |
 | e | Data dictionary (deployed schema) | below | yes |
-| f | Publish approval | `../readiness-status.yaml` `approvals[]` (recorded below) | yes |
+| f | Publish approval | `../readiness-status.yaml` `approvals[]` (prior approval RETRACTED after the discount-rate correction; re-approval pending) | pending |
 
 ## Known data issues / caveats (MANDATORY -- all four)
 
@@ -42,9 +42,11 @@ never re-decided.
    measure sign. (`../assumptions.md` deviation 1.)
 3. **Known gaps (measured).**
    - `discount_applied` is UNKNOWN (NULL) on **4,199 / 12,575 (33.39%)** of
-     transactions. The `DiscountedTransactionRate` metric counts unknowns as
-     not-discounted, so the reported rate (**33.55%**) is a FLOOR; the rate among
-     KNOWN-status transactions is **50.37%**. Any discount visual MUST surface this.
+     transactions. The APPROVED `DiscountedTransactionRate` is the KNOWN-STATUS rate --
+     discounted / known-status = 4,219 / 8,376 = **50.37%** (unknowns EXCLUDED, per the
+     Q2 ruling). Supporting caveats to surface on any discount visual: the floor (if
+     unknowns were treated as not-discounted) is 4,219 / 12,575 = **33.55%**, and the
+     unknown-status share is 4,199 / 12,575 = **33.39%**.
    - `item` is missing on **1,213 / 12,575 (9.65%)** of transactions -- these land on
      the `-1` unknown member of `dim_product_rss` (kept, not dropped; Q4).
    - `price_per_unit` / `quantity` / `total_spent` each missing ~4.8% (~604 rows);
@@ -86,29 +88,31 @@ Every deployed column appears once; business meaning carried from `../source-map
 ```yaml
 approvals:
   - stage: "publish_ready"
-    owner: "data_owner"                  # acting as governance / release authority
-    at: "2026-06-25"
-    note: "reviewed this pack and authorized release; the live publish ACTION is F016"
+    owner: "<data_owner | governance>"   # to be recorded on RE-approval of the corrected pack
+    at: "<YYYY-MM-DD>"
 ```
 
-RECORDED 2026-06-25: the data owner reviewed this pack and AUTHORIZED release ->
-`publish_ready` is `pass` (the matching `approvals[]` entry is in
-`../readiness-status.yaml`, recorded by the reviewer, not self-granted by the agent).
-This authorizes RELEASE of the governed artifacts; the live publish/refresh ACTION to
-a Power BI workspace remains the deferred, gated F016 execution adapter.
+A publish approval was RECORDED 2026-06-25 and then RETRACTED the same day: it was
+given against a pack that framed `DiscountedTransactionRate` as the 33.55% floor, which
+was corrected to the approved known-status rate (50.37%). Because the approved artifact
+materially changed, the approval no longer applies. The data owner must review THIS
+corrected pack and record a fresh `publish_ready` approval -> `publish_ready` becomes
+`pass`. Until then it is `warning`. The live publish/refresh ACTION remains F016.
 
 ## Readiness verdict for this pack
 
-`pass` -- the pack is assembled, every required section resolves to a committed
-artifact, AND the publish approval is recorded (data_owner, 2026-06-25, above + in
-`readiness-status.yaml` `approvals[]`). All 7 readiness stages are now `pass`. NO
-numeric confidence score. The live publish/refresh ACTION is the deferred F016 adapter.
+`warning` -- the pack is assembled and every required section resolves to a committed
+artifact, BUT the publish approval is PENDING re-approval after the
+`DiscountedTransactionRate` correction (the prior 2026-06-25 approval was retracted).
+Stages 1-6 are `pass`; `publish_ready` becomes `pass` only when the owner re-approves
+the corrected pack. NO numeric confidence score. The live publish ACTION is F016.
 
 ## See also
 
 - The checklist that gates this pack: `handoff-review-checklist.md`.
 - The composed evidence: `../metrics/*.yaml`, `../reconciliation-report.md`,
-  `../readiness-status.yaml`, `../assumptions.md`, `../source-map.yaml`,
+  `../reconciliation-bronze-to-gold.md`, `../readiness-status.yaml`,
+  `../assumptions.md`, `../source-map.yaml`,
   `../design/visual-contract-binding-map.md`.
 - The stage authority: `../../../docs/readiness/publish-ready.md`. Live publish (out of
   scope) is the F016 execution adapter.

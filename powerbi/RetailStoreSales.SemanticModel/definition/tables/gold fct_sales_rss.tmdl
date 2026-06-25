@@ -25,8 +25,8 @@ table 'gold fct_sales_rss'
 		displayFolder: Ratios
 		lineageTag: 3c1883b4-1eab-4d72-98b9-8c790cca8135
 
-	/// Share of transactions that had a discount applied; denominator = ALL transactions (owner ruled unknown = not-discounted). Binds to approved metric contract: DiscountedTransactionRate.yaml.
-	measure DiscountedTransactionRate = DIVIDE(CALCULATE([TransactionCount], 'gold fct_sales_rss'[discount_applied] = TRUE()), [TransactionCount])
+	/// Share of KNOWN-STATUS transactions that had a discount applied; denominator = transactions with a known discount status (discount_applied NOT NULL), per the Q2 ruling that excludes unknowns. Binds to approved metric contract: DiscountedTransactionRate.yaml.
+	measure DiscountedTransactionRate = DIVIDE(CALCULATE([TransactionCount], 'gold fct_sales_rss'[discount_applied] = TRUE()), CALCULATE([TransactionCount], NOT(ISBLANK('gold fct_sales_rss'[discount_applied]))))
 		formatString: 0.0%
 		displayFolder: Ratios
 		lineageTag: 8d0fd576-2a16-4d75-8706-977df6adb2e2

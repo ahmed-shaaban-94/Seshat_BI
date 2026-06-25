@@ -12,7 +12,7 @@ source_id: "retail_store_sales"
 source_family: "kaggle_retail_store_sales_dirty"
 
 # --- where we are -----------------------------------------------------------
-current_stage: "publish_ready"        # ALL 7 stages pass; publish approved 2026-06-25 (terminal authorable state)
+current_stage: "publish_ready"        # stages 1-6 pass; publish_ready=warning (prior approval retracted after the DiscountedTransactionRate correction; re-approval pending)
 mapping_version: "1"
 
 # --- the seven stages -------------------------------------------------------
@@ -69,16 +69,14 @@ stages:
     blocking_reasons: []
 
   publish_ready:
-    status: "pass"
+    status: "warning"
     evidence:
       - "BI handoff pack assembled: mappings/retail_store_sales/handoff/ (bi-handoff-pack.md + handoff-review-checklist.md)"
-      - "every required section resolves to a committed artifact (contracts, reconciliation PASS, deployed-schema data dictionary, the 4 mandatory caveats)"
-      - "publish APPROVED by data_owner 2026-06-25 (see approvals[] below); the handoff pack was reviewed and release authorized"
-    blocking_reasons: []
-    # pass: pack complete + reviewable AND the publish approval is recorded (a named
-    # human sign-off, Principle V -- the agent did not self-grant it). NOTE: this
-    # authorizes RELEASE of the governed artifacts; the live publish/refresh ACTION
-    # itself is still the deferred, gated F016 execution adapter, out of scope here.
+      - "every required section resolves to a committed artifact (contracts, bronze->gold reconciliation PASS, deployed-schema data dictionary, the mandatory caveats)"
+    blocking_reasons:
+      - "publish RE-APPROVAL pending: the prior publish approval (2026-06-25) was given against a pack that framed DiscountedTransactionRate as 33.55% (denominator = all transactions). That metric was CORRECTED to the approved Q2 ruling (known-status, 50.37%), so the approved pack materially changed and the prior approval is retracted as stale. The data owner must review the corrected pack and re-record a {stage: publish_ready} approval. Live publish itself remains the deferred F016 adapter."
+    # warning = pack complete + reviewable; pass requires a FRESH publish approval
+    # against the corrected DiscountedTransactionRate framing (Principle V; no self-grant).
 
 # --- cross-cutting ----------------------------------------------------------
 evidence:
@@ -99,13 +97,14 @@ approvals:
     owner: "data_owner"               # acting as BI report owner
     at: "2026-06-25"
     note: "approved the dashboard design / visual->contract binding map (10 visuals, zero orphans, all 5 contracts bound; v04 discount caveat noted)"
-  - stage: "publish_ready"
-    owner: "data_owner"               # acting as governance / release authority
-    at: "2026-06-25"
-    note: "reviewed the BI handoff pack (5 contracts + penny-exact reconciliation + deployed-schema data dictionary + the 4 mandatory caveats) and AUTHORIZED release. The live publish/refresh ACTION remains the deferred, gated F016 execution adapter."
+  # NOTE: a publish_ready approval was recorded 2026-06-25 and then RETRACTED the same
+  # day -- it was given against a handoff pack framing DiscountedTransactionRate as
+  # 33.55%, which was corrected to the approved known-status definition (50.37%). The
+  # approved artifact materially changed, so the approval no longer applies; a fresh
+  # publish approval against the corrected pack is required (publish_ready = warning).
 
 # --- the single next allowed action -----------------------------------------
-next_action: "NONE within this kit -- the table is fully readied through ALL 7 stages (publish approved 2026-06-25). The only remaining step is the live publish/refresh ACTION to a Power BI workspace, which is the deferred, gated F016 execution adapter (official Power BI connection / MCP), out of scope here. retail_store_sales is the second worked example after C086, now end-to-end complete."
+next_action: "publish RE-APPROVAL -- the data owner reviews the CORRECTED handoff pack (DiscountedTransactionRate now = known-status 50.37%, not the retracted 33.55% framing) and records a fresh {stage: publish_ready, owner, at} entry -> publish_ready becomes pass. Stages 1-6 remain pass. (Optional, the owner's call: re-affirm semantic_model_ready/dashboard_ready, both approved citing this contract -- though the dashboard design always described the known-status rate.) Live publish to a Power BI workspace is the deferred F016 execution adapter."
 
 # --- audit ------------------------------------------------------------------
 last_checked_at: "2026-06-25"

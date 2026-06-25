@@ -31,7 +31,7 @@
 
 | Check | Expected | Observed |
 |-------|----------|----------|
-| `dim_date_rss` spans every fact `transaction_date` (2022-01-01 .. 2025-01-18), contiguous | full coverage, no gaps | full coverage (1,114 days + `-1`) -- PASS |
+| `dim_date_rss` spans every fact `transaction_date` (2022-01-01 .. 2025-01-18), contiguous | full coverage, no gaps | full coverage (contiguous calendar; NO `-1` member -- it is a marked date table, rule S8) -- PASS |
 
 ## 3. Orphan FKs (RC16)
 

@@ -24,10 +24,11 @@ payment_method, customer):
 5. What is the basket value (avg transaction value) and how does it vary by channel?
 6. Who are the highest-activity customers (transaction count)?
 
-> Out of answerable scope with the current contracts (recorded, not invented): true
-> discount RATE among known-status transactions (the approved DiscountedTransactionRate
-> counts unknowns as not-discounted, so it is a floor -- carry the contract's caveat to
-> any discount visual); margin/profit (no cost data); returns (none in this source).
+> Out of answerable scope with the current contracts (recorded, not invented):
+> margin/profit (no cost data); returns (none in this source). NOTE: the approved
+> DiscountedTransactionRate IS the known-status rate (50.37% = discounted / known
+> status); carry the contract's floor (33.55%) and unknown-status (33.39%) figures as
+> caveats on any discount visual.
 
 ## Page / section structure (one question per region, in reading order)
 
@@ -54,9 +55,10 @@ page from becoming a dense grid).
 - Filter-rail slicers are dimension slicers (date/category/location/payment_method);
   they are NOT visuals bound to a measure contract, so they do not appear in the
   binding map (which governs measure-bearing visuals).
-- The discount KPI + any discount visual MUST surface the contract caveat: the rate
-  (33.55%) counts the 33% unknown-discount-status transactions as not-discounted and
-  is therefore a floor, not the true rate (50.37% among known-status). See
+- The discount KPI + any discount visual shows the APPROVED DiscountedTransactionRate
+  = 50.37% (discounted / known-status), and MUST surface the contract caveat: 33.39%
+  of transactions have an UNKNOWN discount status (excluded from the rate), and the
+  floor if unknowns were treated as not-discounted is 33.55%. See
   `mappings/retail_store_sales/metrics/DiscountedTransactionRate.yaml`.
 
 ## See also

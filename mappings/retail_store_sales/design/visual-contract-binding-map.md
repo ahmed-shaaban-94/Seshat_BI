@@ -49,9 +49,10 @@ None. All 5 approved contracts are bound to at least one visual on the page.
 
 ## Caveat carried to the page (not a binding issue, a data-honesty note)
 
-- v04 (DiscountedTransactionRate): the approved contract counts the 33% unknown
-  discount-status transactions as not-discounted, so the figure (33.55%) is a FLOOR,
-  not the true rate (50.37% among known-status). The card must footnote this. Source:
+- v04 (DiscountedTransactionRate): the approved contract is the KNOWN-STATUS rate
+  (50.37% = discounted / known status); unknown-status transactions are EXCLUDED. The
+  card must footnote that 33.39% of transactions have an unknown discount status, and
+  that the floor (if unknowns were treated as not-discounted) is 33.55%. Source:
   `../metrics/DiscountedTransactionRate.yaml`.
 
 ## Review sign-off (Principle V -- the reviewer's action, NOT the skill's)

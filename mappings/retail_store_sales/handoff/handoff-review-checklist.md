@@ -20,9 +20,12 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 - [x] Out-of-scope list present (margin, returns, demographics, live publish).
 
 ## 4. Publish approval (named human sign-off; agent never self-grants)
-- [x] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
-      and in the pack. **DONE** -- data_owner authorized release 2026-06-25 (a named
-      human sign-off; the agent did not self-grant it). `publish_ready` is now `pass`.
+- [ ] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
+      and in the pack. **PENDING RE-APPROVAL** -- a publish approval was recorded
+      2026-06-25 and then RETRACTED: it was given against a pack framing
+      DiscountedTransactionRate as 33.55%, since corrected to the approved known-status
+      rate (50.37%). The owner must re-approve the corrected pack. `publish_ready` =
+      `warning` until then.
 
 ## 5. Guardrails
 - [x] No fabricated confidence/health NUMBER anywhere -- statuses + evidence + counts only.
@@ -32,9 +35,11 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 ## Verdict
 
 All sections + caveats + reconciliation + data-dictionary-matches-schema are
-satisfied, INCLUDING the publish approval (item 4, recorded by data_owner 2026-06-25).
-So `publish_ready` is `pass` and all 7 readiness stages are complete. The only remaining
-step is the live publish/refresh ACTION (the deferred, gated F016 execution adapter).
+satisfied EXCEPT the publish approval (item 4), which is pending RE-approval after the
+DiscountedTransactionRate correction (the prior 2026-06-25 approval was retracted). So
+the pack supports `publish_ready: warning` now, and `pass` the moment the owner
+re-approves the corrected pack. Stages 1-6 remain `pass`. The live publish/refresh
+ACTION is the deferred, gated F016 execution adapter.
 
 ## See also
 
