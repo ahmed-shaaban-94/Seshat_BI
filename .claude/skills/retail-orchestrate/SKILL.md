@@ -65,7 +65,7 @@ field into two sources of truth. You may READ `Gate status`; you may not write
 | Phase | Verb skill | Gate command | Exit gate (from medallion-playbook.md) | Next |
 |-------|-----------|--------------|----------------------------------------|------|
 | 1-4 Profile -> map -> stop-and-ask | **retail-onboard-table** (the Source -> Mapping front door; seeds the readiness-status and DELEGATES the five artifacts to **source-mapping**) | (artifact review) | `Gate status: CLEARED`, zero open rows | gate |
-| GATE Mapping approval | (read state) | -- | reviewer set `Gate status: CLEARED` | silver |
+| GATE Mapping approval | (read state; **grain-confidence-reviewer** surfaces the grain-confidence card + the source-map diff for the human) | -- | reviewer set `Gate status: CLEARED` | silver |
 | 5 Build silver | **retail-build-warehouse** (authors the silver `.sql`) -> then **[SEAM: a human APPLIES the SQL; execution is the deferred DB-write seam]** | `retail check` | exit 0 | gold |
 | 6 Build gold (star) | **retail-build-warehouse** (authors the gold star `.sql`) -> then **[SEAM: human applies]** | `retail check` | exit 0 | validate |
 | ACCEPT Live validate | **retail-validate** | `retail validate --source-map mappings/<table>/source-map.yaml` | exit 0 (or deferred-boundary report) | semantic |
@@ -152,7 +152,7 @@ HARD-STOPS instead of being auto-fixed.
 
 ## See also
 
-- The verbs: `.claude/skills/{retail-onboard-table,source-mapping,retail-govern,retail-validate,retail-semantic-check,pbip-workflow}/SKILL.md`.
+- The verbs: `.claude/skills/{retail-onboard-table,source-mapping,grain-confidence-reviewer,retail-govern,retail-validate,retail-semantic-check,pbip-workflow}/SKILL.md`.
 - The spec + posture: `specs/005-layer-d-orchestration/spec.md`;
   `.specify/memory/constitution.md` Principles I, IV, V, VIII.
 - The method + exit gates: `docs/medallion-playbook.md`.
