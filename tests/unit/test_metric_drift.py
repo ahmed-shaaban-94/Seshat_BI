@@ -234,7 +234,7 @@ def test_additive_measure_escalates() -> None:
 
 
 def test_missing_additive_flag_escalates() -> None:
-    """A definition that omits `additive` is treated as not-confirmed-ratio -> escalate."""
+    """A definition that omits `additive` is not-confirmed-ratio -> escalate."""
     no_flag_def = {
         "denominator": {
             "aggregation": "count_rows",

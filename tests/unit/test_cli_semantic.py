@@ -17,12 +17,14 @@ def _write(p: Path, text: str) -> None:
 
 
 # A minimal repo: one measure in TMDL + one matching contract with a definition.
-_TMDL = """\
-table 'gold fct_sales_rss'
-
-\tmeasure AvgTransactionValue = DIVIDE([TotalSales], CALCULATE([TransactionCount], NOT(ISBLANK('gold fct_sales_rss'[total_spent]))))
-\t\tdisplayFolder: Sales
-"""
+# The measure stays one logical TMDL line at runtime; the source is concatenated
+# across physical lines only to satisfy the 88-col lint (E501).
+_MEASURE_LINE = (
+    "\tmeasure AvgTransactionValue = DIVIDE([TotalSales], "
+    "CALCULATE([TransactionCount], "
+    "NOT(ISBLANK('gold fct_sales_rss'[total_spent]))))"
+)
+_TMDL = f"table 'gold fct_sales_rss'\n\n{_MEASURE_LINE}\n\t\tdisplayFolder: Sales\n"
 
 _CONTRACT_CLEAN = """\
 name: "AvgTransactionValue"
