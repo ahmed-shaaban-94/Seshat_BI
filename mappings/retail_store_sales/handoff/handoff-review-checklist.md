@@ -20,9 +20,9 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 - [x] Out-of-scope list present (margin, returns, demographics, live publish).
 
 ## 4. Publish approval (named human sign-off; agent never self-grants)
-- [ ] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
-      and in the pack. **PENDING** -- the data-owner/governance must authorize release.
-      Until then `publish_ready` stays `warning`.
+- [x] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
+      and in the pack. **DONE** -- data_owner authorized release 2026-06-25 (a named
+      human sign-off; the agent did not self-grant it). `publish_ready` is now `pass`.
 
 ## 5. Guardrails
 - [x] No fabricated confidence/health NUMBER anywhere -- statuses + evidence + counts only.
@@ -32,8 +32,9 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 ## Verdict
 
 All sections + caveats + reconciliation + data-dictionary-matches-schema are
-satisfied; the ONLY open item is the publish approval (item 4). So the pack supports
-`publish_ready: warning` now, and `pass` the moment the owner records the approval.
+satisfied, INCLUDING the publish approval (item 4, recorded by data_owner 2026-06-25).
+So `publish_ready` is `pass` and all 7 readiness stages are complete. The only remaining
+step is the live publish/refresh ACTION (the deferred, gated F016 execution adapter).
 
 ## See also
 

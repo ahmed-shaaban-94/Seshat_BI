@@ -12,7 +12,7 @@ source_id: "retail_store_sales"
 source_family: "kaggle_retail_store_sales_dirty"
 
 # --- where we are -----------------------------------------------------------
-current_stage: "publish_ready"        # dashboard design approved; assembling the handoff pack
+current_stage: "publish_ready"        # ALL 7 stages pass; publish approved 2026-06-25 (terminal authorable state)
 mapping_version: "1"
 
 # --- the seven stages -------------------------------------------------------
@@ -69,13 +69,16 @@ stages:
     blocking_reasons: []
 
   publish_ready:
-    status: "warning"
+    status: "pass"
     evidence:
       - "BI handoff pack assembled: mappings/retail_store_sales/handoff/ (bi-handoff-pack.md + handoff-review-checklist.md)"
       - "every required section resolves to a committed artifact (contracts, reconciliation PASS, deployed-schema data dictionary, the 4 mandatory caveats)"
-    blocking_reasons:
-      - "publish approval not yet recorded -- the data-owner/governance must authorize release (Principle V; no self-grant). Live publish itself is the deferred F016 execution adapter, out of scope."
-    # warning = pack complete + reviewable; pass requires the publish approval entry.
+      - "publish APPROVED by data_owner 2026-06-25 (see approvals[] below); the handoff pack was reviewed and release authorized"
+    blocking_reasons: []
+    # pass: pack complete + reviewable AND the publish approval is recorded (a named
+    # human sign-off, Principle V -- the agent did not self-grant it). NOTE: this
+    # authorizes RELEASE of the governed artifacts; the live publish/refresh ACTION
+    # itself is still the deferred, gated F016 execution adapter, out of scope here.
 
 # --- cross-cutting ----------------------------------------------------------
 evidence:
@@ -96,9 +99,13 @@ approvals:
     owner: "data_owner"               # acting as BI report owner
     at: "2026-06-25"
     note: "approved the dashboard design / visual->contract binding map (10 visuals, zero orphans, all 5 contracts bound; v04 discount caveat noted)"
+  - stage: "publish_ready"
+    owner: "data_owner"               # acting as governance / release authority
+    at: "2026-06-25"
+    note: "reviewed the BI handoff pack (5 contracts + penny-exact reconciliation + deployed-schema data dictionary + the 4 mandatory caveats) and AUTHORIZED release. The live publish/refresh ACTION remains the deferred, gated F016 execution adapter."
 
 # --- the single next allowed action -----------------------------------------
-next_action: "publish approval -- the data-owner/governance reviews mappings/retail_store_sales/handoff/ and records a {stage: publish_ready, owner, at} entry in approvals[] -> publish_ready becomes pass. The table is then fully readied through all 7 stages. Live publish to a Power BI workspace is the deferred F016 execution adapter (official Power BI connection), out of scope here."
+next_action: "NONE within this kit -- the table is fully readied through ALL 7 stages (publish approved 2026-06-25). The only remaining step is the live publish/refresh ACTION to a Power BI workspace, which is the deferred, gated F016 execution adapter (official Power BI connection / MCP), out of scope here. retail_store_sales is the second worked example after C086, now end-to-end complete."
 
 # --- audit ------------------------------------------------------------------
 last_checked_at: "2026-06-25"

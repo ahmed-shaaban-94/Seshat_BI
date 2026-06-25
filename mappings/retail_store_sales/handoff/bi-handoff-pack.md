@@ -20,11 +20,11 @@ publish, no execution adapter (F016 owns live publish/refresh). ASCII, UTF-8 no 
 | # | Section | Points at (existing artifact) | Resolved? |
 |---|---------|-------------------------------|-----------|
 | a | Metric contracts (stage 5, approved) | `../metrics/*.yaml` (5 contracts, all `pass`, owner-approved 2026-06-25) | yes |
-| b | Readiness scorecard | `../readiness-status.yaml` (stages 1-6 pass, 7 in progress) | yes |
+| b | Readiness scorecard | `../readiness-status.yaml` (all 7 stages pass; publish approved 2026-06-25) | yes |
 | c | Reconciliation evidence (stage 4) | `../reconciliation-report.md` (FILLED, PASS: penny-exact, 0 orphans) | yes |
 | d | Known data issues / caveats | `../data-issues`-equivalent + `../assumptions.md` (composed below) | yes |
 | e | Data dictionary (deployed schema) | below | yes |
-| f | Publish approval | `../readiness-status.yaml` `approvals[]` (recorded below on sign-off) | pending |
+| f | Publish approval | `../readiness-status.yaml` `approvals[]` (recorded below) | yes |
 
 ## Known data issues / caveats (MANDATORY -- all four)
 
@@ -86,19 +86,23 @@ Every deployed column appears once; business meaning carried from `../source-map
 ```yaml
 approvals:
   - stage: "publish_ready"
-    owner: "<data_owner | governance>"   # to be recorded on approval
-    at: "<YYYY-MM-DD>"
+    owner: "data_owner"                  # acting as governance / release authority
+    at: "2026-06-25"
+    note: "reviewed this pack and authorized release; the live publish ACTION is F016"
 ```
 
-Absent approval -> `publish_ready` is `blocked`/`warning` (pack complete, release not
-authorized); it does NOT become `pass`.
+RECORDED 2026-06-25: the data owner reviewed this pack and AUTHORIZED release ->
+`publish_ready` is `pass` (the matching `approvals[]` entry is in
+`../readiness-status.yaml`, recorded by the reviewer, not self-granted by the agent).
+This authorizes RELEASE of the governed artifacts; the live publish/refresh ACTION to
+a Power BI workspace remains the deferred, gated F016 execution adapter.
 
 ## Readiness verdict for this pack
 
-`warning` -- the pack is assembled and every required section resolves to a committed
-artifact, BUT the publish approval is not yet recorded. `pass` requires the
-data-owner/governance sign-off above + the `approvals[]` entry in
-`readiness-status.yaml`. NO numeric confidence score.
+`pass` -- the pack is assembled, every required section resolves to a committed
+artifact, AND the publish approval is recorded (data_owner, 2026-06-25, above + in
+`readiness-status.yaml` `approvals[]`). All 7 readiness stages are now `pass`. NO
+numeric confidence score. The live publish/refresh ACTION is the deferred F016 adapter.
 
 ## See also
 
