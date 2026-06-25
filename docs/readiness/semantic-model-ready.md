@@ -17,12 +17,15 @@ metric owner. Maps to playbook Phase 7 (the model half, before any dashboard).
 |----------|-------|-----------|
 | PBIP model | `powerbi/<Model>.SemanticModel/definition/` | relationships, date table marked, PascalCase measures in display folders |
 | Connection params | model expressions/parameters | parameterized host -- NO real host string (G6) |
-| Metric contracts | feature 009/010 artifact (F009/F010) | per measure: name, grain, formula intent, owner |
+| Metric contracts | `templates/metric-contract.yaml` (filled per table under `mappings/<table>/metrics/`) | per measure: name, grain, formula intent, owner |
 
-Note: metric-contract artifacts (F009/F010) are PLANNED, not yet built. Until
-they exist, this stage is `not_started` for any new table -- there is nothing for
-a measure to bind to. (C086 is the first worked example / a filled instance, not
-the schema.)
+Note: the metric-contract TEMPLATE now exists (F009 -- `templates/metric-contract.yaml`,
+grouped into reusable packs via `templates/kpi-pack.yaml`; authoring guide
+`docs/metrics/metric-contract-store.md`). F009 DEFINES contracts; CHECKING a PBIP
+model against them stays F010 (on-disk feature 011). A measure can now trace to a
+filled contract; a new table is still `not_started` here until contracts are filled
+and owner-approved (`pass` needs owner + date), and Gold Ready is `pass`. (C086 is
+the first worked example / a filled instance, not the schema.)
 
 ## Required checks
 

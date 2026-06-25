@@ -1,0 +1,93 @@
+# =============================================================================
+# kpi-pack.yaml  --  a named, owned GROUP of metric contracts
+# =============================================================================
+# Tower BI Agent Kit  -  Layer 5 (Metrics & Semantic Model), feature F009.
+# See: templates/metric-contract.yaml (the atomic unit a pack groups),
+#      docs/metrics/metric-contract-store.md (the store + authoring guide).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template plus ONE example generic retail pack. A KPI pack
+#   groups related metric contracts under a stable pack name so they are reusable
+#   and discoverable across tables -- the unit a future dashboard-design feature
+#   (F011) requests. A pack REFERENCES contracts by their stable `name`; it does NOT
+#   redefine a metric (definition is one metric_contract per file). Every referenced
+#   name MUST resolve to an existing contract -- a dangling reference is a defect the
+#   review catches.
+#
+# THE DEFINE / CHECK BOUNDARY  (verbatim across all F009 artifacts -- do not drift)
+#   This feature DEFINES contracts (and groups them into packs). It does NOT CHECK a
+#   model. Nothing here reads `powerbi/<Model>.SemanticModel/`, asserts a measure /
+#   relationship / marked date table, or adds a `retail check` rule. CHECKING a PBIP
+#   model against these contracts is the SEPARATE later feature F010 (on-disk feature
+#   011, Semantic Model Readiness). A pack is a grouping of intent + binding; it is
+#   never the DAX, never a visual, never a check.
+#
+# WHICH PRINCIPLES THIS INSTANTIATES  (cite, do not re-decide)
+#   .specify/memory/constitution.md
+#     VII  C086 Is An Example ........... the example pack below uses GENERIC retail
+#                                         KPI names only; C086 (El Ezaby pharmacy) is
+#                                         cited, never inlined (FR-006).
+#     IX   Secrets & Reproducibility .... ASCII + UTF-8 no BOM; short paths; no host.
+#
+# NO FAKE CONFIDENCE  (roadmap rule #9 / readiness-model.md)
+#   A pack's readiness rolls up from its member contracts (a pack is no more ready
+#   than its least-ready contract); it is recorded with the FOUR explicit statuses
+#   only -- NO numeric score / confidence field anywhere.
+#
+# WHERE THE FILLED COPY LIVES  (recommended default -- see the store guide, O-1)
+#   metrics/packs/<pack_name>.yaml  -- the top-level reusable pack store (packs span
+#   tables, so they are NOT under mappings/<table>/). The contracts a pack references
+#   live per-table under mappings/<table>/metrics/<MetricName>.yaml. This placement
+#   is cheaply reversible.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid (parsed/reviewed as a set). Quote dates + any value with ':'.
+#   - `contracts[]` lists stable contract NAMES (PascalCase), not inline definitions.
+#   - The example pack at the bottom references the GENERIC example contract name
+#     used by templates/metric-contract.yaml -- replace with your real contract names.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# THE PACK SCHEMA (copy this block; one file per pack)
+# -----------------------------------------------------------------------------
+pack:
+  pack_name: "<pack_name>"            # stable id, e.g. sales_overview (snake_case, short)
+  purpose: "<what this pack is for>"  # e.g. "the headline sale-volume KPIs a sales
+                                      #   overview page answers"; one plain sentence.
+  owner: "<named pack owner>"         # the named human who owns this grouping; not blank,
+                                      #   not "the agent".
+  contracts:                          # the metric contracts this pack includes, BY NAME
+    - "<MetricNameA>"                 # MUST resolve to a metrics/<MetricNameA>.yaml contract
+    - "<MetricNameB>"                 #   (a dangling name is a defect the review catches)
+    # - "<MetricNameC>"
+
+  # readiness rolls up from members; four statuses only, NO score (rule #9).
+  readiness:
+    status: "not_started"             # not_started | blocked | warning | pass
+    evidence: []                      # for a pass: the owner approval (owner + date) +
+                                      #   the member contracts that are themselves pass.
+    blocking_reasons: []              # required when blocked, e.g. "member contract
+                                      #   <MetricNameB> is not yet pass".
+
+# =============================================================================
+# EXAMPLE -- one GENERIC retail pack (generic KPI names ONLY; ZERO C086 values).
+# It demonstrates the schema with ONE anchored name -- the generic example contract
+# `TotalNetSales` that templates/metric-contract.yaml demonstrates (so that reference
+# resolves) -- plus angle-bracket PLACEHOLDERS for the rest. A marked placeholder is
+# NOT a dangling reference; do NOT invent real-looking names here (a name that points
+# to no contract is exactly the defect a pack review must catch -- spec US2 scenario 3).
+# Replace this whole block with real, owner-named packs; it is illustrative.
+# =============================================================================
+example_pack:
+  pack_name: "sales_overview"
+  purpose: "the headline sale-volume KPIs a generic sales-overview page answers"
+  owner: "<sales analytics owner>"    # placeholder named role -- fill on real use
+  contracts:
+    - "TotalNetSales"                 # anchored: the example contract templates/metric-contract.yaml demonstrates
+    - "<AnotherMetricName>"           # placeholder -- replace with a real contract name in your store
+    # - "<AThirdMetricName>"          # add one per metric the pack groups
+  readiness:
+    status: "not_started"             # generic example is unapproved by construction
+    evidence: []
+    blocking_reasons:
+      - "example pack -- one anchored name + placeholders; not a real, approved pack"

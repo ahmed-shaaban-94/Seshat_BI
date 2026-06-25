@@ -1,0 +1,163 @@
+# =============================================================================
+# metric-contract.yaml  --  the machine-readable DEFINITION of one metric
+# =============================================================================
+# Tower BI Agent Kit  -  Layer 5 (Metrics & Semantic Model), feature F009.
+# See: docs/metrics/metric-contract-store.md (the store + authoring guide),
+#      docs/readiness/semantic-model-ready.md (the stage that READS contracts).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. It DEFINES one metric as a committed, reviewable
+#   contract: its stable name, the grain it is valid at, its formula INTENT (plain
+#   language, NOT DAX), its named owner, and the `gold` column(s) it binds to. A
+#   filled copy is the atomic unit the Semantic Model Ready stage depends on -- a
+#   PBIP measure has nothing to trace to until one of these exists and is approved.
+#
+# THE DEFINE / CHECK BOUNDARY  (verbatim across all F009 artifacts -- do not drift)
+#   This feature DEFINES contracts. It does NOT CHECK a model. Nothing here reads
+#   `powerbi/<Model>.SemanticModel/`, asserts a measure / relationship / marked
+#   date table, or adds a `retail check` rule. CHECKING a PBIP model against these
+#   contracts is the SEPARATE later feature F010 (on-disk feature 011, Semantic
+#   Model Readiness). A contract is INTENT + binding + an explicit readiness
+#   status; it is never the DAX, never a visual, never a check.
+#
+# WHICH PRINCIPLES THIS INSTANTIATES  (cite, do not re-decide)
+#   .specify/memory/constitution.md
+#     III  Medallion, Gold-Only ......... binds_to references `gold` ONLY (a contract
+#                                         binding to silver/bronze is a defect; FR-012).
+#     V    Agent Stops at Judgment Calls  business rollup/segment, grain ambiguity, and
+#                                         PII publish-safety are stop-and-ask
+#                                         blocking_reasons -- never auto-filled (FR-009).
+#     VII  C086 Is An Example ........... every value below is an obvious placeholder;
+#                                         C086 (El Ezaby pharmacy) is CITED as the
+#                                         filled instance, never inlined (FR-006).
+#     IX   Secrets & Reproducibility .... ASCII + UTF-8 no BOM; short repo-relative
+#                                         paths (Windows 260-char PBIP limit); no host.
+#
+# NO FAKE CONFIDENCE  (roadmap rule #9 / readiness-model.md)
+#   Readiness is recorded with EXACTLY the four explicit statuses
+#   (not_started | blocked | warning | pass) + evidence[] + blocking_reasons[].
+#   There is NO numeric score / confidence field anywhere in this template, and a
+#   filled copy MUST NOT add one. A `pass` is owner approval recorded as evidence
+#   (owner name + date), never a number.
+#
+# C086 IS A FILLED INSTANCE, NEVER THE UNIVERSAL SCHEMA
+#   The first table through this kit is C086 (El Ezaby pharmacy sales). Its filled
+#   contracts live alongside its mapping artifacts under mappings/<table>/metrics/.
+#   See docs/worked-examples/c086-pharmacy.md for that filled instance. Do NOT copy
+#   pharmacy specifics (billing codes, segment rollups, insurance PII, pharmacy
+#   grain keys, real metric names) into this template -- the values below are
+#   deliberately obvious placeholders.
+#
+# WHERE THE FILLED COPY LIVES  (recommended default -- see the store guide, O-1)
+#   mappings/<table>/metrics/<MetricName>.yaml  -- co-located with the table's
+#   mapping + readiness artifacts (ADR 0003 "cohesive per-table working set").
+#   Reusable KPI packs that group contracts live under the top-level metrics/packs/
+#   store (see templates/kpi-pack.yaml). This placement is cheaply reversible.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is parsed/reviewed as a set, not just read. Quote any
+#     value containing ':' or quotes, and quote dates so they are not auto-typed.
+#   - `name` is PascalCase to match the DAX measure-naming convention
+#     (docs/conventions.md: "Measures in PascalCase") so a measure and its contract
+#     share a name. Keep names SHORT (Windows PBIP path budget).
+#   - `formula_intent` is plain-language INTENT, NEVER DAX/SQL (see the field's note
+#     + the intent-vs-implementation example). Implementation is F010's concern.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# identity -- the stable name a measure (and a KPI pack) reference this contract by.
+# -----------------------------------------------------------------------------
+name: "<MetricName>"                  # PascalCase, e.g. TotalNetSales. Stable; a DAX
+                                      #   measure of the same name traces to this contract.
+                                      #   Must be UNIQUE within the store (a duplicate is a
+                                      #   defect the review catches).
+
+# -----------------------------------------------------------------------------
+# grain -- the grain at which this metric is VALID. Not necessarily the fact's base
+# grain: a ratio or an average may be valid only at a rollup. If the metric's grain
+# differs from the bound fact's base grain, state it here AND flag it for review
+# (Principle V -- grain; do not auto-resolve a grain conflict).
+# -----------------------------------------------------------------------------
+grain: "<the grain this metric is valid at>"   # e.g. "valid at fct_sales line grain
+                                               #   (one row = one invoice line item)";
+                                               #   or "valid only at the daily rollup".
+
+# -----------------------------------------------------------------------------
+# formula_intent -- WHAT the metric MEANS, in plain business language. This is
+# INTENT, explicitly NOT the DAX/SQL that computes it. A non-technical owner must be
+# able to read it and confirm "yes, that is what this number means". The DAX
+# implementation is authored + checked later (F010 / on-disk 011), not here.
+#
+#   INTENT (belongs here):
+#     "The sum of the net (after-discount) money amount across all kept sale lines."
+#   IMPLEMENTATION (does NOT belong here -- F010's concern):
+#     "SUM ( fct_sales[net_amount] )"   <- a DAX expression; reject it in this field.
+# -----------------------------------------------------------------------------
+formula_intent: "<plain-language meaning of the metric; NOT DAX, NOT SQL>"
+
+# -----------------------------------------------------------------------------
+# owner -- the named human who OWNS this metric definition and whose approval
+# promotes it to `pass`. The agent never self-approves (Principle I; see status).
+# -----------------------------------------------------------------------------
+owner: "<named metric owner>"         # e.g. "Sales Analytics lead"; a named role/person,
+                                      #   not "the agent" and not blank.
+
+# -----------------------------------------------------------------------------
+# binds_to -- the `gold` table + column(s) the metric reads. GOLD ONLY (Principle
+# III / FR-012): a contract that binds to a silver/bronze object is a defect.
+# If gold provides no clean column for this metric, the contract STOPS and records
+# a blocking_reason ("no bound gold column") -- it is not approvable until gold
+# builds the column (Semantic Model Ready is downstream of Gold Ready).
+# -----------------------------------------------------------------------------
+binds_to:
+  gold_table: "gold.<fact_or_dim>"    # e.g. gold.fct_sales -- MUST be the `gold` schema
+  columns:                            # the gold column(s) the metric reads
+    - "<gold_column_a>"               # e.g. net_amount
+    # - "<gold_column_b>"             # add one per column the intent reads
+  pii_sensitive: false                # true if any bound column is PII-derived; a PII
+                                      #   metric defers publish-safety to governance
+                                      #   sign-off (Principle V -- PII) and is NOT
+                                      #   auto-approved. Record the reason in
+                                      #   blocking_reasons until governance signs off.
+
+# -----------------------------------------------------------------------------
+# readiness -- the contract's lifecycle state, recorded with the FOUR explicit
+# statuses ONLY. There is NO score field; do not add one (rule #9).
+#   not_started  drafted but not yet reviewed/approved (the default)
+#   blocked      a blocking_reason holds (see the stop-and-ask list below)
+#   warning      reviewable with a recorded non-fatal issue (e.g. an accepted grain
+#                note); never auto-promotes to pass
+#   pass         owner-approved -- REQUIRES an evidence[] entry (owner + date)
+#
+# A `pass` with no evidence is a defect (readiness-model.md). evidence[] for a pass
+# MUST include the owner approval (owner name + approval date). blocking_reasons[]
+# is REQUIRED whenever status is `blocked`.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "not_started"               # not_started | blocked | warning | pass
+  evidence: []                        # for a pass: ["approved by <owner> on <YYYY-MM-DD>"]
+                                      #   plus any committed support (e.g. the source
+                                      #   gold migration that built the bound column).
+  blocking_reasons: []                # required when status is blocked; one entry per
+                                      #   open stop-and-ask item (see list below).
+
+# -----------------------------------------------------------------------------
+# AUTHORING: Principle-V stop-and-ask triggers (verbatim across all F009 artifacts).
+# Each of these is a HUMAN judgment call. The agent RECOMMENDS; the named owner
+# DECIDES. When any holds, record it as a blocking_reason and set status `blocked`
+# -- NEVER invent the answer to fill the field:
+#
+#   1. A business rollup / segment mapping that the analyst has not supplied
+#      (e.g. how raw categories roll into a reporting segment). Do not invent it;
+#      record "rollup mapping not analyst-supplied" and STOP.
+#   2. A grain ambiguity, or a metric defined at a grain FINER than the bound fact
+#      provides. Do not auto-resolve; state the grain in `grain`, record the
+#      conflict, and STOP for human review.
+#   3. A PII publish-safety question (a PII-derived bound column). Set
+#      binds_to.pii_sensitive: true, record the deferral, and STOP for governance
+#      sign-off; never auto-approve a PII metric.
+#
+# REJECT (define/check boundary): a DAX expression, a SQL statement, a visual/page
+# spec, or a `powerbi/` path does NOT belong in any field here. The contract is
+# INTENT + binding, not implementation and not a check.
+# -----------------------------------------------------------------------------
