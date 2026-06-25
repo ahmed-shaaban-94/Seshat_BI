@@ -14,7 +14,7 @@ def test_import_retail_rules_succeeds() -> None:
 
 
 def test_all_submodules_importable() -> None:
-    for sub in ("git_meta", "sql", "dax", "pbir"):
+    for sub in ("git_meta", "sql", "dax", "pbir", "g6"):
         mod = importlib.import_module(f"retail.rules.{sub}")
         assert mod is not None
 
@@ -59,6 +59,7 @@ EXPECTED_RULE_IDS = frozenset(
         "G3",
         "G4",
         "G5",  # git hygiene
+        "G6",  # PBIP parameter hygiene (no real host/value in committed params)
         "P1",
         "P2",  # process
     }
@@ -75,7 +76,7 @@ def test_registered_rule_ids_match_expected_set() -> None:
     from retail import registry
 
     registry._RULES.clear()
-    for sub in ("git_meta", "sql", "dax", "pbir"):
+    for sub in ("git_meta", "sql", "dax", "pbir", "g6"):
         importlib.reload(importlib.import_module(f"retail.rules.{sub}"))
 
     actual = {r.id for r in registry.all_rules()}
