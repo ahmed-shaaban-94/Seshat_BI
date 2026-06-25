@@ -136,3 +136,53 @@ def test_short_row_is_padded_not_rejected(tmp_path: Path) -> None:
     p.write_text("a,b,c\n1,2\n", encoding="utf-8")  # 2 fields under 3 cols -> pad
     buf, n = lbc.csv_buffer(str(p), ncols=3, source_file="short.csv")
     assert n == 1  # the short row is kept (padded), not dropped
+
+
+# --- audit hotfix: --table identifier safety --------------------------------
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        "bronze.sales; DROP TABLE gold.fct_sales",
+        "bronze.sales--comment",
+        "bronze.sales/*comment*/",
+        'bronze."sales"',
+        "bronze.sales table",
+        "retail_store_sales",
+        "silver.retail_store_sales",
+        "gold.retail_store_sales",
+    ],
+)
+def test_loader_rejects_unsafe_or_non_bronze_table_names(table: str) -> None:
+    with pytest.raises(ValueError, match="unsafe SQL identifier"):
+        lbc.create_objects(object(), table, ["id"])
+
+
+def test_loader_quotes_valid_bronze_table_and_columns() -> None:
+    class FakeCursor:
+        def __init__(self) -> None:
+            self.sql: list[str] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, sql: str, params=()) -> None:
+            self.sql.append(sql)
+
+    class FakeConn:
+        def __init__(self) -> None:
+            self.cursor_obj = FakeCursor()
+
+        def cursor(self):
+            return self.cursor_obj
+
+    conn = FakeConn()
+    lbc.create_objects(conn, "bronze.retail_store_sales", ["transaction_id"])
+    combined = "\n".join(conn.cursor_obj.sql)
+    assert 'DROP TABLE IF EXISTS "bronze"."retail_store_sales"' in combined
+    assert 'CREATE TABLE "bronze"."retail_store_sales"' in combined
+    assert '"transaction_id" TEXT' in combined

@@ -20,6 +20,14 @@ committed evidence or approved runtime evidence. This FORMALIZES the roadmap's i
 'Six product layers' framing into a normative category contract -- it cites it, it does
 not reinvent it. It is the FOUNDATION feature that F025-F033 all declare against."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: ADR 0008 is already taken (`docs/decisions/0006-codex-review-hardening.md`, plus 0007 exists); what slot should the enumerated ADR use? -> A: Use the next free slot `docs/decisions/0008-core-authority-vs-product-modules.md`. ADR numbers are append-only; 0006/0007 are shipped and MUST NOT be reused.
+- Q: The roadmap (2026-06-25) records F005-F015 shipped and F016 as the ONLY remaining feature; it does not list F024-F033. Where does the F024-F033 sequence live authoritatively, and does this feature change the roadmap? -> A: The `specs/` directory is the authoritative on-disk sequence for the F024-F033 batch (spec 019 = F025 already drafted); this feature READS the roadmap and changes none of it. Reconciling the roadmap ledger to add the F024-F033 tier is a separate, deferred docs follow-up, not part of this slice.
+- Q: Maintenance Automation runs WITHOUT a per-invocation human trigger -- does that relax Principle V (named-human approval)? -> A: No. Scheduled/CI execution operates ONLY on already-committed or already-named-human-approved evidence; it emits derived evidence and never self-approves. The absence of a per-run trigger is the human-trigger discriminator, NOT a relaxation of the approval boundary; the structural approval (the schedule itself and the evidence it runs on) is a prior named-human action.
+
 ## Why this feature exists
 
 The kit has grown a dozen surfaces -- the conductor (`retail-orchestrate`), validation
@@ -180,8 +188,9 @@ Future deliverables this feature PLANS (enumerated, NOT created now):
 - `docs/architecture/core-vs-modules-and-adapters.md` -- the prose narrative of the
   authority boundary and the module-vs-adapter seam, with the shipped-feature
   classification worked through.
-- `docs/decisions/0006-core-authority-vs-product-modules.md` -- the ADR recording WHY the
+- `docs/decisions/0008-core-authority-vs-product-modules.md` -- the ADR recording WHY the
   authority cut is orthogonal to the six layers and WHY only Core Authority owns truth.
+  (Next free ADR slot: 0006 and 0007 are already shipped; ADR numbers are append-only.)
 - `templates/module-contract.md` -- the copy-me declaration every future Module fills
   (category = Product Module; capability = read-only | artifact-writing | execution-capable;
   what Core Authority it reads; what derived evidence it writes; its forbidden operations).
@@ -322,7 +331,10 @@ distinguishing feature recorded is "no per-invocation human trigger".
   Module. The two categories MUST be disjoint.
 - **FR-006**: Define Maintenance Automation as the category for tools that run WITHOUT a
   per-invocation human trigger (scheduled / CI), emit ONLY derived evidence, and never create
-  truth or self-approve -- distinct from a human-invoked Module.
+  truth or self-approve -- distinct from a human-invoked Module. The absence of a per-run
+  trigger is the discriminator ONLY; it MUST NOT relax Principle V: a Maintenance Automation
+  tool operates exclusively on already-committed or already-named-human-approved evidence,
+  and the schedule itself (and the evidence it runs on) is a prior named-human action.
 - **FR-007**: State that the five categories are ORTHOGONAL to the roadmap's Six product
   layers: a tool carries TWO coordinates (its layer AND its category). The taxonomy MUST NOT
   replace, renumber, or merge the layers.
@@ -333,8 +345,9 @@ distinguishing feature recorded is "no per-invocation human trigger".
   `pass`.
 - **FR-009**: Enumerate (do NOT create) the five future deliverables: `docs/architecture/
   product-modules.md`, `docs/architecture/core-vs-modules-and-adapters.md`,
-  `docs/decisions/0006-core-authority-vs-product-modules.md`, `templates/module-contract.md`,
-  `templates/adapter-contract.md`.
+  `docs/decisions/0008-core-authority-vs-product-modules.md`, `templates/module-contract.md`,
+  `templates/adapter-contract.md`. The ADR uses the next free slot 0008 (0006/0007 are
+  already shipped; ADR numbers are append-only and MUST NOT be reused).
 - **FR-010**: This feature MUST add NO runtime code, NO UI, NO dbt, NO Dagster, NO Power BI
   execution, NO `retail check` rule, and NO readiness stage. `retail check` stays exit 0 and
   no new rule is added.
@@ -417,7 +430,7 @@ approving a metric/mapping remain Core Authority operations owned by a named hum
 
 - Writing any runtime code, UI, dbt, Dagster, or Power BI execution code.
 - Creating any of the five future deliverables (`product-modules.md`,
-  `core-vs-modules-and-adapters.md`, ADR 0006, `module-contract.md`, `adapter-contract.md`)
+  `core-vs-modules-and-adapters.md`, ADR 0008, `module-contract.md`, `adapter-contract.md`)
   in this slice -- they are enumerated, not authored.
 - Adding a `retail check` rule, a CLI verb, a readiness stage, or a conformance checker.
 - Emitting a numeric/maturity score for any tool (rule #9).
@@ -449,6 +462,11 @@ seven stages and their gates are unchanged.
 - **Downstream**: F025-F033 each declare their category against this contract. F031
   (adapter-maintenance policy) and F033 (release-maturity) depend specifically on the
   Maintenance Automation category and the deferred maturity concept this feature parks.
+- **Sequence authority (note)**: the roadmap ledger (2026-06-25) records F005-F015 shipped and
+  F016 as the only remaining feature; it does NOT yet list the F024-F033 tier. The `specs/`
+  directory is the authoritative on-disk sequence for that batch (e.g. `specs/019` = F025 is
+  already drafted). Reconciling the roadmap ledger to ADD the F024-F033 tier is a SEPARATE,
+  deferred docs follow-up -- this feature reads the roadmap and changes none of it.
 
 ## Non-goals
 

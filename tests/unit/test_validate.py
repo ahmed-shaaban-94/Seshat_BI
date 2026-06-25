@@ -56,6 +56,8 @@ def test_pk_uniqueness_clean() -> None:
     target = PkTarget(table="silver.sales_c086", pk_columns=("invoice_no", "line_no"))
     findings = list(check_pk_uniqueness(runner, target))
     assert findings == []
+    assert 'FROM "silver"."sales_c086"' in runner.calls[0]
+    assert '"invoice_no"' in runner.calls[0]
 
 
 def test_pk_uniqueness_duplicate_is_error() -> None:
@@ -73,6 +75,17 @@ def test_pk_uniqueness_null_pk_is_error() -> None:
     findings = list(check_pk_uniqueness(runner, target))
     assert len(findings) == 1
     assert findings[0].severity == Severity.ERROR
+
+
+def test_validate_checks_reject_unsafe_direct_target_identifiers() -> None:
+    runner = FakeRunner([])
+    target = PkTarget(
+        table="silver.sales; DROP TABLE gold.fct_sales",
+        pk_columns=("invoice_no",),
+    )
+    with pytest.raises(ValueError, match="unsafe SQL identifier"):
+        check_pk_uniqueness(runner, target)
+    assert runner.calls == []
 
 
 # ---------------------------------------------------------------------------

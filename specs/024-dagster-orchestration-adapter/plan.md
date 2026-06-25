@@ -129,7 +129,7 @@ docs/integrations/
   dagster-adapter.md                         # PLANNED -- the adapter integration doc (allowed/forbidden, seams, asset graph)
 
 docs/decisions/
-  0008-dagster-is-orchestration-adapter.md   # PLANNED -- the ADR: Dagster runs steps, decides no stage
+  0010-dagster-is-orchestration-adapter.md   # PLANNED -- the ADR: Dagster runs steps, decides no stage
 
 templates/
   dagster-run-evidence.md                    # PLANNED -- the generic derived run-evidence record shape
@@ -172,7 +172,7 @@ status}, and for each blocked/skipped asset {concrete blocking_reason, named own
 field; NO readiness-status write; NO Gate-status write. It is the live-filled DERIVED evidence
 of a run -- the same category as `reconciliation-report.md` being filled by a live run.
 
-**The ADR** (`docs/decisions/0008-dagster-is-orchestration-adapter.md`, planned). Records the
+**The ADR** (`docs/decisions/0010-dagster-is-orchestration-adapter.md`, planned). Records the
 decision: Dagster is an orchestration adapter that runs approved steps and decides no stage;
 the derived-evidence vs authored-truth boundary; the F005 conductor-sibling relationship; the
 pin-together auto-update posture; the F016 publish-trigger-only constraint.

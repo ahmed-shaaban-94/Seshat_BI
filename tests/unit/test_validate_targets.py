@@ -167,6 +167,106 @@ def test_load_targets_rejects_map_missing_gold_star() -> None:
         bad.unlink()
 
 
+@pytest.mark.parametrize(
+    ("yaml_text", "needle"),
+    [
+        (
+            "meta:\n"
+            '  table_id: "demo; DROP TABLE gold.fct_orders"\n'
+            "  primary_key: [id]\n"
+            "gold_star:\n"
+            "  fact:\n"
+            "    name: fct_demo\n"
+            "    measures: [amt]\n"
+            "  dimensions: []\n"
+            "  date_dimension:\n"
+            "    name: dim_date\n"
+            "    surrogate_key: date_sk\n",
+            "meta.table_id",
+        ),
+        (
+            "meta:\n"
+            "  table_id: demo\n"
+            '  primary_key: ["id -- comment"]\n'
+            "gold_star:\n"
+            "  fact:\n"
+            "    name: fct_demo\n"
+            "    measures: [amt]\n"
+            "  dimensions: []\n"
+            "  date_dimension:\n"
+            "    name: dim_date\n"
+            "    surrogate_key: date_sk\n",
+            "meta.primary_key",
+        ),
+        (
+            "meta:\n"
+            "  table_id: demo\n"
+            "  primary_key: [id]\n"
+            "gold_star:\n"
+            "  fact:\n"
+            '    name: "gold.fct_demo; DROP TABLE silver.demo"\n'
+            "    measures: [amt]\n"
+            "  dimensions: []\n"
+            "  date_dimension:\n"
+            "    name: dim_date\n"
+            "    surrogate_key: date_sk\n",
+            "gold_star object name",
+        ),
+        (
+            "meta:\n"
+            "  table_id: demo\n"
+            "  primary_key: [id]\n"
+            "gold_star:\n"
+            "  fact:\n"
+            "    name: fct_demo\n"
+            '    measures: ["amt) FROM gold.fct_demo; SELECT password"]\n'
+            "  dimensions: []\n"
+            "  date_dimension:\n"
+            "    name: dim_date\n"
+            "    surrogate_key: date_sk\n",
+            "gold_star.fact.measures",
+        ),
+        (
+            "meta:\n"
+            "  table_id: demo\n"
+            "  primary_key: [id]\n"
+            "gold_star:\n"
+            "  fact:\n"
+            "    name: fct_demo\n"
+            "    measures: [amt]\n"
+            "  dimensions:\n"
+            "    - name: dim_thing\n"
+            '      surrogate_key: "thing sk"\n'
+            "  date_dimension:\n"
+            "    name: dim_date\n"
+            "    surrogate_key: date_sk\n",
+            "surrogate_key",
+        ),
+    ],
+)
+def test_load_targets_rejects_unsafe_source_map_identifiers(
+    tmp_path: Path, yaml_text: str, needle: str
+) -> None:
+    from retail.validate_targets import load_targets
+
+    p = tmp_path / "malicious.source-map.yaml"
+    p.write_text(yaml_text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unsafe SQL identifier") as exc_info:
+        load_targets(p)
+    assert needle in str(exc_info.value)
+
+
+def test_load_targets_rejects_invalid_yaml_cleanly(tmp_path: Path) -> None:
+    from retail.validate_targets import load_targets
+
+    p = tmp_path / "bad.source-map.yaml"
+    p.write_text("meta: [unterminated\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="invalid YAML"):
+        load_targets(p)
+
+
 def test_validate_module_stays_stdlib_only() -> None:
     # The target LOADER may import yaml, but retail.validate (the check logic)
     # must remain importable with no third-party deps. Guard: validate.py source

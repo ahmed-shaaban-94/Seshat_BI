@@ -1,10 +1,14 @@
 # Tower BI Agent Kit -- Roadmap
 
-- **Status:** Delivered ledger. As of 2026-06-25 the entire spec'd sequence
-  (F005-F015, incl. F011A) is **SHIPPED** to `main`; **F016 (the Power BI execution
-  adapter -- official Power BI MCP / connection; `pbi-cli` no longer preferred) is the
-  only remaining feature** -- deliberately LAST, execution-only, and gated (hard rule #6).
-  This doc now records what was delivered plus the one feature still parked.
+- **Status:** Delivered ledger + a planned companion tier. As of 2026-06-25 the
+  entire originally-spec'd sequence (F005-F015, incl. F011A) is **SHIPPED** to
+  `main`; **F016 (the Power BI execution adapter -- official Power BI MCP /
+  connection; `pbi-cli` no longer preferred) remains the only parked feature of
+  that original sequence** -- deliberately LAST, execution-only, and gated (hard
+  rule #6). Separately, a **Companion Modules & Adapters tier (F024-F034)** is
+  **PLANNED** (specs drafted under `specs/`, NOT built) -- see Tier 5 below. This
+  doc records what was delivered, the one original feature still parked, and the
+  planned companion tier.
 - **Product identity:** **Tower BI Agent Kit** is the product. The **Tower BI
   Readiness System** is the operating spine inside it.
 - **Read first:** `docs/readiness/readiness-model.md` (the spine),
@@ -113,6 +117,45 @@ as the historical authoring order.
 | **014** | Source Drift Detector | 2 | Source Ready | detect when a source's shape/semantics drift from its profile | `70914d4` |
 | **015** | Reconciliation Ledger | 4 | Gold Ready | a durable ledger of cross-layer reconciliation results over time | `0eefe57` |
 | **016** | Power BI Execution Adapter (official Power BI MCP / connection) | 6 | Dashboard/Publish | the deferred, EXECUTION-ONLY Power BI adapter -- materializes/publishes an already-approved model; cannot define metrics, mappings, semantic logic, or dashboard design. LAST, gated on semantic-model readiness. (`pbi-cli` is no longer the preferred path; the official Power BI MCP / connection is the preferred future adapter.) | **NOT BUILT -- the only remaining feature (gated, by design)** |
+
+### Tier 5 -- Companion Modules & Adapters (F024-F034) -- PLANNED (specs drafted, not built)
+
+Authored by the 2026-06-25 companion-modules audit
+(`docs/superpowers/specs/2026-06-25-companion-modules-adapters-audit.md`) as
+planning artifacts only. These are NOT shipped; each has a drafted spec (and
+plan/tasks/analysis) under `specs/`. The binding rule: **Core Authority owns
+truth** -- a module/adapter may READ, SUMMARIZE, VISUALIZE, write DERIVED
+evidence, or EXECUTE an approved step, but MUST NOT create truth (no self-granted
+approval, no defining business meaning, no approving metrics/mappings, no
+publishing Power BI, no moving a readiness stage to `pass` without the required
+evidence + named human approval). F029 (dbt) and F030 (Dagster) are OPTIONAL
+companion engines, not roadmap precursors to F016. F016 remains the
+deliberately-last, bottom-of-stack execution-only adapter; nothing in this tier
+sequences before it or assumes it exists.
+
+| Feature | Name | F024 category | Advances stage | Spec dir | New ADR |
+|---------|------|---------------|----------------|----------|---------|
+| **F024** | Companion Tools Architecture | (defines the 5 categories) | cross-cutting | `018` | `0008-core-authority-vs-product-modules` |
+| **F025** | PR Readiness Reviewer | Product Module (read-only) | cross-cutting (guards promotions) | `019` | -- |
+| **F026** | Readiness Viewer | Product Module (read-only) | cross-cutting (reuses F012 fan-out) | `020` | -- |
+| **F027** | Approval Console | Product Module (artifact-writing) | all (the approval mechanism) | `021` | -- |
+| **F028** | Evidence Pack Generator | Product Module (artifact-writing) | Publish Ready (consumes F013) | `022` | -- |
+| **F029** | dbt Transformation Adapter | Execution Adapter (DB-connected) | Silver/Gold Ready | `023` | `0009-dbt-is-transformation-adapter` |
+| **F030** | Dagster Orchestration Adapter | Execution Adapter (orchestrator) | all (sequences, decides none) | `024` | `0010-dagster-orchestration-adapter` |
+| **F031** | Adapter Maintenance & Auto-Update Policy | Maintenance Automation | none (protects all) | `025` | `0011-adapter-safe-auto-updates` |
+| **F032** | Adapter Compatibility Matrix | Maintenance Automation | none | `026` | -- |
+| **F033** | Release & Maturity Management | Maintenance Automation / Skill | none | `027` | -- |
+| **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | Dashboard Ready (design-approved -> page-implemented) | `039` | -- |
+
+> **Numbering (spec-dir vs F-number) for this tier.** Spec dirs were allocated
+> from the next free on-disk slot, giving **spec-dir = F-number - 6** for F024-F033
+> (018=F024 ... 027=F033). **F034** (Visual Implementation MVP) was drafted later
+> into the next free slot **039** (the feature script numbers from the current max
+> on-disk dir, not the first gap). When a `specs/0NN-*` dir and an F-number
+> disagree, this roadmap row wins; each spec's own header states both. The
+> **append-only ADR allotment** for the four new ADRs this tier authors is fixed
+> here: 0008 (F024), 0009 (F029), 0010 (F030), 0011 (F031) -- shipped ADRs are
+> 0001-0007 and are never reused.
 
 ## Hard design rules (non-negotiable, gate the sequence)
 

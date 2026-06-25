@@ -19,6 +19,14 @@ change readiness to pass without evidence/approval, publish Power BI without pub
 resolve business ambiguity, bypass the source-map gate. This slice is planning artifacts ONLY: no
 Dagster files are created. Generic (Principle VII). No fake confidence (Principle IX)."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: When `publish_ready = pass` but the F016 Power BI Execution Adapter is parked / not yet built at run time, what does the `publish_execution_evidence` asset do? -> A: It fails closed -- the publish asset HALTS, records `blocking_reason` "F016 publish adapter not available" with the named owner, and NEVER publishes itself as a fallback (the publish wall holds even when the only authorized publisher is absent; Principle II).
+- Q: Where does the derived run-evidence record live, and how does it relate to the readiness `evidence[]` channel? -> A: The per-run record is written under the planned project's run-output area `orchestration/dagster/run-evidence/<run-id>.md`; its measured per-asset results + blocking reasons are ALSO surfaced as `evidence[]` / `blocking_reasons[]` entries on the affected table's readiness status (the existing spine / F029 convention). Whether that evidence MARKS any stage `pass` is Core Authority's record, never Dagster's write.
+- Q: When a run halts at a human seam or fails closed, is writing the run-evidence record enough, or must the run also emit a failed/CI signal? -> A: A halted or fail-closed run MUST itself terminate with a non-zero / failed Dagster run status (the CI signal) in ADDITION to writing the run-evidence record, so an unattended scheduler surfaces the blocker. The failed run status is DERIVED evidence about the execution, not a readiness `pass`/fail write into Core Authority.
+
 ## Why this feature exists
 
 The kit already has a conductor that sequences the medallion stages: `retail-orchestrate`
@@ -292,6 +300,10 @@ enumerate each of these.
   Gold Ready (Principle VIII -- the live run is gated on creds).
 - **`publish_ready` not `pass`**: the publish asset does not run and does not trigger F016;
   it records the missing publish approval as a blocker.
+- **F016 parked / not yet built when `publish_ready = pass`**: the publish asset fails closed --
+  it HALTS, records `blocking_reason` "F016 publish adapter not available" with the named owner,
+  and NEVER publishes itself as a fallback. The publish wall holds even when the only authorized
+  publisher is absent (Principle II; clarified 2026-06-25).
 - **A downstream asset is requested directly** (e.g. someone targets `dashboard_blueprint`
   while gold is broken): the upstream STOP edge still blocks it; the dependency cannot be
   run around.
@@ -336,6 +348,16 @@ enumerate each of these.
   measured numbers, timestamp, commit sha, and the concrete `blocking_reason` + named owner
   for any blocked/skipped asset. It MUST NOT contain a numeric health/confidence score
   (Principle IX) and MUST NOT write any readiness `status`, `Gate status`, or approval (US3).
+  The per-run record is written under the planned project's run-output area
+  `orchestration/dagster/run-evidence/<run-id>.md`; its measured per-asset results +
+  `blocking_reason`s are ALSO surfaced as `evidence[]` / `blocking_reasons[]` entries on the
+  affected table's readiness status (the existing spine / F029 convention). Whether that
+  evidence MARKS any stage `pass` is Core Authority's record, never Dagster's write.
+- **FR-013**: A halted or fail-closed run MUST itself terminate with a non-zero / failed Dagster
+  run status (the CI signal) in ADDITION to writing the run-evidence record, so an unattended
+  scheduler surfaces the blocker rather than exiting silently. This failed run status is DERIVED
+  evidence ABOUT the execution; it is NOT a readiness `pass`/fail write into Core Authority and
+  does not flip any stage (US1, US3).
 - **FR-008**: The spec MUST reconcile with F005: state that `retail-orchestrate` is the
   agent-conversational conductor and Dagster is the unattended/CI sibling -- same sequence,
   same gate-exit authority, same two human seams, neither self-approving. It MUST cite the
@@ -367,9 +389,10 @@ enumerate each of these.
   (fail-closed propagation).
 - **Human-seam asset**: an asset that reads a committed human approval as its GO signal and
   halts if absent; it never writes the approval.
-- **Run-evidence record** (`dagster-run-evidence.md`): the derived, measured, timestamped log
-  of a run -- per-asset gate command + exit + numbers + blocked reasons. No score; no authored
-  truth.
+- **Run-evidence record** (`orchestration/dagster/run-evidence/<run-id>.md`): the derived,
+  measured, timestamped log of a run -- per-asset gate command + exit + numbers + blocked
+  reasons. Its measured results are also surfaced as `evidence[]` / `blocking_reasons[]` on the
+  affected table's readiness status. No score; no authored truth.
 - **Core Authority (unchanged)**: the owner of truth -- `readiness-status.yaml`, the gate exit
   codes, the named human approvals. Dagster reads it and writes derived evidence about runs; it
   never writes truth into it.
@@ -422,11 +445,16 @@ The agent recommends and Dagster runs; the named human (and the gate exit code) 
 - Sequence all seven readiness stages in the planned asset graph (decide none).
 - RUN: load bronze, profile source, run dbt or SQL migrations (silver/gold), run
   `retail check`, run `retail validate`, run the semantic check, generate the handoff pack.
-- WRITE DERIVED run-evidence (`dagster-run-evidence.md`): per-asset gate command, exit code,
-  measured numbers, timestamps, commit sha, blocked/skipped reasons + named owners.
+- WRITE DERIVED run-evidence (`orchestration/dagster/run-evidence/<run-id>.md`): per-asset gate
+  command, exit code, measured numbers, timestamps, commit sha, blocked/skipped reasons + named
+  owners; surface those measured results as `evidence[]` / `blocking_reasons[]` on the affected
+  table's readiness status.
 - READ committed approvals and readiness state as the GO signal for human-seam assets.
 - TRIGGER the F016 Power BI Execution Adapter -- and ONLY when `publish_ready` is `pass`.
 - Halt a failed gate asset and propagate the stop to all downstream assets (fail-closed).
+- Terminate a halted / fail-closed run with a non-zero / failed Dagster run status (the CI
+  signal) so an unattended scheduler surfaces the blocker -- a derived signal about the run,
+  never a readiness `pass`/fail write.
 - Escalate any judgment call to the named owner.
 
 ## Forbidden operations
@@ -446,8 +474,10 @@ The agent recommends and Dagster runs; the named human (and the gate exit code) 
 
 ## Evidence required
 
-- For a green run: a `dagster-run-evidence.md` record with each asset's gate command, exit 0,
-  measured numbers (row counts, 0 orphan FKs, penny-exact reconcile), timestamp, commit sha.
+- For a green run: a run-evidence record (`orchestration/dagster/run-evidence/<run-id>.md`) with
+  each asset's gate command, exit 0, measured numbers (row counts, 0 orphan FKs, penny-exact
+  reconcile), timestamp, commit sha; its results also surfaced as `evidence[]` on the affected
+  table's readiness status.
 - For a blocked run: the same record plus, for each blocked/skipped asset, the concrete
   `blocking_reason` and the named owner who can clear it.
 - For a human-seam halt: the committed approval that was read (or recorded as absent), with

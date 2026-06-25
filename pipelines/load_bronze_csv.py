@@ -32,6 +32,17 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+_SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from retail.identifiers import (  # noqa: E402
+    quote_bronze_table,
+    quote_identifier,
+    validate_bronze_table,
+)
 
 
 def log(msg: str) -> None:
@@ -124,14 +135,17 @@ def read_csv_headers(path: str) -> list[str]:
 
 
 def create_objects(conn, table: str, cols: list[str]) -> None:
+    table = validate_bronze_table(table, context="--table")
+    quoted_table = quote_bronze_table(table, context="--table")
     schema = table.split(".", 1)[0]
+    quoted_cols = [quote_identifier(c, context="CSV header") for c in cols]
     with conn.cursor() as cur:
         for sch in ("bronze", "silver", "gold"):
-            cur.execute(f"CREATE SCHEMA IF NOT EXISTS {sch};")
-        coldefs = ",\n  ".join(f'"{c}" TEXT' for c in cols)
-        cur.execute(f"DROP TABLE IF EXISTS {table};")  # rebuildable bronze layer
+            cur.execute(f"CREATE SCHEMA IF NOT EXISTS {quote_identifier(sch)};")
+        coldefs = ",\n  ".join(f"{c} TEXT" for c in quoted_cols)
+        cur.execute(f"DROP TABLE IF EXISTS {quoted_table};")  # rebuildable bronze layer
         cur.execute(f"""
-            CREATE TABLE {table} (
+            CREATE TABLE {quoted_table} (
               {coldefs},
               _source_file TEXT NOT NULL,
               _loaded_at   TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -192,16 +206,21 @@ def csv_buffer(path: str, ncols: int, source_file: str) -> tuple[io.StringIO, in
 
 
 def load_csv(conn, table: str, cols: list[str], path: str) -> None:
+    table = validate_bronze_table(table, context="--table")
+    quoted_table = quote_bronze_table(table, context="--table")
     if not os.path.exists(path):
         sys.exit(f"file not found: {path}")
     fname = os.path.basename(path)
-    quoted = ", ".join(f'"{c}"' for c in cols) + ', "_source_file", "_loaded_at"'
+    quoted = (
+        ", ".join(quote_identifier(c, context="CSV header") for c in cols)
+        + ', "_source_file", "_loaded_at"'
+    )
     with conn.cursor() as cur:
-        cur.execute(f"DELETE FROM {table} WHERE _source_file = %s;", (fname,))
+        cur.execute(f"DELETE FROM {quoted_table} WHERE _source_file = %s;", (fname,))
         log(f"{fname}: cleared prior rows; reading + copying...")
         buf, n = csv_buffer(path, len(cols), fname)
         cur.copy_expert(
-            f"COPY {table} ({quoted}) FROM STDIN "
+            f"COPY {quoted_table} ({quoted}) FROM STDIN "
             f"WITH (FORMAT csv, QUOTE '\"', ENCODING 'UTF8')",
             buf,
         )
@@ -210,9 +229,13 @@ def load_csv(conn, table: str, cols: list[str], path: str) -> None:
 
 
 def reconcile(conn, table: str, path: str, fname: str) -> None:
+    table = validate_bronze_table(table, context="--table")
+    quoted_table = quote_bronze_table(table, context="--table")
     file_rows = count_csv_records(path)  # CSV records, not physical lines (#8)
     with conn.cursor() as cur:
-        cur.execute(f"SELECT COUNT(*) FROM {table} WHERE _source_file = %s;", (fname,))
+        cur.execute(
+            f"SELECT COUNT(*) FROM {quoted_table} WHERE _source_file = %s;", (fname,)
+        )
         db_rows = cur.fetchone()[0]
     ok = file_rows == db_rows
     log(
@@ -238,15 +261,16 @@ def main() -> None:
         sys.exit("missing --cluster-id (or DO_DB_CLUSTER_ID env)")
     if not a.database:
         sys.exit("missing --database (or ANALYTICS_DB_NAME env)")
+    table = validate_bronze_table(a.table, context="--table")
 
     cols = read_csv_headers(a.csv)
     conn = connect(a.cluster_id, a.database)
     log(f"connected to {a.database}; columns = {cols}")
-    create_objects(conn, a.table, cols)
-    load_csv(conn, a.table, cols, a.csv)
+    create_objects(conn, table, cols)
+    load_csv(conn, table, cols, a.csv)
     with conn.cursor() as cur:
-        cur.execute(f"SELECT COUNT(*) FROM {a.table};")
-        log(f"TOTAL {a.table} rows: {cur.fetchone()[0]}")
+        cur.execute(f"SELECT COUNT(*) FROM {quote_bronze_table(table)};")
+        log(f"TOTAL {table} rows: {cur.fetchone()[0]}")
     conn.close()
     log("done")
 

@@ -10,6 +10,14 @@
 
 **Input**: "Roadmap F026 (Product Module, read-only). A module that DISPLAYS readiness across sources / tables / reports by reading the Core Authority artifacts (readiness-status.yaml at mappings/<table>/, ADR 0004) -- current_stage, per-stage status, evidence[], blocking_reasons[], approvals[], next_action. It is the STAGE-CENTRIC lens: a per-stage status matrix across the seven readiness stages, evidence rendered as links/references, an approvals timeline, and the single next_action per table. It does NOT recompute truth, does NOT change readiness state, does NOT infer approvals, and shows missing evidence AS MISSING. Critical overlap: F012 Data Quality Control Room is already a read-only cross-table roll-up of findings + blockers; F026 is scoped strictly as the DELTA (a different view over overlapping inputs), with an explicit recommendation to ship as a stage-view mode of F012 (or merge into F012 if the delta proves thin). Generic (#7). No fake confidence (#9)."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: How does the viewer know which stages REQUIRE an approval, so it flags "approval not recorded" only when one is genuinely missing (not on stages that need none)? -> A: The viewer reads the "Required owner / approval" field of each stage's `docs/readiness/<stage>-ready.md` ("who must sign off, if anyone", per readiness-model.md). A `pass` gate is flagged "approval not recorded" ONLY when that stage doc declares an approval is required AND no matching `approvals[]` entry exists. Where the stage doc records no required approver, an empty `approvals[]` is NORMAL and is not flagged. The viewer never infers the requirement itself -- it reads it from the stage doc.
+- Q: Which set of items does the viewer enumerate, and how does it discover them? -> A: It reuses F012's exact fan-out: scan each `mappings/<table>/` directory for a `readiness-status.yaml` (ADR 0004 canonical location); one matrix row per discovered directory. "Sources / tables / reports" are whatever items have a `mappings/<item>/readiness-status.yaml` -- the viewer adds no second discovery path and invents no rows for items without a file (those are simply absent; a named-but-fileless item is the FR-009 "no readiness file" case only when explicitly asked about by name).
+- Q: `evidence[]` entries are committed file PATHS (e.g. `mappings/<table>/source-profile.md`); the spec also says render "path, and line/section where recorded" -- is the viewer expected to produce a line number? -> A: The viewer renders each `evidence[]` entry VERBATIM as recorded. If the entry already carries a line/section anchor, it is rendered as-is; if it is a bare path, the viewer renders the bare path and does NOT synthesize a line number. "Line/section where recorded" describes the form an entry MAY take, never a value the viewer computes -- synthesizing a line/anchor not present in the source would be fabricated evidence (Forbidden).
+
 ## Why this feature exists
 
 Every table, source, and report in the kit already carries its truth in one Core
@@ -222,9 +230,11 @@ recorded" -- and it adds no approval of its own.
 1. **Given** an item with recorded `approvals[]`, **When** the module renders the
    timeline, **Then** each approval appears as {stage/gate, named owner, date} in
    chronological order, copied verbatim -- nothing invented.
-2. **Given** a stage that reads `pass` but whose gate requires a named approval and whose
-   `approvals[]` lacks it, **When** the timeline renders, **Then** it shows "approval not
-   recorded for this gate" and does NOT infer an approver (no-self-approval; Principle V).
+2. **Given** a stage that reads `pass` whose `docs/readiness/<stage>-ready.md` declares a
+   required approver and whose `approvals[]` lacks a matching entry, **When** the timeline
+   renders, **Then** it shows "approval not recorded for this gate" and does NOT infer an
+   approver (no-self-approval; Principle V). **Given** a `pass` stage whose stage doc
+   declares NO required approver, an empty `approvals[]` is NOT flagged.
 3. **Given** the module runs, **Then** `git status` shows zero modification to any
    `readiness-status.yaml` or per-item artifact (read-only proven), and no `approvals[]`
    entry was added by the viewer.
@@ -264,21 +274,36 @@ recorded" -- and it adds no approval of its own.
   `readiness-status.yaml` (`current_stage`, per-stage `status`, `evidence[]`,
   `blocking_reasons[]`, `approvals[]`, `next_action`). It MUST run NO validator, open NO
   DB connection, and add NO new gate. It reuses F012's read-fan-out over these files
-  rather than re-implementing the scan (recommended shape (a)).
+  rather than re-implementing the scan (recommended shape (a)). Item discovery is exactly
+  F012's fan-out: scan each `mappings/<item>/` directory for a `readiness-status.yaml`
+  (ADR 0004 canonical location) and emit one matrix row per discovered file. The viewer
+  adds NO second discovery path and invents NO row for an item that has no file; a
+  named-but-fileless item surfaces only as the FR-009 "no readiness file" case when a
+  reader asks about it by name (Clarification 2026-06-25).
 - **FR-004**: The view MUST render a per-stage status MATRIX across all seven stages
   (Source Ready -> Publish Ready) -- one row per item, one column per stage, each cell
   the recorded `status`. `current_stage` MUST be marked and the single `next_action`
   shown. This is the F012 delta: F012 shows only `current_stage` + one status.
-- **FR-005**: The module MUST render each stage's `evidence[]` as NAVIGABLE REFERENCES
-  (committed path + line/section where recorded), copied verbatim from the source -- not
-  as F012's measured counts. A stage with empty `evidence[]` MUST render "evidence
-  missing" with the expected artifact named; a referenced file absent on disk MUST render
-  "referenced file not found". Evidence is NEVER fabricated or filled in (FR maps to the
-  scope-wall "shows missing evidence AS MISSING").
+- **FR-005**: The module MUST render each stage's `evidence[]` as NAVIGABLE REFERENCES,
+  copied VERBATIM from the source -- not as F012's measured counts. Each entry is rendered
+  in exactly the form it is recorded: if the entry carries a line/section anchor it is
+  rendered with that anchor; if it is a bare committed path it is rendered as a bare path.
+  The viewer MUST NOT synthesize a line number or section anchor that the source does not
+  record (that would be fabricated evidence; Clarification 2026-06-25). A stage with empty
+  `evidence[]` MUST render "evidence missing" with the expected artifact named; a
+  referenced file absent on disk MUST render "referenced file not found". Evidence is NEVER
+  fabricated or filled in (FR maps to the scope-wall "shows missing evidence AS MISSING").
 - **FR-006**: The module MUST render `approvals[]` as a chronological TIMELINE: each
   approval as {stage/gate, named owner, date}, in date order, copied verbatim. It MUST
-  NOT establish, infer, or back-fill an approval. A gate that reads `pass` but whose
-  required approval is absent MUST render "approval not recorded" (no-self-approval).
+  NOT establish, infer, or back-fill an approval. A gate that reads `pass` is flagged
+  "approval not recorded" ONLY when an approval is genuinely required and absent: the
+  viewer reads the "Required owner / approval" field of that stage's
+  `docs/readiness/<stage>-ready.md` ("who must sign off, if anyone", per readiness-model.md)
+  and flags only when the stage doc declares an approver is required AND no matching
+  `approvals[]` entry exists. Where the stage doc records no required approver, an empty
+  `approvals[]` is NORMAL and MUST NOT be flagged. The viewer reads the requirement from
+  the stage doc; it never infers the requirement itself (no-self-approval; Clarification
+  2026-06-25).
 - **FR-007**: The module MUST be READ-ONLY: it MUST NOT recompute a stage status, MUST
   NOT advance a stage, MUST NOT write a `pass`, MUST NOT edit any `readiness-status.yaml`
   or per-item artifact, MUST NOT add an approval, MUST NOT run SQL or `retail check` /
@@ -361,7 +386,9 @@ viewer (Principle V; no-self-approval).
 
 ## Allowed operations
 
-- READ each item's `readiness-status.yaml` and the files its `evidence[]` references.
+- READ each item's `readiness-status.yaml`, the files its `evidence[]` references, and the
+  "Required owner / approval" field of each `docs/readiness/<stage>-ready.md` (to know
+  which gates require an approval before flagging a missing one).
 - SUMMARIZE / VISUALIZE the recorded state as a stage matrix, an evidence-reference
   block, and an approvals timeline (the rendering this feature exists to do).
 - REUSE F012's existing read-fan-out over the per-item files (recommended shape (a)).

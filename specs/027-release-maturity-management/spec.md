@@ -21,6 +21,13 @@ evidence; the ladder is honestly pinned at Level 2-3 today with Levels 4-6 marke
 BUILT. Generic (Principle VII), ASCII-only (Principle IX), no fake confidence (hard rule
 #9)."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: What is the unit of "a release" -- one set per release under `docs/releases/<release>/`? -> A: One release = one shipped roadmap F-slice, keyed by its roadmap F-number (e.g. `docs/releases/F033/`); the release note maps 1:1 to the delivered-ledger row it summarizes. A batch (e.g. F024-F033) is recorded as a group of per-slice notes, not one merged note; git tags / version numbers are out of scope (release execution stays a human action, Non-goals).
+- Q: Is rung L3 (repeatable silver/gold) reported "achieved" or "not achieved" today, given its repeatability caveat? -> A: L3 is ACHIEVED for the worked tables -- its binary test ("silver + gold proven repeatable for the >=2 worked tables") is satisfied by on-disk evidence (c086 + retail_store_sales each have silver/gold). The caveat "generic repeatability beyond the two worked tables is the NEXT evidence" is recorded as a forward scope-note on the achieved verdict, NOT as an unmet gate. This keeps the binary-test contract (FR-005) while not rounding up (the caveat is explicit).
+
 ## Why this feature exists
 
 The kit ships in slices (F005-F015 shipped; F016 parked; the F024-F033 companion-tools
@@ -223,7 +230,11 @@ shows no maturity snapshot self-promoted and no release self-approved.
   separate artifacts with separate purposes and MUST NOT be merged. ASCII, UTF-8 no BOM,
   placeholders only, no per-table specifics (Principle VII).
 - **FR-003**: Plan a durable output home `docs/releases/` for filled, approved release notes
-  + maturity snapshots, one set per release.
+  + maturity snapshots, one set per release. A "release" is one shipped roadmap F-slice,
+  keyed by its roadmap F-number: filled releases live under `docs/releases/<F-number>/`
+  (e.g. `docs/releases/F033/`) and the note maps 1:1 to the delivered-ledger row it
+  summarizes. A batch of slices is recorded as a group of per-slice notes, NOT one merged
+  note. Git tags / version numbers / package publishes are out of scope (Non-goals).
 - **FR-004**: A release note MUST contain all seven blocks: (1) what became possible, (2)
   what changed, (3) readiness stages affected, (4) new modules/adapters, (5) known
   limitations, (6) migration notes, (7) next best slice. Each "what became possible" claim
@@ -232,16 +243,24 @@ shows no maturity snapshot self-promoted and no release self-approved.
   binary evidence test each: L0 docs only; L1 one worked example; L2 two worked examples; L3
   repeatable silver/gold (proven for the worked tables); L4 dbt transformation adapter; L5
   Dagster orchestration; L6 official Power BI execution adapter. The reported level is the
-  HIGHEST rung whose required evidence ALL exists.
+  HIGHEST rung whose required evidence ALL exists. Rung order is a capability-evidence
+  milestone narrative, independent of the roadmap's F-sequence; it does NOT imply F016 is the
+  sequencing apex -- F016 remains the deliberately-last, bottom-of-stack execution-only adapter
+  that no readiness stage depends on. A rung is binary -- achieved or not. L3's
+  binary test is "silver + gold proven repeatable for the >=2 worked tables"; it is ACHIEVED
+  today (c086 + retail_store_sales each have silver/gold). The caveat "generic repeatability
+  beyond the two worked tables is the NEXT evidence" is a forward scope-note on the achieved
+  verdict, NOT an unmet gate (this preserves the binary contract without rounding up).
 - **FR-006**: No-fake-confidence guard: the maturity report MUST NOT emit a percentage,
   0-100 score, average, or any number that reads as confidence. Each rung is reported
   achieved/not-achieved with cited or missing evidence. If asked for a numeric maturity
   score, the skill DECLINES and cites hard rule #9. (Numbered rungs are milestones, like the
   seven readiness stages -- not a score.)
 - **FR-007**: Honest current-state requirement: the assessment MUST report the kit at its
-  true evidence-backed rung today -- L2 achieved (c086 + retail_store_sales), L3 reported
-  with its repeatability caveat -- and L4/L5/L6 each NOT achieved with the missing artifact
-  named. No release note may claim a capability whose rung is not achieved.
+  true evidence-backed rung today -- L2 achieved (c086 + retail_store_sales), L3 achieved for
+  the two worked tables with its repeatability caveat recorded as a forward scope-note (NOT an
+  unmet gate; see FR-005) -- and L4/L5/L6 each NOT achieved with the missing artifact named.
+  No release note may claim a capability whose rung is not achieved.
 - **FR-008**: No-unbacked-capability guard: a "what became possible" / "production ready" /
   "GA" / "enterprise grade" claim is permitted ONLY when an evidence rung backs it. With no
   backing rung the claim is forbidden and the skill refuses.

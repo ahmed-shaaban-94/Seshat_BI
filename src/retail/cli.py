@@ -134,6 +134,15 @@ def _load_targets(source_map: str):
     return load_targets(source_map)
 
 
+def _redact_dsn(message: object, dsn: str) -> str:
+    text = str(message) or message.__class__.__name__
+    if dsn:
+        text = text.replace(dsn, "<redacted DSN>")
+        if "@" in dsn:
+            text = text.replace(dsn.split("@", 1)[0] + "@", "<credentials>@")
+    return text
+
+
 def _run_validate(args) -> int:
     """Run the LIVE validators against a real DB.
 
@@ -200,13 +209,27 @@ def _run_validate(args) -> int:
     # 3b. Live mode: load targets, connect, run the four checks, print findings.
     try:
         targets = _load_targets(args.source_map)
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, OSError, ValueError) as exc:
         print(f"error: could not load source-map: {exc}", file=sys.stderr)
         return 1
 
     print(f"retail validate: running live checks against {safe_host}", file=sys.stderr)
-    runner = _make_runner(dsn)
-    findings = run_live_checks(runner, targets)
+    try:
+        runner = _make_runner(dsn)
+        findings = run_live_checks(runner, targets)
+    except Exception as exc:
+        print(
+            "error: live validation failed at the DB boundary "
+            f"({exc.__class__.__name__}): {_redact_dsn(exc, dsn)}",
+            file=sys.stderr,
+        )
+        print(
+            "       verify the DSN, network access, database objects, and the "
+            "optional DB driver: pip install 'retail[db]'",
+            file=sys.stderr,
+        )
+        return 1
+
     for finding in findings:
         print(_format(finding))
     if any(f.severity is Severity.ERROR for f in findings):

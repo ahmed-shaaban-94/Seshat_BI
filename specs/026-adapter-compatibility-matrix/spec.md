@@ -24,6 +24,12 @@ compatible (hard rule #9 / Principle IX). Docs/templates first (rule #8). Generi
 (#7). Readiness stage affected: none directly. This is the F031 half of the
 record/policy pair."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: Is `parked` (used for the F016 Power BI MCP row) a distinct STATUS value in the matrix's vocabulary, or a note layered on top of one of the enumerated statuses? -> A: `parked` is NOT a status value. The matrix's status enumeration stays exactly the four readiness statuses (`not_started`/`blocked`/`warning`/`pass`) plus `unknown` for the compatibility sense (FR-008). The F016 Power BI MCP row's compatibility status is `unknown` (never-verified, never-supported); "parked" is recorded as a note / `blocking_reasons[]` entry describing WHY the row is `unknown` (the adapter is not yet exercised), never as a sixth status. This keeps the status field bound to the single committed enumeration and prevents a forked vocabulary (readiness-model alignment; hard rule #9 / Principle IX).
+
 ## Why this feature exists
 
 The kit is acquiring external adapters -- a dbt transformation adapter (F029), a
@@ -99,7 +105,7 @@ identity, not by assumed content.
 | F031 Adapter Maintenance Policy | the POLICY: what a dependency-update PR must do, when to re-verify, the enforcement procedure | F032 is the RECORD the policy reads + writes against; F032 enforces nothing |
 | F029 dbt Transformation Adapter | the dbt adapter's runtime/build | F032 records dbt-core + dbt-postgres supported ranges + smoke test; it does not build or run the adapter |
 | F030 Dagster Orchestration Adapter | the Dagster adapter's runtime/build | F032 records Dagster + dagster-dbt supported ranges + smoke test; it does not build or run the adapter |
-| F016 Power BI Execution Adapter | the parked, execution-only Power BI MCP / connection adapter | F032 records the Power BI PBIP/TMDL assumptions + the MCP adapter STATUS (e.g. `parked`/`unknown`); it does not unpark, build, or execute it |
+| F016 Power BI Execution Adapter | the parked, execution-only Power BI MCP / connection adapter | F032 records the Power BI PBIP/TMDL assumptions + the MCP adapter STATUS (compatibility `unknown`, with a "parked, not yet exercised" note); it does not unpark, build, or execute it |
 | F005 Retail Readiness Model | the seven-stage readiness spine + readiness-status.yaml | F032 advances NO spine stage; it uses the four-status vocabulary (`not_started`/`blocked`/`warning`/`pass`) plus `unknown` for the compatibility sense, never a score |
 
 The single biggest design risk is scope-bleed from the RECORD into the POLICY (F031)
@@ -233,9 +239,10 @@ supported status is a named owner attesting a passed smoke test as evidence.
   matrix records the direct adapter rows; a transitive move that breaks a smoke test
   flips that adapter's smoke-test status to `blocked`/`unknown` at next verification --
   the matrix does not silently keep `pass` for an unverified state.
-- **An adapter is parked (e.g. F016 Power BI MCP)**: the row records status `parked`
-  (or `unknown` for compatibility) with a note that it is not yet exercised; it is NOT
-  marked supported, and it is NOT omitted.
+- **An adapter is parked (e.g. F016 Power BI MCP)**: the row records compatibility
+  status `unknown` (the adapter is not yet exercised) with a note / `blocking_reasons[]`
+  entry stating it is "parked, not yet exercised"; "parked" is the NOTE, not a status
+  value. It is NOT marked supported, and it is NOT omitted.
 - **A version range with an open upper bound** (e.g. "tested at X, upper bound
   untested"): the supported range states the tested floor and marks the ceiling
   `unknown` -- it does not assume newer-is-fine.
@@ -455,10 +462,11 @@ plainly rather than force-fitting a spine stage the way feature-delivery specs d
   policy. This pairing is the recommended default and is recorded in both specs; it is
   cheaply reconcilable if the batch later merges them (a doc move), but they are
   specified separately to keep the record honest and the policy enforceable.
-- **Power BI execution adapter is parked (F016)**: its row records `parked`/`unknown`
-  status, not supported; `pbi-cli` is no longer the preferred path -- the official
-  Power BI MCP / connection is the preferred future adapter, and the matrix tracks its
-  STATUS, not its implementation.
+- **Power BI execution adapter is parked (F016)**: its row records compatibility status
+  `unknown` (not supported) with a "parked, not yet exercised" note in
+  `blocking_reasons[]`; "parked" is a note, not a status value (see Clarifications). `pbi-cli`
+  is no longer the preferred path -- the official Power BI MCP / connection is the preferred
+  future adapter, and the matrix tracks its STATUS, not its implementation.
 - **Last-verified dates and smoke-test results are point-in-time evidence**: the matrix
   is a record updated when a version is re-verified; staleness is honest (an old
   last-verified date is shown, not hidden), and re-verification timing is the F031

@@ -119,7 +119,7 @@ approved `source-map.yaml` (path + git ref + rows) for grain/PK/each column.
       evidence-not-approval rule (T004), the basic-tests set (`unique`/`not_null`/
       `relationships` + reconciliation), and the stop-and-ask Principle V list (FR-003).
 - [ ] T011 [US3] In plan.md, ENUMERATE `templates/dbt-adapter-contract.md` + the ADR
-      `docs/decisions/0007-dbt-is-transformation-adapter.md` as PLANNED outputs that state the
+      `docs/decisions/0009-dbt-is-transformation-adapter.md` as PLANNED outputs that state the
       evidence-not-approval rule and the auto-update policy (T004 + FR-010) -- not authored now.
 - [ ] T012 [US3] In spec.md, confirm the Human approval boundary + Forbidden operations
       sections list: no self-granted Silver/Gold Ready, no defining mapping/metric contracts,

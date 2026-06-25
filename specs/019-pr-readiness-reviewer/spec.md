@@ -10,6 +10,12 @@
 
 **Input**: "A Product Module (read-only) that turns the manual PR review pattern into a repeatable skill. It reads one PR's state (open/draft/mergeable, CI/workflow conclusions, open review threads, unresolved Codex/GitHub review comments) and the committed readiness evidence (readiness-status.yaml, source-map approval metadata, declared-vs-run tests, no raw data / no secrets / no local paths) and emits a structured verdict: merge_ready (yes/no), blockers[], warnings[], required_human_decisions[], evidence[], next_action. It MUST distinguish blocker vs warning. It reports readiness from evidence only -- it CANNOT merge a PR, approve a PR, resolve a review thread, or move a readiness stage. Category per F024: Product Module, read-only. Generic (#7). No fake confidence (#9). Depends on F024."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: Where does the rendered verdict go -- is it persisted as a committed/tracked repo file, or emitted ephemerally to the operator? -> A: Ephemeral -- the skill renders the verdict to the operator (chat/stdout) using the generic template as its shape; it writes NO tracked verdict file and creates no new evidence artifact. Any persistence (saving or posting the verdict) is a separate, opt-in, human-triggered action outside this read-only module, consistent with the already-deferred PR-comment write.
+
 ## Why this feature exists
 
 The kit already merges work through a human PR review pattern that is, today, tribal
@@ -303,7 +309,11 @@ named.
 - **FR-009**: The skill MUST be READ-ONLY: it MUST NOT merge a PR, approve a PR (submit a
   review, grant a required approval), resolve or reply to a review thread, push or amend a
   commit, edit a PR body, or move/upgrade a readiness stage. It performs read-only
-  observation only (F024 Core Authority; Principle V).
+  observation only (F024 Core Authority; Principle V). The verdict is EMITTED EPHEMERALLY --
+  rendered to the operator (chat/stdout) in the shape of the generic template; the skill
+  writes NO tracked verdict file and creates no new committed evidence artifact. Persisting or
+  posting the verdict is a separate, opt-in, human-triggered action outside this module (the
+  PR-comment write stays deferred under "Deferred decisions").
 - **FR-010**: No-fake-confidence guard: `merge_ready` is a derived boolean, never a numeric
   score. The skill MUST refuse to emit a numeric merge/confidence/health score; if asked, it
   declines, cites no-fake-confidence (rule #9), and returns the boolean + explicit
@@ -459,6 +469,10 @@ here.)
   authoritative input; this module consumes it, never redefines it.
 - "Cross-cutting" means the reviewer applies to any PR regardless of which stage it
   advances; it does not itself gate or advance a stage.
+- The verdict is delivered EPHEMERALLY (rendered to the operator using the generic template
+  as its shape); the module persists nothing and creates no new committed evidence file.
+  Saving or posting the verdict is a deliberate, human-triggered action outside this read-only
+  module (auto-posting as a PR comment is enumerated under "Deferred decisions").
 
 ## Deferred decisions (future specs / issues -- recorded, not built)
 
