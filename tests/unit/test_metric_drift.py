@@ -216,6 +216,35 @@ def test_unparseable_unbalanced_parens_escalates() -> None:
     assert v.status == "escalate", v
 
 
+# --- additive measures escalate (filter-set logic does not apply) -----------
+
+
+def test_additive_measure_escalates() -> None:
+    """An additive measure's denominator filter-set logic does not apply -> escalate."""
+    additive_def = {
+        "additive": True,
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": [{"column": "total_spent", "op": "is_not_null"}],
+        },
+    }
+    v = check_measure_drift(DAX_AVG, additive_def)
+    assert v.status == "escalate", v
+    assert "additive" in v.detail.lower()
+
+
+def test_missing_additive_flag_escalates() -> None:
+    """A definition that omits `additive` is treated as not-confirmed-ratio -> escalate."""
+    no_flag_def = {
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": [{"column": "total_spent", "op": "is_not_null"}],
+        },
+    }
+    v = check_measure_drift(DAX_AVG, no_flag_def)
+    assert v.status == "escalate", v
+
+
 # --- backward compatibility: a contract with no definition block ------------
 
 

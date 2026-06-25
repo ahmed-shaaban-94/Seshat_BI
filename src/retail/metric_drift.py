@@ -241,6 +241,15 @@ def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Ver
     if not definition or "denominator" not in definition:
         return Verdict("skip", "contract has no structured `definition.denominator`")
 
+    # Additive measures are not ratios; denominator filter-set logic does not apply.
+    # Require an explicit `additive: false` to proceed; True or absent -> escalate.
+    if definition.get("additive") is not False:
+        return Verdict(
+            "escalate",
+            "additive measure (or `additive` unset); "
+            "denominator filter-set logic does not apply",
+        )
+
     contract_filters = _contract_filters(definition["denominator"])
     if contract_filters is None:
         return Verdict(
