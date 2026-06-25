@@ -24,6 +24,14 @@ artifacts (`source-map.yaml`, `assumptions.md`, `unresolved-questions.md`,
 `reconciliation-report.md`) belong to Stage 2 (Mapping Ready) and MUST NOT be
 authored here.
 
+**Optional strengthening artifacts (Layer 2 -- Source Intelligence).** The semantic
+half of the profile may additionally be recorded in two OPTIONAL generic artifacts that
+strengthen this stage's `evidence[]` without changing its gate: a Business Meaning
+Registry (`templates/business-meaning-registry.md`) and an Arabic<->English retail term
+Dictionary (`templates/retail-term-dictionary.md`). They are NOT required and do NOT
+add a new gate -- the profile remains the one required artifact and the gate stays a
+review. See `docs/source-intelligence.md` for how a filled copy contributes evidence.
+
 ## Required checks
 
 | Check | Gate |
@@ -82,6 +90,8 @@ source-mapping workflow to author the source-map decisions.
 - `readiness-model.md` -- the four-status state model and the no-fake-confidence rule.
 - `readiness-pipeline.md` -- the seven-stage sequence; this is stage 1 of 7.
 - `mapping-ready.md` -- the next stage (the source-mapping gate).
+- `../source-intelligence.md` -- Layer 2: how the OPTIONAL registry + dictionary feed this stage's evidence.
+- `../../templates/business-meaning-registry.md`, `../../templates/retail-term-dictionary.md` -- the OPTIONAL semantic-proposal artifacts.
 - `../../.claude/skills/source-mapping/SKILL.md` -- the skill that runs this stage; calls `profile.py` as the mechanical profiler.
 - `../../src/retail/profile.py` -- the mechanical profiler (row/col counts, `'' OR NULL` missingness, candidate-PK proof).
 - `../medallion-playbook.md` -- Phase 1, which this stage maps to.
