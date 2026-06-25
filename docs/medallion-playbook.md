@@ -228,7 +228,10 @@ matches the shipped governance rule **RC8** ("Power BI reads `gold`"): one canon
 
 - One fact at the silver grain + conformed dimensions (one per business entity).
 - Surrogate `_sk` keys; keep natural keys as attributes.
-- **Unknown member at `_sk = -1`** in every dim; fact FKs `COALESCE` missing lookups to -1.
+- **Unknown member at `_sk = -1`** in every ENTITY dim; fact FKs `COALESCE` missing
+  lookups to -1. The DATE dim is the EXCEPTION (rule S8): it carries NO -1 member (a
+  marked date table rejects nulls), and an unmatched fact date fails via `date_sk NOT
+  NULL` rather than a sentinel.
 - Transaction identifiers with no attributes (invoice no, line no) → **degenerate
   dimensions** on the fact, not their own dim.
 - **Date dimension is a CONTIGUOUS generated calendar** over the full span — never

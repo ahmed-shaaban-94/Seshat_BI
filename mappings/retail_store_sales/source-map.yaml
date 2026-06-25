@@ -202,6 +202,8 @@ gold_star:
     surrogate_key: "date_sk"               # YYYYMMDD integer
     method: "generate_series"              # RC15: contiguous, one row per calendar day
     contiguous: true
+    has_unknown_member: false              # S8: a marked date table carries NO -1/NULL
+                                           # member; unmatched fact dates fail-loud (NOT NULL)
     span:
       from: "2022-01-01"                   # earliest transaction_date
       to: "2025-01-18"                     # latest transaction_date

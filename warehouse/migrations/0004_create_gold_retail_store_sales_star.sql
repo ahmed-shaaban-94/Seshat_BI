@@ -3,7 +3,9 @@
 --
 -- Power BI reads gold. One fact (transaction grain) + 4 conformed dims + dim_date.
 -- Surrogate _sk keys (GENERATED ... IDENTITY), natural keys retained, an unknown
--- member (_sk = -1) in every dim, fact FKs COALESCE missing lookups to -1.
+-- member (_sk = -1) in every ENTITY dim (fact FKs COALESCE missing lookups to -1);
+-- the DATE dim carries NO -1 member (marked date table, rule S8) -- an unmatched
+-- fact date is rejected by date_sk NOT NULL, not absorbed by a sentinel.
 -- transaction_id + discount_applied are DEGENERATE dims: they live on the fact.
 --
 -- Idempotent: drop fact before dims (FK order), recreate all in one transaction.

@@ -3,7 +3,9 @@
 --
 -- Power BI reads gold. One fact (line-item grain) + 6 conformed dimensions.
 -- Surrogate _sk keys (GENERATED ... IDENTITY), natural keys retained, an unknown
--- member (_sk = -1) in every dim, fact FKs COALESCE missing/unknown lookups to -1.
+-- member (_sk = -1) in every ENTITY dim (fact FKs COALESCE missing/unknown lookups
+-- to -1); the DATE dim carries NO -1 member (marked date table, rule S8) -- an
+-- unmatched fact date is rejected by date_sk NOT NULL, not absorbed by a sentinel.
 -- invoice_no + line_no are DEGENERATE dimensions: they live on the fact, not a dim.
 --
 -- Idempotent: drop fact before dims (FK order), recreate all in one transaction.

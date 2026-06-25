@@ -46,7 +46,7 @@ stages:
   gold_ready:
     status: "pass"
     evidence:
-      - "warehouse/migrations/0004_create_gold_retail_store_sales_star.sql applied; fct_sales_rss 12,575 rows + 5 dims (each with -1 member)"
+      - "warehouse/migrations/0004_create_gold_retail_store_sales_star.sql applied; fct_sales_rss 12,575 rows + 5 dims (the 4 entity dims each carry a -1 member; dim_date_rss deliberately carries NONE -- it is a marked date table, rule S8)"
       - "retail validate exit 0 WITH banner: PK unique, date coverage complete, 0 orphan FKs (all 5), penny-exact reconcile (quantity 66,276; total_spent 1,552,071.00)"
       - "mappings/retail_store_sales/reconciliation-report.md (filled, PASS)"
       - "the 9.65% missing-item rows (1,213) correctly land on the -1 unknown product member (Q4 honored)"
