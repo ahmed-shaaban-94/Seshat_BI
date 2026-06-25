@@ -28,7 +28,7 @@ Docs/planning feature -- no `src/`/`tests/`. This slice writes ONLY the five Spe
 files under `specs/025-adapter-maintenance-policy/`. The future deliverables
 (`docs/operations/dependency-update-policy.md`,
 `docs/operations/adapter-update-policy.md`,
-`docs/decisions/0009-safe-auto-updates.md`, optional `.github/dependabot.yml` /
+`docs/decisions/0011-safe-auto-updates.md`, optional `.github/dependabot.yml` /
 `renovate.json`) are ENUMERATED, not created.
 
 ---
@@ -154,11 +154,13 @@ matrix as the durable home; the policy makes no self-verdict.
       (NOT the doc): the adapter-specific overlay -- Lane B for dbt/Dagster, Lane C for
       the Power BI execution adapter, the compatibility-review trigger, the no-fork-tax
       restatement (Principle II). Enumerate it in plan.md's PLANS list. [FR-007, SC-001]
-- [ ] T015 [US3] Author the PLANNING task for `docs/decisions/0009-safe-auto-updates.md`
+- [ ] T015 [US3] Author the PLANNING task for `docs/decisions/0011-safe-auto-updates.md`
       (NOT the ADR): the automerge decision (Lane A on green CI, below the spine; B
       review; C never), the alternatives (no-automerge-at-all; automerge-everything;
       the lane split chosen), and the no-bypass invariant. Enumerate it in plan.md's
-      PLANS list; note 0009 is reserved (0007/0008 claimed by sibling features).
+      PLANS list; note ADRs 0001-0007 are shipped on disk; the F024-F033 batch
+      authors new appended ADRs 0008 (018), 0009 (023), 0010 (024), 0011 (025), so
+      0011 is reserved for this feature.
       [SC-001, SC-004]
 - [ ] T016 [US3] Author the PLANNING task for the OPTIONAL bot config
       (`.github/dependabot.yml` / `renovate.json`): if later created it ENCODES the

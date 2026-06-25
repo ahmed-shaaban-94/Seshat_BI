@@ -128,7 +128,7 @@ docs/operations/
 `-- adapter-update-policy.md      # PLANNED -- lanes + compatibility-review trigger for dbt/Dagster/Power BI adapters
 
 docs/decisions/
-`-- 0009-safe-auto-updates.md     # PLANNED -- ADR: automerge for Lane A on green CI, below the spine; B review; C never
+`-- 0011-safe-auto-updates.md     # PLANNED -- ADR: automerge for Lane A on green CI, below the spine; B review; C never
 
 .github/                          # OPTIONAL PLANNED config (one of):
 |-- dependabot.yml                # PLANNED (optional) -- encodes the lanes as bot rules
@@ -139,8 +139,9 @@ docs/decisions/
 policy docs live in a new `docs/operations/` home (parallel to `docs/readiness/` and
 `docs/decisions/`), keeping operations narrative separate from readiness-stage docs and
 decision records. The ADR follows the existing `docs/decisions/000N-*.md` convention;
-0009 is reserved for this feature (0007/0008 are claimed by sibling features in this
-batch -- named here, created later, so no collision). The optional bot config, if
+ADRs 0001-0007 are shipped on disk; the F024-F033 batch authors new appended ADRs
+0008 (018), 0009 (023), 0010 (024), 0011 (025), so 0011 is reserved for this feature
+-- named here, created later, so no collision. The optional bot config, if
 later created, lives under the existing `.github/` next to `workflows/ci.yml`.
 
 ## Phase 0 -- Research (no external research needed)
@@ -170,7 +171,7 @@ and the Lane B vs Lane C split for dbt/Dagster (B) versus the Power BI execution
 adapter (C). Restates the no-fork-tax rule (Principle II): an update is taken by
 upgrading the dependency, never by vendoring or re-implementing.
 
-**0009-safe-auto-updates.md** (planned ADR). Decision: allow automerge for Lane A on
+**0011-safe-auto-updates.md** (planned ADR). Decision: allow automerge for Lane A on
 green CI, confined below the readiness spine; require human review for Lane B; forbid
 automerge for Lane C. Context: Principle II needs a safe upgrade path; the apparent
 tension with Principle V. Alternatives considered: (a) no automerge at all (rejected --

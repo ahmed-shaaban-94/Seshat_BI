@@ -33,7 +33,7 @@ per table.
 
 **Storage**: This slice -- five committed text files under
 `specs/023-dbt-transformation-adapter/`. The feature when built adds a `dbt/` project tree,
-two `templates/dbt-*-contract.md`, one `docs/decisions/0009-*.md`, one
+two `templates/dbt-*-contract.md`, one `docs/decisions/0007-*.md`, one
 `docs/integrations/dbt-adapter.md`, and one `.claude/skills/dbt-transformation-adapter/
 SKILL.md` -- all ENUMERATED below, NONE created now.
 

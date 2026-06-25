@@ -24,6 +24,14 @@ DB-connected, not publish-capable. Readiness stage affected: Silver Ready, Gold 
 Planning-only: enumerate the future dbt project shape and deliverables; create no dbt
 files in this slice."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: What is the parity tolerance for additive money sums, and is the parity assertion limited to the fact or extended to the dimensions? -> A: Exact to the cent (an absolute delta <= 0.01 on each additive-measure sum, since silver/gold use `NUMERIC(12,2)`), AND assert per-dimension distinct row counts in addition to the fact's row count and `transaction_id` distinct count. This closes the divergent-unknown-member gap the edge cases flag.
+- Q: After a table's build-path switch (migrations -> dbt) is approved, what happens to that table's migration files? -> A: Retain them; the migration files are NOT deleted on switch. They remain the parity oracle and the rollback path, marked superseded-but-kept; retiring a migration is a separate, later named-human decision, not a side effect of the switch.
+- Q: After a table is switched to dbt, does the reconciliation parity test run once (at switch) or on every dbt build? -> A: Re-run the parity test on every dbt build for a switched table, against the retained migration oracle, for as long as that oracle is retained. A one-time-at-switch check would let the two paths silently diverge afterward.
+
 ## Why this feature exists
 
 The warehouse already builds silver and gold as numbered, idempotent SQL migrations
@@ -231,22 +239,31 @@ divergence between two build paths. It is high-value but follows the gating + ci
 MVP (US1-US3), since parity is only meaningful once dbt is allowed to build at all.
 
 **Independent Test**: define the parity check between a dbt mart and the matching
-migration gold table; confirm it asserts equal row count, preserved `transaction_id`
-uniqueness, and additive-measure-sum equality within tolerance, and that a mismatch keeps
-Gold Ready `blocked` and keeps migrations as the default.
+migration gold table; confirm it asserts equal fact row count, preserved `transaction_id`
+distinct count, additive-measure-sum equality to the cent (absolute delta `<= 0.01` per
+measure), and equal per-dimension distinct row counts, that a mismatch keeps Gold Ready
+`blocked` and keeps migrations as the default, and that after an approved switch the check
+re-runs on every dbt build while the migration oracle is retained.
 
 **Acceptance Scenarios**:
 
 1. **Given** a dbt-built mart and the migration-built `gold.fct_sales_rss`, **When** the
-   reconciliation test runs, **Then** it asserts equal row count, equal `transaction_id`
-   distinct count, and `SUM(total_spent)` equal within the stated tolerance.
+   reconciliation test runs, **Then** it asserts equal fact row count, equal
+   `transaction_id` distinct count, `SUM(total_spent)` equal to the cent (absolute delta
+   `<= 0.01`), and equal per-dimension distinct row counts (each conformed dimension's
+   member count, including the `-1` unknown member where present).
 2. **Given** any parity assertion fails, **When** results are recorded, **Then** the
    measured delta is a `blocking_reason`, Gold Ready stays `blocked`, and migrations
    remain the default build path.
 3. **Given** parity passes AND a named human approves the switch, **When** the build path
    is changed, **Then** the decision (dbt becomes the build path for that table) is
    recorded as evidence with the parity result + the approver; the agent never flips the
-   default on its own.
+   default on its own; and that table's migration files are RETAINED (not deleted) as the
+   parity oracle and rollback path.
+4. **Given** a table already switched to dbt with its migration oracle retained, **When**
+   any subsequent dbt build runs, **Then** the reconciliation parity test re-runs against
+   that oracle and a new divergence keeps Gold Ready `blocked` until a named human resolves
+   it; the parity check is not a one-time-at-switch event.
 
 ---
 
@@ -292,11 +309,21 @@ Gold Ready `blocked` and keeps migrations as the default.
 - **FR-006**: dbt MUST be specified as an OPTIONAL ALTERNATIVE transformation engine.
   `warehouse/migrations` remains the DEFAULT build path; dbt becomes a table's build path
   ONLY after the reconciliation parity test passes AND a named human approves the switch.
-  Both paths MUST NOT silently feed the same gold tables.
+  Both paths MUST NOT silently feed the same gold tables. After an approved switch, that
+  table's migration files MUST be RETAINED (not deleted) as the parity oracle and the
+  rollback path, marked superseded-but-kept; retiring a migration is a separate later
+  named-human decision, never a side effect of the switch. While the migration oracle is
+  retained, the reconciliation parity test (FR-007) MUST re-run on EVERY dbt build for that
+  table -- a one-time-at-switch check is insufficient because it would let the two paths
+  silently diverge afterward.
 - **FR-007**: The reconciliation parity test MUST assert, for a table already built by
-  migrations: equal row count, preserved `transaction_id` distinct count, and additive
-  money-measure sum equality (e.g. `SUM(total_spent)`) within a stated tolerance, against
-  the migration-built gold table (`gold.fct_sales_rss` for the worked example).
+  migrations, against the migration-built gold table (`gold.fct_sales_rss` for the worked
+  example): equal fact row count, preserved `transaction_id` distinct count, additive
+  money-measure sum equality (e.g. `SUM(total_spent)`) to the cent (absolute delta
+  `<= 0.01` per additive measure, since silver/gold use `NUMERIC(12,2)`), AND equal
+  per-dimension distinct row counts (each conformed dimension's member count, including the
+  `-1` unknown member where present) -- the per-dimension count closes the
+  divergent-unknown-member gap the Edge Cases flag.
 - **FR-008**: Only `profiles.example.yml` (placeholders, NO secrets, NO DSN, NO tokens)
   MAY be committed. The real `profiles.yml` MUST be git-ignored. No connection string,
   credential, or host MAY appear in any tracked file (Principle IX).
@@ -324,8 +351,11 @@ Gold Ready `blocked` and keeps migrations as the default.
   feature-level contract stating the entry gate, the evidence-not-approval rule, the
   parity requirement, the no-secrets rule, and the auto-update policy.
 - **Reconciliation parity test**: the assertion that a dbt mart reproduces the
-  migration-built gold table (row count, key uniqueness, additive-measure sums within
-  tolerance). Its result is evidence; a human approves any build-path switch.
+  migration-built gold table (fact row count, `transaction_id` distinct count,
+  additive-measure sums to the cent -- absolute delta `<= 0.01` per measure, and
+  per-dimension distinct row counts). Its result is evidence; a human approves any
+  build-path switch. After a switch it re-runs on every dbt build while the migration
+  oracle is retained.
 - **Readiness status** (`mappings/<table>/readiness-status.yaml`, F005, ADR 0004): where
   dbt run/test/parity evidence is recorded; Tower readiness + a named human own the stage
   status. dbt writes derived evidence, never truth.
@@ -336,10 +366,12 @@ Gold Ready `blocked` and keeps migrations as the default.
 
 - **SC-001**: A reader of the spec + planned contracts can state, unambiguously, that dbt
   may NOT run a model for any table whose Mapping Ready is not `pass`, with no exception.
-- **SC-002**: The parity requirement is concrete: a reviewer can name the three assertions
-  (row count, `transaction_id` distinct count, additive-measure sum within tolerance) and
-  the migration target (`gold.fct_sales_rss` for the worked example) the dbt mart must
-  match before dbt can become a table's build path.
+- **SC-002**: The parity requirement is concrete: a reviewer can name the four assertions
+  (fact row count, `transaction_id` distinct count, additive-measure sum to the cent --
+  absolute delta `<= 0.01` per measure, and per-dimension distinct row counts) and the
+  migration target (`gold.fct_sales_rss` for the worked example) the dbt mart must match
+  before dbt can become a table's build path, and that the test re-runs on every dbt build
+  while the migration oracle is retained.
 - **SC-003**: There is NO path by which a green `dbt test` alone moves Silver Ready or Gold
   Ready to `pass`: every such transition cites dbt evidence PLUS a named human approval.
 - **SC-004**: 100% of the planned generic artifacts contain ZERO `retail_store_sales` /
@@ -360,7 +392,9 @@ Gold Ready `blocked` and keeps migrations as the default.
   `pass`, citing the dbt run/test/parity evidence. The agent + dbt recommend; the human
   decides.
 - **The named human approves any build-path switch** (migrations -> dbt) for a table, only
-  after the parity test passes. The agent never flips the default on its own.
+  after the parity test passes. The agent never flips the default on its own. The switch
+  RETAINS the table's migration files as the parity oracle/rollback; **retiring a retained
+  migration is a separate later named-human decision**, never a side effect of the switch.
 - **The named human resolves every Principle V judgment call** (grain ambiguity,
   sentinel-vs-null, PII publish-safety, business rollup/segment) the map does not already
   answer. dbt never auto-resolves one.
@@ -386,6 +420,10 @@ Gold Ready `blocked` and keeps migrations as the default.
 - Moving Silver Ready / Gold Ready to `pass` on a green `dbt test` alone (self-approval).
 - Switching a table's default build path from migrations to dbt without a passing parity
   test AND a named human approval.
+- Deleting or retiring a table's migration files as a side effect of a build-path switch
+  (they MUST be retained as the parity oracle/rollback; retirement is a separate human call).
+- Skipping the reconciliation parity re-run on a dbt build for a switched table whose
+  migration oracle is still retained (the parity check is not one-time-at-switch).
 - Silently changing the declared grain, or auto-resolving any Principle V judgment call.
 - Publishing or materializing a Power BI model (that is F016, parked + gated separately).
 - Committing `profiles.yml` or any DSN/credential/host/token in a tracked file.
@@ -432,17 +470,19 @@ Semantic Model Ready, Dashboard Ready, or Publish Ready.
   adapter. Auto-adopted default; recorded, reversible.
 - Filled dbt models for the worked example live under the planned `dbt/models/` tree;
   generic templates live under `templates/`. Recorded in plan.md.
-- The parity tolerance for additive money sums is a small, stated rounding tolerance
-  (e.g. to the cent), since silver/gold use `NUMERIC(12,2)`; the exact tolerance is a
-  human-confirmed default recorded in the adapter contract.
+- The parity tolerance for additive money sums is exact to the cent (absolute delta
+  `<= 0.01` per additive measure), since silver/gold use `NUMERIC(12,2)`; this is the
+  stated default recorded in the adapter contract (clarified 2026-06-25), still
+  human-confirmable when the adapter is built.
 - Mapping Ready = `pass` is a precondition that already exists for the worked example
   (the migrations were built from an approved map).
 
 ## Deferred decisions
 
-- The exact parity tolerance value and whether dimension row counts are also asserted
-  (beyond the fact) -- recorded as a default, confirmed by the owner when the adapter is
-  built.
+- (Resolved 2026-06-25) The parity tolerance is exact to the cent (absolute delta
+  `<= 0.01` per additive measure) and dimension row counts ARE asserted beyond the fact
+  (per-dimension distinct member counts). See FR-007 / SC-002. Still owner-confirmable at
+  build time, but no longer an open default.
 - Whether dbt incremental materialization is used for large facts (vs full refresh) --
   deferred to the build slice; does not change the gate or the parity rule.
 - Whether the reconciliation ledger (F015) consumes the parity results durably -- a later

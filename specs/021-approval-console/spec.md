@@ -20,6 +20,14 @@ and cannot move a stage to `pass` without the required approval AND evidence. Pu
 skill + two templates + one docs page; no Python, no CLI, no new `retail check` rule.
 Generic (#7); no fabricated confidence number (#9); ASCII + UTF-8 no BOM (Principle IX)."
 
+## Clarifications
+
+### Session 2026-06-26
+
+- Q: When the console writes the authority class into the committed artifacts, which vocabulary does it use, and what about the fourth class (metric-owner)? -> A: Write each target's existing vocabulary verbatim -- `data_owner` (underscore) into `readiness-status.yaml` `approvals[].owner`, and `data-owner` (hyphen) into the `unresolved-questions.md` "Who must answer" cell, exactly as each template already spells it. The base `unresolved-questions.md` template carries only three classes (analyst / governance / data-owner); `metric-owner` is an ADDITIVE extension class (from F009 metric contracts) the console uses ONLY for a metric-contract question, documented in the docs page as not-yet-present in the base template -- the console never silently renames or collapses the existing three.
+- Q: Where does the console report a duplicate-`question_id` defect (the same question packaged twice)? -> A: Surface it as a `remaining_blockers` line on the request side and DECLINE to create a second decidable request for that `question_id`; the one existing request is authoritative (surface the conflict, never create a second decidable copy).
+- Q: If only one of the two write-back targets (`unresolved-questions.md`, `readiness-status.yaml`) is present/writable when recording a decision, what does the console do? -> A: Record the `approval-decision.md` first (the durable record), then apply both write-throughs idempotently; if a target artifact is missing, record the decision with a `remaining_blockers` entry naming the missing target and do NOT fabricate it or perform a partial stage flip. A `pass` flip happens only after BOTH write-throughs land alongside the required evidence.
+
 ## Why this feature exists
 
 The kit already STOPS at judgment calls. Principle V requires the agent to raise -- and
@@ -240,7 +248,10 @@ surfaces the conflict and does not overwrite.
   artifact, the console treats the approval as NOT recorded; "the human said yes in chat"
   is not an approval. The request stays open until the write-back lands.
 - **A question packaged twice**: the same `question_id` MUST resolve to one request; a
-  duplicate is a defect the console flags rather than creating a second decidable copy.
+  duplicate is a defect the console flags -- it surfaces the duplicate as a
+  `remaining_blockers` line on the request side and DECLINES to create a second decidable
+  request, treating the one existing request as authoritative (it never creates a second
+  decidable copy).
 - **A decision for a question that was never packaged**: the console requires a matching
   request `question_id`; it does not record a decision against a phantom question.
 - **A recommended_default with no source**: if the console cannot trace the default to a
@@ -284,11 +295,23 @@ surfaces the conflict and does not overwrite.
   in `artifacts_to_update_after_decision`: at minimum the `Resolution` column + `answered`
   status of the matching `unresolved-questions.md` row, and an `approvals[]` entry (stage +
   owner + `at`, where `at` is populated from the decision's `date`) in
-  `readiness-status.yaml`. No approval may live only in chat.
+  `readiness-status.yaml`. No approval may live only in chat. The console records the
+  `approval-decision.md` FIRST (the durable record), then applies both write-throughs
+  idempotently; if a target artifact is missing or unwritable, it records the decision with
+  a `remaining_blockers` entry naming the missing target and does NOT fabricate it or
+  perform a partial stage flip -- a `pass` flip occurs only after BOTH write-throughs land
+  alongside the stage's required evidence (FR-007).
 - **FR-009**: The console MUST validate that the recording `owner` matches the question's
   authority class (analyst = business/grain/rollups; governance = PII/publish-safety;
   data-owner = source semantics; metric-owner = metric contracts). A decision recorded
-  under the wrong authority is refused.
+  under the wrong authority is refused. When SERIALIZING the class into a committed
+  artifact the console MUST use that target's existing vocabulary verbatim: `data_owner`
+  (underscore) in `readiness-status.yaml` `approvals[].owner`, and `data-owner` (hyphen)
+  in the `unresolved-questions.md` "Who must answer" cell -- it never silently renames or
+  collapses the three classes the base `unresolved-questions.md` template already carries
+  (analyst / governance / data-owner). `metric-owner` is an ADDITIVE extension class (from
+  F009 metric contracts), used ONLY for a metric-contract question and documented in the
+  docs page as not-yet-present in the base `unresolved-questions.md` template.
 - **FR-010**: The console MUST surface -- never silently overwrite -- a decision that
   contradicts a prior recorded approval (conflict-surfacing, Principle V posture).
 - **FR-011**: No fabricated confidence: a request and a decision carry explicit status +
@@ -317,6 +340,10 @@ surfaces the conflict and does not overwrite.
 - **Authority class**: who may decide -- analyst (business meaning / grain / rollups),
   governance (PII / publish-safety), data-owner (source semantics / upstream truth), or
   metric-owner (metric contracts). The console matches the decider to the question class.
+  The base `unresolved-questions.md` template carries the first three; `metric-owner` is an
+  additive extension (F009) used only for metric-contract questions. The console serializes
+  each class in the target artifact's own spelling (`data_owner` in `readiness-status.yaml`;
+  `data-owner` in `unresolved-questions.md`); it never renames or collapses an existing class.
 - **The console skill**: the read-and-write verb; the agent is the runtime. It packages
   requests and transcribes decisions; it never decides, never self-approves, never flips a
   stage to `pass` without approval AND evidence.

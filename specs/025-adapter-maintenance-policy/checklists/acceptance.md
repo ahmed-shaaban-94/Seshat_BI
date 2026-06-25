@@ -69,7 +69,7 @@
   stage to `pass` or clear a blocker. The governance checklist verifies this resolution.
 - The future deliverables (`docs/operations/dependency-update-policy.md`,
   `docs/operations/adapter-update-policy.md`,
-  `docs/decisions/0009-safe-auto-updates.md`, optional
+  `docs/decisions/0011-safe-auto-updates.md`, optional
   `.github/dependabot.yml` / `renovate.json`) are ENUMERATED in plan.md and tasks.md as
   planned outputs; none is created in this slice.
 - The compatibility-review verdict and the Lane B/C approvals are deliberately

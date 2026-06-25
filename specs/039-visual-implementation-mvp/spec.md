@@ -10,6 +10,14 @@
 
 **Input**: "Visual Implementation MVP (F034). Layer 6 (Dashboard & Delivery). Advances readiness stage: Dashboard Ready -- specifically, it advances `dashboard_ready` from 'design approved on paper' to 'the approved design is realized as visuals on a real PBIR page'. A human builds the approved dashboard blueprint as visuals in Power BI Desktop, saves the report as plain-text PBIR (PBIP), and the page is reviewed in git like code. Docs/templates/skill-only authoring slice (roadmap rule 8); generic to retail BI (rule 7). INDEPENDENT of F016: it is a MANUAL Desktop build with git-diff review, not execution automation, so it crosses no automation boundary (rule 6 gates only the F016 adapter). HARD GATES inherited from Dashboard Ready: no implementation before `semantic_model_ready` is `pass` and the design-review sign-off exists (rule 5); NO pbi-cli / Power BI MCP automation, NO publish (rule 6, F016 owns that). It adds NO new readiness stage and NO new `retail check` rule -- only an evidence item under the existing Dashboard Ready owner."
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: The trace template records a per-visual status, but the spec only names `pass` and `blocked`, while the readiness model defines four statuses (`not_started` / `blocked` / `warning` / `pass`) and the Edge Cases describe a post-build divergence as a `warning` finding. Which status set does the trace template's status column admit? -> A: The trace status column admits the full readiness four-status set verbatim (`not_started` / `blocked` / `warning` / `pass`), never a fabricated score. A measure-bearing row is `pass` only when it binds 1:1 to exactly one approved contract by name AND a mapped model field; `blocked` for an orphan visual (not in the approved binding map) or an unmapped field; `warning` for a non-blocking divergence surfaced during/after the build (e.g. an accepted layout deviation, or a built visual whose map entry was re-approved upstream and now diverges) that must be visible but does not by itself retract design approval; `not_started` for an approved binding-map entry with no built visual yet. The overall trace rolls up to the worst row status. This reuses the readiness model verbatim and adds no fifth status (FR-005, FR-012).
+
+- Q: O-1 asks whether the implementation-verification procedure ships as a new workflow alongside `powerbi-handoff.md` or as a thin standalone verb skill. Does this slice ratify the recorded reversible default for the artifacts authored here? -> A: Yes -- for THIS slice the procedure ships as a new workflow `visual-implementation-review.md` ALONGSIDE `powerbi-handoff.md` under `.claude/skills/powerbi-dashboard-design/workflows/` (the recorded reversible default). The build is the natural continuation of F011A surface 4 and reuses its handoff notes verbatim as the input contract; this adds no new top-level directory and no new skill (Principle II reuse, YAGNI). Promoting it to a standalone verb skill remains a later, separate, reversible decision and is NOT pre-empted here. O-1's disposition is now "default ratified for this slice"; it is not a blocking open item.
+
 ## Why this feature exists
 
 The readiness spine defines Stage 6, **Dashboard Ready** (`docs/readiness/dashboard-ready.md`):
@@ -93,13 +101,15 @@ be read as pre-empting the deferred adapter:
   turns those notes into a committed, gated, traced READINESS STEP with a verification that
   the built page matches the binding map. F034 does not duplicate the handoff notes; it
   consumes them as its input contract.
-- **Open decision O-1 (recorded, not blocking): does the implementation verification live as
-  a new workflow under `.claude/skills/powerbi-dashboard-design/workflows/` (alongside
-  `powerbi-handoff.md`), or as a thin new verb skill?** Recommended reversible default: **a new
-  workflow alongside `powerbi-handoff.md`** (e.g. `visual-implementation-review.md`), because
-  the build is the natural continuation of surface 4 and reuses its inputs. If review prefers a
-  standalone verb skill, the split is a later, separate decision recorded in tasks -- this slice
-  does not pre-empt it. (Same posture F011A used for its router-vs-verb O-1.)
+- **Open decision O-1 (default RATIFIED for this slice, see Clarifications 2026-06-25): does the
+  implementation verification live as a new workflow under
+  `.claude/skills/powerbi-dashboard-design/workflows/` (alongside `powerbi-handoff.md`), or as a
+  thin new verb skill?** Disposition: **a new workflow alongside `powerbi-handoff.md`**
+  (`visual-implementation-review.md`) -- ratified for the artifacts THIS slice authors, because the
+  build is the natural continuation of surface 4 and reuses its inputs verbatim (adds no new
+  top-level directory and no new skill). Promoting it to a standalone verb skill remains a later,
+  separate, reversible decision recorded in tasks -- this slice does not pre-empt it. (Same posture
+  F011A used for its router-vs-verb O-1.)
 
 ## Architecture (a docs/templates/skill authoring slice; no codegen, no engine, no CLI)
 
@@ -321,8 +331,10 @@ zero publish actions, and zero semantic-model/DAX/SQL edits.
   generated; reviewed, not published.
 - **Implementation trace (output)**: `templates/visual-implementation-trace.md` (generic blank)
   and its per-subject-area filled instance -- one row per built measure-bearing visual mapping
-  it to exactly one approved contract by name, the mapped field(s), and a PASS / blocking-reason
-  column. The reviewable evidence that the page realizes the approved binding map.
+  it to exactly one approved contract by name, the mapped field(s), and a status drawn from the
+  readiness four-status set (`not_started` / `blocked` / `warning` / `pass`) plus a
+  blocking/divergence reason; the overall trace rolls up to the worst row status. The reviewable
+  evidence that the page realizes the approved binding map.
 - **Implementation review workflow (output)**: the agent-procedure markdown (per O-1, a
   `visual-implementation-review.md` alongside `powerbi-handoff.md`) -- restates build order,
   defines the git-diff review checklist, and defines the 1:1 trace check. It verifies a

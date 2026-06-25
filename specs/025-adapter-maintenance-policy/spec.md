@@ -42,7 +42,7 @@ This is the load-bearing constraint, stated up front so the spec cannot drift:
 - **It writes NO policy doc, NO CI config, and NO runtime code THIS slice.** The
   deliverables (`docs/operations/dependency-update-policy.md`,
   `docs/operations/adapter-update-policy.md`,
-  `docs/decisions/0009-safe-auto-updates.md`, and the OPTIONAL planned
+  `docs/decisions/0011-safe-auto-updates.md`, and the OPTIONAL planned
   `.github/dependabot.yml` / `renovate.json`) are FUTURE outputs this spec
   ENUMERATES. This slice authors only the five Spec-Kit planning files.
 - **Automerge lives entirely BELOW the readiness spine.** This is the resolution of
@@ -101,11 +101,12 @@ only**. The future shape this spec PLANS is:
   **dependency-update-policy** (the lanes + required checks for the toolchain and
   drivers) and an **adapter-update-policy** (the lanes + compatibility-review trigger
   for the dbt / Dagster / Power BI execution adapters specifically).
-- One ADR, **`docs/decisions/0009-safe-auto-updates.md`**, recording the decision
+- One ADR, **`docs/decisions/0011-safe-auto-updates.md`**, recording the decision
   "automerge is allowed for Lane A on green CI and lives below the readiness spine;
   Lane B requires human review; Lane C never automerges" with its alternatives and
-  rationale. (ADR numbers 0007/0008 are claimed by sibling features in this batch;
-  0009 is this feature's, named here, created later.)
+  rationale. (ADRs 0001-0007 are shipped on disk; the F024-F033 batch authors new
+  appended ADRs 0008 (018), 0009 (023), 0010 (024), 0011 (025); 0011 is this
+  feature's, named here, created later.)
 - OPTIONAL planned config (`.github/dependabot.yml` or `renovate.json`) that ENCODES
   the lanes as bot rules -- planned, not created, and itself subject to the policy.
 
@@ -113,6 +114,12 @@ The runtime is the existing CI workflow (`.github/workflows/ci.yml`, which alrea
 runs ruff format check, ruff lint, `pytest -m unit`, and `retail check`) plus a
 human reviewer. This feature defines the policy those runtimes enforce; it builds no
 new runtime.
+
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: The "dependency-invariants note" is named as a required check (FR-004) and as evidence, but its minimum content is only illustrated with an open-ended "e.g." -- so what must an update PR's note assert at minimum for the check to be enforceable (SC-003)? -> A: A fixed minimum of three invariants, each affirmed pass/fail with a one-line reason: (1) gold-only read surface preserved -- the update does not let Power BI read `silver`/`bronze` (Principle III); (2) no new runtime dependency on the static core's import path unless explicitly intended and named -- the DB driver stays an OPTIONAL, lazily-imported extra (Principle VIII); (3) no fork/vendor/re-implement -- the update is taken by upgrading the dependency, with no local patch an upstream bump would force re-applying (Principle II, no fork tax). The note is open to additional invariants but MUST assert at least these three; an unaffirmed invariant fails the check.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -254,7 +261,13 @@ durable matrix entry. The policy never records a compatibility verdict on its ow
   (if available), semantic check fixture mode (if available), dbt compile/build smoke
   (once dbt exists), Dagster definitions-load smoke (once Dagster exists), a
   no-secrets scan, a no-raw-data scan, and a recorded dependency-invariants note. All
-  required checks MUST pass before merge.
+  required checks MUST pass before merge. The dependency-invariants note MUST affirm,
+  at minimum, three invariants (each pass/fail with a one-line reason): (1) gold-only
+  read surface preserved (Principle III); (2) no new runtime dependency on the static
+  core's import path unless explicitly intended and named -- the DB driver stays an
+  OPTIONAL, lazily-imported extra (Principle VIII); (3) no fork/vendor/re-implement to
+  take the update (Principle II, no fork tax). An unaffirmed invariant fails the check;
+  the note MAY add further invariants but MUST assert at least these three.
 - **FR-005**: The policy MUST state the invariant that NO update in ANY lane may
   bypass a readiness gate or move any readiness stage to `pass`. An update that could
   regress a gate MUST re-pass that gate before merge; automerge lives below the
@@ -370,8 +383,12 @@ durable matrix entry. The policy never records a compatibility verdict on its ow
 - **Required-checks results**: explicit pass/fail for each required check, with
   "not applicable yet (<reason>)" for any check that does not yet exist.
 - **No-secrets / no-raw-data / no-local-paths** scan result (a hard blocker if red).
-- **Dependency-invariants note**: the documented invariants the update must preserve
-  (e.g. gold-only read surface, no new runtime dependency unless intended).
+- **Dependency-invariants note**: the documented invariants the update must preserve,
+  affirmed pass/fail with a one-line reason. The minimum three (FR-004): (1) gold-only
+  read surface preserved (Principle III); (2) no new runtime dependency on the static
+  core's import path unless explicitly intended and named (Principle VIII); (3) no
+  fork/vendor/re-implement to take the update (Principle II). Further invariants MAY be
+  added; an unaffirmed minimum invariant fails the check.
 - **For Lane B/C**: the named reviewer and approval.
 - **For a major-version / adapter update**: the compatibility-review record (gates
   affected, reviewer, outcome) with its durable entry referenced in F032's matrix.
@@ -447,5 +464,5 @@ cross-cutting framing.)
   surface.
 - The cross-cutting "all stages" framing: F012 (spec 013, Data Quality Control Room).
 - The future deliverables this spec enumerates: `docs/operations/dependency-update-policy.md`,
-  `docs/operations/adapter-update-policy.md`, `docs/decisions/0009-safe-auto-updates.md`,
+  `docs/operations/adapter-update-policy.md`, `docs/decisions/0011-safe-auto-updates.md`,
   and the optional planned `.github/dependabot.yml` / `renovate.json`.

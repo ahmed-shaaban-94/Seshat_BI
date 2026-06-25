@@ -112,6 +112,14 @@ This slice writes ONLY the 5 spec-kit files. The four artifacts above are
 enumerated as PLANNED outputs (see plan.md "Repository artifacts this feature PLANS
 (not created)").
 
+## Clarifications
+
+### Session 2026-06-25
+
+- Q: Should the base pack contract include an optional numeric "N of 10 sections present" completeness tally? -> A: No -- the base contract carries the four-status per-section record plus rolled-up blockers only; no count is emitted (safest distance from hard rule #9). A labeled factual tally may be added later as a reversible-easy addition, never as confidence.
+- Q: Where do per-table FILLED evidence packs live -- `mappings/<table>/` or a new top-level `packs/` dir? -> A: `mappings/<table>/` -- reuse the established per-table working-set home (ADR 0003 / constitution v1.5.0); no new top-level directory.
+- Q: What is the pack export format for this contract -- markdown only, or markdown plus an additional rendered form? -> A: Markdown only (the index + summary) is the base contract; any additional rendered form is a later additive slice (hard rule #8, Principle IX).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Compose the 10-section pack from existing evidence (Priority: P1)
@@ -286,7 +294,9 @@ current stage honestly, and no downstream stage is claimed as reached.
 - **FR-007**: Each section's status MUST be one of the four explicit statuses
   (`not_started` / `blocked` / `warning` / `pass`) with `evidence[]` and
   `blocking_reasons[]`. A `warning` MUST NOT auto-promote to `pass`. NO numeric
-  confidence/health score is emitted anywhere (hard rule #9).
+  confidence/health score is emitted anywhere (hard rule #9). The base contract
+  emits NO completeness count either; the four-status per-section record plus the
+  rolled-up blockers convey completeness. (Clarifications 2026-06-25.)
 - **FR-008**: The pack MUST be composable as an IN-PROGRESS artifact from an
   intermediate late stage: present sections render, absent ones are blockers, and
   the summary states the current stage without claiming an unreached one.
@@ -417,6 +427,13 @@ composes evidence and surfaces the state the Core Authority artifacts already re
 - **Pack artifacts live under `templates/` and `docs/tools/`.** Consistent with the
   existing template home (alongside `templates/handoff/`) and the tool-doc home.
   (Auto-decision; reversible-easy.)
+- **Per-table FILLED packs live under `mappings/<table>/`.** Reuse the established
+  per-table working-set home (ADR 0003 / constitution v1.5.0) rather than a new
+  top-level `packs/` dir, keeping all per-table derived evidence in one folder.
+  (Clarifications 2026-06-25; reversible-easy -- a path move.)
+- **Pack export format is markdown only.** The base contract is the markdown index
+  + summary; any rendered form is a later additive slice (hard rule #8).
+  (Clarifications 2026-06-25.)
 - **The 10-section contract is fixed and ordered.** The section list and order are a
   stable contract so packs are comparable across tables. (Auto-decision.)
 - **Upstream artifacts are committed before a pack is composed.** The pack assumes
@@ -429,14 +446,18 @@ composes evidence and surfaces the state the Core Authority artifacts already re
 
 ## Deferred decisions
 
-- **Optional numeric "completeness" indicator.** Whether to show a simple
-  "N of 10 sections present" count (a factual tally, NOT a confidence score) is
-  deferred; if added it must read as a tally, never as confidence (hard rule #9).
-- **Per-table pack storage path.** Whether filled packs live under
-  `mappings/<table>/` or a top-level `packs/` dir is deferred to the build slice
-  (cheaply reversible -- a path move).
-- **Pack export format (markdown only vs additional rendered form).** Deferred; the
-  base contract is the markdown index + summary.
+- **Optional numeric "completeness" indicator.** RESOLVED (Clarifications
+  2026-06-25): the base contract emits NO count -- the four-status per-section
+  record plus rolled-up blockers convey completeness. A labeled factual tally
+  ("N of 10 sections present") may be added later as a reversible-easy addition,
+  and if added MUST read as a tally, never as confidence (hard rule #9).
+- **Per-table pack storage path.** RESOLVED (Clarifications 2026-06-25): filled
+  packs live under `mappings/<table>/` -- the established per-table working-set
+  home (ADR 0003 / constitution v1.5.0). No new top-level `packs/` dir. (Cheaply
+  reversible -- a path move.)
+- **Pack export format.** RESOLVED (Clarifications 2026-06-25): markdown only (the
+  index + summary) is the base contract. Any additional rendered form is a later
+  additive slice (hard rule #8, Principle IX).
 
 ## See also
 
