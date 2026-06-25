@@ -1,7 +1,9 @@
 # Dashboard Ready
 
-Planning (docs/templates; no runtime code). PLANNED, gated -> this is the
-next-but-gated stage (feature 011), not yet built.
+Planning (docs/templates; no runtime code). The stage verb is BUILT: the
+`dashboard-design` skill (feature F011/012) runs this gated stage, and the
+`powerbi-dashboard-design` design FOUNDATION (F011A) backs it. The stage remains
+gated -- it is entered only when `semantic_model_ready` is `pass`.
 
 ## Purpose
 

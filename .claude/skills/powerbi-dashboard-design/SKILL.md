@@ -95,7 +95,7 @@ Routing rules:
 No data-bound dashboard design before the subject area semantic_model_ready is pass (roadmap
 rule 5). This feature DEFINES NO new gate and is NOT a second source of truth: the gate, the
 design-review sign-off, and the dashboard_ready: pass are owned by docs/readiness/dashboard-ready.md
-and the F011/012 dashboard-design verb (spec-only today). This feature documents and reuses them.
+and the F011/012 dashboard-design verb. This feature documents and reuses them.
 
 The gate applies to data-bound work (surface 1). Pure-styling work that touches
 no metric -- a background's safe zones (surface 2), a theme's palette (surface 3)
@@ -105,9 +105,9 @@ no metric -- a background's safe zones (surface 2), a theme's palette (surface 3
 `dashboard_ready: pass` (that is the verb owner's recorded design-review).
 
 **Routing the gated intent:** the "design a dashboard from approved contracts"
-intent routes to the PLANNED F011/012 `dashboard-design` verb (spec-only today;
-it sits O-1 alongside this router). This skill points that intent at the verb; it
-does not re-implement the gate or design the specific dashboard itself.
+intent routes to the F011/012 `dashboard-design` verb (it sits O-1 alongside this
+router). This skill points that intent at the verb; it does not re-implement the
+gate or design the specific dashboard itself.
 
 ## See also
 
@@ -116,5 +116,5 @@ does not re-implement the gate or design the specific dashboard itself.
 - The stage this foundation backs: `docs/readiness/dashboard-ready.md` (the gate
   to inherit) + `docs/readiness/readiness-model.md` (the four statuses, no score).
 - The gated verb this router hands off to: the F011/012 `dashboard-design` skill
-  (spec-only today; see `specs/012-dashboard-design-skill/`).
+  (`.claude/skills/dashboard-design/SKILL.md`; spec at `specs/012-dashboard-design-skill/`).
 - The deferred execution owner: F016 (PBIP/PBIR authoring, pbi-cli, publish).
