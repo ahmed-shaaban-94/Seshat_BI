@@ -161,7 +161,7 @@ operations section enumerates each.
       `publish_ready = pass`, the publish asset TRIGGERS F016 and Dagster opens no Power BI
       connection and publishes nothing (Principle II + hard rule #6).
 - [ ] T018 [US4] In `spec.md`, ENUMERATE the planned ADR
-      `docs/decisions/0008-dagster-is-orchestration-adapter.md` as a FUTURE output (Author the
+      `docs/decisions/0010-dagster-is-orchestration-adapter.md` as a FUTURE output (Author the
       ADR later -- NOT create it now) recording "Dagster runs steps, decides no stage" + the
       authority boundary.
 
