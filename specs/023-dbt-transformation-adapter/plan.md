@@ -33,7 +33,7 @@ per table.
 
 **Storage**: This slice -- five committed text files under
 `specs/023-dbt-transformation-adapter/`. The feature when built adds a `dbt/` project tree,
-two `templates/dbt-*-contract.md`, one `docs/decisions/0007-*.md`, one
+two `templates/dbt-*-contract.md`, one `docs/decisions/0009-*.md`, one
 `docs/integrations/dbt-adapter.md`, and one `.claude/skills/dbt-transformation-adapter/
 SKILL.md` -- all ENUMERATED below, NONE created now.
 
@@ -129,7 +129,7 @@ docs/integrations/
 |- dbt-adapter.md                            # PLANNED -- how dbt plugs in as an optional engine behind the gate
 
 docs/decisions/
-|- 0007-dbt-is-transformation-adapter.md     # PLANNED -- ADR: dbt is an optional alternative engine; migrations default until parity
+|- 0009-dbt-is-transformation-adapter.md     # PLANNED -- ADR: dbt is an optional alternative engine; migrations default until parity
 
 .claude/skills/dbt-transformation-adapter/
 |- SKILL.md                                  # PLANNED -- agent skill: run dbt ONLY behind Mapping Ready=pass; record derived evidence
@@ -178,7 +178,7 @@ tests exist). No `retail_store_sales` values.
 `source-map.yaml` (path + git ref + rows for grain/PK/columns), the grain it builds, and the
 tests it carries. A column with no citation is a defect.
 
-**0007-dbt-is-transformation-adapter.md (ADR, planned)**: records the OPTIONAL-ALTERNATIVE
+**0009-dbt-is-transformation-adapter.md (ADR, planned)**: records the OPTIONAL-ALTERNATIVE
 posture -- migrations stay the default; dbt becomes a table's build path only after the
 parity test passes and a named human approves; both paths never feed the same gold tables
 silently.

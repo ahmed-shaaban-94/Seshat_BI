@@ -118,7 +118,7 @@ governing docs and a thin agent skill that orchestrates dbt behind the gate:
   (`templates/dbt-model-contract.md`) that bind every dbt model to its source-map
   evidence and to the readiness gate -- generic templates, no `retail_store_sales`
   values baked in.
-- A **decision record** (`docs/decisions/0007-dbt-is-transformation-adapter.md`) that
+- A **decision record** (`docs/decisions/0009-dbt-is-transformation-adapter.md`) that
   records the optional-alternative posture and the parity requirement.
 - An **integration doc** (`docs/integrations/dbt-adapter.md`) that documents how dbt plugs
   in as an optional engine behind the Mapping Ready gate.
