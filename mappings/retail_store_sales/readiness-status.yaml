@@ -12,7 +12,7 @@ source_id: "retail_store_sales"
 source_family: "kaggle_retail_store_sales_dirty"
 
 # --- where we are -----------------------------------------------------------
-current_stage: "gold_ready"            # silver+gold built + live-validated 2026-06-25
+current_stage: "semantic_model_ready" # contracts approved + governed PBIP model authored + semantic-check pass
 mapping_version: "1"
 
 # --- the seven stages -------------------------------------------------------
@@ -53,13 +53,12 @@ stages:
     blocking_reasons: []
 
   semantic_model_ready:
-    status: "blocked"
+    status: "pass"
     evidence:
-      - "F009 metric contracts authored (proposals) under mappings/retail_store_sales/metrics/: TotalSales, TotalQuantity, TransactionCount, AvgTransactionValue (not_started, awaiting owner approval); DiscountedTransactionRate (blocked on Q2 unknown-NULL handling)"
-    blocking_reasons:
-      - "metric contracts are PROPOSALS -- not yet owner-approved (Principle V; no self-grant)"
-      - "no governed PBIP model over gold.fct_sales_rss yet (the existing Retailgold.SemanticModel is the C086 star); model authoring (pbip-workflow + powerbi-analyst) follows contract approval"
-      - "DiscountedTransactionRate blocked: Q2 follow-on -- how the rate treats the 33% unknown discount_applied is an owner decision"
+      - "5 metric contracts owner-approved 2026-06-25 (pass): TotalSales, TotalQuantity, TransactionCount, AvgTransactionValue, DiscountedTransactionRate (mappings/retail_store_sales/metrics/)"
+      - "governed PBIP model authored as TMDL: powerbi/RetailStoreSales.SemanticModel (5 dims + fct_sales_rss; marked date table; parameterized connection, no real host)"
+      - "retail-semantic-check 5-step verdict = pass: retail check exit 0 (D1-D8/C1/R1/G6), gold_ready=pass, all 5 model measures bind 1:1 to an approved contract"
+    blocking_reasons: []
 
   dashboard_ready:
     status: "not_started"
@@ -84,7 +83,7 @@ approvals:
     note: "accepted the four open-question recommendations (Q1 keep customer_id; Q2 blank discount = unknown; Q3 single-item grain; Q4 missing item -> -1 unknown member)"
 
 # --- the single next allowed action -----------------------------------------
-next_action: "Stage 5 Semantic Model Ready -- author metric contracts (F009) under mappings/retail_store_sales/metrics/ + build a governed PBIP model over gold.fct_sales_rss, then retail-semantic-check. (gold is validated; this is the next stage.)"
+next_action: "Stage 6 Dashboard Ready -- design a report against the approved contracts (dashboard-design / F011), supplying the business questions the page must answer. Stages 1-5 are pass."
 
 # --- audit ------------------------------------------------------------------
 last_checked_at: "2026-06-25"
