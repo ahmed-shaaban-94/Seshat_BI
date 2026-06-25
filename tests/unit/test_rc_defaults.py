@@ -292,7 +292,8 @@ def test_s8_ignores_minus_one_arithmetic_in_date_insert(tmp_path: Path) -> None:
         "CREATE TABLE gold.dim_date (date_sk int, full_date date, month_idx int);\n"
         "INSERT INTO gold.dim_date\n"
         "SELECT (to_char(g.d,'YYYYMMDD'))::int, g.d::date,\n"
-        "       extract(month FROM g.d)::int - 1\n"  # zero-based month -- arithmetic, not a member
+        # the `- 1` below is arithmetic (zero-based month), NOT an unknown member:
+        "       extract(month FROM g.d)::int - 1\n"
         "FROM generate_series(DATE '2023-01-01', DATE '2025-12-31',"
         " INTERVAL '1 day') AS g(d);\n",
     )
@@ -304,7 +305,10 @@ def test_s8_ignores_minus_one_arithmetic_in_date_insert(tmp_path: Path) -> None:
 
 
 def test_s8_still_flags_values_minus_one_after_narrowing(tmp_path: Path) -> None:
-    """The narrowing must NOT reopen Codex #1: a real VALUES(-1,...) member still ERRORs."""
+    """The narrowing must NOT reopen Codex #1.
+
+    A real `VALUES (-1, ...)` date member must still raise an S8 ERROR.
+    """
     rel = _write(
         tmp_path,
         "warehouse/migrations/0002_gold.sql",
