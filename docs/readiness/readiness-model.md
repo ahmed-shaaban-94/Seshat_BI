@@ -93,6 +93,7 @@ checked_by: "<agent | person>"
   `gold-ready.md`, `semantic-model-ready.md`, `dashboard-ready.md`,
   `publish-ready.md`.
 - Templates: `templates/readiness-status.yaml`, `readiness-scorecard.md`,
-  `blocking-reasons.md`, `data-issues.md`.
+  `blocking-reasons.md`, `data-issues.md`,
+  `handoff/bi-handoff-pack.md`, `handoff/handoff-review-checklist.md`.
 - Constitution principles this reinforces: I (Agent-First), IV (Source Mapping
   Before Silver), V (Agent Stops at Judgment Calls), VIII (Static-First).

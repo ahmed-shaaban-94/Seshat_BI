@@ -16,7 +16,10 @@ to publish. This stage authorizes a release; it does not perform it.
 
 ## Required artifacts
 
-The BI handoff pack (feature 013) -- a committed set, not runtime code:
+The BI handoff pack (feature 013) -- a committed set, not runtime code. The generic
+templates now exist: `templates/handoff/bi-handoff-pack.md` (the bundle index, copied
+per table to `mappings/<table>/handoff/`) and `templates/handoff/handoff-review-checklist.md`
+(the completeness gate a human walks before publish):
 
 | Artifact | What it carries |
 |----------|-----------------|
@@ -79,5 +82,6 @@ approved pack and STOP; there is no automated publish today.
 - The state model: `readiness-model.md`
 - The stage sequence + hard gates: `readiness-pipeline.md`
 - Prior stage: `dashboard-ready.md`
+- The handoff pack + review checklist: `../../templates/handoff/bi-handoff-pack.md`, `../../templates/handoff/handoff-review-checklist.md`
 - Status + approvals template: `../../templates/readiness-status.yaml`
 - A filled instance (first worked example): `../worked-examples/c086-pharmacy.md`
