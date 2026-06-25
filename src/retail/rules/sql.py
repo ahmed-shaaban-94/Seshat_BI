@@ -12,6 +12,7 @@ from ..sql import (
     iter_sql_files,
     schema_zone,
     stale_schema_tokens,
+    strip_sql_comments,
     tokenize_sql,
 )
 
@@ -29,7 +30,10 @@ def _read(ctx: RuleContext, rel: str) -> str:
 def s1_snake_case_identifiers(ctx: RuleContext) -> list[Finding]:
     findings: list[Finding] = []
     for rel in iter_sql_files(ctx):
-        text = _read(ctx, rel)
+        # Strip comments first (preserving line numbers + quoted identifiers) so a
+        # double-quoted phrase inside a -- or /* */ comment is not mistaken for a
+        # non-snake_case identifier. Real "..."/[...] identifiers in code survive.
+        text = strip_sql_comments(_read(ctx, rel))
         for lineno, line in enumerate(text.splitlines(), start=1):
             for m in _QUOTED.finditer(line):
                 ident = m.group(1) if m.group(1) is not None else m.group(2)

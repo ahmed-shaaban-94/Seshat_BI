@@ -86,6 +86,40 @@ def tokenize_sql(text: str) -> list[SqlToken]:
     return tokens
 
 
+def strip_sql_comments(text: str) -> str:
+    """Blank out `--` and `/* */` comments, PRESERVING line structure + quoted
+    identifiers.
+
+    Unlike ``tokenize_sql`` (which also collapses quoted identifiers to an empty
+    token), this keeps `"..."`/`[...]` identifiers intact so an identifier-level
+    rule (S1) can still inspect them -- it only removes comment spans, replacing
+    each removed character that is not a newline with a space so every line number
+    and column outside comments is unchanged. Single-quoted string literals are
+    left as-is (S1 only matches double-quoted / bracketed identifiers, so a string
+    literal's contents never reach its regex).
+    """
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        if text.startswith("--", i):
+            j = text.find("\n", i)
+            end = n if j == -1 else j
+            out.append(" " * (end - i))  # keep columns; newline (if any) added next loop
+            i = end
+            continue
+        if text.startswith("/*", i):
+            j = text.find("*/", i)
+            end = n if j == -1 else j + 2
+            span = text[i:end]
+            # preserve newlines inside the block so line numbers downstream hold
+            out.append("".join("\n" if c == "\n" else " " for c in span))
+            i = end
+            continue
+        out.append(text[i])
+        i += 1
+    return "".join(out)
+
+
 def iter_sql_files(ctx: RuleContext) -> list[str]:
     """Repo-relative POSIX paths of tracked warehouse SQL files."""
     return sorted(
