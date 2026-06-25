@@ -67,8 +67,10 @@ slice.** Dashboard and pbi-cli/PBIP work are explicitly **later and gated**.
 > The features F006-F015 were batch-drafted into `specs/007-016/` (which already held
 > 001-006), giving a consistent **spec-dir = roadmap-F + 1** offset for that batch:
 > 007=F006, 008=F007, 009=F008, 010=F009, 011=F010, 012=F011, 013=F012, 014=F013,
-> 015=F014, 016=F015. When a `specs/0NN-*` directory and a roadmap F-number disagree,
-> the roadmap row wins; each spec's own header states both numbers.
+> 015=F014, 016=F015. F011A (Power BI Visual Foundation) was drafted later into the
+> next free on-disk slot: spec-dir 017 = F011A. When a `specs/0NN-*` directory and a
+> roadmap F-number disagree, the roadmap row wins; each spec's own header states both
+> numbers.
 
 ### Now
 
@@ -91,6 +93,7 @@ slice.** Dashboard and pbi-cli/PBIP work are explicitly **later and gated**.
 | Feature | Name | Layer | Advances stage | One-line scope |
 |---------|------|-------|----------------|----------------|
 | **011** | Power BI Dashboard Design Skill | 6 | Dashboard Ready | an agent skill that designs a dashboard FROM approved metric contracts (no contracts -> no design) |
+| **011A** | Power BI Visual Foundation | 6 | Dashboard Ready | the design FOUNDATION the F011 verb reasons with (four-surface router + generic templates/tokens/theme/blueprints; defines no new gate) |
 | **012** | Data Quality Control Room | 4 | all stages | a consolidated view of data-quality findings + blockers across tables |
 | **013** | BI Handoff Pack | 6 | Publish Ready | the documentation/evidence bundle handed to a BI consumer |
 

@@ -1,0 +1,140 @@
+# =============================================================================
+# 16x9-grid.yaml  --  the desktop canvas grid for 16:9 Power BI report pages
+# =============================================================================
+# Tower BI Agent Kit -- Power BI Visual Foundation (F011A), Layer 6 Dashboard.
+# See: docs/powerbi/visual-design-system.md (the four surfaces + design principles).
+#
+# WHAT THIS IS
+#   A GENERIC, tool-agnostic geometry definition. It fixes the canvas size,
+#   column/row grid, gutters, margins, and safe zones a 16:9 desktop report page
+#   is laid out on. It is design-system SOURCE (lives under design/), consumed by:
+#     - the page blueprint  (templates/dashboard-page-blueprint.yaml -> grid field)
+#       to place report-visual objects on a consistent grid (surface 1), and
+#     - the background spec  (templates/background-spec.yaml -> safe zones)
+#       to keep an exported static background's structure aligned with the grid
+#       (surface 2).
+#   It carries GEOMETRY ONLY -- no data, no metric, no color, no font. Visual
+#   styling tokens live in design/tokens/tower-retail-design-tokens.yaml; the
+#   structure-not-data rule for backgrounds is owned by, and explained in,
+#   docs/powerbi/background-assets.md (do NOT bake any KPI value or dynamic title
+#   into a static background built on these safe zones).
+#
+# UNITS
+#   All values are in device-independent PIXELS, matching Power BI Desktop's
+#   report-page size in points (1 unit = 1 px at 100% display scaling). The two
+#   resolution profiles below describe the SAME 16:9 grid; the 1080p profile is
+#   the 720p profile scaled x1.5, so a layout authored on one transfers to the
+#   other by ratio.
+#
+# C086 IS AN INSTANCE, NEVER THE SCHEMA
+#   This grid is generic to retail BI. No worked-example (e.g. C086 pharmacy)
+#   specifics belong here -- it is pure layout geometry reused by every page.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read by tooling, not just humans.
+#   - The arithmetic must CLOSE: usable width = canvas_width - 2*margin, then
+#     usable width = columns*column_width + (columns-1)*gutter. Same for rows.
+#     Each profile below is reconciled in its arithmetic_check block.
+#   - safe_zone is a FIRST-CLASS field: the inner rectangle (inside the margins)
+#     that all content -- live visuals AND any static background structure -- must
+#     stay within. Nothing important sits in the outer margin band.
+# =============================================================================
+
+meta:
+  grid_id: "desktop-16x9"
+  aspect_ratio: "16:9"
+  orientation: "landscape"
+  unit: "px"                      # device-independent pixels at 100% scaling
+  default_profile: "1280x720"    # Power BI Desktop's native 16:9 page default
+  applies_to:
+    - "report visual layout (surface 1) -- templates/dashboard-page-blueprint.yaml"
+    - "static background safe zones (surface 2) -- templates/background-spec.yaml"
+  see_also:
+    mobile_grid: "design/grids/mobile-grid.yaml"          # the phone-canvas sibling
+    tokens: "design/tokens/tower-retail-design-tokens.yaml"  # colors/fonts/spacing (NOT here)
+    background_rules: "docs/powerbi/background-assets.md" # structure-not-data rule lives there
+
+# -----------------------------------------------------------------------------
+# profiles -- two reconciled 16:9 sizes. Same column/row count and proportions;
+# the 1920x1080 profile is the 1280x720 profile scaled x1.5. Author on either.
+# -----------------------------------------------------------------------------
+profiles:
+
+  # --- 1280x720 : the native Power BI 16:9 page default (recommended start) ---
+  "1280x720":
+    recommended: true
+    canvas:
+      width: 1280
+      height: 720
+    margin:                       # outer band reserved AROUND the grid (page edge)
+      top: 24
+      right: 24
+      bottom: 24
+      left: 24
+    grid:
+      columns: 12
+      rows: 8
+      gutter: 16                  # gap BETWEEN adjacent columns/rows
+      column_width: 88            # (1280 - 24 - 24 - 11*16) / 12
+      row_height: 70              # (720 - 24 - 24 - 7*16) / 8
+    # safe_zone -- the inner rectangle inside the margins. ALL content (visuals
+    # and any static background structure) stays within this rectangle.
+    safe_zone:
+      x: 24                       # = margin.left
+      y: 24                       # = margin.top
+      width: 1232                 # = 1280 - margin.left - margin.right
+      height: 672                 # = 720 - margin.top - margin.bottom
+    # zones -- suggested generic bands (in ROW units) for the page-blueprint
+    # section vocabulary. Generic guidance, not a fixed mandate; a page may merge
+    # or omit bands. (See workflows/page-blueprint.md for the section vocabulary.)
+    zones:
+      header:           { rows: "1" }       # page title / date context / filter summary
+      kpi_strip:        { rows: "2" }       # the KPI cards (each with comparison/context)
+      main_insight:     { rows: "3-5" }     # the page's primary answer visual(s)
+      diagnostic:       { rows: "6-7" }     # supporting breakdown / trend
+      footer_status:    { rows: "8" }       # data-as-of / source / control notes
+    # arithmetic_check -- a reviewer confirms these CLOSE (T034 only parses YAML).
+    arithmetic_check:
+      usable_width: 1232          # canvas.width - margin.left - margin.right
+      width_from_grid: 1232       # columns*column_width + (columns-1)*gutter = 12*88 + 11*16
+      width_closes: true
+      usable_height: 672          # canvas.height - margin.top - margin.bottom
+      height_from_grid: 672       # rows*row_height + (rows-1)*gutter = 8*70 + 7*16
+      height_closes: true
+
+  # --- 1920x1080 : the 1280x720 grid scaled x1.5 (same proportions) ----------
+  "1920x1080":
+    recommended: false
+    scaled_from: "1280x720"       # x1.5 -- proportions identical to the default
+    canvas:
+      width: 1920
+      height: 1080
+    margin:
+      top: 36
+      right: 36
+      bottom: 36
+      left: 36
+    grid:
+      columns: 12
+      rows: 8
+      gutter: 24                  # 16 * 1.5
+      column_width: 132           # (1920 - 36 - 36 - 11*24) / 12
+      row_height: 105             # (1080 - 36 - 36 - 7*24) / 8
+    safe_zone:
+      x: 36
+      y: 36
+      width: 1848                 # = 1920 - 36 - 36
+      height: 1008                # = 1080 - 36 - 36
+    zones:
+      header:           { rows: "1" }
+      kpi_strip:        { rows: "2" }
+      main_insight:     { rows: "3-5" }
+      diagnostic:       { rows: "6-7" }
+      footer_status:    { rows: "8" }
+    arithmetic_check:
+      usable_width: 1848          # 1920 - 36 - 36
+      width_from_grid: 1848       # 12*132 + 11*24
+      width_closes: true
+      usable_height: 1008         # 1080 - 36 - 36
+      height_from_grid: 1008      # 8*105 + 7*24
+      height_closes: true

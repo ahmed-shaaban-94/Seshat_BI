@@ -1,0 +1,203 @@
+# =============================================================================
+# visual-spec.yaml  --  the spec for ONE report visual (surface 1, data-bound)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/SKILL.md  (the four-surface router
+# this template serves) and docs/powerbi/visual-design-system.md (the prose).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. It specifies ONE report visual -- a card, chart,
+#   slicer, table/matrix, or tooltip -- on a dashboard page. It is a SURFACE 1
+#   artifact (report visuals); a page is built from several of these plus a page
+#   blueprint (templates/dashboard-page-blueprint.yaml). One file = one visual.
+#
+# WHICH SURFACE THIS BELONGS TO  (route to exactly one; never blend)
+#   Surface 1 -- report visuals. This template does NOT carry background/canvas
+#   structure (surface 2 -> templates/background-spec.yaml), theme defaults
+#   (surface 3 -> templates/theme-json-spec.md), or any implementation/handoff
+#   step (surface 4 -> the powerbi-handoff workflow, F016 owns execution).
+#
+# THE CONTRACT + MAPPED-FIELD REQUIREMENT  (the gate this template inherits)
+#   No data-bound dashboard design before the subject area semantic_model_ready is
+#   pass (roadmap rule 5). This template DEFINES NO new gate and is NOT a second
+#   source of truth: the gate, the design-review sign-off, and the dashboard_ready:
+#   pass are owned by docs/readiness/dashboard-ready.md and the F011/012
+#   dashboard-design verb. This template documents and reuses them. Concretely,
+#   every data-bound visual MUST trace to:
+#     (a) ONE approved metric contract (F009), REFERENCED BY NAME -- never an
+#         inlined formula or DAX (metric definition is F009's job, not this
+#         template's); and
+#     (b) a field PRESENT in the governed semantic model (F010), named in
+#         `semantic_model_fields`.
+#   A visual with no backing contract is an ORPHAN and MUST NOT be emitted. A
+#   field not in the model is UNMAPPED and MUST be recorded as a blocking reason,
+#   not designed around. The foundation never invents a metric to fill a card.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled visuals live ONLY in a per-subject-area working set, never in this
+#   template. Do NOT copy any C086/pharmacy specifics (billing codes, segment
+#   rollups, insurance/PII columns, pharmacy grain keys, real measure names) into
+#   this file -- the values below are deliberately obvious placeholders.
+#
+# SISTER ARTIFACTS  (a page is reviewed as a set of these)
+#   templates/dashboard-page-blueprint.yaml  the page these visuals sit on
+#   templates/background-spec.yaml ........... surface 2 (static structure)
+#   templates/theme-json-spec.md ............. surface 3 (defaults, not meaning)
+#   templates/screenshot-review.md ........... the critique-output shape
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - REFERENCE, never embed: name the metric contract and the model fields; do
+#     not paste a formula, a DAX expression, a color hex, or a theme value here.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This template carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops
+#     at NOTES; F016 owns any execution step (rule 6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# visual -- identity and intent. The business_question is decided FIRST: a visual
+# that answers no question does not belong on the page (a Principle V judgment
+# call -- surface "which question does this answer?" rather than guessing).
+# -----------------------------------------------------------------------------
+visual_id: "<visual_id>"             # short stable id, e.g. exec_kpi_sales
+visual_type: "<type>"                # card | kpi_card | line_chart | bar_chart |
+                                     #   column_chart | combo_chart | matrix |
+                                     #   table | slicer | map | tooltip
+business_question: "<one question this visual answers>"
+                                     # e.g. "How are sales tracking vs last period?"
+                                     # If none, do NOT emit the visual (FR-009).
+
+# -----------------------------------------------------------------------------
+# metric_contract -- REFERENCE BY NAME to an approved metric contract (F009).
+# This is the (a) half of the gate. NEVER inline the formula/DAX here; the
+# contract owns the definition. A visual with no contract is an orphan -> do not
+# emit it; record "orphan visual: no contract for <business_question>" instead.
+# Slicers and purely structural visuals that bind to no metric: set `none: true`.
+# -----------------------------------------------------------------------------
+metric_contract:
+  name: "<approved_metric_contract_name>"   # e.g. metric_net_sales (NAME ONLY)
+  store_ref: "<path-or-id in the metric-contract store (F009)>"
+  status_required: "pass"            # the contract must be approved; if not -> blocked
+  none: false                        # set true ONLY for non-metric visuals (e.g. a slicer)
+  # NOTE: no `formula:` / `dax:` / `expression:` field exists here BY DESIGN.
+
+# -----------------------------------------------------------------------------
+# semantic_model_fields -- the (b) half of the gate. Each entry names a field
+# PRESENT in the governed semantic model (F010), by table.field. A field not in
+# the model is UNMAPPED -> record "unmapped field: <table>.<field>" as a blocking
+# reason and STOP; never design around a field the model does not have.
+# -----------------------------------------------------------------------------
+semantic_model_fields:
+  measures:                          # measures this visual displays (mapped, F010)
+    - "<fact_table>.<measure_field>"      # e.g. fct_sales.net_sales
+  dimensions:                        # grouping/axis fields (mapped, F010)
+    - "<dim_table>.<attribute_field>"     # e.g. dim_branch.branch_name
+  date_field: "<dim_date>.<date_field>"   # the date context, if time-based
+                                          # (an unclear date context is an anti-pattern)
+
+# -----------------------------------------------------------------------------
+# position -- where the visual sits on the page grid (design/grids/16x9-grid.yaml).
+# Layout coordinates only -- no data, no measure. Position is design intent the
+# implementer (F016) realizes; this template does not author the PBIR.
+# -----------------------------------------------------------------------------
+position:
+  section: "<page_section>"          # header | kpi_strip | main_insight |
+                                     #   diagnostic | exception_detail | filter_rail |
+                                     #   footer_status  (page-blueprint sections)
+  x: "<col_start>"                   # grid column start (from the 16:9 grid)
+  y: "<row_start>"                   # grid row start
+  width: "<cols>"                    # grid columns spanned
+  height: "<rows>"                   # grid rows spanned
+  z_order: "<int>"                   # stacking order; live visual sits ABOVE any
+                                     #   static background (surfaces stay separate)
+
+# -----------------------------------------------------------------------------
+# formatting_rules -- visual-LEVEL formatting intent. Defaults come from the theme
+# (surface 3); record here ONLY a deliberate per-visual override and WHY (a
+# deviation is a `warning`-class note with a reason -- defaults then deviations).
+# Put NO business meaning here: a sentiment COLOR may be referenced from the theme,
+# but the sentiment THRESHOLD/RULE is a metric contract (F009), never set here.
+# -----------------------------------------------------------------------------
+formatting_rules:
+  title: "<short visual title>"      # static label text only (no dynamic value)
+  show_data_labels: "<true|false>"
+  legend: "<position or 'none'>"
+  axis: "<axis notes, e.g. start-at-zero for bar charts>"
+  conditional_format_ref: "<theme sentiment color ref, or 'none'>"
+                                     # references a theme color; the RULE stays in F009
+  override_reason: "<why this visual deviates from theme defaults, or 'none'>"
+
+# -----------------------------------------------------------------------------
+# interactions -- how this visual cross-filters/highlights others on the page.
+# Default is the page's standard cross-filter; record only deviations.
+# -----------------------------------------------------------------------------
+interactions:
+  cross_filter: "<default | highlight | none>"
+  affects_visuals:                   # ids of visuals this one filters (or empty)
+    - "<other_visual_id>"
+  drives_bookmark: "<bookmark name, or 'none'>"
+
+# -----------------------------------------------------------------------------
+# tooltip_behavior -- what the hover tooltip explains. A KPI with no comparison or
+# no explanation is an anti-pattern; a tooltip carries the context, not invented
+# data. Any field named here MUST also be mapped (semantic_model_fields).
+# -----------------------------------------------------------------------------
+tooltip_behavior:
+  type: "<default | custom_page | none>"
+  explains: "<what the tooltip adds: comparison, definition, breakdown>"
+  fields:                            # extra mapped fields shown on hover (F010)
+    - "<dim_table>.<attribute_field>"
+
+# -----------------------------------------------------------------------------
+# sorting -- the default sort the reader sees first (most-relevant first).
+# -----------------------------------------------------------------------------
+sorting:
+  by: "<measure-or-field to sort on>"   # e.g. the displayed measure, mapped
+  direction: "<desc | asc>"
+  top_n: "<int or 'all'>"            # limit for readability (e.g. top 10 branches)
+
+# -----------------------------------------------------------------------------
+# number_format -- consistent, explicit formats (a wrong/inconsistent number
+# format is an anti-pattern). Defaults may come from the design tokens
+# (design/tokens/tower-retail-design-tokens.yaml); record the visual's choice.
+# -----------------------------------------------------------------------------
+number_format:
+  value: "<format, e.g. #,##0 | #,##0.00 | 0.0% | currency-no-symbol>"
+  decimals: "<int>"
+  scale: "<none | thousands | millions>"   # e.g. show large money in millions
+  currency_symbol: "<symbol or 'none'>"    # presentation only; no real account/host
+
+# -----------------------------------------------------------------------------
+# anti_pattern_checks -- self-check this visual against the QA reference
+# (docs/powerbi/visual-qa.md + the dashboard-qa workflow). Each MUST be false to
+# pass; a true entry is a blocking reason or a recorded `warning` with a reason.
+# -----------------------------------------------------------------------------
+anti_pattern_checks:
+  uses_metric_without_contract: false   # true -> ORPHAN, do not emit (gate, FR-002)
+  uses_unmapped_field: false            # true -> UNMAPPED, record + STOP (gate, FR-002)
+  kpi_without_comparison: false         # a KPI must carry comparison/context
+  unclear_date_context: false           # time visuals need an explicit date field
+  wrong_or_inconsistent_number_format: false
+  table_as_main_executive_visual: false # tables are for detail, not exec insight
+  no_tooltip_explanation: false         # context-carrying visuals need a tooltip
+  inconsistent_category_colors: false   # category/branch colors stay consistent
+  references_inlined_formula_or_dax: false   # this template REFERENCES, never embeds
+
+# -----------------------------------------------------------------------------
+# readiness -- record this visual's design readiness with the FOUR statuses only
+# (readiness-model.md). NEVER a numeric confidence score (rule 9). Never
+# self-grant `dashboard_ready: pass` -- that is the verb owner's recorded
+# design-review (F011/012), not this template's.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "<not_started | blocked | warning | pass>"
+  evidence:                          # committed artifacts/approvals backing the status
+    - "<e.g. the approved metric contract ref + the mapped field list>"
+  blocking_reasons:                  # concrete reasons, if blocked (empty otherwise)
+    - "<e.g. 'orphan visual: no contract for <business_question>'>"
+    - "<e.g. 'unmapped field: <table>.<field>'>"
+    - "<e.g. 'semantic_model_ready not pass -- Dashboard Ready gate, rule 5'>"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).

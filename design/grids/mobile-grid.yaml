@@ -1,0 +1,195 @@
+# =============================================================================
+# mobile-grid.yaml  --  the phone-portrait design canvas (a design-system seed)
+# =============================================================================
+# Tower BI Agent Kit -- Power BI Visual Foundation (F011A), design-system source.
+# See: docs/powerbi/visual-design-system.md (the four surfaces + design principles)
+#      .claude/skills/powerbi-dashboard-design/workflows/mobile-layout.md (uses this)
+#
+# WHAT THIS IS
+#   A GENERIC, conservative SEED (not a copy-me blank): the phone-portrait canvas
+#   an agent designs a mobile page layout AGAINST. It fixes the canvas size, the
+#   single-column grid, gutters/margins, and the safe-zone BANDS so a phone layout
+#   is a deliberate vertical PRIORITY STACK, not a free-placed shrink of the
+#   desktop page. The desktop counterpart is design/grids/16x9-grid.yaml.
+#
+# IT CARRIES STRUCTURE ONLY -- NEVER DATA
+#   A grid is layout structure (canvas, columns, bands, safe zones). It holds no
+#   KPI value, no metric, no contract, no theme color. The live, data-bound Power
+#   BI visuals are a surface-1 concern placed onto this grid later; the static
+#   background asset that may render the bands is surface 2 (background is STATIC
+#   STRUCTURE, never data -- see workflows/background-asset-design.md). This file
+#   records dimensions only; it records no stage readiness.
+#
+# THE BANDS MIRROR THE MOBILE REFLOW TABLE
+#   The safe_zones below are the section vocabulary from mobile-layout.md
+#   (header / KPI strip / main insight / diagnostic / exception-detail /
+#   filter rail / footer-status), ordered top-to-bottom by phone priority, each
+#   marked survives | optional | desktop_only exactly as that reflow table decides.
+#   The phone keeps the KPI strip + the one top insight and sheds the diagnostic
+#   depth, the exception detail, and the filter breadth of a seated desktop session.
+#
+# DIMENSIONS ARE A STARTER -- VALIDATE IN POWER BI DESKTOP
+#   The pixel sizes below are a conservative portrait STARTER for the EXTERNAL
+#   design canvas (Figma / Canva / PowerPoint). This is the DESIGN canvas, not
+#   Power BI's internal mobile-layout grid; the phone layout is reflowed in Power
+#   BI Desktop by F016 (surface 4, workflows/powerbi-handoff.md). Treat the exact
+#   px as uncertain and confirm it against the target device + Desktop before use,
+#   the same humility themes/README.md applies to the theme schema. The load-
+#   bearing content is the STRUCTURE (portrait, single column, the bands), which
+#   is fixed; the exact px is the part to validate.
+#
+# C086 IS AN EXAMPLE, NEVER THE SCHEMA
+#   This grid is generic to retail BI (rule 7). It carries no C086/pharmacy
+#   specifics; a worked page's specifics live only in a per-subject-area instance.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is parsed (T034), not just read. Quote any value
+#     containing ':' . All values ASCII; units are stated, never assumed.
+#   - All sizes are in CSS-style px on the design canvas unless a unit says
+#     otherwise. Percentages are of the usable width/height (after margins).
+# =============================================================================
+
+# --- identity ----------------------------------------------------------------
+grid_id: "mobile-portrait"
+orientation: "portrait"               # the opposite of the desktop 16:9 landscape
+purpose: "phone-portrait page layout (vertical priority stack)"
+counterpart: "design/grids/16x9-grid.yaml"   # the desktop landscape grid
+
+# --- canvas ------------------------------------------------------------------
+# A tall, narrow canvas read one-thumb, top-to-bottom. STARTER values -- validate
+# in Power BI Desktop against the target device (see header note).
+canvas:
+  width: 360                          # px, STARTER (common portrait design width)
+  height: 800                         # px, STARTER (tall canvas; scroll expected)
+  aspect_ratio: "9:20"               # portrait, narrow -- not a shrunk 16:9
+  units: "px"
+  scroll: "vertical"                  # the page scrolls down; do not cram to fit
+  note: "STARTER -- confirm against target device + Power BI Desktop before use"
+
+# --- margins -----------------------------------------------------------------
+# The outer safe margin. Visuals and bands stay inside it; nothing touches the
+# screen edge. Usable area = canvas minus these margins.
+margins:
+  top: 16                             # px
+  right: 16                           # px
+  bottom: 16                          # px
+  left: 16                            # px
+  units: "px"
+
+# --- columns -----------------------------------------------------------------
+# The phone is a SINGLE-COLUMN priority stack by default: the most important
+# answer first, detail further down or not at all. A small column count is
+# defined ONLY to allow a tidy two-up KPI card row; it is the documented
+# EXCEPTION, never the default. Charts and the main insight always span full
+# width (all columns).
+columns:
+  count: 2                            # base grid (enables two-up; default uses both = full width)
+  default_span: 2                     # DEFAULT: every visual spans both columns (full width)
+  gutter: 12                          # px, horizontal space between the two columns
+  units: "px"
+  two_up_exception:
+    span: 1                           # a KPI card may take one column (two cards per row)
+    applies_to: "KPI cards only"
+    rule: "two-up is the documented exception; charts and main insight stay full width (span 2)"
+
+# --- rows --------------------------------------------------------------------
+# Rows flow vertically; the canvas scrolls, so rows are not capped to one screen.
+# Row height is driven by content within the band minimums below, on a baseline
+# rhythm. Bands (safe_zones) own the vertical order, not a fixed row matrix.
+rows:
+  flow: "vertical"                    # top-to-bottom priority stack
+  baseline: 8                         # px, vertical rhythm unit (row heights snap to multiples)
+  min_visual_height: 96              # px, smallest legible visual block on the phone
+  units: "px"
+
+# --- gutters -----------------------------------------------------------------
+# Spacing between stacked blocks (vertical) and between the two columns
+# (horizontal, mirrors columns.gutter). Generous spacing preserves whitespace --
+# a few stacked visuals beat a dense shrunk page.
+gutters:
+  vertical: 12                        # px, between stacked visuals/bands
+  horizontal: 12                      # px, between two-up columns (matches columns.gutter)
+  units: "px"
+
+# --- safe_zones (the bands) --------------------------------------------------
+# The vertical bands, TOP-TO-BOTTOM in phone priority order. Each is a section
+# from the mobile-layout.md reflow table with its phone fate:
+#   survives      -- keep on the phone (the headline answer + its context)
+#   optional      -- include at most one if genuinely glanceable, else drop
+#   desktop_only  -- do not shrink onto the phone; it belongs to a seated session
+# Heights are STARTER minimums in px; the stack scrolls, so they are not a budget
+# that must sum to the canvas height. Cramming every section onto the phone is a
+# readability deviation -- record it as a `warning` and propose this stack instead
+# (see mobile-layout.md, "When the phone is overcrowded").
+safe_zones:
+
+  - band: "header"
+    order: 1
+    fate: "survives"                  # compact; keep the date context with the title
+    full_width: true
+    min_height: 48                    # px
+    note: "page title + date context; a glanced number is never read without its period"
+
+  - band: "kpi_strip"
+    order: 2
+    fate: "survives"                  # survives FIRST -- the reason to open the page on a phone
+    full_width: true
+    layout: "stack_or_two_up"        # vertical card stack, or two-up via columns.two_up_exception
+    min_height: 120                   # px
+    note: "headline numbers; stack the cards rather than shrinking a wide desktop row"
+
+  - band: "main_insight"
+    order: 3
+    fate: "survives"                  # the single chart answering the page's business question
+    full_width: true
+    min_height: 220                   # px
+    note: "full phone width; the headline 'why' under the KPI strip's 'what'"
+
+  - band: "diagnostic"
+    order: 4
+    fate: "optional"                  # at most one supporting breakdown if glanceable, else drop
+    full_width: true
+    min_height: 180                   # px
+    note: "usually desktop-only; include one only if it stays legible on the phone"
+
+  - band: "exception_detail"
+    order: 5
+    fate: "desktop_only"              # a wide table/matrix is unreadable shrunk to a phone
+    full_width: true
+    min_height: 0                     # px; not placed on the phone canvas
+    note: "dense tables stay desktop-only; do not shrink them onto the canvas"
+
+  - band: "filter_rail"
+    order: 6
+    fate: "desktop_only"              # the side rail does not travel; keep 1-2 slicers inline at top
+    full_width: true
+    min_height: 0                     # px; a rail is not placed on the phone
+    note: "if a slicer must travel, place it inline above the visuals it filters, not a side rail"
+
+  - band: "footer_status"
+    order: 7
+    fate: "survives"                  # compact, at the bottom; a glanced number needs its freshness
+    full_width: true
+    min_height: 32                    # px
+    note: "last-refresh / data-quality flag; compact at the foot of the stack"
+
+# --- touch ------------------------------------------------------------------
+# A phone has no hover: a visual that relies on a tooltip for its context must
+# carry that context on its face (a comparison value, a label) or be desktop-only.
+# Interactive targets need a finger-sized minimum.
+touch:
+  min_target: 44                      # px, minimum tappable target (slicer, button)
+  hover_available: false              # no hover on a phone -- context must be on-face
+  units: "px"
+
+# --- see also ---------------------------------------------------------------
+# - The workflow that designs against this grid:
+#     .claude/skills/powerbi-dashboard-design/workflows/mobile-layout.md
+# - The desktop landscape counterpart: design/grids/16x9-grid.yaml
+# - The static background asset that may render these bands (surface 2):
+#     .claude/skills/powerbi-dashboard-design/workflows/background-asset-design.md
+# - The design principles (executive pages use fewer visuals -- the phone is the
+#     extreme case): docs/powerbi/visual-design-system.md
+# - The execution owner for the phone layout in Power BI Desktop (surface 4):
+#     .claude/skills/powerbi-dashboard-design/workflows/powerbi-handoff.md
+# =============================================================================

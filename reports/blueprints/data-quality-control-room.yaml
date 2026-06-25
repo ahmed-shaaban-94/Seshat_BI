@@ -1,0 +1,356 @@
+# =============================================================================
+# data-quality-control-room.yaml  --  GENERIC starter page blueprint (surface 1)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# One of four starter blueprints in reports/blueprints/. See the index + the
+# "how a page blueprint is read" table in docs/powerbi/dashboard-blueprints.md.
+#
+# WHAT THIS IS
+#   A GENERIC starter page blueprint a team copies and FILLS for a specific
+#   subject area. It is design intent for ONE surface-1 page (report visuals): who
+#   it is for, the single business question it answers, the upstream contracts and
+#   model it depends on (as PLACEHOLDERS), the sections and candidate visuals that
+#   fill it, and the QA rules to check it against. It is NOT the report (built
+#   later, F016), NOT a metric definition (that is F009), and NOT a theme or a
+#   background (surfaces 3 and 2). The copy-me blank is
+#   templates/dashboard-page-blueprint.yaml; this is a named starter instance.
+#
+# REFERENCE, NEVER EMBED  (the discipline a blueprint encodes)
+#   This file REFERENCES its metric contracts, semantic model, theme, and
+#   background by NAME/PATH -- it never inlines a metric formula, a DAX expression,
+#   a relationship, or a theme color. A blueprint that inlines a metric has crossed
+#   into F009's territory.
+#
+# THE CONTRACTS-FIRST GATE  (pointer, NOT re-defined here)
+#   This page describes data-bound visuals (surface 1), so it inherits the
+#   Dashboard Ready gate: no data-bound dashboard design before the subject area's
+#   semantic_model_ready is pass (roadmap rule 5). This blueprint DEFINES NO new
+#   gate and is NOT a second source of truth: the gate, the design-review sign-off,
+#   and the dashboard_ready: pass are owned by docs/readiness/dashboard-ready.md
+#   and the F011/012 dashboard-design verb. A GENERIC starter (placeholders, no
+#   concrete metric) is authorable any time; a copy FILLED for a specific subject
+#   area is gated. See docs/powerbi/dashboard-blueprints.md.
+#
+# DATA-QUALITY-SPECIFIC NOTE  (the one trap this page must avoid)
+#   A data-quality page is the easiest place to INVENT a metric (a freshness %, a
+#   completeness %, a reconciliation variance, an anomaly count). The allowance to
+#   "reference readiness/validation evidence" is NOT a gate carve-out. Every status
+#   tile MUST source its value from EITHER (a) a placeholder metric contract named
+#   by reference (F009, name only -- no formula), OR (b) an existing committed
+#   evidence artifact (e.g. mappings/<table>/reconciliation-report.md, the table's
+#   readiness-status.yaml, a recorded `retail check` / `retail validate` run). In
+#   NEITHER case does this blueprint define the metric or relax the gate.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled values live ONLY in a per-subject-area copy, never in this starter. Do
+#   NOT copy any C086/pharmacy specifics (billing codes, segment rollups,
+#   insurance/PII columns, pharmacy grain keys, real measure names) into this file
+#   -- the values below are deliberately obvious placeholders.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - REFERENCE, never embed: name the contracts, model, theme, and background; do
+#     not paste a formula, a DAX expression, a color hex, or a theme value here.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This blueprint carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops
+#     at NOTES; F016 owns any execution step (rule 6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# page -- identity and intent. The business_question is decided FIRST: a page that
+# answers no single question is not one page (a Principle V judgment call). A page
+# answering two questions is two pages.
+# -----------------------------------------------------------------------------
+page:
+  name: "data_quality_control_room"      # short stable name; matches this file
+  title: "Data Quality & Controls"       # static page title chrome (no live value)
+
+# Who reads this page. Plain text -- describes the reader, invents no metric.
+audience: "data steward / analyst"
+
+# The ONE question this page answers. Generic placeholder phrasing -- it is the
+# page's PURPOSE, not a metric definition. Kept identical to the index row in
+# docs/powerbi/dashboard-blueprints.md (cross-file consistency).
+business_question: "Is the data behind these dashboards trustworthy -- what is fresh, complete, and reconciled?"
+
+# A control room serves operations, not the executive headline. It is a monitoring
+# page: status tiles answer "is it healthy?" at a glance, exception lists answer
+# "what needs attention, and where?". Detail/exception tables are the POINT here,
+# not an anti-pattern (see qa_rules.not_applicable below).
+page_role: "monitoring / control room"
+
+# -----------------------------------------------------------------------------
+# readiness_dependencies -- the upstream stage(s) that must be `pass` before a
+# FILLED copy of this page may design data-bound visuals. Names the stage; does
+# NOT re-state the gate (owned by docs/readiness/dashboard-ready.md + F011/012).
+# -----------------------------------------------------------------------------
+readiness_dependencies:
+  semantic_model_ready: "pass"           # the hard gate (rule 5): contracts first
+  gate_owner: "docs/readiness/dashboard-ready.md + the F011/012 dashboard-design verb"
+  note: "Gate inherited, not re-defined here. A generic starter is authorable now;
+    a copy filled for a subject area is gated on the line above."
+
+# -----------------------------------------------------------------------------
+# required_metric_contracts -- the approved metric contracts the status tiles bind
+# to, REFERENCED BY NAME ONLY (F009). PLACEHOLDERS here -- a starter invents no
+# concrete metric. NEVER an inlined formula or DAX. A tile with no contract AND no
+# evidence-artifact source is an ORPHAN: do not emit it; record the blocking reason.
+# -----------------------------------------------------------------------------
+required_metric_contracts:
+  - name: "<metric_freshness_lag>"       # NAME ONLY; e.g. lag since last load
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<metric_row_completeness>"    # NAME ONLY; e.g. share of expected rows present
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<metric_recon_variance>"      # NAME ONLY; e.g. source-vs-gold total variance
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<metric_anomaly_count>"       # NAME ONLY; e.g. count of flagged exceptions
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  # NOTE: no `formula:` / `dax:` / `expression:` field exists here BY DESIGN.
+
+# -----------------------------------------------------------------------------
+# evidence_artifact_sources -- the existing COMMITTED artifacts a status tile may
+# read its state from INSTEAD of a metric contract (the (b) option in the
+# data-quality note above). These are not metrics this page defines; they are
+# upstream outputs this page surfaces. Reference by path -- never copy their values
+# inline. PLACEHOLDER paths; a filled copy points at the subject area's artifacts.
+# -----------------------------------------------------------------------------
+evidence_artifact_sources:
+  - "mappings/<table>/readiness-status.yaml"        # the table's stage statuses + evidence
+  - "mappings/<table>/reconciliation-report.md"     # the gold reconciliation acceptance run
+  - "<a recorded `retail check` run id/output>"      # governance-check evidence (no inline result)
+  - "<a recorded `retail validate` run id/output>"   # gold-validation evidence (no inline result)
+
+# -----------------------------------------------------------------------------
+# required_semantic_model_contract -- the governed model the data-bound visuals
+# read fields from (F010). REFERENCE by name/path -- never a copied relationship or
+# column definition. PLACEHOLDER; a filled copy names the subject area's model.
+# -----------------------------------------------------------------------------
+required_semantic_model_contract:
+  name: "<governed_semantic_model_name>"
+  model_ref: "<relative path to the governed PBIP model (F010)>"
+  note: "Referenced by name/path; relationships/columns are owned by F010, never
+    copied into this blueprint."
+
+# -----------------------------------------------------------------------------
+# background_asset -- the static canvas behind the page, if any (surface 2). A
+# control room is information-dense; a plain theme background is usually enough.
+# REFERENCE by path -- the image is STATIC STRUCTURE, never data (no KPI value or
+# dynamic title baked in). See docs/powerbi/background-assets.md.
+# -----------------------------------------------------------------------------
+background_asset:
+  use: "none"                            # "none" -> rely on the theme page background
+  asset_path: "<design/backgrounds/data-quality-control-room-bg.png, or 'none'>"
+  spec_ref: "<templates/background-spec.yaml filled for this page, or 'none'>"
+
+# -----------------------------------------------------------------------------
+# theme_json -- the default palette/fonts/formatting (surface 3). REFERENCE by
+# path -- the theme controls DEFAULTS, never business meaning. Sentiment COLORS for
+# the status tiles (ok/warn/fail) come from the theme; the sentiment THRESHOLD/RULE
+# that decides ok-vs-fail is a metric contract (F009), never set here.
+# -----------------------------------------------------------------------------
+theme_json: "themes/tower-retail.theme.json"
+
+# -----------------------------------------------------------------------------
+# canvas + grid -- layout coordinates only (no data). Desktop 16:9 default; the
+# grid the sections/visuals are measured on. See design/grids/16x9-grid.yaml.
+# -----------------------------------------------------------------------------
+canvas:
+  aspect_ratio: "16:9"
+  grid_ref: "design/grids/16x9-grid.yaml"
+
+# -----------------------------------------------------------------------------
+# sections -- the page layout in the shared seven-section vocabulary
+# (docs/powerbi/dashboard-blueprints.md). A control room leans on a status-tile
+# strip (kpi_strip) + exception_detail + footer_status; it does NOT need the
+# executive main_insight/diagnostic emphasis. Only the sections this page uses are
+# listed -- the vocabulary is a menu, not a checklist.
+# -----------------------------------------------------------------------------
+sections:
+  - id: "header"
+    purpose: "Page title chrome + the active period/date context (as-of). Static
+      structure -- the date context is shown by a LIVE visual, never baked into a
+      background image."
+  - id: "kpi_strip"
+    purpose: "The status-tile band: a few health tiles (freshness, completeness,
+      reconciliation, anomalies), each with a sentiment color (ok/warn/fail) and a
+      comparison/threshold context. Every tile cites one contract OR one evidence
+      artifact source."
+  - id: "exception_detail"
+    purpose: "The exception lists: the tables/matrices of the specific rows,
+      tables, or checks that need attention (the 'what and where'). This is the
+      page's core -- detail tables are the point of a control room."
+  - id: "filter_rail"
+    purpose: "Compact slicers (subject area / table / date window). Kept to the
+      side so they do not dominate the canvas (slicers serve the answer)."
+  - id: "footer_status"
+    purpose: "Data-as-of, last-refresh note, and the source/evidence pointers
+      (which artifacts the tiles read from). Never the page's main content."
+
+# -----------------------------------------------------------------------------
+# candidate_visuals -- the visuals proposed per section. Each data-bound visual
+# cites EITHER one placeholder metric contract (by name) OR one evidence artifact
+# source, AND a mapped semantic-model field placeholder (F010). Full per-visual
+# shape is templates/visual-spec.yaml -- this lists candidates, it does not inline
+# a visual-spec body. PLACEHOLDERS only; a starter invents no concrete metric.
+# -----------------------------------------------------------------------------
+candidate_visuals:
+
+  # --- kpi_strip: the status tiles (the at-a-glance health of the data) ---------
+  - visual_id: "tile_freshness"
+    visual_type: "kpi_card"
+    section: "kpi_strip"
+    answers: "How recently did the data behind these dashboards last load?"
+    source:
+      metric_contract: "<metric_freshness_lag>"   # NAME ONLY (F009), or use evidence below
+      evidence_artifact: "mappings/<table>/readiness-status.yaml"
+    semantic_model_fields:
+      measures:
+        - "<fact_or_audit_table>.<freshness_measure_field>"   # mapped (F010)
+      date_field: "<dim_date>.<date_field>"
+    sentiment_color_ref: "theme ok/warn/fail (color from themes/tower-retail.theme.json)"
+    note: "Sentiment COLOR from the theme; the ok-vs-fail THRESHOLD is a contract
+      (F009), not set here."
+
+  - visual_id: "tile_completeness"
+    visual_type: "kpi_card"
+    section: "kpi_strip"
+    answers: "What share of the expected rows/records are present?"
+    source:
+      metric_contract: "<metric_row_completeness>"   # NAME ONLY (F009)
+      evidence_artifact: "<a recorded `retail validate` run id/output>"
+    semantic_model_fields:
+      measures:
+        - "<fact_or_audit_table>.<completeness_measure_field>"   # mapped (F010)
+    sentiment_color_ref: "theme ok/warn/fail"
+
+  - visual_id: "tile_reconciliation"
+    visual_type: "kpi_card"
+    section: "kpi_strip"
+    answers: "Does the gold total reconcile to the source total (within tolerance)?"
+    source:
+      metric_contract: "<metric_recon_variance>"   # NAME ONLY (F009)
+      evidence_artifact: "mappings/<table>/reconciliation-report.md"
+    semantic_model_fields:
+      measures:
+        - "<fact_or_audit_table>.<recon_variance_measure_field>"   # mapped (F010)
+    sentiment_color_ref: "theme ok/warn/fail"
+
+  - visual_id: "tile_anomalies"
+    visual_type: "kpi_card"
+    section: "kpi_strip"
+    answers: "How many records/checks are currently flagged for attention?"
+    source:
+      metric_contract: "<metric_anomaly_count>"   # NAME ONLY (F009)
+      evidence_artifact: "<a recorded `retail check` run id/output>"
+    semantic_model_fields:
+      measures:
+        - "<fact_or_audit_table>.<anomaly_count_measure_field>"   # mapped (F010)
+    sentiment_color_ref: "theme ok/warn/fail"
+
+  # --- exception_detail: the lists of what needs attention ----------------------
+  - visual_id: "list_failing_checks"
+    visual_type: "table"
+    section: "exception_detail"
+    answers: "Which specific checks failed, on which table, with what severity?"
+    source:
+      metric_contract: "none"                       # a list of recorded check outcomes,
+      evidence_artifact: "<a recorded `retail check` run id/output>"   # not a metric
+    semantic_model_fields:
+      dimensions:
+        - "<check_table>.<check_name_field>"        # mapped (F010)
+        - "<check_table>.<target_table_field>"
+        - "<check_table>.<severity_field>"
+    note: "An exception/detail TABLE is correct on a control room (it is the point),
+      NOT the 'table as main executive visual' anti-pattern (see qa_rules)."
+
+  - visual_id: "list_stale_or_incomplete"
+    visual_type: "matrix"
+    section: "exception_detail"
+    answers: "Which tables are stale or below the completeness threshold, and by how much?"
+    source:
+      metric_contract: "<metric_freshness_lag>"     # NAME ONLY (F009); may pair with
+      evidence_artifact: "mappings/<table>/readiness-status.yaml"     # the status file
+    semantic_model_fields:
+      dimensions:
+        - "<audit_table>.<table_name_field>"        # mapped (F010)
+      measures:
+        - "<audit_table>.<freshness_measure_field>"
+        - "<audit_table>.<completeness_measure_field>"
+    note: "Detail is the role of this page; keep it readable (top_n, clear sort)."
+
+  # --- footer_status: provenance of the numbers above ---------------------------
+  - visual_id: "footer_data_as_of"
+    visual_type: "card"
+    section: "footer_status"
+    answers: "As of when are these health figures, and from which evidence?"
+    source:
+      metric_contract: "<metric_freshness_lag>"     # NAME ONLY (F009)
+      evidence_artifact: "mappings/<table>/readiness-status.yaml"
+    semantic_model_fields:
+      date_field: "<dim_date>.<date_field>"
+    note: "The 'as of' date is a LIVE visual, never baked into a static background."
+
+# -----------------------------------------------------------------------------
+# qa_rules -- the anti-patterns to check this page against. Names the rule; the
+# readable reference lives in docs/powerbi/visual-qa.md (and the dashboard-qa
+# workflow runs them). The control room has page-specific NUANCE: detail tables
+# are expected here, so the "table as main executive visual" anti-pattern does NOT
+# apply -- but the gate-breach and surface-blend anti-patterns DO.
+# -----------------------------------------------------------------------------
+qa_rules:
+  applicable:
+    - "every status tile cites ONE metric contract OR one evidence artifact source
+       (no orphan tile -- visual-qa #10)"
+    - "every data-bound field is mapped in the governed semantic model
+       (no unmapped field -- visual-qa #11)"
+    - "no KPI value or dynamic title baked into any static background
+       (surface-2 purity -- visual-qa #12)"
+    - "tiles inherit theme sentiment colors; the ok/warn/fail THRESHOLD is a
+       contract, not a per-visual style (surface-3 purity -- visual-qa #13)"
+    - "every tile has a comparison/threshold context, not a bare number
+       (visual-qa #2)"
+    - "explicit, consistent number formats (lag units, %, counts -- visual-qa #4)"
+    - "the active period/as-of date is visible (date context -- visual-qa #3)"
+    - "the filter rail does not dominate the canvas (visual-qa #5)"
+    - "exception tables stay readable: a clear sort + top_n, not an unbounded dump"
+  not_applicable:
+    - rule: "table as the main executive visual (visual-qa #6)"
+      why: "This is a monitoring/control-room page, not an executive page;
+        exception/detail tables are its core purpose, not an anti-pattern."
+
+# -----------------------------------------------------------------------------
+# readiness -- this STARTER's design readiness, recorded with the FOUR statuses
+# only (docs/readiness/readiness-model.md). It is a GENERIC starter bound to no
+# subject area, so it is `not_started`. NEVER a numeric confidence score (rule 9).
+# NEVER self-grant `dashboard_ready: pass` -- that is the verb owner's recorded
+# design-review (F011/012), not this blueprint's.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "not_started"                  # a generic starter, not bound to a subject area
+  evidence: []                           # none -- no subject area filled in yet
+  blocking_reasons:
+    - "generic starter: no subject area selected; a filled copy is gated on that
+       subject area's semantic_model_ready being pass (Dashboard Ready, rule 5)"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).
+
+# -----------------------------------------------------------------------------
+# See also
+# -----------------------------------------------------------------------------
+# - templates/dashboard-page-blueprint.yaml ... the copy-me blank this fills
+# - templates/visual-spec.yaml ................ the per-visual spec shape
+# - docs/powerbi/dashboard-blueprints.md ...... how a blueprint is read + the index
+# - docs/powerbi/visual-qa.md ................. the anti-pattern reference (qa_rules)
+# - design/grids/16x9-grid.yaml ............... the desktop grid the layout uses
+# - themes/tower-retail.theme.json ............ the theme defaults (surface 3)
+# - docs/readiness/dashboard-ready.md ......... the inherited gate + design review
+# - docs/readiness/readiness-model.md ......... the four-status readiness vocabulary
+# - reports/blueprints/executive-summary.yaml . sibling starter blueprint
+# - reports/blueprints/branch-performance.yaml  sibling starter blueprint
+# - reports/blueprints/product-mix.yaml ....... sibling starter blueprint

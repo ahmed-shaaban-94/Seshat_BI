@@ -1,0 +1,347 @@
+# =============================================================================
+# product-mix.yaml  --  starter page blueprint: product / category mix (surface 1)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/workflows/page-blueprint.md (the
+# workflow that authors a page) and docs/powerbi/dashboard-blueprints.md (how a
+# blueprint is read + the index of the four starters).
+#
+# WHAT THIS IS
+#   A GENERIC STARTER blueprint -- a copy-me INSTANCE (not the template) for ONE
+#   dashboard page: the product/category mix page. It is SURFACE 1 (report
+#   visuals) design intent -- audience + the ONE business question + the upstream
+#   contracts/model it depends on (as PLACEHOLDERS) + sections + candidate visuals
+#   + QA rules. It is NOT the report (built later, F016), NOT a metric definition
+#   (F009), and NOT a theme or background (surfaces 3 and 2). Copy it and fill it
+#   for a specific subject area; it invents no concrete business metric.
+#
+# WHICH SURFACE THIS BELONGS TO  (route to exactly one; never blend)
+#   Surface 1 -- report visuals. A page is built from several visual specs
+#   (templates/visual-spec.yaml) plus this blueprint. It does NOT carry
+#   background/canvas structure (surface 2 -> templates/background-spec.yaml), theme
+#   defaults (surface 3 -> templates/theme-json-spec.md), or any
+#   implementation/handoff step (surface 4 -> the powerbi-handoff workflow, F016
+#   owns execution).
+#
+# THE INHERITED GATE  (a blueprint describes data-bound visuals, so it is gated)
+#   No data-bound dashboard design before the subject area semantic_model_ready is
+#   pass (roadmap rule 5). This blueprint DEFINES NO new gate and is NOT a second
+#   source of truth: the gate, the design-review sign-off, and the dashboard_ready:
+#   pass are owned by docs/readiness/dashboard-ready.md and the F011/012
+#   dashboard-design verb. This starter documents and reuses them. Concretely,
+#   every data-bound visual MUST trace to:
+#     (a) ONE approved metric contract (F009), REFERENCED BY NAME -- never an
+#         inlined formula or DAX (metric definition is F009's job, not this
+#         blueprint's); and
+#     (b) a field PRESENT in the governed semantic model (F010), named by
+#         table.field.
+#   A visual with no backing contract is an ORPHAN and MUST NOT be emitted. A
+#   field not in the model is UNMAPPED and MUST be recorded as a blocking reason,
+#   not designed around. The foundation never invents a metric to fill a card.
+#   This starter is GENERIC reference (placeholders) and may be authored at any
+#   time; a blueprint FILLED for a specific subject area is gated.
+#
+# REFERENCE, NEVER EMBED  (the one discipline a blueprint encodes)
+#   Contracts, the semantic model, the theme, and the background are named BY
+#   name/path -- never inlined. No metric formula, no DAX, no relationship, no
+#   theme color hex appears here. A blueprint that inlines a metric has crossed
+#   into F009's territory; one that inlines theme colors has crossed into surface 3.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled mix page lives ONLY in a per-subject-area working set, never in this
+#   starter. Do NOT copy any C086/pharmacy specifics (billing codes, segment
+#   rollups, insurance/PII columns, pharmacy grain keys, real category names, real
+#   measure names) into this file -- the values below are deliberately obvious
+#   placeholders, and the category language is intentionally generic.
+#
+# SISTER STARTERS  (the four blueprints are reviewed as a set)
+#   reports/blueprints/executive-summary.yaml ......... executive / leadership
+#   reports/blueprints/branch-performance.yaml ........ regional / branch manager
+#   reports/blueprints/data-quality-control-room.yaml . data steward / analyst
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - REFERENCE, never embed: name the metric contracts, the model, the theme, and
+#     the background; do not paste a formula, DAX, a color hex, or a theme value.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This blueprint carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops
+#     at NOTES; F016 owns any execution step (rule 6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# page -- identity and intent. The business_question is decided FIRST: a page that
+# answers two questions is two pages (a Principle V judgment call -- surface the
+# question choice, do not guess). Audience and question below are the committed
+# strings from docs/powerbi/dashboard-blueprints.md (the starter index).
+# -----------------------------------------------------------------------------
+page_id: "product_mix"               # short stable id
+page_name: "Product / Category Mix"
+audience: "merchandising / category analyst"
+business_question: "How is the mix across product categories shifting, and where is it concentrated?"
+                                     # a question, not a formula; one page = one question
+
+# -----------------------------------------------------------------------------
+# readiness_dependencies -- the upstream stage(s) that must be `pass` before a
+# FILLED instance of this page is designed. Names the stage only; never re-states
+# the gate (owned by docs/readiness/dashboard-ready.md).
+# -----------------------------------------------------------------------------
+readiness_dependencies:
+  - "semantic_model_ready"           # must be `pass` for the subject area (rule 5)
+
+# -----------------------------------------------------------------------------
+# required_metric_contracts -- REFERENCE BY NAME to approved metric contracts
+# (F009). Placeholders only; NEVER an inlined formula or DAX. Each candidate
+# visual below cites one of these by name. A visual whose contract is missing is
+# an ORPHAN -> do not emit it.
+# -----------------------------------------------------------------------------
+required_metric_contracts:
+  - name: "<metric_contract_category_value>"   # e.g. value/sales by category (NAME ONLY)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<metric_contract_category_share>"   # category share of total (NAME ONLY)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<metric_contract_category_value_prior>"  # prior-period value for the shift (NAME ONLY)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  # NOTE: no `formula:` / `dax:` / `expression:` field exists here BY DESIGN.
+
+# -----------------------------------------------------------------------------
+# required_semantic_model_contract -- REFERENCE BY NAME/PATH to the governed
+# semantic model (F010) the visuals read fields from. Never a copied relationship
+# or column definition.
+# -----------------------------------------------------------------------------
+required_semantic_model_contract:
+  name: "<governed_semantic_model_name>"   # e.g. the subject area's gold model (NAME ONLY)
+  store_ref: "<path-or-id of the semantic-model contract (F010)>"
+
+# -----------------------------------------------------------------------------
+# background_asset -- REFERENCE BY PATH to the static canvas behind the page, if
+# any. The image is surface 2 (structure, not data); it never carries a KPI value
+# or a dynamic title. Set `none: true` if the page uses no background image.
+# -----------------------------------------------------------------------------
+background_asset:
+  path: "<design/backgrounds/product-mix-bg.png or 'none'>"
+  spec_ref: "templates/background-spec.yaml"   # the surface-2 spec shape
+  none: false
+
+# -----------------------------------------------------------------------------
+# theme_json -- REFERENCE BY PATH to the default palette/fonts/formatting. The
+# theme is surface 3 (defaults, not meaning); it carries no metric, no DAX, no
+# relationship. Category colors must stay CONSISTENT across pages (an anti-pattern
+# otherwise) -- they come from the theme, not from per-visual overrides.
+# -----------------------------------------------------------------------------
+theme_json:
+  path: "themes/tower-retail.theme.json"
+
+# -----------------------------------------------------------------------------
+# canvas -- the page size + the grid the sections lay out on. Layout intent only;
+# the implementer (F016) realizes the PBIR. No data here.
+# -----------------------------------------------------------------------------
+canvas:
+  size: "16:9"
+  grid_ref: "design/grids/16x9-grid.yaml"   # desktop grid + safe zones source
+
+# -----------------------------------------------------------------------------
+# sections -- the page laid out in the shared section vocabulary (the SAME enum
+# visual-spec.yaml position.section uses): header | kpi_strip | main_insight |
+# diagnostic | exception_detail | filter_rail | footer_status. A mix page leans on
+# kpi_strip + main_insight (the mix breakdown) + diagnostic (the shift/
+# contribution) + exception_detail; not every page uses every section.
+#
+# Each candidate visual is a PLACEHOLDER citing one metric contract (by name) + a
+# mapped semantic-model field (table.field). The full per-visual spec lives in a
+# templates/visual-spec.yaml instance; this blueprint lists the candidates.
+# -----------------------------------------------------------------------------
+sections:
+
+  # header -- static structure: title, period context, audience cue. No live KPI
+  # baked into a background.
+  - section: "header"
+    purpose: "page title + reporting period context for the category analyst"
+    candidate_visuals:
+      - visual_id: "mix_header_title"
+        visual_type: "text"           # static label; no dynamic value
+        business_question: "what page is this and for what period?"
+        metric_contract: "none"       # structural; binds to no metric
+        semantic_model_field: "<dim_date>.<period_label> (period context only)"
+
+  # kpi_strip -- the few headline KPIs, each with comparison/context. Every KPI
+  # cites one contract.
+  - section: "kpi_strip"
+    purpose: "headline mix KPIs with prior-period comparison"
+    candidate_visuals:
+      - visual_id: "mix_kpi_top_category_share"
+        visual_type: "kpi_card"
+        business_question: "what share does the largest category hold, vs prior period?"
+        metric_contract: "<metric_contract_category_share>"   # by name (F009)
+        semantic_model_field: "<fct_sales>.<category_share>"  # mapped (F010)
+        comparison: "vs prior period"                         # a KPI needs context
+      - visual_id: "mix_kpi_category_count_active"
+        visual_type: "kpi_card"
+        business_question: "how many categories are active this period, vs prior?"
+        metric_contract: "<metric_contract_category_value>"   # by name (F009)
+        semantic_model_field: "<dim_category>.<category_name>"  # mapped (F010)
+        comparison: "vs prior period"
+
+  # main_insight -- the MIX BREAKDOWN: the one primary visual that answers the
+  # page's business question (share of total across categories).
+  - section: "main_insight"
+    purpose: "mix breakdown -- share of total across product categories"
+    candidate_visuals:
+      - visual_id: "mix_breakdown_share"
+        visual_type: "bar_chart"      # share by category, sorted desc (readable)
+        business_question: "how is value distributed across product categories?"
+        metric_contract: "<metric_contract_category_share>"   # by name (F009)
+        semantic_model_field: "<dim_category>.<category_name>"  # axis, mapped (F010)
+        measure_field: "<fct_sales>.<category_share>"          # value, mapped (F010)
+        sort: "desc by share"
+        top_n: "<int or 'all'>"       # limit long tails for readability
+
+  # diagnostic -- the CONTRIBUTION view: explains the mix (the "why") -- which
+  # categories drive the total, and how the mix is SHIFTING vs prior period.
+  - section: "diagnostic"
+    purpose: "contribution + shift -- which categories drive the total and how the mix moved"
+    candidate_visuals:
+      - visual_id: "mix_contribution_pareto"
+        visual_type: "combo_chart"    # contribution-to-total / Pareto (cumulative)
+        business_question: "which categories contribute most of the total (concentration)?"
+        metric_contract: "<metric_contract_category_value>"   # by name (F009)
+        semantic_model_field: "<dim_category>.<category_name>"  # axis, mapped (F010)
+        measure_field: "<fct_sales>.<category_value>"         # value, mapped (F010)
+        sort: "desc by contribution"
+      - visual_id: "mix_shift_vs_prior"
+        visual_type: "bar_chart"      # change in share/value vs prior period
+        business_question: "where is the mix shifting vs the prior period?"
+        metric_contract: "<metric_contract_category_value_prior>"  # by name (F009)
+        semantic_model_field: "<dim_category>.<category_name>"  # axis, mapped (F010)
+        measure_field: "<fct_sales>.<category_value>"         # current vs prior, mapped (F010)
+        date_field: "<dim_date>.<date_field>"                 # explicit date context
+
+  # exception_detail -- the drill/detail table for categories needing attention.
+  # Detail, NOT the executive headline (a table as the main exec visual is an
+  # anti-pattern).
+  - section: "exception_detail"
+    purpose: "per-category detail for the categories flagged in the diagnostic"
+    candidate_visuals:
+      - visual_id: "mix_category_detail"
+        visual_type: "table"
+        business_question: "for the flagged categories, what are the underlying numbers?"
+        metric_contract: "<metric_contract_category_value>"   # by name (F009)
+        semantic_model_field: "<dim_category>.<category_name>"  # rows, mapped (F010)
+        measure_field: "<fct_sales>.<category_value>"         # mapped (F010)
+        note: "detail surface only; not the page's headline"
+
+  # filter_rail -- slicers kept to the side so they do not dominate the canvas.
+  # Slicers bind to no metric (structural).
+  - section: "filter_rail"
+    purpose: "period and category-group slicers; kept to the side"
+    candidate_visuals:
+      - visual_id: "mix_slicer_period"
+        visual_type: "slicer"
+        business_question: "which period is in view?"
+        metric_contract: "none"       # slicer binds to no metric
+        semantic_model_field: "<dim_date>.<period_field>"     # mapped (F010)
+      - visual_id: "mix_slicer_category_group"
+        visual_type: "slicer"
+        business_question: "which category group is in view?"
+        metric_contract: "none"
+        semantic_model_field: "<dim_category>.<category_group>"  # mapped (F010)
+
+  # footer_status -- data-as-of + any data-quality flag. Never the page's main
+  # content.
+  - section: "footer_status"
+    purpose: "data-as-of, refresh note, data-quality flag"
+    candidate_visuals:
+      - visual_id: "mix_footer_data_as_of"
+        visual_type: "text"
+        business_question: "as of when is this data, and is it trustworthy?"
+        metric_contract: "none"
+        semantic_model_field: "<dim_date>.<refresh_date> (status context only)"
+
+# -----------------------------------------------------------------------------
+# slicers -- page-level filtering summary (the filter_rail visuals above). Kept to
+# the side; slicers must not dominate the canvas (an anti-pattern otherwise).
+# -----------------------------------------------------------------------------
+slicers:
+  - "mix_slicer_period"
+  - "mix_slicer_category_group"
+
+# -----------------------------------------------------------------------------
+# tooltips -- the hover context the page provides. A KPI/visual with no comparison
+# or explanation is an anti-pattern; a tooltip carries context, not invented data.
+# Any field a tooltip shows MUST also be a mapped semantic-model field (F010).
+# -----------------------------------------------------------------------------
+tooltips:
+  - on_visual: "mix_breakdown_share"
+    explains: "category share with the prior-period value for comparison"
+    fields:
+      - "<fct_sales>.<category_share>"      # mapped (F010)
+      - "<fct_sales>.<category_value>"      # mapped (F010)
+  - on_visual: "mix_contribution_pareto"
+    explains: "cumulative contribution-to-total at each category"
+    fields:
+      - "<fct_sales>.<category_value>"      # mapped (F010)
+
+# -----------------------------------------------------------------------------
+# mobile -- what survives to the phone layout (design/grids/mobile-grid.yaml): the
+# KPI strip + the main-insight mix breakdown. The exception-detail table and the
+# Pareto stay desktop-only (detail does not read on a phone).
+# -----------------------------------------------------------------------------
+mobile:
+  grid_ref: "design/grids/mobile-grid.yaml"
+  keep:
+    - "mix_kpi_top_category_share"
+    - "mix_kpi_category_count_active"
+    - "mix_breakdown_share"
+  desktop_only:
+    - "mix_contribution_pareto"
+    - "mix_category_detail"
+
+# -----------------------------------------------------------------------------
+# qa_rules -- the anti-patterns to check this page against (the reference list
+# lives in docs/powerbi/visual-qa.md; the dashboard-qa workflow runs them). Each
+# names the rule; each MUST be false to pass, or be a recorded `warning` + reason.
+# -----------------------------------------------------------------------------
+qa_rules:
+  too_many_visuals: false              # executive/analyst pages stay focused
+  kpi_without_comparison: false        # every KPI in kpi_strip carries a comparison
+  unclear_date_context: false          # the shift visual names an explicit date field
+  wrong_or_inconsistent_number_format: false   # share % and value formats consistent
+  slicers_dominating: false            # slicers kept to the filter_rail
+  table_as_main_executive_visual: false # the detail table is exception_detail, not main
+  no_hierarchy: false                  # main_insight reads before diagnostic before detail
+  inconsistent_category_colors: false  # category colors come from the theme, consistent
+  no_tooltip_explanation: false        # share/contribution visuals carry tooltips
+  uses_metric_without_contract: false  # every data-bound visual cites one contract (F009)
+  uses_unmapped_field: false           # every field is mapped in the model (F010)
+  background_contains_dynamic_values: false  # background is structure, not data (surface 2)
+  theme_colors_overridden_per_visual: false  # defaults come from the theme (surface 3)
+
+# -----------------------------------------------------------------------------
+# readiness -- this starter's design readiness with the FOUR statuses only
+# (readiness-model.md). NEVER a numeric confidence score (rule 9). Never
+# self-grant `dashboard_ready: pass` -- that is the verb owner's recorded
+# design-review (F011/012), not this blueprint's. As a GENERIC starter referencing
+# PLACEHOLDER contracts, this is `not_started` until copied and filled against an
+# approved subject area whose semantic_model_ready is `pass`.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "not_started"
+  evidence: []                         # none yet: this is a generic starter, not a filled page
+  blocking_reasons:
+    - "generic starter -- not bound to a subject area; copy and fill against approved contracts"
+    - "semantic_model_ready not pass -- Dashboard Ready gate, rule 5 (until a subject area is bound)"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).
+
+# -----------------------------------------------------------------------------
+# See also
+#   templates/dashboard-page-blueprint.yaml ........ the copy-me blank this fills
+#   docs/powerbi/dashboard-blueprints.md ........... how a blueprint is read + index
+#   docs/powerbi/visual-qa.md ...................... the anti-pattern reference
+#   .claude/skills/powerbi-dashboard-design/workflows/page-blueprint.md  the workflow
+#   docs/readiness/dashboard-ready.md .............. the stage + the inherited gate
+# -----------------------------------------------------------------------------

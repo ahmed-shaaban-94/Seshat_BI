@@ -61,6 +61,14 @@ When this stage is `pass`: assemble the BI handoff pack (Stage 7,
 - Do NOT call pbi-cli / PBIP authoring automation -- that is feature 016, the
   last and gated adapter; it is not part of this stage.
 
+## Design foundation that backs this stage
+
+Pointer only -- not a gate. The generic design FOUNDATION the F011/012 design
+verb reasons with (no gate, status, blocking reason, required check, or
+design-review responsibility is changed here): the `powerbi-dashboard-design`
+skill + `docs/powerbi/` + `templates/` + `design/` + `themes/` +
+`reports/blueprints/` (feature 017 = F011A).
+
 ## See also
 
 - `readiness-model.md` -- the state model (status + evidence + blockers).

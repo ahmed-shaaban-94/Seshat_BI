@@ -1,0 +1,284 @@
+# =============================================================================
+# dashboard-page-blueprint.yaml  --  the blueprint for ONE dashboard page
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/SKILL.md (the four-surface router
+# this template serves), .claude/skills/powerbi-dashboard-design/workflows/page-blueprint.md
+# (how to fill it), and docs/powerbi/dashboard-blueprints.md (the prose).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. It blueprints ONE dashboard page: a page answers
+#   exactly ONE business question, for one audience, laid out in a fixed set of
+#   sections, built from several SURFACE 1 visuals (each its own
+#   templates/visual-spec.yaml). One file = one page. Several filled pages make a
+#   report; the four starter pages live in reports/blueprints/*.yaml.
+#
+# WHICH SURFACE THIS BELONGS TO  (route to exactly one; never blend)
+#   Surface 1 -- report visuals (the page is the canvas they sit on). This template
+#   REFERENCES the other surfaces by path; it never embeds them:
+#     - background/canvas structure (surface 2)  -> templates/background-spec.yaml
+#       + design/backgrounds/  (a STATIC background under the live visuals)
+#     - theme defaults (surface 3)               -> templates/theme-json-spec.md
+#       + themes/tower-retail.theme.json
+#     - implementation/handoff (surface 4)       -> the powerbi-handoff workflow;
+#       F016 owns execution. This template authors NO PBIP/PBIR, NO DAX, NO SQL.
+#
+# THE GATE THIS PAGE INHERITS  (verbatim, not re-decided here)
+#   No data-bound dashboard design before the subject area semantic_model_ready is pass (roadmap
+#   rule 5). This feature DEFINES NO new gate and is NOT a second source of truth: the gate, the
+#   design-review sign-off, and the dashboard_ready: pass are owned by docs/readiness/dashboard-ready.md
+#   and the F011/012 dashboard-design verb (spec-only today). This feature documents and reuses them.
+#
+#   Concretely for this page: every data-bound visual on it MUST trace to (a) an
+#   approved metric contract (F009), referenced BY NAME, and (b) a field present in
+#   the governed semantic model (F010). The page references those contracts and the
+#   model (below) -- it never inlines a metric formula or DAX. A visual with no
+#   contract is an orphan and is NOT emitted; an unmapped field is a blocking reason.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled pages live ONLY in a per-subject-area working set, never in this
+#   template. Do NOT copy any C086/pharmacy specifics (billing codes, segment
+#   rollups, insurance/PII columns, pharmacy grain keys, real metric names) into
+#   this file -- the values below are deliberately obvious placeholders.
+#
+# SISTER ARTIFACTS  (a page is reviewed as a set)
+#   templates/visual-spec.yaml ............... surface 1, one per visual on this page
+#   templates/background-spec.yaml ........... surface 2 (static structure)
+#   templates/theme-json-spec.md ............. surface 3 (defaults, not meaning)
+#   templates/screenshot-review.md ........... the critique-output shape
+#   design/grids/16x9-grid.yaml .............. the desktop grid sections sit on
+#   design/grids/mobile-grid.yaml ............ the phone grid mobile_notes target
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - REFERENCE, never embed: name the contracts and the model; name each visual by
+#     its visual_id; point at the theme/background/grid by path. Paste NO formula,
+#     NO DAX expression, NO color hex, NO theme value here.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This template carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops at
+#     NOTES; F016 owns any execution step (rule 6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# page -- identity and intent. The business_question is decided FIRST: a page that
+# answers no single question is not a page (a Principle V judgment call -- surface
+# "which one question does this page answer?" rather than guessing). The audience
+# fixes density: an executive page uses fewer visuals than an analyst page.
+# -----------------------------------------------------------------------------
+page_name: "<page_name>"             # short stable id, e.g. executive_summary
+audience: "<who reads it>"           # e.g. executive | branch_manager | analyst
+business_question: "<the ONE question this page answers>"
+                                     # e.g. "How is the business performing this period vs last?"
+                                     # If a page needs two questions, split it into two pages.
+
+# -----------------------------------------------------------------------------
+# readiness_dependencies -- the upstream stages that must be satisfied before any
+# data-bound visual on this page may be designed (the gate, above). Surfaces 2/3
+# (background structure, theme defaults) are NOT gated on these; surface-1 visuals
+# ARE. Record the dependency, never a fabricated score.
+# -----------------------------------------------------------------------------
+readiness_dependencies:
+  semantic_model_ready: "pass"       # REQUIRED for data-bound visuals (rule 5).
+                                     #   If not pass -> design no such visual; record
+                                     #   "semantic_model_ready not pass -- Dashboard
+                                     #   Ready gate, rule 5" and STOP.
+  upstream_stages:
+    - "metric contracts approved (F009)"      # the contracts this page references
+    - "governed semantic model bound (F010)"  # the model the fields come from
+
+# -----------------------------------------------------------------------------
+# required_metric_contracts -- REFERENCE LIST. Names (and store refs) of the
+# approved metric contracts (F009) the visuals on this page bind to. NAMES ONLY:
+# no formula, no DAX, no expression -- the contract owns the definition. A visual
+# whose contract is not in this list (and approved) is an orphan -> not emitted.
+# -----------------------------------------------------------------------------
+required_metric_contracts:
+  - name: "<approved_metric_contract_name>"    # e.g. metric_net_sales (NAME ONLY)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"          # the contract must be approved; if not -> blocked
+  # - name: "<approved_metric_contract_name_2>"
+  #   store_ref: "<...>"
+  #   status_required: "pass"
+  # NOTE: no `formula:` / `dax:` / `expression:` field exists here BY DESIGN.
+
+# -----------------------------------------------------------------------------
+# required_semantic_model_contract -- REFERENCE (single). The governed semantic
+# model (F010) every field on this page must come from, named/pathed only. Every
+# field a visual uses MUST be present in this model; a field not in it is UNMAPPED
+# -> a blocking reason, not designed around.
+# -----------------------------------------------------------------------------
+required_semantic_model_contract:
+  name: "<governed_semantic_model_name>"       # NAME ONLY (e.g. the subject-area model)
+  model_ref: "<relative path to the governed PBIP model (F010)>"
+  status_required: "semantic_model_ready: pass"
+  # NOTE: no relationship/measure definition is inlined here BY DESIGN -- the model
+  #       owns the schema; this page only references fields that already exist in it.
+
+# -----------------------------------------------------------------------------
+# background_asset -- surface 2 REFERENCE. The page's static background (structure
+# only -- safe zones, containers, grid art), authored OUTSIDE Power BI and exported
+# to an image. The live surface-1 visuals sit editable ABOVE it. The asset spec is
+# templates/background-spec.yaml; exported assets live under design/backgrounds/.
+# This is a path reference -- the structure-not-data rule is OWNED by the surface-2
+# spec, not restated here (surfaces stay separate).
+# -----------------------------------------------------------------------------
+background_asset:
+  spec_ref: "templates/background-spec.yaml"   # surface 2 spec (forbidden-dynamic-content lives there)
+  asset_path: "<design/backgrounds/<page_name>-background.png>"   # exported static image, or 'none'
+  has_background: "<true|false>"     # false -> theme/page background only, no image
+
+# -----------------------------------------------------------------------------
+# theme_json -- surface 3 REFERENCE. The page inherits DEFAULTS (palette, fonts,
+# visual/page/filter-pane defaults, sentiment colors) from the theme; it sets no
+# business meaning here. The theme spec is templates/theme-json-spec.md; the
+# starter theme is themes/tower-retail.theme.json. Path reference only -- the
+# defaults-not-meaning rule is OWNED by the surface-3 spec.
+# -----------------------------------------------------------------------------
+theme_json:
+  theme_ref: "themes/tower-retail.theme.json"  # the starter theme (VALIDATE in Desktop)
+  spec_ref: "templates/theme-json-spec.md"     # surface 3 spec (must-NOT-control list lives there)
+
+# -----------------------------------------------------------------------------
+# canvas_size -- the page canvas. Default is 16:9 desktop; record a deviation with
+# a reason (defaults then deviations). The grid below references the matching grid.
+# -----------------------------------------------------------------------------
+canvas_size:
+  ratio: "16:9"                      # default; deviation must carry a reason
+  width_px: "<1280 or chosen>"       # presentation only; no data
+  height_px: "<720 or chosen>"
+
+# -----------------------------------------------------------------------------
+# grid -- REFERENCE to the layout grid the sections + visuals snap to. Layout
+# structure only; carries no data. Desktop grid: design/grids/16x9-grid.yaml.
+# -----------------------------------------------------------------------------
+grid:
+  grid_ref: "design/grids/16x9-grid.yaml"   # columns/rows/gutters/safe zones
+  columns: "<n>"                     # mirrors the grid (e.g. 12); for quick reading
+  rows: "<n>"
+
+# -----------------------------------------------------------------------------
+# sections -- the fixed page section vocabulary. Each visual's position.section
+# (templates/visual-spec.yaml) MUST name one of these seven keys. Mark each section
+# present:true if the page uses it; an executive page may omit diagnostic/detail.
+# The seven keys are fixed so visuals and pages share one layout language.
+# -----------------------------------------------------------------------------
+sections:
+  header:                            # page title, period/date context, branding
+    present: "<true|false>"
+    purpose: "title + the date/period context (static label, no baked KPI value)"
+  kpi_strip:                         # the few headline KPIs (each with comparison/context)
+    present: "<true|false>"
+    purpose: "headline KPIs; every KPI carries a comparison (vs prior/target)"
+  main_insight:                      # the primary chart that answers the business question
+    present: "<true|false>"
+    purpose: "the one chart that answers business_question (trend/contribution/etc.)"
+  diagnostic:                        # supporting breakdowns that explain the main insight
+    present: "<true|false>"
+    purpose: "supporting breakdowns (by category/branch) -- the 'why' behind the headline"
+  exception_detail:                  # the detail/table view (detail, NOT executive insight)
+    present: "<true|false>"
+    purpose: "row-level detail/exceptions; a table is for detail, never the exec headline"
+  filter_rail:                       # the slicers (kept from dominating the page)
+    present: "<true|false>"
+    purpose: "slicers/filters in a contained rail; slicers must not dominate the canvas"
+  footer_status:                     # data-as-of, refresh note, data-quality link
+    present: "<true|false>"
+    purpose: "data-as-of / last-refresh note + link to the data-quality control room"
+
+# -----------------------------------------------------------------------------
+# visuals -- REFERENCE LIST. Each entry names a visual by its visual_id and points
+# at its templates/visual-spec.yaml (one file per visual), and the section it sits
+# in. The page does NOT inline a visual's metric/fields/formatting -- that is the
+# visual spec's job. A visual whose contract is not in required_metric_contracts
+# (and approved) is an orphan -> do not list it; record the blocking reason instead.
+# -----------------------------------------------------------------------------
+visuals:
+  - visual_id: "<visual_id>"         # matches a templates/visual-spec.yaml visual_id
+    spec_ref: "<path to the filled visual-spec for this visual>"   # e.g. .../visuals/<visual_id>.yaml
+    section: "<one of the seven section keys above>"
+    binds_contract: "<approved_metric_contract_name | none>"       # from required_metric_contracts
+  # - visual_id: "<visual_id_2>"
+  #   spec_ref: "<...>"
+  #   section: "kpi_strip"
+  #   binds_contract: "<approved_metric_contract_name>"
+
+# -----------------------------------------------------------------------------
+# slicers -- the page's filters (a kind of surface-1 visual, listed here for layout
+# intent). Slicers must not dominate (an anti-pattern); keep them in filter_rail.
+# A slicer binds to a mapped field, not a metric -- set binds_contract: none.
+# -----------------------------------------------------------------------------
+slicers:
+  - field: "<dim_table>.<attribute_field>"   # a MAPPED field (F010), e.g. dim_date.month
+    type: "<dropdown | list | between | relative_date>"
+    section: "filter_rail"           # keep slicers contained; do not let them dominate
+    default: "<default selection, or 'none'>"
+  # - field: "<dim_table>.<attribute_field_2>"
+  #   type: "dropdown"
+  #   section: "filter_rail"
+  #   default: "none"
+
+# -----------------------------------------------------------------------------
+# tooltips -- page-level tooltip intent. A KPI/visual with no comparison or no
+# explanation is an anti-pattern; tooltips carry context, not invented data. Any
+# field a tooltip shows MUST be mapped (F010). Per-visual tooltip detail lives in
+# the visual spec; record page-wide tooltip conventions here.
+# -----------------------------------------------------------------------------
+tooltips:
+  convention: "<page-wide tooltip convention, e.g. 'every KPI tooltip shows vs prior period'>"
+  custom_tooltip_pages:              # ids of custom tooltip pages, if any (else empty)
+    - "<tooltip_page_id>"
+
+# -----------------------------------------------------------------------------
+# mobile_notes -- phone-layout intent. Reference the phone grid; record what
+# survives to mobile (the KPI strip + the main insight) vs. what is desktop-only
+# detail. Layout intent only; F016 realizes the phone layout.
+# -----------------------------------------------------------------------------
+mobile_notes:
+  grid_ref: "design/grids/mobile-grid.yaml"  # the phone grid
+  keep_on_mobile:                    # sections/visuals that survive to phone layout
+    - "kpi_strip"
+    - "main_insight"
+  desktop_only:                      # detail kept off the phone layout
+    - "exception_detail"
+
+# -----------------------------------------------------------------------------
+# qa_rules -- the page-level self-check against the QA reference
+# (docs/powerbi/visual-qa.md + the dashboard-qa workflow). Each MUST be true to
+# pass; a false entry is a blocking reason or a recorded `warning` with a reason.
+# These are page-scope checks; per-visual checks live in each visual spec.
+# -----------------------------------------------------------------------------
+qa_rules:
+  qa_ref: "docs/powerbi/visual-qa.md"   # the prose anti-pattern reference
+  answers_one_business_question: "<true|false>"   # the page has a single, clear question
+  every_kpi_has_comparison: "<true|false>"        # no bare KPI without context
+  not_too_many_visuals: "<true|false>"            # exec pages stay sparse (see tokens)
+  clear_date_context: "<true|false>"              # the period/date is unambiguous
+  consistent_number_formats: "<true|false>"       # formats consistent across visuals
+  consistent_category_colors: "<true|false>"      # category/branch colors stable
+  slicers_do_not_dominate: "<true|false>"         # filters contained in filter_rail
+  table_not_the_exec_headline: "<true|false>"     # tables are detail, not the headline
+  visual_hierarchy_present: "<true|false>"        # clear primary -> supporting order
+  no_orphan_visual: "<true|false>"                # every visual binds an approved contract
+  no_unmapped_field: "<true|false>"               # every field is in the governed model
+
+# -----------------------------------------------------------------------------
+# readiness -- record this PAGE's design readiness with the FOUR statuses only
+# (docs/readiness/readiness-model.md): not_started | blocked | warning | pass,
+# plus evidence[] and blocking_reasons[]. NEVER a numeric confidence score
+# (roadmap rule 9). Never self-grant `dashboard_ready: pass` -- that is the verb
+# owner's recorded design-review (F011/012), not this template's. STOP and ask on
+# a Principle V judgment call: an ambiguous surface, which business question the
+# page answers, a readability/grain deviation, the design-review sign-off.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "<not_started | blocked | warning | pass>"
+  evidence:                          # committed artifacts/approvals backing the status
+    - "<e.g. the approved metric contracts + the bound semantic model + the visual specs>"
+  blocking_reasons:                  # concrete reasons, if blocked (empty otherwise)
+    - "<e.g. 'semantic_model_ready not pass -- Dashboard Ready gate, rule 5'>"
+    - "<e.g. 'orphan visual: no contract for <business_question>'>"
+    - "<e.g. 'unmapped field: <table>.<field>'>"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).

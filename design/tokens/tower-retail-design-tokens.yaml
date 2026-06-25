@@ -1,0 +1,245 @@
+# =============================================================================
+# tower-retail-design-tokens.yaml  --  the design-system SEED (surface 3 source)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/SKILL.md  (the four-surface router)
+# and docs/powerbi/theme-json.md (what a theme controls vs must NOT control).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me SEED. It is the conservative executive retail design
+#   system -- colors, typography, spacing, KPI-card rules, and number-format
+#   defaults -- that the starter theme JSON compiles from and that page/visual
+#   specs reference for consistency. It is tool-agnostic source: a clean,
+#   restrained executive look, NOT an overdesigned SaaS style. No extreme
+#   gradients, no neon, no glassmorphism -- conservative hex values throughout.
+#
+# WHICH SURFACE THIS FEEDS  (route to exactly one; never blend)
+#   Surface 3 -- theme JSON DEFAULTS. These tokens are compiled into
+#   themes/tower-retail.theme.json (dataColors, background/foreground, defaults)
+#   and cited by templates/theme-json-spec.md. They carry styling DEFAULTS only,
+#   never data (surface 1), never static background structure (surface 2), and
+#   never any implementation/handoff step (surface 4).
+#
+# THE SURFACE-3 PURITY RULE  (this is the gate this seed inherits -- and it is
+# a PURE-STYLING artifact, so it is NOT gated on metric contracts: a palette and
+# fonts carry no metric, so they are authorable as generic reference regardless
+# of any subject area's semantic_model_ready status. The rule below is what keeps
+# the styling clean, paste verbatim from the feature's pinned spine):
+#
+#   Theme JSON controls DEFAULTS, never business meaning. It MAY set: color
+#   palette, fonts, visual defaults, page/wallpaper defaults, filter-pane
+#   defaults, sentiment COLORS. It MUST NOT control: DAX, metric definitions,
+#   semantic-model relationships, source mapping, visual storytelling, or data
+#   validation. (A sentiment COLOR belongs in the theme; the sentiment
+#   THRESHOLD/RULE is a metric contract, F009.)
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   branded colors and worked values live ONLY in a per-subject-area working set,
+#   never in this seed. Do NOT copy any C086/pharmacy specifics (billing codes,
+#   segment rollups, insurance/PII columns, pharmacy grain keys, a tenant's brand
+#   palette) into this file -- the values below are deliberately neutral,
+#   conservative defaults, NOT a specific tenant's brand.
+#
+# SISTER ARTIFACTS  (the design system is read as a set)
+#   themes/tower-retail.theme.json ........... the compiled starter theme (surface 3)
+#   templates/theme-json-spec.md ............. the human-readable theme spec
+#   design/grids/16x9-grid.yaml .............. desktop canvas grid + safe zones
+#   design/grids/mobile-grid.yaml ............ phone canvas grid
+#   templates/visual-spec.yaml ............... a visual's number_format reuses these
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes. Hex colors are quoted strings ('#RRGGBB').
+#   - ASCII only, UTF-8 no BOM. Repo paths <= 200 chars. No real connection host
+#     or secret anywhere (this is styling source; it carries no data).
+#   - This seed carries NO PBIP/PBIR edit, NO DAX, NO SQL, NO metric. The exact
+#     Power BI theme schema is treated as UNCERTAIN: the theme that compiles from
+#     these tokens MUST be validated in Power BI Desktop (see themes/README.md).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# meta -- identity of this seed. It is the GENERIC default set, version-tracked
+# so the compiled theme can cite which token version it reflects.
+# -----------------------------------------------------------------------------
+meta:
+  name: "tower-retail-design-tokens"
+  style: "conservative executive retail"   # restrained, high-legibility; NOT SaaS-flashy
+  version: "1"
+  compiles_to: "themes/tower-retail.theme.json"
+  notes: "Generic defaults, not a tenant brand. No gradients, no neon, no glass."
+
+# -----------------------------------------------------------------------------
+# colors -- the core palette. Conservative, desaturated, executive. Primary is a
+# calm professional blue (trust, neutrality); secondary is a muted slate accent.
+# Backgrounds are near-white with a faintly cooler surface for cards, so visuals
+# read clearly with accessible contrast (avoid dark behind dense charts).
+# These hex values are DEFAULTS; a tenant brand is applied in a working set, not
+# here.
+# -----------------------------------------------------------------------------
+colors:
+  primary: "#1F4E79"        # calm professional blue -- primary accent / key series
+  secondary: "#4A6572"      # muted slate -- secondary accent / supporting series
+  background: "#FFFFFF"     # page background -- near-white, high legibility
+  surface: "#F4F6F8"        # card/container surface -- faint cool grey, sits on bg
+  border: "#D9DEE3"         # hairline borders/dividers (subtle, not heavy)
+
+  # text colors -- a legible hierarchy on light surfaces (WCAG AA target).
+  text:
+    primary: "#1A1D21"      # headings/values -- near-black, strong contrast
+    secondary: "#3C434B"    # body/labels -- dark grey, still AA on bg
+    muted: "#6B7480"        # captions/footnotes -- muted grey, lowest emphasis
+
+  # -------------------------------------------------------------------------
+  # sentiment colors -- success/warning/danger. These are COLORS only. The
+  # THRESHOLD/RULE that decides when a value is good/bad is business logic and
+  # lives in a metric contract (F009), NEVER here. The pinned surface-3 purity
+  # rule above governs this: a sentiment COLOR belongs in the theme; the
+  # sentiment THRESHOLD/RULE is a metric contract, F009.
+  # Conservative, accessible tones (not neon traffic-light colors).
+  # -------------------------------------------------------------------------
+  sentiment:
+    success: "#2E7D5B"      # muted green -- positive/on-target (color only, no rule)
+    warning: "#B5832A"      # amber/ochre -- caution (color only, no rule)
+    danger:  "#B23A3A"      # muted red -- negative/off-target (color only, no rule)
+    neutral: "#6B7480"      # no-change / not-applicable (color only)
+
+  # -------------------------------------------------------------------------
+  # neutral ramp -- greys for gridlines, axes, disabled states, zebra striping.
+  # Ordered light -> dark. Used for non-categorical, structural styling.
+  # -------------------------------------------------------------------------
+  neutrals:
+    - "#F4F6F8"             # n50  -- lightest (surface)
+    - "#E4E8EC"             # n100 -- zebra/alt row
+    - "#D9DEE3"             # n200 -- borders/gridlines
+    - "#B4BCC4"             # n300 -- axis lines
+    - "#8A929B"             # n400 -- disabled text
+    - "#6B7480"             # n500 -- muted text
+    - "#3C434B"             # n600 -- secondary text
+    - "#1A1D21"             # n700 -- primary text
+
+  # -------------------------------------------------------------------------
+  # categorical data colors -- the ORDERED sequence a chart assigns to series/
+  # categories in order (theme dataColors compiles from THIS list, T029).
+  # Consistent category/branch colors across pages is a design principle
+  # (FR-012); keep this order stable so a category keeps its color everywhere.
+  # Conservative, distinguishable, colorblind-considerate hues -- not a rainbow.
+  # -------------------------------------------------------------------------
+  data_colors:
+    - "#1F4E79"             # 1 -- primary blue
+    - "#4A6572"             # 2 -- slate
+    - "#2E7D5B"             # 3 -- green
+    - "#B5832A"             # 4 -- amber
+    - "#7A5C8E"             # 5 -- muted purple
+    - "#3F7CAC"             # 6 -- mid blue
+    - "#9E6B4A"             # 7 -- muted terracotta
+    - "#5B7B6E"             # 8 -- sage
+
+# -----------------------------------------------------------------------------
+# typography -- one clean, widely-available sans-serif family for legibility on
+# dashboards. A type scale that keeps an executive page calm (few sizes, clear
+# hierarchy). No decorative fonts; system-safe family so the theme renders
+# consistently without embedding a font.
+# -----------------------------------------------------------------------------
+typography:
+  font_family: "Segoe UI"            # clean system sans-serif (Power BI default-safe)
+  font_family_fallback: "Arial"      # widely available fallback
+  base_size_pt: 10                   # body/data-label baseline
+  scale_pt:
+    page_title: 20                   # one page title per page
+    section_header: 14               # section labels (KPI strip, diagnostic, etc.)
+    kpi_value: 28                    # the headline KPI number
+    kpi_label: 11                    # the KPI caption/label
+    body: 10                         # tables, axis, general text
+    caption: 9                       # footnotes, data-as-of, source notes
+  weight:
+    regular: 400
+    semibold: 600                    # headings/KPI values; avoid heavy/black weights
+
+# -----------------------------------------------------------------------------
+# spacing -- a single base unit and a small scale built from it (4px base keeps
+# alignment to the grid). Generous-but-not-wasteful gutters preserve whitespace
+# (a readability principle); executive pages should not feel cramped.
+# -----------------------------------------------------------------------------
+spacing:
+  base_unit_px: 4                    # all spacing is a multiple of this
+  scale_px:
+    xs: 4                            # 1x  -- tight internal padding
+    sm: 8                            # 2x  -- between related elements
+    md: 16                           # 4x  -- card padding / standard gap
+    lg: 24                           # 6x  -- between sections
+    xl: 32                           # 8x  -- page margins / safe-zone padding
+  card_padding_px: 16                # default inner padding of a KPI/visual card
+  card_gap_px: 16                    # default gap between cards on the grid
+
+# -----------------------------------------------------------------------------
+# kpi_card -- the rules a KPI card follows. A KPI is value + comparison +
+# context (FR-012): a bare number with no comparison is an anti-pattern. These
+# are DESIGN defaults (what a card shows and how), NOT business logic -- the
+# comparison's metric and the sentiment THRESHOLD live in a metric contract
+# (F009), never here. The sentiment colors referenced are from colors.sentiment.
+# -----------------------------------------------------------------------------
+kpi_card:
+  requires_value: true               # the headline number (from a metric contract)
+  requires_comparison: true          # vs prior period / target -- a KPI needs context
+  requires_context_label: true       # what/when the value covers (e.g. "MTD vs LY")
+  show_trend_indicator: true         # small up/down arrow or sparkline for direction
+  sentiment_color_ref: "colors.sentiment"   # COLOR source; the RULE is F009, not here
+  max_decimals: 1                    # keep headline numbers scannable
+  value_typography_ref: "typography.scale_pt.kpi_value"
+  label_typography_ref: "typography.scale_pt.kpi_label"
+  background_ref: "colors.surface"   # card sits on the surface color
+  # NOTE: no `threshold:` / `target:` / `formula:` field exists here BY DESIGN --
+  # that is business logic owned by the metric contract (F009).
+
+# -----------------------------------------------------------------------------
+# layout_rules -- defaults that keep executive pages calm and grain-appropriate.
+# Fewer visuals per executive page is a design principle (FR-012); tables are for
+# detail, not the main executive insight. A deviation (a denser page) is allowed
+# only as a recorded `warning`-class design note with a reason (defaults then
+# deviations) -- this seed sets the DEFAULT, it does not forbid the deviation.
+# -----------------------------------------------------------------------------
+layout_rules:
+  max_visuals_per_executive_page: 6  # default ceiling for an exec page (FR-012)
+  exec_page_prefers_cards_over_tables: true   # tables = detail, not exec headline
+  preserve_whitespace: true          # do not fill every grid cell
+  grid_ref: "design/grids/16x9-grid.yaml"     # the canvas grid these sit on
+
+# -----------------------------------------------------------------------------
+# number_format -- the consistent, explicit default formats. A wrong or
+# inconsistent number format is an anti-pattern; these defaults keep every visual
+# aligned. The VOCABULARY here matches templates/visual-spec.yaml's number_format
+# block (value / decimals / scale / currency_symbol) so a visual can inherit
+# these and only record a deliberate override. currency_symbol is a GENERIC
+# placeholder -- a tenant sets its real symbol in a working set, never here.
+# -----------------------------------------------------------------------------
+number_format:
+  integer:
+    value: "#,##0"                   # counts, whole units
+    decimals: 0
+  decimal:
+    value: "#,##0.00"                # precise non-money decimals
+    decimals: 2
+  money:
+    value: "#,##0"                   # money default; pair with scale for large values
+    decimals: 0
+    scale: "none"                    # none | thousands | millions (large money -> millions)
+    currency_symbol: "<currency_symbol>"   # GENERIC placeholder; set per tenant, not here
+  percent:
+    value: "0.0%"                    # rates/shares -- one decimal by default
+    decimals: 1
+  large_value_scale: "millions"      # default scale for headline money on exec pages
+  thousands_separator: true          # always group thousands for legibility
+
+# -----------------------------------------------------------------------------
+# accessibility -- the floor every default must clear. Conservative palette and
+# light surfaces are chosen so text and series meet AA contrast; the theme that
+# compiles from these tokens MUST still be validated in Power BI Desktop
+# (themes/README.md) because the exact theme schema is treated as uncertain.
+# -----------------------------------------------------------------------------
+accessibility:
+  min_text_contrast_ratio: "4.5:1"   # WCAG AA for normal text
+  min_large_text_contrast_ratio: "3:1"   # WCAG AA for large/headings
+  avoid_dark_behind_dense_charts: true   # readability principle (light surfaces)
+  colorblind_considerate_categoricals: true   # data_colors chosen to be distinguishable
+  do_not_rely_on_color_alone: true   # pair sentiment color with an icon/label

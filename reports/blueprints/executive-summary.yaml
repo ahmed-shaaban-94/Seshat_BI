@@ -1,0 +1,267 @@
+# =============================================================================
+# executive-summary.yaml  --  GENERIC starter page blueprint (surface 1)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/SKILL.md (the four-surface router),
+# templates/dashboard-page-blueprint.yaml (the copy-me blank this fills), and
+# docs/powerbi/dashboard-blueprints.md (how a blueprint is read + the index that
+# names this starter).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me starter for ONE dashboard page: the executive summary. It
+#   is surface 1 (report visuals) DESIGN INTENT -- audience + the single business
+#   question the page answers + the upstream contracts/model it depends on (as
+#   PLACEHOLDERS) + the sections and candidate visuals that fill it + QA rules. It
+#   is NOT the report (built later, F016), NOT a metric definition (that is F009),
+#   and NOT a theme or a background (surfaces 3 and 2). One file = one page.
+#
+# WHICH SURFACE THIS BELONGS TO  (route to exactly one; never blend)
+#   Surface 1 -- report visuals. This blueprint REFERENCES (never embeds) its
+#   background (surface 2 -> a background-spec.yaml asset path), its theme
+#   (surface 3 -> themes/tower-retail.theme.json), and its contracts/model
+#   (F009/F010). It carries no implementation/handoff step (surface 4 -> the
+#   powerbi-handoff workflow; F016 owns execution).
+#
+# THE CONTRACTS-FIRST GATE  (inherited, not redefined here)
+#   This page describes data-bound visuals, so it inherits the Dashboard Ready
+#   gate: no data-bound dashboard design before the subject area's
+#   semantic_model_ready is pass (roadmap rule 5). This blueprint DEFINES NO new
+#   gate and is NOT a second source of truth -- the gate, the design-review
+#   sign-off, and the dashboard_ready: pass are owned by
+#   docs/readiness/dashboard-ready.md and the F011/012 dashboard-design verb. This
+#   starter is GENERIC reference (placeholders, no concrete metric), so it is
+#   authorable now; a copy filled for a SPECIFIC subject area is gated.
+#
+# REFERENCE, NEVER EMBED  (the one discipline a blueprint encodes)
+#   Contracts, model, theme, and background are named/pathed REFERENCES -- never an
+#   inlined metric formula, DAX expression, relationship, or theme color. A
+#   blueprint that inlines a metric has crossed into F009's territory; one that
+#   inlines theme colors has crossed into surface 3.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled pages live ONLY in a per-subject-area working set, never in this
+#   starter. Do NOT copy any C086/pharmacy specifics into this file -- the values
+#   below are deliberately obvious placeholders.
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - REFERENCE, never embed: name the contract and the model fields; do not paste
+#     a formula, a DAX expression, a color hex, or a theme value here.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This blueprint carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops
+#     at NOTES; F016 owns any execution step (rule 6).
+#   - Executive pages use FEWER visuals (FR-012): this starter leans on
+#     header + KPI strip + main insight; it does not enumerate every section.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# page -- identity and intent. audience + the single business question are the
+# committed strings the index names (docs/powerbi/dashboard-blueprints.md). A page
+# answers exactly ONE question; a page that answers two is two pages.
+# -----------------------------------------------------------------------------
+page:
+  name: "executive_summary"            # short stable page name
+  audience: "executive / leadership"   # who reads this page
+  business_question: "How is overall performance this period versus the prior period and target?"
+                                       # the ONE question this page answers; a
+                                       # question, not a formula (it invents no metric)
+
+# -----------------------------------------------------------------------------
+# readiness_dependencies -- the upstream stage(s) that must be `pass` before a
+# SPECIFIC fill of this page is designed. Names the stage; it does NOT re-state the
+# gate (the gate is owned by docs/readiness/dashboard-ready.md + the F011/012 verb).
+# -----------------------------------------------------------------------------
+readiness_dependencies:
+  - stage: "semantic_model_ready"      # must be `pass` before data-bound design
+    status_required: "pass"            # rule 5 (inherited; not redefined here)
+    owner_doc: "docs/readiness/dashboard-ready.md"   # the gate's owner (reused, not copied)
+
+# -----------------------------------------------------------------------------
+# required_metric_contracts -- the approved contracts each KPI/visual binds to,
+# REFERENCED BY NAME (F009). PLACEHOLDERS only -- this starter invents no concrete
+# metric. Never inline a formula or DAX; the contract owns the definition.
+# -----------------------------------------------------------------------------
+required_metric_contracts:
+  - name: "<total-sales-contract>"     # NAME ONLY (e.g. the headline performance KPI)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<gross-margin-contract>"    # NAME ONLY (a profitability KPI)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  - name: "<period-comparison-contract>"   # NAME ONLY (vs prior period / target)
+    store_ref: "<path-or-id in the metric-contract store (F009)>"
+    status_required: "pass"
+  # NOTE: no `formula:` / `dax:` / `expression:` field exists here BY DESIGN.
+
+# -----------------------------------------------------------------------------
+# required_semantic_model_contract -- the governed model the visuals read fields
+# from, REFERENCED BY NAME/PATH (F010). A field not in the model is UNMAPPED ->
+# record it as a blocking reason; never design around a field the model lacks.
+# -----------------------------------------------------------------------------
+required_semantic_model_contract:
+  name: "<governed-semantic-model-name>"   # NAME ONLY (the bound, governed model)
+  model_ref: "<path-or-id of the governed semantic model (F010)>"
+  status_required: "pass"
+
+# -----------------------------------------------------------------------------
+# background_asset -- the static canvas behind the page, REFERENCED BY PATH. The
+# image is surface 2 (static structure, never data); it is specified in its own
+# background-spec.yaml, not inlined here. Set `none: true` if the page uses the
+# theme/page color only (no external background).
+# -----------------------------------------------------------------------------
+background_asset:
+  spec_ref: "<templates/background-spec.yaml filled for this page, or a path>"
+  asset_file: "<design/backgrounds/executive-summary-bg.png, or 'none'>"
+  none: false                          # true -> no external background image
+
+# -----------------------------------------------------------------------------
+# theme_json -- the default palette/fonts/formatting, REFERENCED BY PATH. The theme
+# is surface 3 (defaults, never business meaning); it is not inlined here.
+# -----------------------------------------------------------------------------
+theme_json:
+  path: "themes/tower-retail.theme.json"   # the starter theme (validate in Desktop)
+
+# -----------------------------------------------------------------------------
+# canvas -- the page canvas size and the grid the sections/visuals are placed on.
+# Layout structure only -- no data. Desktop default is 16:9.
+# -----------------------------------------------------------------------------
+canvas:
+  aspect_ratio: "16:9"                 # executive page: standard desktop 16:9
+  grid_ref: "design/grids/16x9-grid.yaml"   # the grid sections/visuals align to
+
+# -----------------------------------------------------------------------------
+# sections -- the page layout in the shared section vocabulary
+# (docs/powerbi/dashboard-blueprints.md). An EXECUTIVE page leans on
+# header + KPI strip + main insight (fewer visuals, FR-012); diagnostic and
+# footer-status are light. It does not use exception-detail (that is a control-room
+# concern) -- the vocabulary is a menu, not a checklist.
+# -----------------------------------------------------------------------------
+sections:
+  - section: "header"                  # page title, period context, audience cue
+    purpose: "Page title + the period/comparison context (static structure)."
+    used: true
+  - section: "kpi_strip"               # the few headline KPIs, each with comparison
+    purpose: "3-4 headline KPIs, each carrying a vs-prior / vs-target comparison."
+    used: true
+  - section: "main_insight"            # the ONE primary visual answering the question
+    purpose: "The single trend visual that answers the page's business question."
+    used: true
+  - section: "diagnostic"              # light supporting context (the 'why')
+    purpose: "One supporting visual giving the headline its 'why' (kept minimal)."
+    used: true
+  - section: "footer_status"           # data-as-of / refresh / data-quality flag
+    purpose: "Data-as-of and refresh note (never the page's main content)."
+    used: true
+  # exception_detail and filter_rail are intentionally light/absent on an
+  # executive page (FR-012: fewer visuals). Add them only with a recorded reason.
+
+# -----------------------------------------------------------------------------
+# candidate_visuals -- the visuals proposed per section (FEW -- executive page).
+# Each data-bound visual cites ONE metric contract (by name, from
+# required_metric_contracts) + a MAPPED semantic-model field (by table.field). A
+# visual with no contract is an ORPHAN -> do not emit it. Each visual is specified
+# in full in its own templates/visual-spec.yaml; this lists the candidates.
+# -----------------------------------------------------------------------------
+candidate_visuals:
+  - visual_id: "exec_kpi_total_sales"
+    section: "kpi_strip"
+    visual_type: "kpi_card"
+    business_question: "How is the headline performance KPI tracking vs prior/target?"
+    metric_contract: "<total-sales-contract>"        # by name (F009)
+    semantic_model_fields:
+      measures:
+        - "<fact_table>.<headline_measure>"          # mapped (F010)
+      date_field: "<dim_date>.<date_field>"          # the comparison's date context
+    comparison: "vs prior period and target"         # a KPI must carry comparison
+
+  - visual_id: "exec_kpi_gross_margin"
+    section: "kpi_strip"
+    visual_type: "kpi_card"
+    business_question: "How is profitability tracking vs prior/target?"
+    metric_contract: "<gross-margin-contract>"       # by name (F009)
+    semantic_model_fields:
+      measures:
+        - "<fact_table>.<margin_measure>"            # mapped (F010)
+      date_field: "<dim_date>.<date_field>"
+    comparison: "vs prior period and target"
+
+  - visual_id: "exec_kpi_period_delta"
+    section: "kpi_strip"
+    visual_type: "kpi_card"
+    business_question: "What is the change versus the prior period?"
+    metric_contract: "<period-comparison-contract>"  # by name (F009)
+    semantic_model_fields:
+      measures:
+        - "<fact_table>.<period_delta_measure>"      # mapped (F010)
+      date_field: "<dim_date>.<date_field>"
+    comparison: "vs prior period"
+
+  - visual_id: "exec_trend_main"
+    section: "main_insight"
+    visual_type: "line_chart"
+    business_question: "How is overall performance trending across the period?"
+    metric_contract: "<total-sales-contract>"        # by name (F009)
+    semantic_model_fields:
+      measures:
+        - "<fact_table>.<headline_measure>"          # mapped (F010)
+      date_field: "<dim_date>.<date_field>"          # the trend's date axis
+    comparison: "trend vs prior period (overlay or delta)"
+
+  - visual_id: "exec_diag_breakdown"
+    section: "diagnostic"
+    visual_type: "bar_chart"
+    business_question: "Which top dimension is driving the headline movement?"
+    metric_contract: "<total-sales-contract>"        # by name (F009)
+    semantic_model_fields:
+      measures:
+        - "<fact_table>.<headline_measure>"          # mapped (F010)
+      dimensions:
+        - "<dim_table>.<top_level_dimension>"        # mapped (F010), e.g. a category
+    comparison: "top-N contributors (kept minimal on an exec page)"
+
+  - visual_id: "exec_footer_status"
+    section: "footer_status"
+    visual_type: "card"
+    business_question: "As of when is this data, and is it trustworthy?"
+    metric_contract: "<none>"                        # status text, not a metric KPI
+    semantic_model_fields:
+      measures: []
+      date_field: "<dim_date>.<refresh_or_asof_field>"   # mapped (F010), if shown
+    comparison: "none (a data-as-of / refresh note, not a headline KPI)"
+
+# -----------------------------------------------------------------------------
+# qa_rules -- the anti-patterns to check this page against. Each NAMES the rule;
+# the readable reference list lives in docs/powerbi/visual-qa.md (and the
+# dashboard-qa workflow USES it). Each MUST be false to pass; a true entry is a
+# blocking reason or a recorded `warning` with a reason.
+# -----------------------------------------------------------------------------
+qa_rules:
+  too_many_visuals: false              # executive pages use FEWER visuals
+  kpi_without_comparison: false        # every KPI carries vs-prior / vs-target
+  unclear_date_context: false          # the period/comparison context is explicit
+  wrong_or_inconsistent_number_format: false
+  table_as_main_executive_visual: false    # the headline is a trend, not a table
+  no_visual_hierarchy: false           # KPI strip + one main insight lead the eye
+  inconsistent_category_colors: false  # category colors stay consistent (theme)
+  visual_using_metric_without_contract: false   # ORPHAN -> do not emit (gate, FR-002)
+  visual_using_unmapped_field: false            # UNMAPPED -> record + STOP (gate, FR-002)
+  background_contains_dynamic_values: false     # surface-2 purity (structure not data)
+  theme_colors_overridden_randomly: false       # surface-3 purity (defaults, not chaos)
+
+# -----------------------------------------------------------------------------
+# readiness -- record this page's design readiness with the FOUR statuses only
+# (docs/readiness/readiness-model.md). NEVER a numeric confidence score (rule 9).
+# Never self-grant `dashboard_ready: pass` -- that is the verb owner's recorded
+# design-review (F011/012), not this blueprint's. This GENERIC starter is
+# `not_started` (no subject area bound; placeholders only).
+# -----------------------------------------------------------------------------
+readiness:
+  status: "not_started"                # generic starter: no subject area bound yet
+  evidence: []                         # a real fill records its approved contracts + mapped fields here
+  blocking_reasons:                    # what blocks a SPECIFIC fill until resolved
+    - "generic starter -- contracts/model are placeholders, not yet bound to a subject area"
+    - "semantic_model_ready not pass for the target subject area -- Dashboard Ready gate, rule 5"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).

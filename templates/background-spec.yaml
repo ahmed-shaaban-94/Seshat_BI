@@ -1,0 +1,229 @@
+# =============================================================================
+# background-spec.yaml  --  the spec for ONE page background/canvas (surface 2)
+# =============================================================================
+# Tower BI Agent Kit  -  Power BI Visual Foundation (F011A, Layer 6 Dashboard).
+# See: .claude/skills/powerbi-dashboard-design/SKILL.md  (the four-surface router
+# this template serves) and docs/powerbi/background-assets.md (the prose).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. It specifies ONE external background/canvas asset
+#   for a dashboard page -- a PNG/SVG/JPG designed OUTSIDE Power BI and imported as
+#   the page background. It is a SURFACE 2 artifact (external background/canvas);
+#   one file = one page background.
+#
+# WHICH SURFACE THIS BELONGS TO  (route to exactly one; never blend)
+#   Surface 2 -- external background/canvas. This template carries STATIC STRUCTURE
+#   ONLY: safe zones, layout containers, grid lines, branding chrome, exported
+#   image. It does NOT carry report visuals (surface 1 -> templates/visual-spec.yaml),
+#   theme defaults (surface 3 -> templates/theme-json-spec.md), or any
+#   implementation/handoff step (surface 4 -> the powerbi-handoff workflow, F016
+#   owns execution).
+#
+# THE SURFACE-2 PURITY RULE  (the one rule that keeps this surface clean)
+#   Background is STATIC STRUCTURE, never data. Never bake a KPI value, a dynamic
+#   title, or any other dynamic/refreshing content into a static background image.
+#   The background carries layout structure (safe zones, containers, grid); the
+#   live Power BI visuals sit editable ABOVE it.
+#   (Pasted verbatim again in the forbidden_dynamic_content section below -- it is
+#   the load-bearing rule of this template.)
+#
+# NOT GATED ON CONTRACTS  (surface 2 carries structure, not data)
+#   A background asset binds to NO metric and NO semantic-model field, so it is NOT
+#   gated on the subject area's semantic_model_ready (unlike surface-1 visuals). It
+#   may be authored before contracts exist. This template DEFINES NO gate and is
+#   NOT a second source of truth: the Dashboard Ready gate, the design-review
+#   sign-off, and the dashboard_ready: pass are owned by
+#   docs/readiness/dashboard-ready.md and the F011/012 dashboard-design verb.
+#
+# C086 IS AN EXAMPLE, NEVER INLINED HERE  (generic, roadmap rule 7)
+#   The first subject area through this kit is C086 (a pharmacy sales table); its
+#   filled assets live ONLY in a per-subject-area working set, never in this
+#   template. Do NOT copy any C086/pharmacy specifics (billing codes, segment
+#   rollups, insurance/PII columns, pharmacy grain keys, real measure names) into
+#   this file -- the values below are deliberately obvious placeholders.
+#
+# SISTER ARTIFACTS  (a page is reviewed as a set of these)
+#   templates/dashboard-page-blueprint.yaml  the page this background sits under
+#   templates/visual-spec.yaml ............... surface 1 (live visuals, ABOVE this)
+#   templates/theme-json-spec.md ............. surface 3 (defaults, not meaning)
+#   design/grids/16x9-grid.yaml .............. the desktop grid + safe zones source
+#   design/backgrounds/README.md ............. where exported assets live + naming
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec, not just prose. Quote any value
+#     containing ':' or quotes.
+#   - STRUCTURE, never data: this file describes containers, zones, and a static
+#     image -- no measure, no KPI value, no dynamic title. See
+#     forbidden_dynamic_content below.
+#   - ASCII only, UTF-8 no BOM. Keep ids/paths SHORT (Windows 260-char PBIP path
+#     limit; repo paths <= 200 chars). No real connection host or secret.
+#   - This template carries NO PBIP/PBIR edit, NO DAX, NO SQL. The handoff stops
+#     at NOTES; F016 owns any execution step (rule 6).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# page -- which dashboard page this background belongs to. One background per page;
+# it is referenced (by path) from that page's blueprint
+# (templates/dashboard-page-blueprint.yaml), never inlined into it.
+# -----------------------------------------------------------------------------
+page:
+  name: "<page_name>"                  # short stable name, e.g. executive_summary
+  belongs_to_blueprint: "<path to the page blueprint that references this>"
+                                       # e.g. reports/blueprints/<page>.yaml
+  purpose: "<the page's business question, for context only>"
+                                       # context only -- the question is decided in
+                                       # the blueprint; the background carries no data
+
+# -----------------------------------------------------------------------------
+# canvas_size -- the page canvas dimensions the background image is built to fit.
+# The asset is exported at exactly this size (1:1) so it aligns to the grid; a
+# mismatched size shifts every safe zone. Desktop default is 16:9.
+# -----------------------------------------------------------------------------
+canvas_size:
+  aspect_ratio: "<16:9 | 4:3 | custom>"   # desktop default is 16:9
+  width_px: "<int>"                    # e.g. 1280  (match design/grids/16x9-grid.yaml)
+  height_px: "<int>"                   # e.g. 720
+  grid_ref: "design/grids/16x9-grid.yaml" # the grid the zones below are measured on
+                                          # (phone -> design/grids/mobile-grid.yaml)
+
+# -----------------------------------------------------------------------------
+# asset_path -- where the exported background image lives in the repo. The image
+# is a static export from an EXTERNAL tool (surface 2); Power BI imports it as the
+# page background. Naming/location convention: design/backgrounds/README.md.
+# -----------------------------------------------------------------------------
+asset_path:
+  file: "<design/backgrounds/<page>-bg.png>"  # the committed static export
+  authoring_tool: "<Figma | Canva | PowerPoint | Illustrator>"
+                                       # designed OUTSIDE Power BI (surface 2)
+  source_file_ref: "<link/path to the editable source, or 'none'>"
+                                       # the editable design file, if kept
+  exported_1to1: true                  # exported at canvas_size, no rescale
+
+# -----------------------------------------------------------------------------
+# export_format -- the static image format and import-fit settings. PNG for crisp
+# UI chrome/transparency; SVG for vector; JPG only for photographic fills. The fit
+# in Power BI is "Fit" at the matching canvas size so the grid aligns.
+# -----------------------------------------------------------------------------
+export_format:
+  format: "<png | svg | jpg>"          # PNG default (crisp chrome, transparency)
+  transparency: "<true | false>"       # true keeps page color visible where unset
+  dpi: "<int or 'screen'>"             # screen-resolution export; no print DPI need
+  image_fit: "fit"                     # Power BI background fit: Fit (not Tile/Normal)
+  transparency_pct: 0                  # background image transparency = 0% (opaque
+                                       #   structure); visuals sit ABOVE it
+
+# -----------------------------------------------------------------------------
+# safe_zones -- the regions kept clear/aligned so live visuals (surface 1) land
+# cleanly ABOVE the background. Coordinates are grid cells from canvas_size.grid_ref.
+# Safe zones are STRUCTURE (where things go), never data (what they show).
+# -----------------------------------------------------------------------------
+safe_zones:
+  outer_margin_cells: "<int>"          # clear margin around the whole canvas
+  header_band:                         # top band reserved for page title chrome
+    x: "<col_start>"
+    y: "<row_start>"
+    width: "<cols>"
+    height: "<rows>"
+  content_safe_area:                   # where visuals may be placed
+    x: "<col_start>"
+    y: "<row_start>"
+    width: "<cols>"
+    height: "<rows>"
+  footer_band:                         # bottom band reserved for footer/status chrome
+    x: "<col_start>"
+    y: "<row_start>"
+    width: "<cols>"
+    height: "<rows>"
+
+# -----------------------------------------------------------------------------
+# static_regions -- the layout containers/chrome the background DRAWS. These are
+# static shapes only (panels, dividers, branding, section labels as fixed text).
+# A "label" here is FIXED chrome text (e.g. a section heading), NEVER a value that
+# refreshes. Each region names its section so it aligns to the page blueprint.
+# -----------------------------------------------------------------------------
+static_regions:
+  - id: "<region_id>"                  # e.g. kpi_strip_panel
+    section: "<page_section>"          # header | kpi_strip | main_insight |
+                                       #   diagnostic | exception_detail |
+                                       #   filter_rail | footer_status
+    kind: "<panel | divider | card_frame | branding | section_label>"
+    x: "<col_start>"
+    y: "<row_start>"
+    width: "<cols>"
+    height: "<rows>"
+    static_text: "<fixed chrome text only, or 'none'>"
+                                       # e.g. a section heading; NEVER a KPI value
+                                       # or a dynamic/refreshing title (see below)
+  # - id: "..."  (add one entry per static container; empty list if none)
+
+# -----------------------------------------------------------------------------
+# forbidden_dynamic_content -- THE load-bearing section of this template (FR-005).
+# It exists so "background is structure, not data" is committed, not improvised.
+#
+# THE SURFACE-2 PURITY RULE (verbatim):
+#   Background is STATIC STRUCTURE, never data. Never bake a KPI value, a dynamic
+#   title, or any other dynamic/refreshing content into a static background image.
+#   The background carries layout structure (safe zones, containers, grid); the
+#   live Power BI visuals sit editable ABOVE it.
+#
+# Every check below MUST be false to pass. A true entry is a defect: move that
+# content UP to a live visual (surface 1, templates/visual-spec.yaml). Baking a
+# number into the image makes a value that never refreshes -- the failure mode this
+# surface exists to prevent.
+# -----------------------------------------------------------------------------
+forbidden_dynamic_content:
+  contains_kpi_value: false            # NO live/last-known KPI number in the image
+  contains_dynamic_title: false        # NO title that should reflect a filter/value
+  contains_measure_or_metric: false    # NO measure result baked into the image
+  contains_data_label_or_axis_value: false  # NO chart value/axis number in the image
+  contains_date_or_refresh_stamp: false     # NO "as of <date>" baked in (use a visual)
+  contains_filter_or_slicer_state: false    # NO filter selection drawn into the image
+  baked_in_screenshot_of_a_visual: false    # NO screenshot of a chart as background
+  # All MUST be false. If any is true: the content belongs on a LIVE visual above
+  # the background, not inside the static image (FR-005, surface-2 purity rule).
+
+# -----------------------------------------------------------------------------
+# import_instructions -- how a human imports this static asset in Power BI Desktop
+# (surface 4 stops at NOTES; F016 owns any automation). NOTES ONLY -- this template
+# edits no PBIP/PBIR file and runs no pbi-cli.
+# -----------------------------------------------------------------------------
+import_instructions:
+  steps:
+    - "Set the page Canvas size to match canvas_size (Format page -> Canvas settings)."
+    - "Format page -> Canvas background -> Browse -> select asset_path.file."
+    - "Set Image fit = Fit and Transparency = 0% (opaque structure)."
+    - "Place all live visuals ABOVE the background, aligned to the safe_zones."
+    - "Lock the background; never paste a KPI/title onto the image itself."
+  handoff_note: "Implementation is NOTES only here. Any PBIP/PBIR edit or pbi-cli
+    automation is owned by F016 (rule 6); this slice does not perform it."
+
+# -----------------------------------------------------------------------------
+# qa_checklist -- self-check the background against the surface-2 rules and the QA
+# reference (docs/powerbi/visual-qa.md + the dashboard-qa workflow). Each MUST be
+# true to pass; a false entry is a blocking reason or a recorded `warning` + reason.
+# -----------------------------------------------------------------------------
+qa_checklist:
+  is_static_structure_only: "<true|false>"   # carries no data (the surface-2 rule)
+  no_forbidden_dynamic_content: "<true|false>" # all forbidden checks above are false
+  exported_at_canvas_size_1to1: "<true|false>" # aligns to the grid, no rescale
+  safe_zones_align_to_grid: "<true|false>"     # zones match canvas_size.grid_ref
+  whitespace_preserved: "<true|false>"         # not over-filled; reading room kept
+  not_dark_behind_dense_charts: "<true|false>" # readability: avoid dark under dense data
+  contrast_sufficient_for_visuals: "<true|false>" # visuals stay legible above it
+  consistent_aspect_ratio: "<true|false>"      # 16:9 (or the page's declared ratio)
+  branding_is_chrome_not_data: "<true|false>"  # logo/labels are fixed chrome only
+
+# -----------------------------------------------------------------------------
+# readiness -- record this background's design readiness with the FOUR statuses
+# only (docs/readiness/readiness-model.md). NEVER a numeric confidence score
+# (rule 9). Never self-grant `dashboard_ready: pass` -- that is the verb owner's
+# recorded design-review (F011/012), not this template's.
+# -----------------------------------------------------------------------------
+readiness:
+  status: "<not_started | blocked | warning | pass>"
+  evidence:                            # committed artifacts/approvals backing the status
+    - "<e.g. asset_path.file committed + safe zones aligned to the grid>"
+  blocking_reasons:                    # concrete reasons, if blocked (empty otherwise)
+    - "<e.g. 'forbidden dynamic content: KPI value baked into the image'>"
+    - "<e.g. 'export size does not match canvas_size -- safe zones misaligned'>"
+  # NO `score:` / `confidence:` field exists here BY DESIGN (rule 9).
