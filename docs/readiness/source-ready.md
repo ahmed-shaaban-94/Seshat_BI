@@ -90,6 +90,7 @@ source-mapping workflow to author the source-map decisions.
 - `readiness-model.md` -- the four-status state model and the no-fake-confidence rule.
 - `readiness-pipeline.md` -- the seven-stage sequence; this is stage 1 of 7.
 - `mapping-ready.md` -- the next stage (the source-mapping gate).
+- `source-drift.md` -- the companion that re-certifies this stage over time (shape/semantic drift as evidence + blockers).
 - `../source-intelligence.md` -- Layer 2: how the OPTIONAL registry + dictionary feed this stage's evidence.
 - `../../templates/business-meaning-registry.md`, `../../templates/retail-term-dictionary.md` -- the OPTIONAL semantic-proposal artifacts.
 - `../../.claude/skills/source-mapping/SKILL.md` -- the skill that runs this stage; calls `profile.py` as the mechanical profiler.
