@@ -6,7 +6,8 @@ build-backend = "hatchling.build"
 name = "retail"
 version = "0.1.0"
 license = "Apache-2.0"
-description = "Static governance checker for Retail Tower Power BI conventions."
+description = "Seshat BI: agent-first Retail BI readiness checker (static retail check + live retail validate over the medallion warehouse and Power BI conventions)."
+authors = [{ name = "Ahmed Shaaban" }]
 requires-python = ">=3.13"
 dependencies = []
 
