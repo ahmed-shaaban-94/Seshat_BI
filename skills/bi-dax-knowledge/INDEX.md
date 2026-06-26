@@ -10,11 +10,11 @@
 | I need to... | Open only these | End on |
 |---|---|---|
 | **1. Ground a model before DAX** | `references/retail-schema.md`, `knowledge/dax-core-concepts.md` | mapped model roles / known missing model metadata |
-| **2. Define a metric contract** | `patterns/metric-contract-patterns.json`, `knowledge/dax-core-concepts.md` | metric contract (grain, additivity, filter behavior, validation notes); `checklists/metric-contract-checklist.md` |
+| **2. Define a metric contract** | `patterns/metric-contract-patterns.json`, `knowledge/dax-core-concepts.md`, `checklists/metric-contract-checklist.md` | metric contract (grain, additivity, filter behavior, validation notes) via `checklists/metric-contract-checklist.md` |
 | **3. Write a basic measure** | `patterns/metric-contract-patterns.json`, `patterns/dax-patterns.json`, `knowledge/dax-best-practices.md` | generated measure + contract assumptions |
 | **4. Write time intelligence** | `patterns/dax-patterns.json`, `knowledge/dax-core-concepts.md`, `knowledge/dax-retail-examples.md` | measure shape + date-table/model prerequisites |
 | **5. Write ranking / segmentation / ABC** | `patterns/dax-patterns.json`, `knowledge/dax-retail-examples.md` | generated DAX shape + required model assumptions |
-| **6. Review existing DAX** | `patterns/analyzer-rules.json`, `knowledge/dax-best-practices.md`, `knowledge/dax-anti-patterns.md` | analyzer-style verdict (issues, severity, fix direction); `checklists/dax-measure-review-checklist.md` |
+| **6. Review existing DAX** | `patterns/analyzer-rules.json`, `knowledge/dax-best-practices.md`, `knowledge/dax-anti-patterns.md`, `checklists/dax-measure-review-checklist.md` | analyzer-style verdict (issues, severity, fix direction) via `checklists/dax-measure-review-checklist.md` |
 | **7. Fix context/filter problems** | `knowledge/dax-evaluation-context-deep-dive.md`, `knowledge/dax-calculate-deep-dive.md`, `knowledge/dax-core-concepts.md` | diagnosis of context issue + corrected DAX shape or blocked metadata request |
 | **8. Check semantic model prerequisites** | `patterns/metric-contract-patterns.json`, `knowledge/dax-core-concepts.md`, `checklists/dax-model-review-checklist.md` | model-review verdict (`checklists/dax-model-review-checklist.md`) / missing prerequisites |
 | **9. Tune DAX performance** | `knowledge/dax-engine-internals.md`, `knowledge/dax-performance-diagnostics.md`, `knowledge/dax-performance-notes.md` | performance diagnosis + safer rewrite direction |
