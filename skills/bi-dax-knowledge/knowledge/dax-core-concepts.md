@@ -29,7 +29,8 @@ questions, and links to staged analyzer-rule candidates (`patterns/analyzer-rule
   playbooks (wrong total, ignores slicer, slow measure, TI wrong, blank vs zero, propagation,
   context transition, percent-of-total).
 
-Planned in later slices (not yet written): `references/agent-training-set.md`.
+Graded Q&A bank for teaching/eval: `references/agent-training-set.md` (+ machine-gradeable
+`references/agent-training-set.json`).
 
 ## 1. The two evaluation contexts
 

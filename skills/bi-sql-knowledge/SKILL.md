@@ -55,7 +55,7 @@ layer. It reasons about SQL; it never runs it.
 
 | The task is about... | Route to |
 |---|---|
-| Source mapping / retail pipeline readiness | `retail-bi` |
+| Source mapping / retail pipeline readiness | `source-mapping` / `retail-onboard-table` (readiness spine: `docs/readiness/`) |
 | SQL reasoning / profiling / validation / reconciliation / transformation logic | **`bi-sql-knowledge`** (this skill) |
 | DAX generation / review / performance / model prerequisites | `bi-dax-knowledge` |
 | Dashboard / visual / page design | `powerbi-dashboard-design` |
@@ -63,7 +63,7 @@ layer. It reasons about SQL; it never runs it.
 Where it sits in the pipeline:
 
 ```text
-source -> [retail-bi: mapping / readiness]
+source -> [source-mapping / retail-onboard-table: mapping / readiness]
        -> [bi-sql-knowledge: profile / validate / reconcile / transform -> silver/gold]
        -> [bi-dax-knowledge: measures / model]
        -> [powerbi-dashboard-design: visuals / pages]

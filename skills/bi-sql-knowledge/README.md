@@ -57,7 +57,7 @@ profiling); window and date/time analytics; SQL anti-patterns; and basic perform
 
 | The task is about... | Route to |
 |---|---|
-| Source mapping / retail pipeline readiness | `retail-bi` |
+| Source mapping / retail pipeline readiness | `source-mapping` / `retail-onboard-table` (readiness spine: `docs/readiness/`) |
 | SQL reasoning / profiling / validation / reconciliation / transformation logic | **`bi-sql-knowledge`** (this skill) |
 | DAX generation / review / performance / model prerequisites | `bi-dax-knowledge` |
 | Dashboard / visual / page design | `powerbi-dashboard-design` |

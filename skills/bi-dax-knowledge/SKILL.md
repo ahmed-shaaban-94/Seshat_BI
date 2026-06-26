@@ -55,6 +55,8 @@ Each pattern (`future_agent_use`) and contract (`phase_support`) declares which 
 ```
 bi-dax-knowledge/
 ├─ SKILL.md                         ← this file (interface)
+├─ INDEX.md                         ← the router (open after this file)
+├─ README.md                        ← overview, scope, boundaries
 ├─ references/
 │  ├─ retail-schema.md              ← the fictional model all examples use
 │  └─ source-map.md                 ← attribution + how content was derived
@@ -69,11 +71,15 @@ bi-dax-knowledge/
 │  ├─ dax-anti-patterns.md          ← AP-xxx mistakes
 │  ├─ dax-performance-notes.md      ← intro perf primer (the "why" lives in engine-internals)
 │  └─ dax-retail-examples.md        ← worked original examples
-└─ patterns/                        ← JSON: precise reusable rules (read for generation/review)
-   ├─ dax-patterns.json             ← 20-pattern library (per-pattern schema)
-   ├─ metric-contract-patterns.json ← 21 reusable metric specs (+ concept links, phase support)
-   ├─ analyzer-rules.json           ← 20 enforceable AR-xxx rules (+ detectability/required_inputs/promoted_from)
-   └─ analyzer-rule-candidates.json ← ARC-xxx candidates; 10 promoted, 6 still staged (analyzer_v2/human)
+├─ patterns/                        ← JSON: precise reusable rules (read for generation/review)
+│  ├─ dax-patterns.json             ← 20-pattern library (per-pattern schema)
+│  ├─ metric-contract-patterns.json ← 21 reusable metric specs (+ concept links, phase support)
+│  ├─ analyzer-rules.json           ← 20 enforceable AR-xxx rules (+ detectability/required_inputs/promoted_from)
+│  └─ analyzer-rule-candidates.json ← ARC-xxx candidates; 10 promoted, 6 still staged (analyzer_v2/human)
+└─ checklists/                      ← short copy-me checklists (the artifact a route ends on)
+   ├─ metric-contract-checklist.md  ← fill a metric contract before writing DAX
+   ├─ dax-measure-review-checklist.md ← pre-merge review of a measure
+   └─ dax-model-review-checklist.md ← semantic-model DAX prerequisites
 
 references/agent-training-set.md   ← graded Q&A bank (36 items, 7 categories) for teaching/eval
 references/agent-training-set.json  ← machine-gradeable twin (same items)
