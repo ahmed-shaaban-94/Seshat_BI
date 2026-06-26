@@ -44,7 +44,7 @@ Stages:
 | Source mapping / grain / PII / unresolved questions | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source map + unresolved questions |
 | SQL validation / SQL reconciliation / transformation logic | `skills/bi-sql-knowledge/SKILL.md` then `skills/bi-sql-knowledge/INDEX.md` | SQL validation / reconciliation checklist |
 | DAX / metric contracts / semantic model prerequisites | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | metric contract / semantic model handoff |
-| Dashboard / visual design / audience / layout | existing dashboard design skill/docs if found; otherwise mark intended/future | dashboard blueprint |
+| Dashboard / visual design / audience / layout | `.claude/skills/powerbi-dashboard-design/` (gated "design from contracts" verb: `.claude/skills/dashboard-design/`) | dashboard blueprint |
 | Power BI execution / publish | STOP unless `semantic_model_ready` and publish gates have passed | blocked verdict or BI handoff pack |
 | Unknown or ambiguous task | `docs/knowledge-map.md` | clarifying question or blocked verdict |
 
