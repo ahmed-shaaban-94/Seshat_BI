@@ -202,3 +202,36 @@ def test_emit_ratio_refuses_bad_side():
     })
     assert dax is None
     assert "column" in reason
+
+
+import subprocess
+import sys
+from pathlib import Path
+
+from retail.dax_gen import load_contract
+
+
+def test_load_contract_reads_definition(tmp_path: Path):
+    p = tmp_path / "c.yaml"
+    p.write_text(
+        'name: "Rev"\nformula_intent: "money"\n'
+        "definition:\n  kind: base\n  aggregation: sum\n"
+        "  source:\n    table: gold.t\n    column: c\n",
+        encoding="utf-8",
+    )
+    data = load_contract(str(p))
+    assert data["name"] == "Rev"
+    assert data["definition"]["kind"] == "base"
+
+
+def test_dax_gen_import_is_stdlib_only():
+    # importing dax_gen must NOT pull yaml at import time (lazy in load_contract)
+    import os
+    code = (
+        "import sys; import retail.dax_gen; "
+        "assert 'yaml' not in sys.modules, 'yaml imported at module scope'"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parent.parent.parent / "src")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr

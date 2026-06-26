@@ -464,3 +464,17 @@ def test_kind_ratio_explicit_additive_true_still_escalates() -> None:
     v = check_measure_drift(DAX_DISCOUNTED, explicit_additive_def)
     assert v.status == "escalate", v
     assert "additive" in v.detail.lower()
+
+
+import subprocess
+import sys
+
+
+def test_retail_rules_pulls_neither_dax_gen_nor_yaml():
+    code = (
+        "import sys; import retail.rules; "
+        "assert 'retail.dax_gen' not in sys.modules, 'dax_gen leaked into core'; "
+        "assert 'yaml' not in sys.modules, 'yaml leaked into core'"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr

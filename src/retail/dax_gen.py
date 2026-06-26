@@ -228,3 +228,19 @@ def generate_measure(
     if errors:
         return GenResult.refuse("D-rule ERROR(s): " + "; ".join(errors))
     return GenResult.success(dax=dax, tmdl_block=block, warnings=tuple(warnings))
+
+
+def load_contract(path: str) -> dict:
+    """Read a metric contract YAML and return the whole parsed mapping.
+
+    Lazy `import yaml` (dev/optional dep) -- the ONLY yaml touch in this module,
+    kept out of the `retail check` core chain (the stdlib-only invariant).
+    """
+    from pathlib import Path
+
+    import yaml  # lazy
+
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"contract {path} is not a YAML mapping")
+    return data
