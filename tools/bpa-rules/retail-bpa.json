@@ -1,0 +1,13 @@
+[
+  {
+    "ID": "MEASURE_PREFER_DIVIDE",
+    "Name": "Use DIVIDE() instead of the '/' operator",
+    "Category": "DAX Expressions (generic DAX best-practice)",
+    "Description": "Generic, advisory best-practice only -- NOT a Tower BI contract/approval/business-truth verdict. DIVIDE() handles divide-by-zero/blank safely; a bare '/' can error or return Infinity. (This mirrors the home-grown D4 rule; here it proves the repo-controlled BPA ruleset mechanism, not a replacement for Tower BI's own DAX governance.)",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Expression.Contains(\"/\")",
+    "FixExpression": null,
+    "CompatibilityLevel": 1200
+  }
+]
