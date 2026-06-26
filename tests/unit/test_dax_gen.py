@@ -235,3 +235,68 @@ def test_dax_gen_import_is_stdlib_only():
     env["PYTHONPATH"] = str(Path(__file__).parent.parent.parent / "src")
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
+
+
+CONTRACTS = Path(__file__).parent.parent / "fixtures" / "contracts"
+_WORKTREE_SRC = str(Path(__file__).parent.parent.parent / "src")
+
+
+def _run_cli(*argv: str) -> subprocess.CompletedProcess[str]:
+    import os
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = _WORKTREE_SRC
+    return subprocess.run(
+        [sys.executable, "-m", "retail.cli", *argv],
+        capture_output=True, text=True, env=env,
+    )
+
+
+def test_cli_generate_success_stdout_tmdl() -> None:
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"))
+    assert r.returncode == 0
+    assert "measure TotalRevenue" in r.stdout
+    assert r.stderr.strip() == ""
+
+
+def test_cli_generate_refusal_stdout_empty_stderr_reason() -> None:
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "refuse_no_column.yaml"))
+    assert r.returncode == 1
+    assert r.stdout.strip() == ""          # stdout = verified-only
+    assert "refused" in r.stderr.lower()
+
+
+def test_cli_generate_json_format() -> None:
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "ratio_disc.yaml"),
+                 "--format", "json")
+    assert r.returncode == 0
+    import json
+    obj = json.loads(r.stdout)
+    assert obj["ok"] is True and obj["dax"].startswith("DIVIDE(")
+
+
+def test_cli_out_refuses_powerbi_path(tmp_path: Path) -> None:
+    # an --out resolving under powerbi/ is refused (resolved-path check)
+    target = "powerbi/Model.SemanticModel/x.tmdl"
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
+                 "--out", target)
+    assert r.returncode == 1
+    assert "powerbi" in r.stderr.lower()
+
+
+def test_cli_out_refuses_traversal_into_powerbi(tmp_path: Path) -> None:
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
+                 "--out", "../powerbi/sneak.tmdl")
+    assert r.returncode == 1
+    assert "powerbi" in r.stderr.lower()
+
+
+def test_cli_out_writes_then_refuses_overwrite(tmp_path: Path) -> None:
+    out = tmp_path / "m.tmdl"
+    r1 = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
+                  "--out", str(out))
+    assert r1.returncode == 0 and out.exists()
+    r2 = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
+                  "--out", str(out))
+    assert r2.returncode == 1
+    assert "exist" in r2.stderr.lower()

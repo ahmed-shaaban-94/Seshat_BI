@@ -1,0 +1,8 @@
+name: "TotalRevenue"
+formula_intent: "the total money taken across all transactions"
+definition:
+  kind: base
+  aggregation: sum
+  source:
+    table: gold.fct_sales_rss
+    column: total_spent

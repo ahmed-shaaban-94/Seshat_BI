@@ -1,0 +1,12 @@
+name: "DiscountedRate"
+formula_intent: "share of transactions that had a discount, among known-status"
+definition:
+  kind: ratio
+  numerator:
+    aggregation: count_rows
+    source: {table: gold.fct_sales_rss}
+    filter: [{column: discount_applied, op: is_true}]
+  denominator:
+    aggregation: count_rows
+    source: {table: gold.fct_sales_rss}
+    filter: [{column: discount_applied, op: is_not_null}]

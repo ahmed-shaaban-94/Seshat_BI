@@ -84,6 +84,36 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="root dir holding <dataset>/metrics/<Measure>.yaml contracts",
     )
+
+    # DAX generator (Task 7). Lazy imports inside _run_generate keep dax_gen/yaml
+    # out of the `retail check` import chain (mirrors the validate / semantic-check
+    # handlers). --out is fail-closed: refuses powerbi/ writes and overwrites.
+    gen = sub.add_parser(
+        "generate",
+        help="generate a verified best-practice DAX measure from a metric contract",
+    )
+    gen.add_argument(
+        "--contract",
+        required=True,
+        metavar="PATH",
+        help="metric contract YAML (reads its `definition` block)",
+    )
+    gen.add_argument(
+        "--out",
+        default=None,
+        metavar="PATH",
+        help=(
+            "write the verified TMDL block to a NEW standalone file "
+            "(never under powerbi/; refuses to overwrite)"
+        ),
+    )
+    gen.add_argument(
+        "--format",
+        dest="fmt",
+        choices=("tmdl", "json"),
+        default="tmdl",
+        help="output format on success (tmdl or json)",
+    )
     return parser
 
 
@@ -122,6 +152,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "semantic-check":
         return _run_semantic_check(args)
+
+    if args.command == "generate":
+        return _run_generate(args)
 
     return 0
 
@@ -365,6 +398,79 @@ def _run_semantic_check(args) -> int:
     if exit_code == 0 and not findings:
         print("retail semantic-check: no drift (0 findings).", file=sys.stderr)
     return exit_code
+
+
+def _run_generate(args) -> int:
+    """Generate a verified DAX measure from a metric contract YAML.
+
+    Lazy imports (dax_gen, yaml via load_contract) live INSIDE this handler so
+    the stdlib-only `retail check` import chain never pulls them. Fail-closed:
+    stdout carries ONLY verified output; every refusal/error writes to stderr
+    and returns 1, leaving stdout empty (safe for shell redirection).
+
+    --out guard: resolve the path before writing; refuse if it resolves under
+    the repo's powerbi/ directory (prevents model mutation), and refuse if the
+    target file already exists (no silent overwrite).
+    """
+    import json
+    from pathlib import Path
+
+    from .dax_gen import generate_measure, load_contract
+
+    # 1. Read and parse the contract file.
+    try:
+        contract = load_contract(args.contract)
+    except Exception as exc:
+        print(f"[error] cannot read contract: {exc}", file=sys.stderr)
+        return 1
+
+    # 2. Validate required `name` field.
+    name = contract.get("name")
+    if not name:
+        print("[error] contract has no `name`", file=sys.stderr)
+        return 1
+
+    # 3. Generate the measure (fail-closed: refuses bad contracts).
+    result = generate_measure(
+        contract.get("definition") or {},
+        name=name,
+        doc_intent=contract.get("formula_intent"),
+    )
+    if not result.ok:
+        print(f"[refused] {name}: {result.reason}", file=sys.stderr)
+        return 1
+
+    # 4a. --out mode: write to a file with powerbi/ and overwrite guards.
+    if args.out:
+        out = Path(args.out).resolve()
+        powerbi = (Path.cwd() / "powerbi").resolve()
+        if out == powerbi or powerbi in out.parents:
+            print(
+                f"[refused] --out resolves under powerbi/: {out}",
+                file=sys.stderr,
+            )
+            return 1
+        if out.exists():
+            print(f"[refused] --out file already exists: {out}", file=sys.stderr)
+            return 1
+        out.write_text(result.tmdl_block, encoding="utf-8")
+        return 0
+
+    # 4b. Stdout mode: emit verified output only.
+    if args.fmt == "json":
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "dax": result.dax,
+                    "tmdl_block": result.tmdl_block,
+                    "warnings": list(result.warnings),
+                }
+            )
+        )
+    else:
+        print(result.tmdl_block)
+    return 0
 
 
 if __name__ == "__main__":

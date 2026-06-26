@@ -1,0 +1,6 @@
+name: "Broken"
+formula_intent: "a sum with no column -> must refuse"
+definition:
+  kind: base
+  aggregation: sum
+  source: {table: gold.fct_sales_rss}
