@@ -209,7 +209,8 @@ FROM gold.fact_sales;                -- PASS = rows = keys (one row per key)
 
 This slice produces the gates that make a gold table **trustworthy**; once it passes, the validated
 grain and keys hand off to `bi-dax-knowledge` (which relies on a known grain for additivity). Source
-readiness/mapping that precedes profiling belongs to `retail-bi`.
+readiness/mapping that precedes profiling belongs to the `source-mapping` gate (readiness spine:
+`docs/readiness/`).
 
 ## Feeds
 
