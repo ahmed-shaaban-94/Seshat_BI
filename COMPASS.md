@@ -102,3 +102,7 @@ Every agent run should end with one of:
 
 This file is not the knowledge base, not a tutorial, not a runtime validator, not
 a wiki, and not a vector index. It is a compass.
+
+## See also
+
+- Routing smoke test: `docs/quality/agent-routing-smoke-test.md` — a manual check that this routing layer still works.
