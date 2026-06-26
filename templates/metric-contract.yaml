@@ -160,4 +160,33 @@ readiness:
 # REJECT (define/check boundary): a DAX expression, a SQL statement, a visual/page
 # spec, or a `powerbi/` path does NOT belong in any field here. The contract is
 # INTENT + binding, not implementation and not a check.
-# -----------------------------------------------------------------------------
+# =============================================================================
+
+# =============================================================================
+# OPTIONAL: definition.kind (F-DAXGEN, additive) -- consumed by `retail generate`
+# =============================================================================
+# `formula_intent` above stays plain-language INTENT. The OPTIONAL `definition`
+# block below is IMPLEMENTATION-side structure that the DAX Generator reads to
+# emit + verify a measure. It is NOT required for a contract to be valid, and a
+# contract WITHOUT it behaves exactly as today. Vocabulary is lowercase:
+#   sum | count | distinct_count | average | count_rows   (-> DAX SUM/COUNT/
+#   DISTINCTCOUNT/AVERAGE/COUNTROWS). Filters reuse the tight op whitelist
+#   {is_true, is_not_null}. gold.* tables only.
+#
+# definition:                       # kind:base example
+#   kind: base
+#   aggregation: sum                # column REQUIRED (except count_rows = table only)
+#   source: {table: gold.fct_x, column: amount}
+#   filter: [{column: flag, op: is_true}]   # optional
+#
+# definition:                       # kind:ratio example (inline sides only)
+#   kind: ratio
+#   numerator:   {aggregation: count_rows, source: {table: gold.fct_x},
+#                 filter: [{column: flag, op: is_true}]}
+#   denominator: {aggregation: count_rows, source: {table: gold.fct_x},
+#                 filter: [{column: flag, op: is_not_null}]}
+#
+# The generator REFUSES to emit anything it cannot verify (`retail generate`
+# round-trips its own output through the L3 drift check + D1-D11). A contract
+# with no `definition` is simply not generatable yet -- author one when ready.
+# =============================================================================

@@ -227,8 +227,14 @@ def _contract_filters(side: dict[str, Any]) -> frozenset[Filter] | None:
     raw = side.get("filter", [])
     if raw is None:
         raw = []
+    # Fail-closed: a malformed `filter` escalates (None), never raises. A non-list
+    # or a non-dict element is unrecognized shape -> escalate to a human.
+    if not isinstance(raw, list):
+        return None
     out: set[Filter] = set()
     for f in raw:
+        if not isinstance(f, dict):
+            return None
         col = f.get("column")
         op = f.get("op")
         if not col or op not in ("is_not_null", "is_true"):
@@ -237,12 +243,109 @@ def _contract_filters(side: dict[str, Any]) -> frozenset[Filter] | None:
     return frozenset(out)
 
 
+# AGG name -> the single DAX function the generator emits for it (mirror of dax_gen)
+_BASE_AGG_FUNC: dict[str, str] = {
+    "sum": "SUM",
+    "count": "COUNT",
+    "distinct_count": "DISTINCTCOUNT",
+    "average": "AVERAGE",
+    "count_rows": "COUNTROWS",
+}
+
+
+def _recognized_agg_func(expr: str) -> str | None:
+    """Return the recognized AGG function name if `expr` is a top-level AGG(...) call.
+
+    Returns None if `expr` is not a call to any known aggregation function.
+    Uses _outer_call (paren-anchored) so COUNT does not prefix-match COUNTROWS.
+    """
+    for func in _BASE_AGG_FUNC.values():
+        if _outer_call(expr, func) is not None:
+            return func
+    return None
+
+
+def _check_base_drift(dax_expr: str, definition: dict[str, Any]) -> Verdict:
+    """Verify a kind:base measure's aggregation + filter-set vs its contract.
+
+    Recognizes exactly two shapes (mirroring the generator's emit templates):
+      AGG( <col-or-table> )                          -> no filter
+      CALCULATE( AGG( <col-or-table> ), p1, p2, ... ) -> wrapped + filters
+    ESCALATE for anything else; never guesses. The base measure is its OWN
+    contract, so its aggregation IS checked (unlike a referenced measure).
+    """
+    expr = dax_expr.strip()
+    agg = definition.get("aggregation")
+    want_func = _BASE_AGG_FUNC.get(agg) if agg else None
+    if want_func is None:
+        return Verdict("escalate", f"contract aggregation {agg!r} not recognized")
+
+    # _contract_filters reads side["filter"]; wrap the base filter list in that shape.
+    contract_filters = _contract_filters({"filter": definition.get("filter", [])})
+    if contract_filters is None:
+        return Verdict("escalate", "contract filter is malformed or uses an unknown op")
+
+    inner = _outer_call(expr, "CALCULATE")
+    if inner is None:
+        # bare aggregation, no filter
+        actual_func = _recognized_agg_func(expr)
+        if actual_func is None:
+            return Verdict("escalate", "measure is not a recognized AGG(col) shape")
+        if actual_func != want_func:
+            return Verdict(
+                "drift",
+                f"aggregation {actual_func!r} != contract {want_func!r}",
+            )
+        dax_filters: frozenset[Filter] = frozenset()
+    else:
+        parts = _split_balanced(inner)
+        if parts is None or not parts:
+            return Verdict("escalate", "CALCULATE arguments unbalanced")
+        inner_expr = parts[0].strip()
+        actual_func = _recognized_agg_func(inner_expr)
+        if actual_func is None:
+            return Verdict("escalate", "CALCULATE inner is not a recognized AGG(col)")
+        if actual_func != want_func:
+            return Verdict(
+                "drift",
+                f"aggregation {actual_func!r} != contract {want_func!r}",
+            )
+        recognized: set[Filter] = set()
+        for p in (x for x in parts[1:] if x.strip()):
+            f = _recognize_filter(p)
+            if f is None:
+                return Verdict("escalate", f"unrecognized predicate: {p!r}")
+            recognized.add(f)
+        dax_filters = frozenset(recognized)
+
+    if dax_filters == contract_filters:
+        return Verdict("pass", "base aggregation + filter-set matches the contract")
+    return Verdict(
+        "drift",
+        f"filter-set {sorted((f.column, f.op) for f in dax_filters)} "
+        f"!= contract {sorted((f.column, f.op) for f in contract_filters)}",
+    )
+
+
 def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Verdict:
     """Compare a DIVIDE measure's denominator filter-set to its contract definition.
 
     Returns a Verdict (pass | drift | escalate | skip). ESCALATE is the default for any
     expression not confidently recognized. Never raises on bad DAX -- escalates instead.
+    If definition.kind == "base", verify the base measure's aggregation + filter-set
+    against its own contract.
     """
+    if definition and definition.get("kind") == "base":
+        return _check_base_drift(dax_expr, definition)
+    # kind:ratio implies non-additive; caller need not restate additive:false.
+    # Shallow-copy only when the key is truly absent (explicit additive:true respected).
+    if (
+        definition
+        and definition.get("kind") == "ratio"
+        and "additive" not in definition
+    ):
+        definition = {**definition, "additive": False}
+    # ----- existing ratio path BELOW, UNCHANGED -----
     # Backward compat: no structured definition -> nothing to check.
     if not definition or "denominator" not in definition:
         return Verdict("skip", "contract has no structured `definition.denominator`")

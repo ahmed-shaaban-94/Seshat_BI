@@ -22,6 +22,10 @@ This module parses YAML (pyyaml, a dev/optional dep) and MUST live OUTSIDE the
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 import pytest
 
 from retail.metric_drift import Verdict, check_measure_drift
@@ -343,3 +347,168 @@ def test_four_arg_divide_still_escalates() -> None:
     bad = "DIVIDE([A], [B], 0, 1)"
     v = check_measure_drift(bad, DEF_AVG)
     assert v.status == "escalate", v
+
+
+# --- kind:base verify (HAND-AUTHORED DAX -- never generator output) ----------
+# A base measure IS its own contract, so we check its aggregation + filter-set
+# against the definition directly (the referenced-measure opacity rule does not
+# apply: there is no referenced measure here).
+
+DEF_BASE_REVENUE = {
+    "kind": "base",
+    "aggregation": "sum",
+    "source": {"table": "gold.fct_sales_rss", "column": "total_spent"},
+}
+DAX_BASE_REVENUE = "SUM('gold fct_sales_rss'[total_spent])"  # hand-written
+
+DEF_BASE_DISC_TXN = {
+    "kind": "base",
+    "aggregation": "count_rows",
+    "source": {"table": "gold.fct_sales_rss"},
+    "filter": [{"column": "discount_applied", "op": "is_true"}],
+}
+DAX_BASE_DISC_TXN = (  # hand-written
+    "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+    "'gold fct_sales_rss'[discount_applied] = TRUE())"
+)
+
+
+def test_base_pass_matches_contract() -> None:
+    assert check_measure_drift(DAX_BASE_REVENUE, DEF_BASE_REVENUE).status == "pass"
+
+
+def test_base_pass_with_filter() -> None:
+    assert check_measure_drift(DAX_BASE_DISC_TXN, DEF_BASE_DISC_TXN).status == "pass"
+
+
+def test_base_drift_wrong_filter_column() -> None:
+    # contract says discount_applied; DAX filters a different column -> drift
+    bad = (
+        "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+        "'gold fct_sales_rss'[returned] = TRUE())"
+    )
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "drift"
+
+
+def test_base_drift_missing_filter() -> None:
+    bad = "COUNTROWS('gold fct_sales_rss')"  # contract requires a filter
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "drift"
+
+
+def test_base_drift_wrong_aggregation() -> None:
+    bad = "COUNT('gold fct_sales_rss'[total_spent])"  # contract says sum
+    assert check_measure_drift(bad, DEF_BASE_REVENUE).status == "drift"
+
+
+def test_base_escalate_unrecognized_shape() -> None:
+    bad = "SUMX('gold fct_sales_rss', [x] * [y])"  # not an AGG(col) shape
+    assert check_measure_drift(bad, DEF_BASE_REVENUE).status == "escalate"
+
+
+def test_base_escalate_unknown_predicate() -> None:
+    bad = (
+        "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+        "LEN('gold fct_sales_rss'[discount_applied]) <> 0)"
+    )
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "escalate"
+
+
+# --- I1: a malformed `filter` is a fail-closed ESCALATE, never a raise --------
+
+
+def test_base_malformed_filter_scalar_escalates() -> None:
+    # A scalar `filter` is unrecognized shape -> _contract_filters returns None
+    # -> escalate (fail-closed). It must NOT raise.
+    malformed = {
+        "kind": "base",
+        "aggregation": "count_rows",
+        "source": {"table": "gold.fct_sales_rss"},
+        "filter": "discount_applied",
+    }
+    assert check_measure_drift(DAX_BASE_DISC_TXN, malformed).status == "escalate"
+
+
+def test_ratio_malformed_denominator_filter_escalates() -> None:
+    # A ratio whose denominator `filter` is a single dict (not a list) is
+    # malformed -> escalate (fail-closed). It must NOT raise.
+    malformed = {
+        "kind": "ratio",
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": {"column": "discount_applied", "op": "is_not_null"},
+        },
+    }
+    assert check_measure_drift(DAX_DISCOUNTED, malformed).status == "escalate"
+
+
+# --- ZERO-REGRESSION: kind-absent path is byte-identical + sole new reader ---
+def test_kind_absent_ratio_path_unchanged() -> None:
+    # the existing committed ratio still passes exactly as before
+    assert check_measure_drift(DAX_DISCOUNTED, DEF_DISCOUNTED).status == "pass"
+    assert check_measure_drift(DAX_AVG, DEF_AVG).status == "pass"
+
+
+def test_aggregation_unread_on_kind_absent_path() -> None:
+    # mutating `aggregation` on a kind-absent ratio contract must NOT change the
+    # verdict -- proves the base branch is the ONLY new reader of `aggregation`.
+    import copy
+
+    mutated = copy.deepcopy(DEF_DISCOUNTED)
+    mutated["denominator"]["aggregation"] = "this_value_is_never_read"
+    before = check_measure_drift(DAX_DISCOUNTED, DEF_DISCOUNTED)
+    after = check_measure_drift(DAX_DISCOUNTED, mutated)
+    assert before == after
+
+
+# --- spec §4: kind:ratio implies non-additive (Task 5 gap close) -------------
+
+
+def test_kind_ratio_without_additive_treated_nonadditive() -> None:
+    """A kind:ratio contract that omits `additive` must pass, not escalate.
+
+    §4 of the approved spec: `kind: ratio` IMPLIES non-additive semantics;
+    the caller need not restate `additive: false`.
+    """
+    no_additive_def = {
+        "kind": "ratio",
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": [{"column": "discount_applied", "op": "is_not_null"}],
+        },
+    }
+    v = check_measure_drift(DAX_DISCOUNTED, no_additive_def)
+    assert v.status == "pass", v
+
+
+def test_kind_ratio_explicit_additive_true_still_escalates() -> None:
+    """An explicit `additive: true` on a kind:ratio contract must still escalate.
+
+    The normalization only fills in a missing key; an explicit flag is respected.
+    """
+    explicit_additive_def = {
+        "kind": "ratio",
+        "additive": True,
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": [{"column": "discount_applied", "op": "is_not_null"}],
+        },
+    }
+    v = check_measure_drift(DAX_DISCOUNTED, explicit_additive_def)
+    assert v.status == "escalate", v
+    assert "additive" in v.detail.lower()
+
+
+def test_retail_rules_pulls_neither_dax_gen_nor_yaml():
+    from pathlib import Path
+
+    code = (
+        "import sys; import retail.rules; "
+        "assert 'retail.dax_gen' not in sys.modules, 'dax_gen leaked into core'; "
+        "assert 'yaml' not in sys.modules, 'yaml leaked into core'"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parent.parent.parent / "src")
+    r = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, env=env
+    )
+    assert r.returncode == 0, r.stderr
