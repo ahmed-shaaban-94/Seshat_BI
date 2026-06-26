@@ -85,6 +85,32 @@ suffices, extends AR-PERF-002).
 
 ---
 
+## CC-012 — Table filters vs column filters
+
+**What it is.** A *column filter* is a predicate on a single column (`'Product'[Color] = "Red"`,
+which CC-005 shows desugars to `FILTER(ALL('Product'[Color]), …)`). A *table filter* is a
+`FILTER` over a whole table (`FILTER('Product', …)` or `FILTER('Sales', …)`). They are
+semantically close but have very different cost.
+
+**Why it matters.** A column filter is a small, storage-engine-friendly set the engine can push
+down; a table filter materializes a (potentially large) filtered table in the formula engine.
+Choosing the column form is the single most common DAX performance lever (see
+`dax-engine-internals.md` for SE vs FE).
+
+**Key rule.** Prefer `CALCULATE([m], 'Product'[Color] = "Red")` (column filter) over
+`CALCULATE([m], FILTER('Product', …))` (table filter). Use `FILTER` only when the condition needs
+a measure or several columns, and then iterate the smallest thing —
+`FILTER(VALUES('Product'[Color]), …)`, not the whole fact.
+
+**Common mistake.** Wrapping a simple column constant in `FILTER(wholeTable, …)`; iterating
+`FILTER('Sales', …)` over fact grain when a dimension column predicate would do.
+
+**Analyzer candidate.** ARC-PERF-03 (FILTER where a predicate suffices, extends AR-PERF-002).
+
+**Phases.** analyzer, generator.
+
+---
+
 ## CC-006 — CALCULATE modifiers (USERELATIONSHIP, CROSSFILTER, KEEPFILTERS, ALL-in-CALCULATE)
 
 **What it is.** Special arguments that change *how* filtering works rather than *what* is filtered.
@@ -129,6 +155,32 @@ CALCULATE (
 using USERELATIONSHIP).
 
 **Phases.** analyzer, generator, model_review, human guidance.
+
+---
+
+## CC-015 — Relationship cross-filter direction and ambiguity
+
+**What it is.** A relationship propagates filters from the *one* side to the *many* side by
+default (single direction). *Cross-filter direction* (single vs both) decides whether filters
+also flow back the other way. When two tables can reach each other by more than one path, the
+engine faces **ambiguity** and either disables a path or refuses to evaluate deterministically.
+
+**Why it matters.** Filter propagation is what makes a measure slice correctly across
+dimensions; getting direction or path wrong silently changes results or kills performance. The
+scoped, per-measure controls live in CC-006 (`CROSSFILTER`, `USERELATIONSHIP`); this concept is
+the *model-level* picture they operate on.
+
+**Key rule.** Keep relationships single-direction by default and reach across with a scoped
+`CROSSFILTER`/`USERELATIONSHIP` or `TREATAS` (CC-010) rather than a model-wide bidirectional
+relationship. Avoid creating two active paths between the same tables (ambiguity).
+
+**Common mistake.** Turning on a model-wide bidirectional relationship "to make filtering work,"
+which introduces ambiguity and over-broad propagation; leaving two active paths between tables.
+
+**Analyzer candidate.** ARC-MODEL-01 (bidirectional default, promoted to AR-BIDI-001) ·
+ARC-REL-01 (role-playing relationship).
+
+**Phases.** analyzer, model_review, human guidance.
 
 ---
 

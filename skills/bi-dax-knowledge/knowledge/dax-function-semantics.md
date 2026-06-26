@@ -32,6 +32,33 @@ counts and totals (see `VALUES` vs `DISTINCT`).
 
 ---
 
+## CC-017 — Blank semantics (blank vs zero, and the blank row)
+
+**What it is.** DAX has a first-class `BLANK()` that is distinct from zero and from an empty
+string, plus a *blank row* the engine adds to a dimension for unmatched (invalid-relationship)
+fact rows. Two separate ideas share the word "blank": the **scalar** `BLANK()` value, and the
+**blank row** in a table.
+
+**Why it matters.**
+- `BLANK()` **compares equal to zero** (`BLANK() = 0` is `TRUE`) but is **not** zero: aggregations
+  and `COUNT`/`AVERAGE` *ignore* blanks, so totals and counts differ from treating them as `0`.
+- Whether a function **includes or drops the blank row** changes counts and totals. `ALL` keeps
+  it; `ALLNOBLANKROW` and `VALUES`/`DISTINCT` differ on whether the blank row appears (see the
+  ALL* family and `VALUES` vs `DISTINCT` notes below).
+- A measure returning `BLANK()` is **hidden** in a visual (rows/columns collapse), which is often
+  desired (suppress empty) but can also hide a bug.
+
+**Key rule.** Decide deliberately: return `BLANK()` to suppress empties; coalesce to `0` (e.g.
+`<expr> + 0` or an explicit `IF`) only when a visible zero is intended. Choose `ALL` vs
+`ALLNOBLANKROW` based on whether the blank row should participate.
+
+**Common mistake.** Assuming a blank measure is `0` in arithmetic that should show zero; or using
+`ALL` where `ALLNOBLANKROW` is needed (or vice-versa) and getting an off-by-the-blank-row count.
+
+**Phases.** analyzer, generator, human guidance.
+
+---
+
 ## 1. CALCULATE / CALCULATETABLE
 
 - **Returns:** scalar (`CALCULATE`) / table (`CALCULATETABLE`).
