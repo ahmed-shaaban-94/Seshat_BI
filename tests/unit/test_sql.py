@@ -213,3 +213,45 @@ def test_s4b_warns_on_bare_create_and_alter(tmp_path: Path) -> None:
         "warehouse/fail_s4b_bare.sql:1",
         "warehouse/fail_s4b_bare.sql:2",
     }
+
+
+# --- audit fixes (2026-06-26): S4b false-negative / false-positive ----------
+
+
+def test_s4b_bare_start_is_not_a_transaction(tmp_path: Path) -> None:
+    """`START` alone (e.g. CREATE SEQUENCE ... START WITH 1) must NOT open a txn.
+
+    Audit finding: `START` unconditionally set in_txn=True, silently suppressing
+    later bare-DDL findings. Only `START TRANSACTION` is a real transaction start.
+    A bare CREATE after a `START WITH` sequence must still WARN.
+    """
+    sql = "CREATE SEQUENCE gold.s START WITH 1;\nCREATE TABLE gold.t (id int);\n"
+    ctx = _ctx(tmp_path, _stage_text(tmp_path, "fail_s4b_start_seq.sql", sql))
+    findings = list(s4b_guard_form(ctx))
+    # The bare CREATE TABLE on line 2 must still be flagged (not suppressed by START).
+    assert any(f.rule_id == "S4b" and f.locator.endswith(":2") for f in findings), (
+        findings
+    )
+
+
+def test_s4b_start_transaction_still_opens_txn(tmp_path: Path) -> None:
+    """`START TRANSACTION` still opens a txn so silver/gold bare DDL inside passes."""
+    sql = "START TRANSACTION;\nCREATE TABLE gold.t (id int);\nCOMMIT;\n"
+    ctx = _ctx(tmp_path, _stage_text(tmp_path, "pass_s4b_start_txn.sql", sql))
+    findings = list(s4b_guard_form(ctx))
+    # Inside a real transaction, the bare CREATE is acceptable -> no WARNING for line 2.
+    assert not any(f.locator.endswith(":2") for f in findings), findings
+
+
+def test_s4b_create_or_replace_function_is_guarded(tmp_path: Path) -> None:
+    """`CREATE OR REPLACE FUNCTION` is a guarded form -> no false-positive WARNING.
+
+    Audit finding: _is_guarded only matched `OR REPLACE VIEW`, so every stored
+    function/procedure migration fired a spurious finding.
+    """
+    sql = (
+        "CREATE OR REPLACE FUNCTION gold.f() RETURNS int AS 'select 1' LANGUAGE sql;\n"
+    )
+    ctx = _ctx(tmp_path, _stage_text(tmp_path, "pass_s4b_or_replace_fn.sql", sql))
+    findings = list(s4b_guard_form(ctx))
+    assert findings == [], findings

@@ -49,15 +49,6 @@ class QueryRunner(Protocol):
 # handler only, so this module's import path stays driver-free. Secrets come from
 # env / gitignored .env, NEVER a DSN baked into a tracked file (C2 / Principle IX).
 
-_DB_PART_KEYS = (
-    "ANALYTICS_DB_HOST",
-    "ANALYTICS_DB_PORT",
-    "ANALYTICS_DB_NAME",
-    "ANALYTICS_DB_USER",
-    "ANALYTICS_DB_PASSWORD",
-    "ANALYTICS_DB_SSLMODE",
-)
-
 
 def resolve_dsn(env: Mapping[str, str]) -> str | None:
     """Resolve a Postgres DSN from the environment, host-agnostically.
@@ -309,16 +300,6 @@ def check_reconciliation(runner: QueryRunner, target: ReconcileTarget) -> list[F
                 )
             )
     return findings
-
-
-# The four live checks, in run order. The CLI handler builds a real QueryRunner
-# (lazy psycopg2) and a per-table target set, then runs these and prints findings.
-LIVE_CHECKS = (
-    check_pk_uniqueness,
-    check_date_coverage,
-    check_orphan_fks,
-    check_reconciliation,
-)
 
 
 @dataclass(frozen=True)

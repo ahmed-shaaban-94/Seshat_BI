@@ -36,7 +36,6 @@ PUBLIC API (consumed by D1-D8 rules and by M4b):
   - TmdlRelationship(name, cross_filtering_behavior, line)
   - TmdlTable(name, measures, columns, partition_sources, annotations, line,
     data_category)
-  - TmdlModel(tables, relationships)
   - MSource(text, locator)
   - parse_tmdl(text: str) -> TmdlTable | None
   - parse_relationships(text: str) -> tuple[TmdlRelationship, ...]
@@ -178,19 +177,6 @@ class TmdlTable:
     # Value of the table-level ``dataCategory:`` property, or None. ``"Time"`` is
     # half of the real "Mark as Date Table" marker (the other half is a key column).
     data_category: str | None = None
-
-
-@dataclass(frozen=True)
-class TmdlModel:
-    """Parsed representation of a full semantic model (all tables + relationships).
-
-    Attributes:
-        tables: all parsed tables.
-        relationships: all parsed relationships.
-    """
-
-    tables: tuple[TmdlTable, ...]
-    relationships: tuple[TmdlRelationship, ...]
 
 
 # ---------------------------------------------------------------------------

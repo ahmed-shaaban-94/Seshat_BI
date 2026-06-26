@@ -256,15 +256,17 @@ def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Ver
             "escalate", "contract denominator filter is malformed or uses an unknown op"
         )
 
-    # The measure must be a single top-level DIVIDE(num, den).
+    # The measure must be a single top-level DIVIDE. DAX DIVIDE takes 2 or 3 args:
+    # DIVIDE(num, den) or DIVIDE(num, den, alternate_result). The denominator is
+    # always args[1]; the optional 3rd arg is the alternate result and does not
+    # affect the denominator filter-set (audit 2026-06-26: 3-arg form was wrongly
+    # escalated, skipping the drift check on a common divide-by-zero pattern).
     inner = _outer_call(dax_expr.strip(), "DIVIDE")
     if inner is None:
         return Verdict("escalate", "measure is not a single top-level DIVIDE ratio")
     args = _split_balanced(inner)
-    if args is None or len(args) != 2:
-        return Verdict(
-            "escalate", "DIVIDE does not have exactly two balanced arguments"
-        )
+    if args is None or len(args) not in (2, 3):
+        return Verdict("escalate", "DIVIDE does not have 2 or 3 balanced arguments")
 
     den = _normalize_denominator(args[1])
     if den is None:

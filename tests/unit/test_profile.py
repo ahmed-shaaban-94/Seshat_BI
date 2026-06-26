@@ -141,3 +141,27 @@ def test_profile_imports_without_psycopg2() -> None:
     mod = importlib.import_module("retail.profile")
     assert hasattr(mod, "profile")
     assert "psycopg2" not in sys.modules
+
+
+# --- audit fix (2026-06-26): _safe_identifier must use fullmatch ------------
+
+
+def test_safe_identifier_rejects_embedded_newline() -> None:
+    """A newline-terminated name must be rejected (was a `.match` bypass).
+
+    `.match` anchors only at the start; with `$` not in MULTILINE it still allowed
+    a trailing `\n...`. `.fullmatch` closes it. Defensive: profile.py interpolates
+    identifiers into SQL text.
+    """
+    import pytest
+
+    from retail.profile import _safe_identifier
+
+    with pytest.raises(ValueError):
+        _safe_identifier("valid_id\nDROP TABLE x")
+
+
+def test_safe_identifier_accepts_plain_dotted() -> None:
+    from retail.profile import _safe_identifier
+
+    assert _safe_identifier("gold.fct_sales") == "gold.fct_sales"

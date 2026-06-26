@@ -37,7 +37,7 @@ binds the existing layers into stages:
      source -> mapping -> silver -> gold -> semantic model -> dashboard -> publish
         | each stage's gate is an EXISTING check:
         v
-  A  GOVERNANCE CORE         retail check (static, 27 rules) + retail validate (live)
+  A  GOVERNANCE CORE         retail check (static, 31 rules) + retail validate (live)
         |                    -- the gates the stages assert; unchanged
         v
   ENGINE / SUBSTRATE         pbi-cli (later adapter) ; Postgres medallion + PBIP
@@ -53,9 +53,9 @@ executes the sequence; the readiness status records the state.
 |-------|-----------------|----------------------|
 | Source Ready | profile review | `mappings/<t>/source-profile.md` |
 | Mapping Ready | source-mapping gate (Principle IV) | `source-map.yaml` + `assumptions.md` + `unresolved-questions.md` (CLEARED) |
-| Silver Ready | `retail check` S1-S7 | silver migration .sql |
+| Silver Ready | `retail check` S1-S8 | silver migration .sql |
 | Gold Ready | `retail check` + `retail validate` (live) | gold star migration + filled `reconciliation-report.md` |
-| Semantic Model Ready | `retail check` D1-D8/C1/R1/G6 + metric contracts | PBIP model + metric-contract artifacts |
+| Semantic Model Ready | `retail check` D1-D11/C1/R1/G6 + metric contracts | PBIP model + metric-contract artifacts |
 | Dashboard Ready | metric-contract review | report designed against approved contracts |
 | Publish Ready | handoff review | BI handoff pack + publish approval |
 

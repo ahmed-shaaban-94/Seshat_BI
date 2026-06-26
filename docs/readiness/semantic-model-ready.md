@@ -31,7 +31,7 @@ the first worked example / a filled instance, not the schema.)
 
 | Gate | Scope | Pass condition |
 |------|-------|----------------|
-| `retail check` | D1-D8 (DAX/TMDL), C1 (connection params), R1 (relative ref), G6 (no real host) | exit 0 |
+| `retail check` | D1-D11 (DAX/TMDL), C1 (connection params), R1 (relative ref), G6 (no real host) | exit 0 |
 | Metric-contract review | every measure | each measure traces to an approved contract |
 
 ## Statuses
@@ -46,7 +46,7 @@ the first worked example / a filled instance, not the schema.)
 ## Blocking reasons
 
 - Prior stage `gold_ready` is not `pass` (gold star / live validation incomplete).
-- A `retail check` D1-D8 DAX/TMDL finding.
+- A `retail check` D1-D11 DAX/TMDL finding.
 - A C1 connection-parameter finding or R1 relative-reference finding.
 - G6: a real connection host baked into PBIP params (must be parameterized).
 - A measure with no corresponding metric contract.
