@@ -62,3 +62,8 @@ tools/powerbi-modeling-mcp/
 .agents/
 .codex/
 .claude/worktrees/
+
+# F038 BPA runner auto-generated smoke evidence: machine-specific (absolute paths
+# + timestamp), regenerated on every run. The durable record is the hand-written
+# six-gate-verdict-*.md alongside it, which IS committed.
+specs/038-tabular-editor-bpa-adapter/evidence/smoke-*.md
