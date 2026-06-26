@@ -18,45 +18,66 @@ claude.ai. The system renders the committed Seshat BI brand (not a from-scratch
 invention) so it appears under "Design systems for everyone in your org."
 
 This is **not** a React/Vite/Storybook app. The DesignSync contract renders
-preview HTML files; the deliverable is ~12–15 static, inlined HTML files plus a
-short README, not a build-tooled frontend package.
+preview HTML files; the deliverable is ~14 preview HTML files plus shared CSS
+and a short README, not a build-tooled frontend package.
 
 ---
 
 ## Architecture
 
-**One responsibility per file.** Each card is a single `.html` file that is
-fully self-contained: all CSS inline, any raster/vector assets embedded as
-`data:` URIs, no external fonts/scripts/stylesheets (claude.ai renders these
-under a strict CSP that blocks external hosts — CDN fonts, remote images, and
-fetch all fail).
+**Ground-truth format** (learned from the existing "POS Pulse Design System"
+project on claude.ai — the canonical template, read via DesignSync `get_file`,
+not invented). The real DesignSync layout is a **flat `preview/` directory with
+shared CSS**, not per-file inlining:
+
+- Each card is `<!doctype html>` with the marker on **line 2**:
+  `<!-- @dsCard group="…" name="…" subtitle="…" viewport="WxH" -->` — **four**
+  attributes (group, name, subtitle, viewport), not just `group`.
+- Each card links a **shared** `preview/_card.css` (`<link rel="stylesheet"
+  href="_card.css">`), which `@import`s `colors_and_type.css`. Cards are thin and
+  semantic; the shared CSS carries the tokens (as CSS custom properties:
+  `--color-primary`, `--font-sans`, `--ease-out`, …) and the utility classes
+  (`.btn--primary`, `.chip`, `.swatch`, `.eyebrow`, `.tile`, `.row`, `.col`).
+- CSP still applies: **no external hosts** (CDN fonts, remote images, fetch all
+  fail). `_card.css`/`colors_and_type.css` are project-relative siblings, which
+  DesignSync allows; any raster/vector asset is embedded as a `data:` URI or
+  committed as a sibling `.svg`. `_ds_manifest.json` is compiled by the app's
+  self-check from the line-1/2 `@dsCard` markers — we do not hand-author it.
 
 ```
 design/claude-design-system/
-  README.md                      # what this is, how to (re)sync, the don'ts
-  foundations/
-    01-color-palette.html        # brand palette + verified contrast table
-    02-typography.html           # type scale + specimens (fallback stacks)
-    03-spacing-grid.html         # spacing scale + 4px base + grid safe zones
-  brand/
-    04-seven-point-star.html     # the seven-point star (correct vs wrong)
-    05-logo-system.html          # wordmark / stacked / CLI-icon layout slots
-    06-brand-dos-donts.html      # the §3 non-negotiable rules, visualized
-  components/
-    07-kpi-card.html             # SIGNATURE: value+comparison+context+trend
-    08-buttons.html              # primary / secondary / ghost, states
-    09-sentiment-chips.html      # success / warning / danger / neutral chips
-    10-data-table.html           # zebra rows, number formats, headers
-    11-section-header.html       # page title + section header treatments
-  patterns/
-    12-exec-page-layout.html     # exec page: <=6 visuals, cards-over-tables
-    13-number-formats.html       # the number-format reference (int/%/money)
-  powerbi-surface/
-    14-dashboard-tokens.html     # SEPARATE: the generic retail dashboard seed
+  README.md                       # what this is, how to (re)sync, the don'ts
+  colors_and_type.css             # TOKENS as CSS custom properties (brand palette,
+                                  #   type stacks, easing) — the system's source of truth
+  preview/
+    _card.css                     # shared card stylesheet (@imports colors_and_type.css)
+    colors-brand.html             # brand palette swatches (group=Foundations)
+    colors-contrast.html          # the VERIFIED contrast table (group=Foundations)
+    type-scale.html               # type scale + specimens, fallback stacks (Foundations)
+    spacing-grid.html             # spacing scale + 4px base + grid safe zones (Foundations)
+    brand-seven-star.html         # seven-point star: correct vs wrong (group=Brand)
+    brand-logo-system.html        # wordmark / stacked / CLI-icon layout slots (Brand)
+    brand-dos-donts.html          # the §3 non-negotiable rules, visualized (Brand)
+    components-kpi-card.html       # SIGNATURE: value+comparison+context+trend (Components)
+    components-buttons.html        # primary / secondary / ghost / disabled (Components)
+    components-sentiment.html      # success / warning / danger / neutral chips (Components)
+    components-table.html          # zebra rows, number formats, headers (Components)
+    components-section-header.html # page title + section header treatments (Components)
+    patterns-exec-page.html        # exec page: <=6 visuals, cards-over-tables (Patterns)
+    patterns-number-formats.html   # number-format reference int/%/money (Patterns)
+    powerbi-dashboard-tokens.html  # SEPARATE: the generic retail dashboard seed (Power BI surface)
 ```
 
 **Card grouping** (the `@dsCard group="…"` value drives the Design System pane
 sections): `Foundations`, `Brand`, `Components`, `Patterns`, `Power BI surface`.
+
+**Render-check rules** (what DesignSync's `report_validate` actually flags — the
+local self-check must pre-empt these): no **thin** cards (each must carry
+substantive content), no **variantsIdentical** (every variant must render
+visibly distinct — the buttons and sentiment chips are the risk: each state and
+each sentiment must look different), and the seven-point star **must be
+seven-pointed** even as a placeholder (an eight-ray asterisk ships a brand
+violation, visual-identity §3.1).
 
 ---
 
@@ -70,8 +91,8 @@ The **`design/tokens/tower-retail-design-tokens.yaml`** retail tokens are a
 **different, intentionally generic seed** ("conservative executive retail",
 "route to exactly one; never blend"). They are **NOT** the product brand and are
 **NOT** blended into the core palette. They appear only in the isolated
-`powerbi-surface/14-dashboard-tokens.html` card, clearly labeled as the generic
-Power BI theme seed, so the two are never confused.
+`preview/powerbi-dashboard-tokens.html` card (group `Power BI surface`), clearly
+labeled as the generic Power BI theme seed, so the two are never confused.
 
 ### Core brand palette (from visual-identity.md §5)
 
@@ -134,7 +155,7 @@ change to either source file.
 
 ## Component details
 
-### Signature: KPI card (`07-kpi-card.html`)
+### Signature: KPI card (`preview/components-kpi-card.html`)
 The most important card. Renders the `kpi_card` contract from the design tokens
 **and** brand rule §7 ("every KPI card must trace back to a metric contract"):
 - value (headline number) + comparison (vs prior/target) + context label
@@ -166,9 +187,10 @@ logo-system layout, the §3 non-negotiable rules visualized, exec-page layout
 
 1. **Build locally** — author all cards in `design/claude-design-system/`.
    Fully local; zero outward effect.
-2. **Self-check** — open each HTML locally, confirm it renders standalone, no
-   external requests, `@dsCard` marker on line 1, contrast rules honored,
-   no real data anywhere.
+2. **Self-check** — open each HTML locally, confirm it renders against the shared
+   `_card.css`, no external-host requests, `@dsCard` marker present (line 1 or 2),
+   four marker attributes (group/name/subtitle/viewport), contrast rules honored,
+   no thin/identical variants, no real data anywhere.
 3. **Confirm with the user before any push.** A synced system becomes
    **org-visible**. The push is treated as publishing.
 4. **DesignSync** (only after explicit go-ahead):
@@ -184,11 +206,19 @@ No `projectId` is hardcoded; the sync resolves create→write at push time.
 
 This is static HTML, so "testing" = a deterministic local self-check (no test
 runner needed):
-- **Self-containment:** grep each file for `http://`, `https://`, `src=`,
-  `@import`, `url(` pointing off-host → must be empty (or `data:` only).
-- **Marker presence:** line 1 of each card matches `<!-- @dsCard group="…" -->`.
-- **Contrast:** the palette card's rendered ratios match the verified table
-  above (the numbers are computed, embedded, and visually confirmed).
+- **Self-containment:** grep each file for off-host references (`http://`,
+  `https://`, external `src=`/`url(`) → must be empty. The only allowed links are
+  the project-relative siblings `_card.css` / `colors_and_type.css` and `data:`
+  URIs / sibling `.svg` assets.
+- **Marker presence:** each card carries `<!-- @dsCard group="…" name="…"
+  subtitle="…" viewport="WxH" -->` (line 1 or 2), all four attributes set.
+- **Contrast:** the `colors-contrast.html` card's rendered ratios match the
+  verified table above (numbers computed, embedded, and visually confirmed).
+- **No thin / identical variants:** every button state and every sentiment chip
+  renders visibly distinct; no card is near-empty (pre-empts `report_validate`
+  `thin` / `variantsIdentical`).
+- **Seven-point star:** the star in `brand-seven-star.html` (and any placeholder)
+  has exactly seven points (§3.1).
 - **Data-free:** grep for `C086`, `pharmacy`, and any real-looking value →
   empty; every number is an obvious sample.
 
@@ -221,12 +251,16 @@ runner needed):
 
 ---
 
-## Open questions for the user
+## Defaults taken (user said "go" — recommended defaults applied; still vetoable)
 
-1. **Background reconciliation:** brand says navy/ivory dashboards; retail seed
-   says white. Confirm the split (brand for covers/headers; retail seed for
-   in-canvas Power BI theme defaults) or state a single rule.
-2. Any logo/star **SVG assets** you want embedded now, or should the brand cards
-   use clean placeholder line-art slots until the final seven-point star asset
-   is exported (per §10, the asset set is "approved conceptually" pending a final
-   export)?
+1. **Background reconciliation:** brand governs covers/headers (navy/ivory); the
+   retail seed governs in-canvas Power BI theme defaults (white). The Power BI
+   surface card shows the white-background seed as-is and notes the divergence.
+   This is the recommended split, taken as default — the user can still override
+   to a single rule at review.
+2. **Logo/star assets:** brand cards use clean **placeholder seven-point line-art
+   slots** (exactly seven points) until the final seven-point-star SVG is exported
+   (per §10 the asset set is "approved conceptually" pending final export). If the
+   user has final SVGs ready, we embed them instead.
+
+Both defaults are safe and reversible; neither blocks the build.
