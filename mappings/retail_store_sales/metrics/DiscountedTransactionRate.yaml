@@ -45,6 +45,16 @@ definition:
     filter:
       - column: discount_applied
         op: is_not_null         # known-status; the bug was an EMPTY filter (all txns)
+  # L4 value proxy (src/retail/value_proxy.py): assert the live DB still returns the
+  # APPROVED ratio. This number is NOT newly minted here -- it transcribes the value
+  # the owner already approved in readiness.evidence below (4,219 / 8,376 = 50.37%).
+  # A ratio is row-count-stable, so tolerance is tight. `retail value-check` recomputes
+  # numerator-count / denominator-count from the filter blocks above and compares.
+  # Values are quoted strings so YAML yields a string (Decimal-exact), never a float.
+  expected_value:
+    value: "0.5037"             # 4,219 / 8,376 (owner-approved 2026-06-25, Q2 ruling)
+    tolerance_abs: "0.0001"     # ratio rounds to 0.5037; allow the rounding band
+    aggregation: ratio          # recompute num/den from the numerator/denominator blocks
 
 readiness:
   status: "pass"

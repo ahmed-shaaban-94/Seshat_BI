@@ -85,6 +85,35 @@ def _build_parser() -> argparse.ArgumentParser:
         help="root dir holding <dataset>/metrics/<Measure>.yaml contracts",
     )
 
+    # L4 value proxy (DAX fortification #4). Recomputes each metric contract's
+    # `definition.expected_value` against the live gold table and asserts it still
+    # equals the approved number, within tolerance. Lazy psycopg2 inside the handler
+    # (reusing the validate path), so the stdlib-only `retail check` chain never
+    # imports a driver. Live-deferred by repo YAGNI: needs a DSN + the `db` extra.
+    value_check = sub.add_parser(
+        "value-check",
+        help="L4: recompute metric values live and compare to the approved value",
+    )
+    value_check.add_argument(
+        "--repo", default=".", help="repo root to scan for contracts"
+    )
+    value_check.add_argument(
+        "--metrics-dir",
+        dest="metrics_dir",
+        default="mappings",
+        metavar="DIR",
+        help="root dir holding <dataset>/metrics/<Measure>.yaml contracts",
+    )
+    value_check.add_argument(
+        "--dsn",
+        default=None,
+        metavar="postgresql://...",
+        help=(
+            "Postgres connection string. Overrides env. If omitted, DATABASE_URL "
+            "or the ANALYTICS_DB_* env vars are used. NEVER commit a real DSN."
+        ),
+    )
+
     # DAX generator (Task 7). Lazy imports inside _run_generate keep dax_gen/yaml
     # out of the `retail check` import chain (mirrors the validate / semantic-check
     # handlers). --out is fail-closed: refuses powerbi/ writes and overwrites.
@@ -152,6 +181,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "semantic-check":
         return _run_semantic_check(args)
+
+    if args.command == "value-check":
+        return _run_value_check(args)
 
     if args.command == "generate":
         return _run_generate(args)
@@ -398,6 +430,199 @@ def _run_semantic_check(args) -> int:
     if exit_code == 0 and not findings:
         print("retail semantic-check: no drift (0 findings).", file=sys.stderr)
     return exit_code
+
+
+def _filter_to_sql(filters, quote) -> str | None:
+    """Translate an L3 ``filter`` list into a SQL WHERE predicate (AND-joined).
+
+    Reuses the L3 recognized-op vocabulary (``is_not_null`` / ``is_true``); each
+    column is quoted via the hardened identifier helper. Returns None for an
+    unrecognized op or a malformed entry (the caller fails the check closed).
+    Empty/None filter list => "TRUE" (count all rows).
+    """
+    if not filters:
+        return "TRUE"
+    if not isinstance(filters, list):
+        return None
+    parts: list[str] = []
+    for f in filters:
+        if not isinstance(f, dict):
+            return None
+        col, op = f.get("column"), f.get("op")
+        if not col:
+            return None
+        qcol = quote(col, context="L4 ratio filter column")
+        if op == "is_not_null":
+            parts.append(f"{qcol} IS NOT NULL")
+        elif op == "is_true":
+            parts.append(f"{qcol} = TRUE")
+        else:
+            return None
+    return " AND ".join(parts)
+
+
+def _run_value_check(args) -> int:
+    """Run the L4 value proxy: recompute each contract's approved value live.
+
+    Lazy psycopg2 (via ``_ensure_driver`` / ``_make_runner``, reused from the
+    validate path) so the stdlib-only `retail check` chain never imports a driver.
+    Discovers metric contracts under --metrics-dir (confined to the repo, like
+    semantic-check), parses each ``definition.expected_value`` block, recomputes the
+    aggregate/ratio against the live gold table, and reports a V-L4 ERROR for any
+    value outside tolerance. A contract with no expected_value block is skipped; a
+    malformed block is a fail-closed ERROR, never a silent skip.
+    """
+    import dataclasses
+    import os
+
+    from .core import Severity
+    from .identifiers import quote_identifier
+    from .metric_drift import load_definition
+    from .runner import _format
+    from .validate import resolve_dsn
+    from .value_proxy import check_expected_value, parse_expected_value
+
+    repo = Path(args.repo)
+
+    # Confine --metrics-dir to the repo tree (same guard as semantic-check, #26).
+    repo_resolved = repo.resolve()
+    metrics_root = (repo / args.metrics_dir).resolve()
+    if metrics_root != repo_resolved and not metrics_root.is_relative_to(repo_resolved):
+        print(
+            f"error: --metrics-dir {args.metrics_dir!r} escapes the repo root; "
+            "it must resolve to a path inside --repo.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # 1. Resolve a DSN (host-agnostic). --dsn wins; else env. No DSN -> clear error.
+    env = dict(os.environ)
+    if args.dsn:
+        env = {**env, "DATABASE_URL": args.dsn}
+    dsn = resolve_dsn(env)
+    if dsn is None:
+        print(
+            "error: no database connection configured.\n"
+            "       pass --dsn (a postgresql:// connection string), or set\n"
+            "       DATABASE_URL, or the ANALYTICS_DB_* vars (in your gitignored\n"
+            "       .env). Never commit a real DSN.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # 2. The DB driver is optional + lazy: only needed for a real run.
+    if not _ensure_driver():
+        print(
+            "error: `retail value-check` needs the optional DB driver.\n"
+            "       install it with:  pip install 'retail[db]'\n"
+            "       (the static `retail check` core stays dependency-free).",
+            file=sys.stderr,
+        )
+        return 1
+
+    # 3. Discover contracts and parse each expected_value block (fail-closed).
+    expectations: list[tuple[str, object]] = []  # (measure_name, ExpectedValue)
+    if metrics_root.is_dir():
+        for contract_path in sorted(metrics_root.glob("*/metrics/*.yaml")):
+            name = contract_path.stem
+            try:
+                definition = load_definition(str(contract_path))
+            except (OSError, ValueError) as exc:
+                print(
+                    f"error: could not load contract {contract_path}: {exc}",
+                    file=sys.stderr,
+                )
+                return 1
+            # binds_to lives at the contract top level, not under `definition`.
+            try:
+                import yaml
+
+                doc = yaml.safe_load(contract_path.read_text(encoding="utf-8")) or {}
+            except (OSError, ValueError) as exc:
+                print(
+                    f"error: could not load contract {contract_path}: {exc}",
+                    file=sys.stderr,
+                )
+                return 1
+            binds_to = doc.get("binds_to") or {}
+            try:
+                expected = parse_expected_value(definition, binds_to)
+            except ValueError as exc:
+                print(
+                    f"error: contract {name}: malformed expected_value ({exc})",
+                    file=sys.stderr,
+                )
+                return 1
+            if expected is None:
+                continue  # no expected_value block -> skip
+            # For a ratio, translate the L3 numerator/denominator filters into SQL.
+            if expected.aggregation == "ratio":
+                num_sql = _filter_to_sql(
+                    (definition or {}).get("numerator", {}).get("filter"),
+                    quote_identifier,
+                )
+                den_sql = _filter_to_sql(
+                    (definition or {}).get("denominator", {}).get("filter"),
+                    quote_identifier,
+                )
+                if num_sql is None or den_sql is None:
+                    print(
+                        f"error: contract {name}: ratio numerator/denominator filter "
+                        "uses an unrecognized op (L4 cannot recompute it)",
+                        file=sys.stderr,
+                    )
+                    return 1
+                expected = dataclasses.replace(
+                    expected,
+                    numerator_count_sql_filter=num_sql,
+                    denominator_count_sql_filter=den_sql,
+                )
+            expectations.append((name, expected))
+
+    if not expectations:
+        print(
+            "retail value-check: no contract carries a `definition.expected_value` "
+            "block -- nothing to verify.",
+            file=sys.stderr,
+        )
+        return 0
+
+    # 4. Connect and run each check. No real DB is touched in tests (fake runner).
+    safe_host = dsn.split("@")[-1] if "@" in dsn else dsn
+    print(
+        f"retail value-check: running L4 value checks against {safe_host}",
+        file=sys.stderr,
+    )
+    try:
+        runner = _make_runner(dsn)
+        findings = []
+        for name, expected in expectations:
+            findings.extend(check_expected_value(runner, name, expected))
+    except ValueError as exc:
+        # an unsafe identifier in a contract -> clean message, no traceback
+        print(
+            f"error: value-check rejected an unsafe contract identifier: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    except Exception as exc:
+        print(
+            "error: live value-check failed at the DB boundary "
+            f"({exc.__class__.__name__}): {_redact_dsn(exc, dsn)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    for finding in findings:
+        print(_format(finding))
+    if any(f.severity is Severity.ERROR for f in findings):
+        return 1
+    print(
+        "retail value-check: all live values match the approved contracts "
+        "(0 findings).",
+        file=sys.stderr,
+    )
+    return 0
 
 
 def _run_generate(args) -> int:
