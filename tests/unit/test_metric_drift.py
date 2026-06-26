@@ -22,6 +22,8 @@ This module parses YAML (pyyaml, a dev/optional dep) and MUST live OUTSIDE the
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from retail.metric_drift import Verdict, check_measure_drift
@@ -471,10 +473,14 @@ import sys
 
 
 def test_retail_rules_pulls_neither_dax_gen_nor_yaml():
+    from pathlib import Path
+
     code = (
         "import sys; import retail.rules; "
         "assert 'retail.dax_gen' not in sys.modules, 'dax_gen leaked into core'; "
         "assert 'yaml' not in sys.modules, 'yaml leaked into core'"
     )
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parent.parent.parent / "src")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
