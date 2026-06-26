@@ -287,7 +287,9 @@ NEW   tests/fixtures/contracts/*.yaml  (base / ratio / refusal fixtures)
 ## 9. Phase-2 / Phase-3 seams (documented, NOT built)
 
 ### Extensibility invariant (binding)
-**Phase 1 must not block future expansion.** Every Phase-1 narrowing is a *refusal guard*, not a *structural wall*: lifting any one of them must be **purely additive** and must **not** change existing behavior, field names, or function signatures. Concretely, each deferred capability has a known additive path:
+> **Every Phase-1 narrowing is a refusal guard, not a structural wall. Lifting any one of them in a future phase must be purely additive — a new `kind` value, a new whitelist entry, a new ratio-side branch, or a new verifier branch — and must not require changing existing public signatures or breaking existing contracts.**
+
+**Phase 1 stays small and safe without becoming a dead end.** Concretely, each deferred capability has a known additive path:
 
 | Future capability | Additive path (no rework) |
 |---|---|
@@ -300,6 +302,21 @@ NEW   tests/fixtures/contracts/*.yaml  (base / ratio / refusal fixtures)
 | NL front-end | Optional upstream stage emitting a human-approved `definition`; engine input unchanged. |
 
 Two structural choices make these guards-not-walls and are load-bearing: (a) **`kind` is an open discriminator string, not a boolean flag**; (b) **`GenResult` is a stable return type** Phase 2 reuses verbatim.
+
+### Expansion Roadmap / Deferred Capabilities
+The following are **documented seams only — NOT Phase-1 deliverables.** They name where future work attaches without committing to building any of it now. Each is reachable via the additive-only path above.
+
+1. **Cross-contract `ref:`** — a ratio side referencing another contract's measure (`{ref: TotalTxns}`) instead of an inline aggregation.
+2. **More aggregations** — extend the agg→DAX map beyond the Phase-1 five (e.g. `min`, `max`, `median`).
+3. **Richer filter operators** — `is_false`, `value_equality`, `in_set` (already in the L3 m2 backlog), inherited via the shared predicate emitter.
+4. **Time intelligence** — `kind: time_intelligence` for YoY / MTD / rolling patterns, with its own verifier branch.
+5. **Composed measures** — measures built from other generated measures (depends on cross-contract `ref:`).
+6. **Metric dependency graph** — resolve + order inter-contract references so composed/ref measures generate in dependency order.
+7. **Analyzer/Refiner (Phase 2)** — turn findings on an *existing* measure into suggested rewrites + explanations, reusing the same rule-run + verify helpers.
+8. **Live-data goal loop (Phase 3)** — behind the existing `retail validate` lazy-`psycopg2` seam; **read-and-compare only, never auto-mutate data to hit a number.**
+9. **Optional NL front-end (Phase 3)** — an LLM drafts a `definition` from natural language for **human approval before generation**; meaning-definition stays human-owned.
+
+These exist to prove Phase 1 is not a dead end. None ships in this slice.
 
 ### Seams
 
