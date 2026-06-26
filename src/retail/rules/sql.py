@@ -349,6 +349,16 @@ def _strip_sql_noise(text: str) -> str:
     only be detected from (noise-stripped) raw text. This strips comments and
     string contents so a `-1` or `dim_` inside them never produces a match,
     while preserving structure (and newlines) for line accounting.
+
+    KNOWN GAP (audit 2026-06-26 #10, DEFERRED): this comment-first stripper differs
+    from ``retail.sql.strip_sql_comments`` (quote-first), and its `''`-escape
+    handling mis-splits `'it''s'` into `'it'`+`'s'` cosmetically. Verified at the
+    rule level: the mis-split preserves span parity (the two pseudo-strings tile the
+    same region as the true literal), so NO S6/S8 verdict changes on well-formed
+    SQL -- a `-1` outside the string is never swallowed and one inside never leaks.
+    Unifying both strippers into one quote-first state machine (the audit's
+    suggested mechanism) is design-doc §A: it has S1/S6/S8 (two ERROR rules) blast
+    radius and is human-gated. Kept separate; the latent edge is regression-tested.
     """
     out: list[str] = []
     i, n = 0, len(text)

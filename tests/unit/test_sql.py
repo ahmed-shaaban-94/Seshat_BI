@@ -92,6 +92,27 @@ def test_s1_still_flags_real_quoted_identifier_after_comment_fix(
     assert all("ignored phrase" not in f.message for f in findings)
 
 
+def test_strip_sql_noise_comment_marker_inside_string_is_data() -> None:
+    """`_strip_sql_noise` (S6/S8's stripper) must not treat a comment marker inside
+    a string literal as a comment (audit #10 regression guard).
+
+    The stripper collapses string CONTENTS to '' anyway, so a `--`/`/* */` inside a
+    string never reaches the rule scan -- and, crucially, the `-1`/code AFTER the
+    string is preserved. (The `''` escape is cosmetically mis-split into `''''` but
+    span parity is even, so no S6/S8 VERDICT changes -- see the §A deferral note in
+    rules/sql.py. These cases lock in the behavior that is correct today.)
+    """
+    from retail.rules.sql import _strip_sql_noise
+
+    # A `--` and `/* */` inside string literals must not eat the trailing `-1`.
+    assert "-1" in _strip_sql_noise("SELECT '-- x', -1 AS y;")
+    assert "-1" in _strip_sql_noise("SELECT 'a /* b */ c', -1;")
+    # A `''` escape keeps the trailing code intact (cosmetic mis-split only).
+    out = _strip_sql_noise("INSERT INTO gold.dim_x VALUES ('it''s', -1);")
+    assert "-1" in out
+    assert "FROM" not in out  # nothing spuriously swallowed/exposed
+
+
 def test_strip_sql_comments_preserves_double_dash_inside_string_literal() -> None:
     """`--` inside a '...' string literal is DATA, not a comment marker.
 
