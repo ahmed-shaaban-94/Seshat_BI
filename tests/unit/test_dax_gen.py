@@ -204,6 +204,7 @@ def test_emit_ratio_refuses_bad_side():
     assert "column" in reason
 
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -275,20 +276,22 @@ def test_cli_generate_json_format() -> None:
     assert obj["ok"] is True and obj["dax"].startswith("DIVIDE(")
 
 
-def test_cli_out_refuses_powerbi_path(tmp_path: Path) -> None:
+def test_cli_out_refuses_powerbi_path() -> None:
     # an --out resolving under powerbi/ is refused (resolved-path check)
     target = "powerbi/Model.SemanticModel/x.tmdl"
     r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
                  "--out", target)
     assert r.returncode == 1
     assert "powerbi" in r.stderr.lower()
+    assert r.stdout.strip() == ""
 
 
-def test_cli_out_refuses_traversal_into_powerbi(tmp_path: Path) -> None:
+def test_cli_out_refuses_traversal_into_powerbi() -> None:
     r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
                  "--out", "../powerbi/sneak.tmdl")
     assert r.returncode == 1
     assert "powerbi" in r.stderr.lower()
+    assert r.stdout.strip() == ""
 
 
 def test_cli_out_writes_then_refuses_overwrite(tmp_path: Path) -> None:
@@ -300,3 +303,20 @@ def test_cli_out_writes_then_refuses_overwrite(tmp_path: Path) -> None:
                   "--out", str(out))
     assert r2.returncode == 1
     assert "exist" in r2.stderr.lower()
+
+
+def test_cli_out_refuses_symlink_into_powerbi(tmp_path: Path):
+    # a symlink whose target resolves under powerbi/ must be refused.
+    # Skip ONLY the symlink case where the OS denies symlink creation
+    # (Windows without privilege) -- the ../powerbi and absolute cases never skip.
+    powerbi = (Path.cwd() / "powerbi")
+    powerbi.mkdir(exist_ok=True)
+    link = tmp_path / "link.tmdl"
+    try:
+        os.symlink(powerbi / "real.tmdl", link)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation not permitted on this platform/CI")
+    r = _run_cli("generate", "--contract", str(CONTRACTS / "base_revenue.yaml"),
+                 "--out", str(link))
+    assert r.returncode == 1
+    assert "powerbi" in r.stderr.lower()
