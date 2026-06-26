@@ -1,0 +1,52 @@
+# =============================================================================
+# profiles.example.yml  --  EXAMPLE dbt connection profile (PLACEHOLDERS ONLY)
+# =============================================================================
+# Seshat BI  -  feature F029 (on-disk spec 023-dbt-transformation-adapter).
+# Authority category (F024): Execution Adapter / DB-connected.
+# See: templates/dbt-adapter-contract.md, docs/integrations/dbt-adapter.md,
+#      docs/decisions/0009-dbt-is-transformation-adapter.md.
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me EXAMPLE of the dbt-postgres connection profile shape. It is
+#   the ONLY connection file committed to the repo. The values below are deliberate
+#   PLACEHOLDERS -- not a real host, DSN, credential, or token.
+#
+# SECRETS  (Principle IX -- HARD RULE)
+#   The REAL profiles.yml is git-ignored and supplied by the operator; it holds the
+#   real host / port / user / password / dbname. NO connection string, credential,
+#   or host MAY appear in any tracked file. To use dbt: copy this file to
+#   profiles.yml (git-ignored), fill the real values, and keep profiles.yml OUT of
+#   version control. A committed profiles.yml or any real DSN/host/credential in a
+#   tracked file is a defect the review catches.
+#   ACTION REQUIRED (human-gated): add `profiles.yml` to .gitignore before the build
+#   slice creates a real profiles.yml -- this slice does not edit .gitignore.
+#
+# REPRODUCIBILITY  (Principle IX)
+#   dbt-core + dbt-postgres are pinned TOGETHER (see the auto-update policy in
+#   templates/dbt-adapter-contract.md): patch/minor -> PR; major -> named-human
+#   review; no automerge for minor/major until compatibility tests exist.
+#
+# ASCII + UTF-8 no BOM. Generic -- no retail_store_sales / C086 values.
+# =============================================================================
+
+# The profile NAME is referenced by dbt_project.yml (profile: "<profile_name>").
+# Keep it generic; do not name it after a single table or example.
+seshat_bi_warehouse:                 # <profile_name> -- a generic, table-agnostic name
+  target: dev                        # the default target; the operator may add prod
+  outputs:
+
+    dev:
+      type: postgres                 # dbt-postgres -- the only adapter in scope (F029)
+      host: "<your-postgres-host>"          # PLACEHOLDER -- real value lives in git-ignored profiles.yml
+      port: 5432                            # default Postgres port; override in profiles.yml if needed
+      user: "<your-db-user>"                # PLACEHOLDER -- never a real user in a tracked file
+      password: "<set-in-git-ignored-profiles.yml>"  # PLACEHOLDER -- NEVER a real password here
+      dbname: "<your-database-name>"        # PLACEHOLDER -- the analytics database
+      schema: "<your-build-schema>"         # PLACEHOLDER -- dbt's target schema (e.g. a dev silver/gold)
+      threads: 4                            # dbt parallelism; tune per operator
+      sslmode: "<require-or-prefer>"        # PLACEHOLDER -- set per your DB's TLS policy
+
+    # prod:                          # optional -- the operator adds prod in git-ignored profiles.yml
+    #   type: postgres               #   same shape; real values NEVER committed
+    #   host: "<your-postgres-host>"
+    #   ...

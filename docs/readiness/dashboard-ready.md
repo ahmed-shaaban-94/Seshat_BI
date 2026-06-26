@@ -51,6 +51,33 @@ contracts, no dashboard design (roadmap rule 5).
 BI / report owner signs off the design review (visual -> contract binding).
 Recorded in `approvals[]` as `{stage: dashboard_ready, owner: <bi-report-owner>, at: <date>}`.
 
+## Evidence item: "design approved" vs "page implemented"
+
+> Added by feature F034 (on-disk spec `specs/039-visual-implementation-mvp`; roadmap
+> F-number wins). This is an EVIDENCE ITEM only -- it adds NO new status, NO new gate, NO
+> new `retail check` rule, and does NOT change the gate, statuses, blocking reasons, owner,
+> required checks, or the design-review responsibility above.
+
+A `pass` here is granted on the DESIGN (the approved visual -> contract binding map plus the
+recorded design-review sign-off) -- it can be `pass` while no report page has yet been built.
+A separate evidence item records that the approved design was REALIZED as visuals on a real
+PBIR page, built by a human in Power BI Desktop and reviewed in git like code:
+
+- A `pass` MAY record `evidence: built-page traces to the approved binding map; R1 passes`
+  once a human-built PBIR page is committed and verified 1:1 against the approved binding map
+  (every measure-bearing visual -> exactly one approved contract + a mapped model field; no
+  orphan visual; no unmapped field).
+- This evidence is recorded under the EXISTING owner; it never self-grants `dashboard_ready:
+  pass` and never DOWNGRADES a legitimately approved design. A build-time divergence is a new
+  `warning` / `blocked` finding on the page, not a retraction of the design approval.
+- The build is a HUMAN Desktop save committed as plain text -- NOT automation. Any generation
+  / publish step is the deferred, gated F016 adapter (rule 6); F034 is independent of it.
+
+The reviewable evidence artifact is the implementation trace
+(`templates/visual-implementation-trace.md`, filled per subject area under
+`mappings/<subject>/design/`). The procedure that fills it ships alongside `powerbi-handoff.md`
+(`.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`).
+
 ## Next allowed action
 
 When this stage is `pass`: assemble the BI handoff pack (Stage 7,
