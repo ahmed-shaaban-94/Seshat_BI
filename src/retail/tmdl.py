@@ -42,7 +42,7 @@ PUBLIC API (consumed by D1-D8 rules and by M4b):
   - iter_model_files(ctx: RuleContext, suffix: str) -> Iterable[tuple[str, str]]
   - iter_m_sources(repo_root: Path, tracked_files: tuple[str, ...]) -> Iterable[MSource]
   - normalize_measure_body(expression: str) -> str
-  - top_level_blocks(text: str) -> list[str]   (M0 regression anchor — kept intact)
+  - top_level_blocks(text: str) -> list[str]   (M0 regression anchor; test-only)
   - DATE_TABLE_MARKER: str
   - TI_TRIGGER_FUNCTIONS: frozenset[str]
 """
@@ -163,7 +163,10 @@ class TmdlTable:
         name: table name.
         measures: all ``measure`` blocks found.
         columns: all ``column`` blocks found.
-        partition_sources: RAW M source body texts (for D8).
+        partition_sources: RAW M source body texts, one joined string per source.
+            NOTE: D8 does NOT consume this field -- it re-scans raw table-file
+            bodies independently (see ``iter_m_sources``); this attribute is
+            retained for parser completeness, not for any rule.
         annotations: raw ``annotation <name> = <value>`` lines (for D7 marker).
         line: 1-based line number of the ``table`` header.
     """
