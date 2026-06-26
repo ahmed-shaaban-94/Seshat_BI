@@ -343,3 +343,86 @@ def test_four_arg_divide_still_escalates() -> None:
     bad = "DIVIDE([A], [B], 0, 1)"
     v = check_measure_drift(bad, DEF_AVG)
     assert v.status == "escalate", v
+
+
+# --- kind:base verify (HAND-AUTHORED DAX -- never generator output) ----------
+# A base measure IS its own contract, so we check its aggregation + filter-set
+# against the definition directly (the referenced-measure opacity rule does not
+# apply: there is no referenced measure here).
+
+DEF_BASE_REVENUE = {
+    "kind": "base",
+    "aggregation": "sum",
+    "source": {"table": "gold.fct_sales_rss", "column": "total_spent"},
+}
+DAX_BASE_REVENUE = "SUM('gold fct_sales_rss'[total_spent])"  # hand-written
+
+DEF_BASE_DISC_TXN = {
+    "kind": "base",
+    "aggregation": "count_rows",
+    "source": {"table": "gold.fct_sales_rss"},
+    "filter": [{"column": "discount_applied", "op": "is_true"}],
+}
+DAX_BASE_DISC_TXN = (  # hand-written
+    "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+    "'gold fct_sales_rss'[discount_applied] = TRUE())"
+)
+
+
+def test_base_pass_matches_contract() -> None:
+    assert check_measure_drift(DAX_BASE_REVENUE, DEF_BASE_REVENUE).status == "pass"
+
+
+def test_base_pass_with_filter() -> None:
+    assert check_measure_drift(DAX_BASE_DISC_TXN, DEF_BASE_DISC_TXN).status == "pass"
+
+
+def test_base_drift_wrong_filter_column() -> None:
+    # contract says discount_applied; DAX filters a different column -> drift
+    bad = (
+        "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+        "'gold fct_sales_rss'[returned] = TRUE())"
+    )
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "drift"
+
+
+def test_base_drift_missing_filter() -> None:
+    bad = "COUNTROWS('gold fct_sales_rss')"  # contract requires a filter
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "drift"
+
+
+def test_base_drift_wrong_aggregation() -> None:
+    bad = "COUNT('gold fct_sales_rss'[total_spent])"  # contract says sum
+    assert check_measure_drift(bad, DEF_BASE_REVENUE).status == "drift"
+
+
+def test_base_escalate_unrecognized_shape() -> None:
+    bad = "SUMX('gold fct_sales_rss', [x] * [y])"  # not an AGG(col) shape
+    assert check_measure_drift(bad, DEF_BASE_REVENUE).status == "escalate"
+
+
+def test_base_escalate_unknown_predicate() -> None:
+    bad = (
+        "CALCULATE(COUNTROWS('gold fct_sales_rss'), "
+        "LEN('gold fct_sales_rss'[discount_applied]) <> 0)"
+    )
+    assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "escalate"
+
+
+# --- ZERO-REGRESSION: kind-absent path is byte-identical + sole new reader ---
+def test_kind_absent_ratio_path_unchanged() -> None:
+    # the existing committed ratio still passes exactly as before
+    assert check_measure_drift(DAX_DISCOUNTED, DEF_DISCOUNTED).status == "pass"
+    assert check_measure_drift(DAX_AVG, DEF_AVG).status == "pass"
+
+
+def test_aggregation_unread_on_kind_absent_path() -> None:
+    # mutating `aggregation` on a kind-absent ratio contract must NOT change the
+    # verdict -- proves the base branch is the ONLY new reader of `aggregation`.
+    import copy
+
+    mutated = copy.deepcopy(DEF_DISCOUNTED)
+    mutated["denominator"]["aggregation"] = "this_value_is_never_read"
+    before = check_measure_drift(DAX_DISCOUNTED, DEF_DISCOUNTED)
+    after = check_measure_drift(DAX_DISCOUNTED, mutated)
+    assert before == after
