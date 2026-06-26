@@ -26,6 +26,7 @@ not reinvent it. It is the FOUNDATION feature that F025-F033 all declare against
 
 - Q: ADR 0008 is already taken (`docs/decisions/0006-codex-review-hardening.md`, plus 0007 exists); what slot should the enumerated ADR use? -> A: Use the next free slot `docs/decisions/0008-core-authority-vs-product-modules.md`. ADR numbers are append-only; 0006/0007 are shipped and MUST NOT be reused.
 - Q: The roadmap (2026-06-25) records F005-F015 shipped and F016 as the ONLY remaining feature; it does not list F024-F033. Where does the F024-F033 sequence live authoritatively, and does this feature change the roadmap? -> A: The `specs/` directory is the authoritative on-disk sequence for the F024-F033 batch (spec 019 = F025 already drafted); this feature READS the roadmap and changes none of it. Reconciling the roadmap ledger to add the F024-F033 tier is a separate, deferred docs follow-up, not part of this slice.
+- Q: The authority matrix originally read "only if its connectivity level allows" for Maintenance Automation on the "Connects to a DB / external service" row -- but only an Execution Adapter declares a connectivity level (the other three categories carry no sub-axis), and the module-vs-adapter seam states "if a tool needs to connect out or publish, it is an Adapter". Which wins? -> A: The seam wins. A Maintenance Automation tool that must connect out is, by the seam, an Execution Adapter (cf. F030 Dagster: scheduled yet classified Execution Adapter / DB-connected, not Maintenance Automation). The Maintenance Automation connect cell is corrected to "no (if it must connect out, the seam makes it an Adapter)". (Correction found while authoring the F024 deliverables; the ADR, the narrative, and the plan already agreed -- only the matrix cell was the drift point.)
 - Q: Maintenance Automation runs WITHOUT a per-invocation human trigger -- does that relax Principle V (named-human approval)? -> A: No. Scheduled/CI execution operates ONLY on already-committed or already-named-human-approved evidence; it emits derived evidence and never self-approves. The absence of a per-run trigger is the human-trigger discriminator, NOT a relaxation of the approval boundary; the structural approval (the schedule itself and the evidence it runs on) is a prior named-human action.
 
 ## Why this feature exists
@@ -148,7 +149,7 @@ the Maintenance Automation category. This feature is their foundation.
 | Summarizes / visualizes evidence | yes | yes | yes | yes | yes |
 | Writes DERIVED evidence (report, signal) | n/a | yes | only if `artifact-writing` | yes (the run record) | yes |
 | Executes an APPROVED step | n/a | yes | only if `execution-capable` | yes (its sole purpose) | yes (scheduled) |
-| Connects to a DB / external service | no | no | no | only if its connectivity level allows | only if its connectivity level allows |
+| Connects to a DB / external service | no | no | no | only if its connectivity level allows | no (if it must connect out, the seam makes it an Adapter) |
 | Publishes a Power BI artifact | no | no | no | only if `publish-capable` | no |
 | **CREATES truth** (business meaning, metric, mapping) | **yes** | no | no | no | no |
 | **GRANTS approval** / moves a stage to `pass` | **yes (named human)** | no | no | no | no |
