@@ -72,6 +72,7 @@ loop lives only in the conductor.
 
 ## See also
 
+- Compass: `COMPASS.md`.
 - Constitution: `.specify/memory/constitution.md` (Principles I, IV, V, VII, VIII).
 - Readiness: `docs/readiness/readiness-model.md`, `readiness-pipeline.md`.
 - Roadmap: `docs/roadmap/roadmap.md`. Architecture: `docs/architecture/`.
