@@ -507,4 +507,5 @@ def test_cli_out_refuses_symlink_into_powerbi(tmp_path: Path):
         str(link),
     )
     assert r.returncode == 1
+    assert "refused" in r.stderr.lower()
     assert "powerbi" in r.stderr.lower()
