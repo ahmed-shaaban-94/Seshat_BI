@@ -15,7 +15,7 @@
   `docs/architecture/readiness-pipeline.md` (how it sits on the existing kit).
 
 > The kit already ships an agent-first constitution, a source-mapping gate, the
-> Spec-Kit foundation, the C086 worked example, a 27-rule static `retail check`,
+> Spec-Kit foundation, the C086 worked example, a 31-rule static `retail check`,
 > and a `retail validate` live surface. This roadmap reconciles that foundation
 > (feature 001-004 + the orchestration/builder slices) with the readiness
 > direction: every future feature advances one **readiness stage**.
@@ -189,7 +189,8 @@ existing constitution (Principles I, IV, V, VIII), they do not replace it:
   execution-only, gated + last), Fabric deployment, ML, forecasting, a universal
   ERP connector, and fully automated mapping approval.
 - The shipped F005-F015 slices are docs/skills/templates (agent-first, hard rule
-  #8); they added NO new `retail check` rule (the static gate stays at 27 rules) and
+  #8); they added NO new `retail check` rule (the static gate was 27 rules at that
+  slice; it is now 31 after S8 + D9-D11 + G6) and
   NO new runtime validator beyond the already-shipped `retail check` / `retail
   validate`. Each shipped feature has its own spec under `specs/`.
 

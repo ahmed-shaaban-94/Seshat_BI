@@ -2,6 +2,15 @@
 
 - **Date:** 2026-06-25
 - **Status:** Accepted (L2 adapter is a separate spike, F038; L1/L4 deferred)
+
+> **Addendum (2026-06-26, F040 DAX Fortification):** Since this ADR was written,
+> L2 was extended with home-grown lexical rules **D9, D10, D11** (date literals,
+> FILTER(ALL) anti-pattern, measure docs), and **L3 was promoted to a CI gate** via
+> the `retail semantic-check` subcommand (drift=ERROR, escalate=WARNING). The
+> registry is now **31 rules** (not 28). The decision below to keep L3 OUT of the
+> registered `retail check` chain still holds — `semantic-check` is a separate
+> subcommand + lazy module, never a `D9` rule. References to "28 rules" / "no D9"
+> in the body are the historical state at authoring time; current count is 31.
 - **Context:** DAX is the analytical backbone -- the number a business user reads --
   and it was the LEAST-governed layer. `retail check` (D1-D8) proves DAX *form*
   (PascalCase, DIVIDE, display folders, no bidirectional, gold-only). `retail validate`

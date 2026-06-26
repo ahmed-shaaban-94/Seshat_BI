@@ -39,7 +39,7 @@ This boundary is stated VERBATIM in `templates/metric-contract.yaml`,
   PBIP read, no DB connection.
 - **CHECKING a PBIP model is OUT of scope (F010 / on-disk 011).** Reading
   `powerbi/`, asserting a measure exists, asserting relationships or the marked date
-  table, running `retail check`'s D1-D8 over TMDL -- all belong to the checking half.
+  table, running `retail check`'s D1-D11 over TMDL -- all belong to the checking half.
 - **No dashboard design (roadmap hard rule #5).** Contracts come BEFORE dashboards;
   designing visuals is F011, gated on approved contracts existing -- which is exactly
   what this store produces.

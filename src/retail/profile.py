@@ -33,7 +33,12 @@ def _safe_identifier(name: str) -> str:
     not be able to break out of the identifier position. Allow letters, digits,
     underscore, and dots between parts; reject everything else.
     """
-    if not _IDENT_RE.match(name):
+    # fullmatch (not match): `.match` anchors only at the start, so a
+    # newline-terminated name like "valid_id\nDROP ..." would slip past the
+    # ^...$ regex (since $ matches before a trailing \n). fullmatch closes that
+    # bypass (audit 2026-06-26, defense-in-depth -- identifiers are interpolated
+    # into SQL text).
+    if not _IDENT_RE.fullmatch(name):
         raise ValueError(f"unsafe SQL identifier: {name!r}")
     return name
 

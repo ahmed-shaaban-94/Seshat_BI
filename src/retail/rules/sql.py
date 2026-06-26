@@ -1,4 +1,4 @@
-"""SQL rules (S1–S4b, plus D8 schema tokens). Added in M2; stub for M1.6 wiring."""
+"""SQL rules (S1–S8, plus D8 schema tokens). Added in M2; stub for M1.6 wiring."""
 
 from __future__ import annotations
 
@@ -159,7 +159,10 @@ def _is_guarded(toks: list[SqlToken], idx: int) -> bool:
     tail = [t.text.upper() for t in toks[idx : idx + 8]]
     joined = " ".join(tail)
     if verb == "CREATE":
-        return "OR REPLACE VIEW" in joined or "IF NOT EXISTS" in joined
+        # Any OR REPLACE form (VIEW / FUNCTION / PROCEDURE) is a guarded create,
+        # not just VIEW -- a literal "OR REPLACE VIEW" check false-positived on
+        # every CREATE OR REPLACE FUNCTION/PROCEDURE migration (audit 2026-06-26).
+        return "OR REPLACE" in joined or "IF NOT EXISTS" in joined
     if verb == "ALTER":
         return "IF EXISTS" in joined or "IF NOT EXISTS" in joined
     if verb == "DROP":
@@ -188,9 +191,17 @@ def s4b_guard_form(ctx: RuleContext) -> list[Finding]:
         for idx, tok in enumerate(toks):
             upper = tok.text.upper()
 
-            # Track transaction boundaries.
-            if upper in ("BEGIN", "START"):
+            # Track transaction boundaries. `BEGIN` opens a txn; `START` only
+            # opens one when followed by `TRANSACTION` -- a bare `START` (e.g.
+            # `CREATE SEQUENCE ... START WITH 1`) must NOT suppress later bare-DDL
+            # findings (audit 2026-06-26 false-negative).
+            if upper == "BEGIN":
                 in_txn = True
+                continue
+            if upper == "START":
+                nxt = toks[idx + 1].text.upper() if idx + 1 < len(toks) else ""
+                if nxt == "TRANSACTION":
+                    in_txn = True
                 continue
             if upper in ("COMMIT", "ROLLBACK"):
                 in_txn = False

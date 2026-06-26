@@ -309,3 +309,37 @@ def test_importing_retail_rules_does_not_pull_metric_drift() -> None:
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert r.returncode == 0, f"core import chain is not clean:\n{r.stdout}\n{r.stderr}"
     assert "clean" in r.stdout
+
+
+# --- audit fix (2026-06-26): L3 accepts the 3-arg DIVIDE(num, den, alt) form --
+
+
+def test_three_arg_divide_is_checked_not_escalated() -> None:
+    """DIVIDE(num, den, 0) is valid DAX; L3 must drift-check it, not escalate.
+
+    Audit finding: `len(args) != 2` escalated every 3-arg DIVIDE. The 3rd arg is
+    the alternate-result; the denominator is still args[1].
+    """
+    dax = (
+        "DIVIDE([TotalSales], CALCULATE([TransactionCount], NOT(ISBLANK("
+        "'gold fct_sales_rss'[total_spent]))), 0)"
+    )
+    v = check_measure_drift(dax, DEF_AVG)
+    assert v.status == "pass", v
+
+
+def test_three_arg_divide_still_detects_drift() -> None:
+    """The 3rd (alt-result) arg must not mask a wrong denominator -> still drift."""
+    wrong = (
+        "DIVIDE([TotalSales], CALCULATE([TransactionCount], NOT(ISBLANK("
+        "'gold fct_sales_rss'[discount_applied]))), 0)"
+    )
+    v = check_measure_drift(wrong, DEF_AVG)
+    assert v.status == "drift", v
+
+
+def test_four_arg_divide_still_escalates() -> None:
+    """A 4-arg DIVIDE is not valid DAX -> escalate (not silently accepted)."""
+    bad = "DIVIDE([A], [B], 0, 1)"
+    v = check_measure_drift(bad, DEF_AVG)
+    assert v.status == "escalate", v
