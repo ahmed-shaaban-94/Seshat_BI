@@ -1,14 +1,20 @@
 # Tower BI Agent Kit -- Roadmap
 
-- **Status:** Delivered ledger + a planned companion tier. As of 2026-06-25 the
+- **Status:** Delivered ledger + a partly-shipped companion tier. As of 2026-06-25 the
   entire originally-spec'd sequence (F005-F015, incl. F011A) is **SHIPPED** to
   `main`; **F016 (the Power BI execution adapter -- official Power BI MCP /
   connection; `pbi-cli` no longer preferred) remains the only parked feature of
   that original sequence** -- deliberately LAST, execution-only, and gated (hard
-  rule #6). Separately, a **Companion Modules & Adapters tier (F024-F034)** is
-  **PLANNED** (specs drafted under `specs/`, NOT built) -- see Tier 5 below. This
+  rule #6). Separately, the **Companion Modules & Adapters tier (F024-F034)** is
+  **PARTLY SHIPPED** (status corrected 2026-06-26): six of its features (F025-F030)
+  shipped as docs-first skills under `.claude/skills/`; F024 + F031-F033 remain
+  spec-only and F034 is a draft -- see Tier 5 below for the verified per-feature
+  status. Beyond that, the DAX-fortification follow-on (L4 value proxy) shipped
+  2026-06-26 (`retail value-check`); the `$$`-tokenizer fix and the F038 BPA spike
+  shipped; the pbi-tools extract spike and the L3 new predicate ops were assessed
+  and DEFERRED for want of a consumer/target (see `docs/superpowers/specs/`). This
   doc records what was delivered, the one original feature still parked, and the
-  planned companion tier.
+  companion tier's true state.
 - **Product identity:** **Tower BI Agent Kit** is the product. The **Tower BI
   Readiness System** is the operating spine inside it.
 - **Read first:** `docs/readiness/readiness-model.md` (the spine),
@@ -118,34 +124,37 @@ as the historical authoring order.
 | **015** | Reconciliation Ledger | 4 | Gold Ready | a durable ledger of cross-layer reconciliation results over time | `0eefe57` |
 | **016** | Power BI Execution Adapter (official Power BI MCP / connection) | 6 | Dashboard/Publish | the deferred, EXECUTION-ONLY Power BI adapter -- materializes/publishes an already-approved model; cannot define metrics, mappings, semantic logic, or dashboard design. LAST, gated on semantic-model readiness. (`pbi-cli` is no longer the preferred path; the official Power BI MCP / connection is the preferred future adapter.) | **NOT BUILT -- the only remaining feature (gated, by design)** |
 
-### Tier 5 -- Companion Modules & Adapters (F024-F034) -- PLANNED (specs drafted, not built)
+### Tier 5 -- Companion Modules & Adapters (F024-F034) -- PARTLY SHIPPED
 
 Authored by the 2026-06-25 companion-modules audit
-(`docs/superpowers/specs/2026-06-25-companion-modules-adapters-audit.md`) as
-planning artifacts only. These are NOT shipped; each has a drafted spec (and
-plan/tasks/analysis) under `specs/`. The binding rule: **Core Authority owns
-truth** -- a module/adapter may READ, SUMMARIZE, VISUALIZE, write DERIVED
-evidence, or EXECUTE an approved step, but MUST NOT create truth (no self-granted
-approval, no defining business meaning, no approving metrics/mappings, no
-publishing Power BI, no moving a readiness stage to `pass` without the required
-evidence + named human approval). F029 (dbt) and F030 (Dagster) are OPTIONAL
-companion engines, not roadmap precursors to F016. F016 remains the
+(`docs/superpowers/specs/2026-06-25-companion-modules-adapters-audit.md`). **Status
+corrected 2026-06-26 (verified against the tree):** SIX of these shipped as
+docs-first skills under `.claude/skills/` (per hard rule #8 -- a skill is a doc, not
+runtime Python; no `src/retail/` change by design). The remaining four are genuinely
+unbuilt -- see the Status column and the per-feature notes below; the earlier blanket
+"PLANNED (specs drafted, not built)" header was stale once the skills landed. The
+binding rule is unchanged: **Core Authority owns truth** -- a module/adapter may READ,
+SUMMARIZE, VISUALIZE, write DERIVED evidence, or EXECUTE an approved step, but MUST NOT
+create truth (no self-granted approval, no defining business meaning, no approving
+metrics/mappings, no publishing Power BI, no moving a readiness stage to `pass` without
+the required evidence + named human approval). F029 (dbt) and F030 (Dagster) are
+OPTIONAL companion engines, not roadmap precursors to F016. F016 remains the
 deliberately-last, bottom-of-stack execution-only adapter; nothing in this tier
 sequences before it or assumes it exists.
 
-| Feature | Name | F024 category | Advances stage | Spec dir | New ADR |
-|---------|------|---------------|----------------|----------|---------|
-| **F024** | Companion Tools Architecture | (defines the 5 categories) | cross-cutting | `018` | `0008-core-authority-vs-product-modules` |
-| **F025** | PR Readiness Reviewer | Product Module (read-only) | cross-cutting (guards promotions) | `019` | -- |
-| **F026** | Readiness Viewer | Product Module (read-only) | cross-cutting (reuses F012 fan-out) | `020` | -- |
-| **F027** | Approval Console | Product Module (artifact-writing) | all (the approval mechanism) | `021` | -- |
-| **F028** | Evidence Pack Generator | Product Module (artifact-writing) | Publish Ready (consumes F013) | `022` | -- |
-| **F029** | dbt Transformation Adapter | Execution Adapter (DB-connected) | Silver/Gold Ready | `023` | `0009-dbt-is-transformation-adapter` |
-| **F030** | Dagster Orchestration Adapter | Execution Adapter (orchestrator) | all (sequences, decides none) | `024` | `0010-dagster-orchestration-adapter` |
-| **F031** | Adapter Maintenance & Auto-Update Policy | Maintenance Automation | none (protects all) | `025` | `0011-safe-auto-updates` |
-| **F032** | Adapter Compatibility Matrix | Maintenance Automation | none | `026` | -- |
-| **F033** | Release & Maturity Management | Maintenance Automation / Skill | none | `027` | -- |
-| **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | Dashboard Ready (design-approved -> page-implemented) | `039` | -- |
+| Feature | Name | F024 category | Spec dir | Status (verified 2026-06-26) |
+|---------|------|---------------|----------|------------------------------|
+| **F024** | Companion Tools Architecture | (defines the 5 categories) | `018` | spec-only (the DECISION ships as `docs/decisions/0008`; the six companions below already build against it -- only the spec doc itself is unwritten) |
+| **F025** | PR Readiness Reviewer | Product Module (read-only) | `019` | **SHIPPED** -- `.claude/skills/pr-readiness-reviewer/` |
+| **F026** | Readiness Viewer | Product Module (read-only) | `020` | **SHIPPED** -- `.claude/skills/readiness-viewer/` |
+| **F027** | Approval Console | Product Module (artifact-writing) | `021` | **SHIPPED** -- `.claude/skills/approval-console/` |
+| **F028** | Evidence Pack Generator | Product Module (artifact-writing) | `022` | **SHIPPED** -- `.claude/skills/evidence-pack-generator/` |
+| **F029** | dbt Transformation Adapter | Execution Adapter (DB-connected) | `023` | **SHIPPED** -- `.claude/skills/dbt-transformation-adapter/` (+ ADR `0009`) |
+| **F030** | Dagster Orchestration Adapter | Execution Adapter (orchestrator) | `024` | **SHIPPED** -- `.claude/skills/dagster-orchestration-adapter/` (+ ADR `0010`) |
+| **F031** | Adapter Maintenance & Auto-Update Policy | Maintenance Automation | `025` | spec-only -- **no consumer yet** (the dbt/dagster adapters are docs-only skills + templates; there is no running runtime to maintain). Defer until an adapter has a runtime. ADR `0011` allotted. |
+| **F032** | Adapter Compatibility Matrix | Maintenance Automation | `026` | spec-only -- same no-consumer reason as F031 |
+| **F033** | Release & Maturity Management | Maintenance Automation / Skill | `027` | spec-only -- same no-consumer reason as F031 |
+| **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | `039` | **Draft** -- the one genuinely consumer-backed unbuilt item: `mappings/retail_store_sales/design/dashboard-layout.md` (approved design) + a committed PBIR report (`powerbi/RetailStoreSales.Report/`) with a single page await visual implementation. Needs spec finalization (a brainstorming gate) before a build. |
 
 > **Numbering (spec-dir vs F-number) for this tier.** Spec dirs were allocated
 > from the next free on-disk slot, giving **spec-dir = F-number - 6** for F024-F033
