@@ -8,7 +8,9 @@ from pathlib import Path
 # from ref-name chars only. Crucially it must NOT start with `-`, or git would
 # parse it as an OPTION (`--output=...`, `-n1`) rather than a revision -- a
 # CI-input option-injection surface (audit 2026-06-26 #24).
-_SAFE_RANGE_RE = re.compile(r"^[A-Za-z0-9_][\w./~^@-]*(\.\.\.?[\w./~^@-]+)?$")
+# `\Z` (not `$`): in Python `$` also matches just before a trailing newline, so a
+# `"a..b\n"` would pass and be handed to git verbatim. `\Z` anchors the true end.
+_SAFE_RANGE_RE = re.compile(r"^[A-Za-z0-9_][\w./~^@-]*(\.\.\.?[\w./~^@-]+)?\Z")
 # Cap on stderr spliced into an error message so a failing git command cannot dump
 # unbounded (or sensitive) output into a RuntimeError / Finding (audit #27).
 _STDERR_LIMIT = 300
@@ -32,11 +34,14 @@ def git_output(repo_root: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        errors="replace",  # non-UTF-8 bytes on git's stderr must not crash the decode
     )
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
         if len(stderr) > _STDERR_LIMIT:
-            stderr = stderr[:_STDERR_LIMIT] + "… (truncated)"
+            # ASCII marker only -- a non-ASCII char raises UnicodeEncodeError on a
+            # Windows charmap console (cp437/cp850); see global encoding rule.
+            stderr = stderr[:_STDERR_LIMIT] + "... (truncated)"
         raise RuntimeError(
             f"git {' '.join(args)} failed ({result.returncode}): {stderr}"
         )

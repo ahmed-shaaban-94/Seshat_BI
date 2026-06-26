@@ -33,6 +33,17 @@ def test_validate_commit_range_accepts_normal_ranges() -> None:
         assert validate_commit_range(ok) == ok
 
 
+def test_validate_commit_range_rejects_trailing_newline() -> None:
+    """A trailing newline must be rejected: Python `$` matches before a final `\\n`,
+    so a `"a..b\\n"` would otherwise pass and be handed to git verbatim. The regex
+    uses `\\Z` to anchor the true end (adversarial pass 2026-06-26)."""
+    from retail.gitutil import validate_commit_range
+
+    for bad in ("a..b\n", "HEAD\n", "origin/main..HEAD\n"):
+        with pytest.raises(ValueError):
+            validate_commit_range(bad)
+
+
 # --- #25: an interpolated func is regex-escaped --------------------------------
 
 
@@ -73,3 +84,6 @@ def test_git_output_error_sanitizes_stderr(monkeypatch: pytest.MonkeyPatch) -> N
     assert len(msg) < 1000, f"stderr not truncated: {len(msg)} chars"
     # And it must not be empty / must keep the exit code for debuggability.
     assert "128" in msg
+    # The truncation marker must be ASCII -- a non-ASCII ellipsis raises
+    # UnicodeEncodeError on a Windows charmap console (adversarial pass 2026-06-26).
+    assert msg.isascii(), f"non-ASCII in error message: {msg!r}"
