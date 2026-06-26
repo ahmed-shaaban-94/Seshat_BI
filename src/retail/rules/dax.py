@@ -136,7 +136,12 @@ def _strip_dax_comments_and_strings(expr: str) -> str:
     no_block = re.sub(r"/\*.*?\*/", " ", expr, flags=re.DOTALL)
     no_line = re.sub(r"//[^\n]*", " ", no_block)
     # Strip double-quoted DAX string literals (escaped quote is "")
-    return re.sub(r'"(?:[^"]|"")*"', " ", no_line)
+    no_double = re.sub(r'"(?:[^"]|"")*"', " ", no_line)
+    # Strip single-quoted DAX table/column name delimiters. DAX uses
+    # 'Table Name'[Column]; '' escapes a literal quote inside the name. A
+    # '/' inside such a name is never a division operator, so remove it before
+    # the bare-'/' scan to avoid a false-positive D4 (audit 2026-06-26 #4).
+    return re.sub(r"'(?:[^']|'')*'", " ", no_double)
 
 
 @register("D4", "Use DIVIDE() not the / operator")
@@ -417,16 +422,23 @@ def d9_no_hardcoded_dates(ctx: RuleContext) -> Iterable[Finding]:
 # D10 — no FILTER(ALL(...)) full-table-scan anti-pattern
 # ---------------------------------------------------------------------------
 
-# FILTER ( ALL ( ... -- a full-table scan where a column filter usually suffices.
-_FILTER_ALL = re.compile(r"FILTER\s*\(\s*ALL\s*\(", re.IGNORECASE)
+# FILTER ( ALL[ SELECTED | EXCEPT | NOBLANKROW ] ( ... -- a row-by-row full scan the
+# engine can't push down; prefer a column filter in CALCULATE. ALLSELECTED/ALLEXCEPT
+# inside FILTER share the same anti-pattern as ALL (audit 2026-06-26 #9).
+_FILTER_ALL = re.compile(
+    r"FILTER\s*\(\s*ALL(?:SELECTED|EXCEPT|NOBLANKROW)?\s*\(", re.IGNORECASE
+)
 
 
-@register("D10", "No FILTER(ALL(...)) full-table-scan anti-pattern")
+@register(
+    "D10", "No FILTER(ALL/ALLSELECTED/ALLEXCEPT(...)) full-table-scan anti-pattern"
+)
 def d10_no_filter_all(ctx: RuleContext) -> Iterable[Finding]:
-    """Warn when a measure uses FILTER(ALL(...)); prefer a column filter in CALCULATE.
+    """Warn on FILTER(ALL/ALLSELECTED/ALLEXCEPT(...)); prefer a CALCULATE column filter.
 
     Comments and string literals are stripped first so the pattern is only matched
-    in live DAX, not in a comment or string.
+    in live DAX, not in a comment or string. Severity is WARNING: ALLSELECTED inside
+    FILTER has legitimate percent-of-selection uses, so this guides rather than blocks.
     """
     for rel, text in iter_model_files(ctx, ".tmdl"):
         table = parse_tmdl(text)
@@ -439,8 +451,8 @@ def d10_no_filter_all(ctx: RuleContext) -> Iterable[Finding]:
                     rule_id="D10",
                     severity=Severity.WARNING,
                     message=(
-                        f"Measure '{m.name}' uses FILTER(ALL(...));"
-                        " prefer a column filter inside CALCULATE"
+                        f"Measure '{m.name}' uses FILTER(ALL/ALLSELECTED/ALLEXCEPT"
+                        "(...)); prefer a column filter inside CALCULATE"
                     ),
                     locator=f"{rel}:{m.line}",
                 )

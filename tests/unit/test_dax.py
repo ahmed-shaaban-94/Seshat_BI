@@ -684,3 +684,71 @@ def test_d11_exempts_tests_prefix(tmp_path: Path) -> None:
     )
     ctx = RuleContext(repo_root=tmp_path, tracked_files=(rel,))
     assert list(d11_measures_documented(ctx)) == []
+
+
+# --- DAX fortification M2 (2026-06-26): D4 single-quote strip, D10 ALL variants ---
+
+
+def _stage_measure(tmp_path: Path, measure_line: str) -> RuleContext:
+    """Stage a one-measure TMDL table inline and return a RuleContext."""
+    rel = "Model.SemanticModel/definition/tables/T.tmdl"
+    dest = tmp_path / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        f"table T\n\t{measure_line}\n\t\tdisplayFolder: X\n", encoding="utf-8"
+    )
+    return RuleContext(repo_root=tmp_path, tracked_files=(rel,))
+
+
+def test_d4_passes_single_quoted_table_with_slash(tmp_path: Path) -> None:
+    """A '/' inside a single-quoted DAX table name is not a division operator."""
+    ctx = _stage_measure(
+        tmp_path, "measure M = CALCULATE([X], 'Sales/Returns'[col] = 1)"
+    )
+    assert list(d4_divide_not_slash(ctx)) == []
+
+
+def test_d4_passes_single_quoted_escaped_quote(tmp_path: Path) -> None:
+    """The '' escape inside a single-quoted DAX name is handled without crashing."""
+    ctx = _stage_measure(tmp_path, "measure M = SUM('O''Brien Sales'[amt])")
+    assert list(d4_divide_not_slash(ctx)) == []
+
+
+def test_d4_still_flags_real_division(tmp_path: Path) -> None:
+    """Regression: a genuine bare '/' between refs still fires D4."""
+    ctx = _stage_measure(tmp_path, "measure M = [Cash] / [Total]")
+    findings = list(d4_divide_not_slash(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D4"
+
+
+def test_d10_flags_filter_allselected(tmp_path: Path) -> None:
+    ctx = _stage_measure(
+        tmp_path,
+        "measure M = CALCULATE([Total], FILTER(ALLSELECTED('dim_product'), "
+        "'dim_product'[Category] = \"Electronics\"))",
+    )
+    findings = list(d10_no_filter_all(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D10"
+    assert findings[0].severity is Severity.WARNING
+
+
+def test_d10_flags_filter_allexcept(tmp_path: Path) -> None:
+    ctx = _stage_measure(
+        tmp_path,
+        "measure M = CALCULATE([Total], FILTER(ALLEXCEPT('dim_store', "
+        "'dim_store'[Region]), 'dim_store'[Active] = TRUE()))",
+    )
+    findings = list(d10_no_filter_all(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "D10"
+    assert findings[0].severity is Severity.WARNING
+
+
+def test_d10_passes_allselected_not_in_filter(tmp_path: Path) -> None:
+    """A bare ALLSELECTED (no FILTER wrapper) is not the anti-pattern -> no finding."""
+    ctx = _stage_measure(
+        tmp_path, "measure M = CALCULATE([Total], ALLSELECTED('dim_product'))"
+    )
+    assert list(d10_no_filter_all(ctx)) == []
