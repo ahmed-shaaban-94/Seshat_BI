@@ -277,9 +277,21 @@ def _run_semantic_check(args) -> int:
 
     repo = Path(args.repo)
 
+    # Confine --metrics-dir to the repo tree: resolve it and reject a value that
+    # traverses outside the repo root (e.g. `../../etc`) so contract discovery
+    # cannot be pointed at arbitrary filesystem locations (audit 2026-06-26 #26).
+    repo_resolved = repo.resolve()
+    metrics_root = (repo / args.metrics_dir).resolve()
+    if metrics_root != repo_resolved and not metrics_root.is_relative_to(repo_resolved):
+        print(
+            f"error: --metrics-dir {args.metrics_dir!r} escapes the repo root; "
+            "it must resolve to a path inside --repo.",
+            file=sys.stderr,
+        )
+        return 1
+
     # 1. Index contract definitions by measure name (YAML stem == measure name).
     definitions: dict[str, dict | None] = {}
-    metrics_root = repo / args.metrics_dir
     if metrics_root.is_dir():
         for contract_path in sorted(metrics_root.glob("*/metrics/*.yaml")):
             name = contract_path.stem

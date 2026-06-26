@@ -248,9 +248,11 @@ def rule_p2_commit_subjects(ctx: RuleContext) -> Iterable[Finding]:
         range_expr = ctx.commit_range if ctx.commit_range is not None else DEFAULT_RANGE
         try:
             subjects = gitutil.git_log_subjects(ctx.repo_root, range_expr)
-        except RuntimeError as exc:
-            # A malformed/empty range must surface as a clean ERROR Finding, not
-            # a traceback (the runner does not wrap rules in try/except).
+        except (RuntimeError, ValueError) as exc:
+            # A malformed/unsafe/empty range must surface as a clean ERROR Finding,
+            # not a traceback (the runner does not wrap rules in try/except).
+            # ValueError = rejected by validate_commit_range (option injection);
+            # RuntimeError = git rejected a safe-shaped range.
             return [
                 Finding(
                     rule_id="P2",

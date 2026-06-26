@@ -75,6 +75,20 @@ def test_semantic_check_drift_exits_one(tmp_path: Path, capsys) -> None:
     assert "AvgTransactionValue" in out
 
 
+def test_semantic_check_rejects_metrics_dir_escaping_repo(
+    tmp_path: Path, capsys
+) -> None:
+    """A `--metrics-dir` that traverses OUT of the repo (`../...`) must be rejected,
+    not silently globbed outside the repo tree (audit #26 path traversal)."""
+    repo = _make_repo(tmp_path, _CONTRACT_CLEAN)
+    # Plant a contract OUTSIDE the repo; a traversal must not reach it.
+    _write(tmp_path.parent / "evil/metrics/AvgTransactionValue.yaml", _CONTRACT_DRIFT)
+    code = main(["semantic-check", "--repo", str(repo), "--metrics-dir", "../evil"])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "metrics-dir" in err or "outside" in err or "escap" in err.lower()
+
+
 def test_cli_does_not_import_yaml_or_metric_drift_at_module_scope() -> None:
     """cli.py must keep yaml + L3 modules out of its module scope (stdlib core)."""
     import retail.cli as cli_mod

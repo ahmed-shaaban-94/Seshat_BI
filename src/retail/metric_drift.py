@@ -144,7 +144,10 @@ def _outer_call(expr: str, func: str) -> str | None:
     # statement terminator must not make the wrapper unrecognized, which would
     # silently bypass the drift check (audit 2026-06-26 #33).
     expr = expr.strip().rstrip(";").rstrip()
-    m = re.match(rf"^{func}\s*\(", expr, re.IGNORECASE)
+    # re.escape: `func` is interpolated into a regex. Callers pass literals today
+    # ("CALCULATE"/"DIVIDE"), but escaping prevents a future dynamic func with
+    # regex metacharacters from being treated as a pattern (audit #25).
+    m = re.match(rf"^{re.escape(func)}\s*\(", expr, re.IGNORECASE)
     if not m:
         return None
     inner_start = m.end()
