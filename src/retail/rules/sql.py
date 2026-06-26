@@ -9,6 +9,7 @@ from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
 from ..sql import (
     SqlToken,
+    _dollar_quote_end,
     iter_sql_files,
     schema_zone,
     stale_schema_tokens,
@@ -362,6 +363,16 @@ def _strip_sql_noise(text: str) -> str:
             out.append("\n" * seg.count("\n"))  # keep line count
             i = n if j == -1 else j + 2
             continue
+        if text[i] == "$":
+            end = _dollar_quote_end(text, i)
+            if end is not None:
+                # Collapse a PL/pgSQL body so a `-1` or `dim_` inside it never
+                # reaches the S6/S8 raw-text scan; keep newlines for line accounting.
+                seg = text[i:end]
+                out.append("''" + "\n" * seg.count("\n"))
+                i = end
+                continue
+            # not a dollar-quote opener (e.g. `$1`); copy the `$` through below.
         if text[i] in ("'", '"'):
             q = text[i]
             j = text.find(q, i + 1)
