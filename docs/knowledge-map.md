@@ -53,6 +53,7 @@ Supporting references:
 - `COMPASS.md` — the shortest operational entry point.
 - `docs/readiness/readiness-pipeline.md` and `docs/architecture/readiness-pipeline.md`
   — the stage sequence and transitions.
+- Smoke test: `docs/quality/agent-routing-smoke-test.md` — a manual routing/governance check for this layer.
 
 Dashboard design: `.claude/skills/powerbi-dashboard-design/` exists and is the
 route (the design vocabulary/router; the gated "design from approved contracts"
