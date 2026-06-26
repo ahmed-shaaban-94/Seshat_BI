@@ -8,17 +8,48 @@
   rule #6). Separately, the **Companion Modules & Adapters tier (F024-F034)** is
   **PARTLY SHIPPED** (status corrected 2026-06-26): six of its features (F025-F030)
   shipped as docs-first skills under `.claude/skills/`; F024 + F031-F033 remain
-  spec-only and F034 is a draft -- see Tier 5 below for the verified per-feature
-  status. Beyond that, the DAX-fortification follow-on (L4 value proxy) shipped
-  2026-06-26 (`retail value-check`); the `$$`-tokenizer fix and the F038 BPA spike
-  shipped; the pbi-tools extract spike and the L3 new predicate ops were assessed
-  and DEFERRED for want of a consumer/target (see `docs/superpowers/specs/`). This
-  doc records what was delivered, the one original feature still parked, and the
-  companion tier's true state.
+  spec-only; and **F034's authoring slice shipped 2026-06-26** (its built-page
+  worked example remains a human Power BI Desktop action -- see Tier 5) -- see Tier 5
+  below for the verified per-feature status. Beyond that, the DAX-fortification
+  follow-on (L4 value proxy) shipped 2026-06-26 (`retail value-check`); the
+  `$$`-tokenizer fix and the F038 BPA spike shipped; the pbi-tools extract spike and
+  the L3 new predicate ops were assessed and DEFERRED for want of a consumer/target
+  (see `docs/superpowers/specs/`). This doc records what was delivered, the one
+  original feature still parked, and the companion tier's true state.
 - **Product identity:** **Tower BI Agent Kit** is the product. The **Tower BI
   Readiness System** is the operating spine inside it.
 - **Read first:** `docs/readiness/readiness-model.md` (the spine),
   `docs/architecture/readiness-pipeline.md` (how it sits on the existing kit).
+
+## Autonomous roadmap run -- closure (2026-06-26)
+
+The 2026-06-26 autonomous run is **closed**. Every prioritized item (the
+ADR-0013 / autopilot DAX-fortification sequence #1-#5, plus the surfaced #6/#7)
+is shipped or deferred for a stated cause -- verified by a closure audit
+(8 independent adversarial checks; 8/8 outcomes accurate; zero new feature code
+for any deferred/gated item).
+
+| Item | Outcome | Where |
+|------|---------|-------|
+| `$$` dollar-quote tokenizer | **SHIPPED** | PR #37 (`31a508c`) |
+| F038 Tabular Editor BPA spike | **SHIPPED** (six-gate PASS) | PR #38 (`9eccd43`) |
+| pbi-tools extract spike | **DEFERRED** -- no `.pbix` target, no installed toolchain | PR #40 evidence; `docs/superpowers/specs/2026-06-26-pbi-tools-extract-spike-deferred.md` |
+| L4 value proxy (`retail value-check`) | **SHIPPED** | PR #40 (`9e17dca`) |
+| L3 new predicate operators | **DEFERRED** -- no consumer | PR #41; `docs/superpowers/specs/2026-06-26-l3-new-operators-deferred.md` |
+| Tier-5 roadmap accuracy + L3 deferral record | **SHIPPED** (docs) | PR #41 (`90bf8de`) |
+| F034 authoring slice | **SHIPPED** (built page = human Desktop action) | PR #43 (`a503448`) |
+
+**Remaining work is human / gated only -- no agent-buildable item is left:**
+
+- **F016 (Power BI execution adapter)** -- gated by hard rule #6 (not startable
+  before Semantic Model Ready is `pass`); execution-only; deliberately last.
+- **F034 built page** -- a human builds the approved design in Power BI Desktop and
+  commits the PBIR; the agent's procedure + trace + review are ready, and the gate
+  already permits the build.
+- **F031-F033 (maintenance automation)** -- no consumer yet (the adapters they
+  would maintain are docs-only skills); revisit when an adapter has a runtime.
+- **pbi-tools / L3 new ops** -- revisit when a real `.pbix` workflow / installed
+  toolchain (pbi-tools) or a real predicate consumer (L3) appears.
 
 > The kit already ships an agent-first constitution, a source-mapping gate, the
 > Spec-Kit foundation, the C086 worked example, a 31-rule static `retail check`,
@@ -154,7 +185,7 @@ sequences before it or assumes it exists.
 | **F031** | Adapter Maintenance & Auto-Update Policy | Maintenance Automation | `025` | spec-only -- **no consumer yet** (the dbt/dagster adapters are docs-only skills + templates; there is no running runtime to maintain). Defer until an adapter has a runtime. ADR `0011` allotted. |
 | **F032** | Adapter Compatibility Matrix | Maintenance Automation | `026` | spec-only -- same no-consumer reason as F031 |
 | **F033** | Release & Maturity Management | Maintenance Automation / Skill | `027` | spec-only -- same no-consumer reason as F031 |
-| **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | `039` | **Draft** -- the one genuinely consumer-backed unbuilt item: `mappings/retail_store_sales/design/dashboard-layout.md` (approved design) + a committed PBIR report (`powerbi/RetailStoreSales.Report/`) with a single page await visual implementation. Needs spec finalization (a brainstorming gate) before a build. |
+| **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | `039` | **Authoring slice SHIPPED 2026-06-26** (spec `Finalized`) -- the three generic artifacts exist: the trace template (`templates/visual-implementation-trace.md`), the Dashboard Ready evidence-item edit (`docs/readiness/dashboard-ready.md`), and the review workflow (`.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`). The **built page itself remains a human Power BI Desktop action** (US-1/SC-001/SC-007/FR-013 UNMET by design -- FR-008/FR-009 forbid agent-generated PBIR): `mappings/retail_store_sales/design/dashboard-layout.md` (approved design) + the committed PBIR report (`powerbi/RetailStoreSales.Report/`, page still empty) await a human's Desktop build, which the gate (`semantic_model_ready: pass` + design-review sign-off) already permits. |
 
 > **Numbering (spec-dir vs F-number) for this tier.** Spec dirs were allocated
 > from the next free on-disk slot, giving **spec-dir = F-number - 6** for F024-F033
