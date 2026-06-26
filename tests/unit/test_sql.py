@@ -38,11 +38,17 @@ def test_s1_passes_snake_case(tmp_path: Path) -> None:
 
 
 def test_s1_flags_quoted_caps(tmp_path: Path) -> None:
+    # #46: fixture has exactly 2 violations: "Sale Items" and "Item Id"
     ctx = _ctx(tmp_path, _stage(tmp_path, "fail_s1_quoted_caps.sql"))
     findings = list(s1_snake_case_identifiers(ctx))
-    assert findings
+    assert len(findings) == 2, (
+        f"expected 2 S1 findings, got {len(findings)}: {findings}"
+    )
     assert all(f.rule_id == "S1" for f in findings)
     assert all(f.severity is Severity.ERROR for f in findings)
+    messages = " ".join(f.message for f in findings)
+    assert "Sale Items" in messages
+    assert "Item Id" in messages
 
 
 def _stage_text(tmp_path: Path, name: str, sql: str) -> str:
@@ -241,6 +247,37 @@ def test_s4b_start_transaction_still_opens_txn(tmp_path: Path) -> None:
     findings = list(s4b_guard_form(ctx))
     # Inside a real transaction, the bare CREATE is acceptable -> no WARNING for line 2.
     assert not any(f.locator.endswith(":2") for f in findings), findings
+
+
+def test_sql_rules_exempt_tests_path_files(tmp_path: Path) -> None:
+    """#48: S1-S4b must NOT flag SQL files under tests/ (non-warehouse exemption).
+
+    iter_sql_files() only yields files starting with `warehouse/`; a tests/ path
+    is never forwarded to any S rule. Each violation below WOULD fire if the file
+    were under warehouse/ -- verifying each assertion is load-bearing:
+      S1 -- "Sale Items", "Item Id" (quoted non-snake_case identifiers)
+      S2 -- CREATE SCHEMA raw (stale schema token)
+      S3 -- CREATE VIEW gold.bad_view (missing vw_ prefix)
+      S4b -- bare CREATE TABLE gold.t (no IF NOT EXISTS / BEGIN guard)
+    """
+    bad_sql = (
+        "CREATE SCHEMA raw;\n"
+        "CREATE VIEW gold.bad_view AS SELECT 1;\n"
+        'CREATE TABLE gold."Sale Items" (\n'
+        '    "Item Id" BIGINT\n'
+        ");\n"
+    )
+    tests_dir = tmp_path / "tests" / "fixtures"
+    tests_dir.mkdir(parents=True)
+    (tests_dir / "bad.sql").write_text(bad_sql, encoding="utf-8")
+    ctx = RuleContext(
+        repo_root=tmp_path,
+        tracked_files=("tests/fixtures/bad.sql",),
+    )
+    assert list(s1_snake_case_identifiers(ctx)) == [], "S1 must skip tests/ paths"
+    assert list(s2_medallion_schemas(ctx)) == [], "S2 must skip tests/ paths"
+    assert list(s3_vw_prefix(ctx)) == [], "S3 must skip tests/ paths"
+    assert list(s4b_guard_form(ctx)) == [], "S4b must skip tests/ paths"
 
 
 def test_s4b_create_or_replace_function_is_guarded(tmp_path: Path) -> None:

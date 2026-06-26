@@ -178,6 +178,28 @@ def test_g1_flags_ignored_definition_path(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_g2_clean_pbip_passes(tmp_path: Path) -> None:
+    """#19: a PBIP repo with no forbidden tracked paths produces NO G2 findings.
+
+    A clean PBIP has definition/ committed (model.tmdl present) and the Desktop-local
+    cache files (.pbi/cache.abf, .pbi/localSettings.json) are NOT tracked.
+    G2 must return an empty findings list (not the INFO branch, not an ERROR).
+    """
+    repo = make_git_repo(tmp_path)
+    # Use a .gitignore that covers the forbidden paths so git_check_ignore won't fire.
+    (repo / ".gitignore").write_text(GOOD_GITIGNORE, encoding="utf-8")
+    pbip_dir = repo / "powerbi" / "Sales.SemanticModel" / "definition"
+    pbip_dir.mkdir(parents=True)
+    (pbip_dir / "model.tmdl").write_text("model\n", encoding="utf-8")
+    (repo / "powerbi" / "Sales.pbip").write_text("{}\n", encoding="utf-8")
+    # No .pbi/cache.abf or .pbi/localSettings.json is committed.
+    commit_all(repo, "feat: clean pbip")
+    findings = list(rule_g2_definition_committed(context_for(repo)))
+    # Not the INFO branch (real PBIP is present) and no ERROR (no forbidden files).
+    assert findings == [], f"expected no G2 findings on a clean PBIP, got: {findings}"
+
+
+@pytest.mark.unit
 def test_g2_emits_info_when_no_pbip(tmp_path: Path) -> None:
     repo = make_git_repo(tmp_path)
     (repo / "README.md").write_text("hi\n", encoding="utf-8")
