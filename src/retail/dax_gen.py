@@ -51,3 +51,72 @@ class GenResult:
     @classmethod
     def refuse(cls, reason: str) -> "GenResult":
         return cls(ok=False, reason=reason)
+
+
+_AGG_TO_DAX: dict[str, str] = {
+    "sum": "SUM",
+    "count": "COUNT",
+    "distinct_count": "DISTINCTCOUNT",
+    "average": "AVERAGE",
+    "count_rows": "COUNTROWS",
+}
+_NEEDS_COLUMN = {"sum", "count", "distinct_count", "average"}
+# canonical predicate spellings -- MUST match the spellings metric_drift recognizes
+_OP_TO_DAX = {
+    "is_true": "{col} = TRUE()",
+    "is_not_null": "NOT(ISBLANK({col}))",
+}
+
+
+def _qualify(table: str, column: str | None) -> str:
+    """`gold.fct_sales_rss`,`col` -> `'gold fct_sales_rss'[col]`; table-only if no col.
+
+    The committed TMDL uses a space-joined single-quoted table name
+    (`'gold fct_sales_rss'`), matching what metric_drift parses. A dotted
+    `schema.table` is rendered with the dot replaced by a space.
+    """
+    tbl = "'" + table.replace(".", " ") + "'"
+    return f"{tbl}[{column}]" if column else tbl
+
+
+def _emit_predicate(f: dict) -> str | None:
+    col = f.get("column")
+    op = f.get("op")
+    tmpl = _OP_TO_DAX.get(op) if op else None
+    if not col or tmpl is None:
+        return None
+    return tmpl.format(col=f"'__TBL__'[{col}]")  # table injected by caller
+
+
+def _emit_base(defn: dict) -> tuple[str | None, str | None]:
+    agg = defn.get("aggregation")
+    if agg not in _AGG_TO_DAX:
+        return None, f"unsupported aggregation {agg!r}"
+    source = defn.get("source") or {}
+    table = source.get("table")
+    column = source.get("column")
+    if not isinstance(table, str) or not table.startswith("gold."):
+        return None, f"source.table must be a gold.* table, got {table!r}"
+    if agg == "count_rows":
+        if column:
+            return None, "count_rows must not specify source.column (table only)"
+    elif not column:
+        return None, f"aggregation {agg!r} requires source.column"
+
+    func = _AGG_TO_DAX[agg]
+    inner = f"{func}({_qualify(table, column)})"
+
+    filters = defn.get("filter") or []
+    if not filters:
+        return inner, None
+
+    preds: list[str] = []
+    tbl = "'" + table.replace(".", " ") + "'"
+    for f in filters:
+        col = f.get("column")
+        op = f.get("op")
+        tmpl = _OP_TO_DAX.get(op) if op else None
+        if not col or tmpl is None:
+            return None, f"unrecognized filter op {op!r} on column {col!r}"
+        preds.append(tmpl.format(col=f"{tbl}[{col}]"))
+    return f"CALCULATE({inner}, {', '.join(preds)})", None
