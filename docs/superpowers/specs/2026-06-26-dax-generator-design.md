@@ -26,7 +26,7 @@ This is the **first code in the repo that produces DAX** rather than validating 
 - **Two measure shapes**, discriminated by `definition.kind`:
   - `kind: base` — a single aggregation over a `gold.*` column/table, with optional filters.
   - `kind: ratio` — `DIVIDE(numerator, denominator)` where each side is an **inline** aggregation.
-- **5 aggregations:** `sum`, `count`, `distinctcount`, `average`, `countrows`.
+- **5 aggregations:** `sum`, `count`, `distinct_count`, `average`, `count_rows`.
 - **Existing predicate whitelist only:** `is_true`, `is_not_null` (reused verbatim from `metric_drift`).
 - **CLI:** `retail generate --contract <path>`.
 - **Internal API:** `generate_measure(definition, *, name, ...) -> GenResult`.
@@ -93,7 +93,7 @@ Discriminated by `kind`. **`kind` absent → today's exact ratio behavior** (leg
 ```yaml
 definition:
   kind: base
-  aggregation: sum            # sum | count | distinctcount | average | countrows
+  aggregation: sum            # sum | count | distinct_count | average | count_rows
   source:
     table: gold.fct_sales     # gold.* ONLY (reuses the gold-only guard)
     column: net_amount        # see column rule below
@@ -108,9 +108,9 @@ definition:
 |-------------|-----|-----------------|
 | `sum` | `SUM(T[col])` | **required** |
 | `count` | `COUNT(T[col])` | **required** |
-| `distinctcount` | `DISTINCTCOUNT(T[col])` | **required** |
+| `distinct_count` | `DISTINCTCOUNT(T[col])` | **required** |
 | `average` | `AVERAGE(T[col])` | **required** |
-| `countrows` | `COUNTROWS(T)` | **forbidden** (table only) |
+| `count_rows` | `COUNTROWS(T)` | **forbidden** (table only) |
 
 **Emit rule:** no filter → bare aggregation; filter present → `CALCULATE(<agg>, <pred>, …)`.
 ```dax
@@ -121,8 +121,8 @@ CALCULATE ( SUM ( 'gold fct_sales'[net_amount] ), 'gold fct_sales'[discount_appl
 ```yaml
 definition:
   kind: ratio
-  numerator:   {aggregation: countrows, filter: [{column: discount_applied, op: is_true}]}
-  denominator: {aggregation: countrows, filter: [{column: discount_applied, op: is_not_null}]}
+  numerator:   {aggregation: count_rows, filter: [{column: discount_applied, op: is_true}]}
+  denominator: {aggregation: count_rows, filter: [{column: discount_applied, op: is_not_null}]}
   format_string: "0.0%"
   display_folder: "Rates"
 ```
@@ -148,8 +148,8 @@ DIVIDE (
 ```
 STEP 1 — VALIDATE SHAPE (pre-emit guards)
   • kind ∈ {base, ratio}? else REFUSE
-  • base: aggregation in whitelist; column REQUIRED for sum/count/distinctcount/average,
-    FORBIDDEN for countrows; table is gold.* ; filters use known ops {is_true, is_not_null}
+  • base: aggregation in whitelist; column REQUIRED for sum/count/distinct_count/average,
+    FORBIDDEN for count_rows; table is gold.* ; filters use known ops {is_true, is_not_null}
   • ratio: numerator & denominator each valid inline aggregations
   • any malformed/unrealizable field → REFUSE("cannot realize field X")
 
@@ -235,7 +235,7 @@ retail generate --contract <path> [--out <path>] [--format tmdl|json]
 
 ## 7. Error handling
 
-- **Bad/unsupported contracts are product-level refusals**, returned as `GenResult(ok=False, reason=...)`. The generator never raises on them. The `reason` carries the precise cause (e.g., the `Verdict.detail` from L3, or "countrows must not specify source.column").
+- **Bad/unsupported contracts are product-level refusals**, returned as `GenResult(ok=False, reason=...)`. The generator never raises on them. The `reason` carries the precise cause (e.g., the `Verdict.detail` from L3, or "count_rows must not specify source.column").
 - **Exceptions are reserved for programmer errors only** — missing required `name` argument, a `GenResult` that violates its sum-type invariant.
 - **CLI errors** (missing `--contract`, unreadable file, malformed YAML) print a clear message to stderr and exit 1, matching the other subcommands.
 
@@ -248,9 +248,9 @@ retail generate --contract <path> [--out <path>] [--format tmdl|json]
 ### New: `tests/unit/test_dax_gen.py`
 | Group | Proves |
 |-------|--------|
-| **Round-trip (core property)** | For every supported shape (5 aggs × {filter, no-filter} × {base, ratio}), `generate_measure` returns `ok=True` **and** feeding `result.dax` back through `check_measure_drift` returns `pass`. The inverse-function guarantee, mechanically enforced. |
+| **Round-trip (core property)** | For every supported shape (5 aggs × {filter, no-filter} × {base, ratio}), `generate_measure` returns `ok=True` **and** feeding `result.dax` back through `check_measure_drift` returns `pass`. For a **base** measure this re-verifies aggregation + full filter-set. For a **ratio** this re-verifies the **same denominator-filter-set check that gates the model** (L3 is denominator-only by design); the numerator's correctness is pinned separately by the `_emit_*` round-trip/emit tests, not re-derived by the L3 pass. The inverse-function guarantee, mechanically enforced — gating exactly what the model's own gate gates. |
 | **D-rule cleanliness** | Every emitted `tmdl_block` passes D1–D11 with **zero ERRORs** (PascalCase, displayFolder, DIVIDE-not-`/`, `///` doc, no hardcoded dates, no `FILTER(ALL(`). |
-| **Refusal / fail-closed** | Unknown `kind`; bad aggregation; sum/count/distinctcount/average **without** column; countrows **with** column; non-`gold.*` table; unknown filter op; malformed `definition` → each returns `ok=False`, **`dax is None` and `tmdl_block is None`**, with a precise `reason`. |
+| **Refusal / fail-closed** | Unknown `kind`; bad aggregation; sum/count/distinct_count/average **without** column; count_rows **with** column; non-`gold.*` table; unknown filter op; malformed `definition` → each returns `ok=False`, **`dax is None` and `tmdl_block is None`**, with a precise `reason`. |
 | **Sum-type invariant** | `GenResult.__post_init__` raises on a malformed result (`ok=True` + no dax; `ok=False` + populated dax). |
 | **`doc_intent` isolation** | Two contracts with **identical `definition` but different `formula_intent`** produce **identical DAX & verification**, differing only in the `///` comment. Proves intent never touches semantics. |
 | **CLI behavior** | exit 0/1; stdout empty on refusal (both formats); reason on stderr; `--format json` shape; via `subprocess`, like existing CLI tests. |
@@ -331,6 +331,6 @@ These exist to prove Phase 1 is not a dead end. None ships in this slice.
 
 - **Stdlib-pure core preserved** — `dax_gen.py` is a lazy module, never in the `retail check` chain; guarded by a subprocess import test.
 - **Zero-regression L3 extension** — `kind` absent ⟹ identical behavior; existing tests untouched and green.
-- **Self-proving** — every emitted measure round-trips to `pass` through the very checker that gates the model, then passes D1–D11. Unverifiable ⟹ refused.
+- **Self-proving** — every emitted measure round-trips to `pass` through the very checker that gates the model, then passes D1–D11. For a ratio, that L3 pass is the **same denominator-filter-set check the model's gate applies** (denominator-only by design — the numerator is pinned by the emit tests, not re-derived here); for a base measure it re-verifies aggregation + full filter-set. The generator gates exactly what the model's own gate gates. Unverifiable ⟹ refused.
 - **Never mutates truth** — no model writes (`powerbi/**` refused on resolved path), no DB, no LLM, no invented semantics, no free-form DAX, no overwrite of existing artifacts.
 - **Fail-closed end to end** — refuse-not-warn in the engine; stdout-verified-only in the CLI; the shell redirect idiom is itself fail-closed.

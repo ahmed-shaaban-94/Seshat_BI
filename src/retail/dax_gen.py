@@ -60,7 +60,6 @@ _AGG_TO_DAX: dict[str, str] = {
     "average": "AVERAGE",
     "count_rows": "COUNTROWS",
 }
-_NEEDS_COLUMN = {"sum", "count", "distinct_count", "average"}
 # canonical predicate spellings -- MUST match the spellings metric_drift recognizes
 _OP_TO_DAX = {
     "is_true": "{col} = TRUE()",
@@ -98,12 +97,18 @@ def _emit_base(defn: dict) -> tuple[str | None, str | None]:
     inner = f"{func}({_qualify(table, column)})"
 
     filters = defn.get("filter") or []
+    # Fail-closed: a malformed `filter` is a refusal, never a raise. Validate the
+    # SHAPE before iterating (a scalar or single dict would otherwise blow up).
+    if not isinstance(filters, list):
+        return None, "filter must be a list of {column, op} objects"
     if not filters:
         return inner, None
 
     preds: list[str] = []
     tbl = "'" + table.replace(".", " ") + "'"
     for f in filters:
+        if not isinstance(f, dict):
+            return None, f"filter entry is not an object: {f!r}"
         col = f.get("column")
         op = f.get("op")
         tmpl = _OP_TO_DAX.get(op) if op else None

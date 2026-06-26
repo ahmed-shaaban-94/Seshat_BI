@@ -443,6 +443,17 @@ def _run_generate(args) -> int:
     # 4a. --out mode: write to a file with powerbi/ and overwrite guards.
     if args.out:
         out = Path(args.out).resolve()
+        # PRIMARY guard (cwd-INDEPENDENT, defense in depth): refuse if ANY path
+        # component of the resolved target is `powerbi` (case-insensitive). This
+        # catches absolute paths into any powerbi/ tree, `../powerbi`, and nested
+        # cases regardless of the process cwd -- closing the cwd-anchored hole.
+        if "powerbi" in [p.lower() for p in out.parts]:
+            print(
+                f"[refused] --out resolves under powerbi/: {out}",
+                file=sys.stderr,
+            )
+            return 1
+        # SECONDARY guard (cwd-relative, cheap): the live model under THIS cwd.
         powerbi = (Path.cwd() / "powerbi").resolve()
         if out == powerbi or powerbi in out.parents:
             print(
@@ -452,6 +463,13 @@ def _run_generate(args) -> int:
             return 1
         if out.exists():
             print(f"[refused] --out file already exists: {out}", file=sys.stderr)
+            return 1
+        # M3: do NOT silently create parent dirs -- refuse cleanly if absent.
+        if not out.parent.exists():
+            print(
+                f"[refused] --out parent directory does not exist: {out.parent}",
+                file=sys.stderr,
+            )
             return 1
         out.write_text(result.tmdl_block, encoding="utf-8")
         return 0

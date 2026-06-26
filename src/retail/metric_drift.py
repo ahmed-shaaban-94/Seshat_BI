@@ -227,8 +227,14 @@ def _contract_filters(side: dict[str, Any]) -> frozenset[Filter] | None:
     raw = side.get("filter", [])
     if raw is None:
         raw = []
+    # Fail-closed: a malformed `filter` escalates (None), never raises. A non-list
+    # or a non-dict element is unrecognized shape -> escalate to a human.
+    if not isinstance(raw, list):
+        return None
     out: set[Filter] = set()
     for f in raw:
+        if not isinstance(f, dict):
+            return None
         col = f.get("column")
         op = f.get("op")
         if not col or op not in ("is_not_null", "is_true"):

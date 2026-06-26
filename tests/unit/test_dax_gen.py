@@ -150,6 +150,64 @@ def test_emit_base_unknown_filter_op_refuses():
     assert "op" in reason or "filter" in reason
 
 
+def test_emit_base_filter_scalar_refuses_not_raises() -> None:
+    # I1: a scalar `filter` is a malformed contract -> refuse, NEVER raise.
+    dax, reason = _emit_base(
+        {
+            "kind": "base",
+            "aggregation": "count_rows",
+            "source": {"table": "gold.t"},
+            "filter": "discount_applied",
+        }
+    )
+    assert dax is None
+    assert "filter must be a list" in reason
+
+
+def test_emit_base_filter_single_dict_refuses_not_raises() -> None:
+    # I1: a single dict (not a list of dicts) is malformed -> refuse, NEVER raise.
+    dax, reason = _emit_base(
+        {
+            "kind": "base",
+            "aggregation": "count_rows",
+            "source": {"table": "gold.t"},
+            "filter": {"column": "c", "op": "is_true"},
+        }
+    )
+    assert dax is None
+    assert "filter must be a list" in reason
+
+
+def test_emit_base_filter_element_not_object_refuses() -> None:
+    # I1: a list whose element is not a dict is malformed -> refuse, NEVER raise.
+    dax, reason = _emit_base(
+        {
+            "kind": "base",
+            "aggregation": "count_rows",
+            "source": {"table": "gold.t"},
+            "filter": ["discount_applied"],
+        }
+    )
+    assert dax is None
+    assert "not an object" in reason
+
+
+def test_generate_measure_malformed_filter_returns_refusal_not_raise() -> None:
+    # I1 at the engine boundary: a malformed-filter base contract is a fail-closed
+    # refusal (ok=False, dax/tmdl None), not an exception.
+    r = generate_measure(
+        {
+            "kind": "base",
+            "aggregation": "count_rows",
+            "source": {"table": "gold.t"},
+            "filter": "discount_applied",
+        },
+        name="X",
+    )
+    assert r.ok is False
+    assert r.dax is None and r.tmdl_block is None
+
+
 BASE_REVENUE = {
     "kind": "base",
     "aggregation": "sum",
@@ -289,7 +347,7 @@ CONTRACTS = Path(__file__).parent.parent / "fixtures" / "contracts"
 _WORKTREE_SRC = str(Path(__file__).parent.parent.parent / "src")
 
 
-def _run_cli(*argv: str) -> subprocess.CompletedProcess[str]:
+def _run_cli(*argv: str, cwd: str | None = None) -> subprocess.CompletedProcess[str]:
     import os
 
     env = os.environ.copy()
@@ -299,6 +357,7 @@ def _run_cli(*argv: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         env=env,
+        cwd=cwd,
     )
 
 
@@ -327,28 +386,85 @@ def test_cli_generate_json_format() -> None:
     assert obj["ok"] is True and obj["dax"].startswith("DIVIDE(")
 
 
-def test_cli_out_refuses_powerbi_path() -> None:
-    # an --out resolving under powerbi/ is refused (resolved-path check)
+_REPO_ROOT = Path(__file__).parents[2]
+
+
+def test_cli_out_refuses_powerbi_path(tmp_path: Path) -> None:
+    # an --out whose resolved path has a `powerbi` component is refused.
+    # Run from a tmp cwd so the component guard -- not a cwd-relative accident --
+    # is what fires; assert the REFUSAL line, not just the word "powerbi".
     target = "powerbi/Model.SemanticModel/x.tmdl"
     r = _run_cli(
-        "generate", "--contract", str(CONTRACTS / "base_revenue.yaml"), "--out", target
+        "generate",
+        "--contract",
+        str(CONTRACTS / "base_revenue.yaml"),
+        "--out",
+        target,
+        cwd=str(tmp_path),
     )
     assert r.returncode == 1
-    assert "powerbi" in r.stderr.lower()
+    assert "refused" in r.stderr.lower()
     assert r.stdout.strip() == ""
+    assert not (tmp_path / target).exists()
 
 
-def test_cli_out_refuses_traversal_into_powerbi() -> None:
+def test_cli_out_refuses_traversal_into_powerbi(tmp_path: Path) -> None:
+    # `../powerbi/...` resolves to a path with a `powerbi` component -> refused.
     r = _run_cli(
         "generate",
         "--contract",
         str(CONTRACTS / "base_revenue.yaml"),
         "--out",
         "../powerbi/sneak.tmdl",
+        cwd=str(tmp_path),
     )
     assert r.returncode == 1
-    assert "powerbi" in r.stderr.lower()
+    assert "refused" in r.stderr.lower()
     assert r.stdout.strip() == ""
+    assert not (tmp_path.parent / "powerbi" / "sneak.tmdl").exists()
+
+
+def test_cli_out_refuses_absolute_into_powerbi(tmp_path: Path) -> None:
+    # REGRESSION TEST FOR C1: an ABSOLUTE --out into the REAL repo's powerbi/
+    # tree, run from a DIFFERENT cwd, must be refused -- never written.
+    # Pre-fix (cwd-anchored guard) this BYPASSED the guard and wrote into the
+    # model; post-fix the cwd-independent component guard refuses it.
+    sneak = (
+        _REPO_ROOT
+        / "powerbi"
+        / "Model.SemanticModel"
+        / "definition"
+        / "tables"
+        / "SNEAK.tmdl"
+    )
+    r = _run_cli(
+        "generate",
+        "--contract",
+        str(CONTRACTS / "base_revenue.yaml"),
+        "--out",
+        str(sneak),
+        cwd=str(tmp_path),
+    )
+    assert r.returncode == 1
+    assert "refused" in r.stderr.lower()
+    assert r.stdout.strip() == ""
+    assert not sneak.exists()  # the model must be untouched
+
+
+def test_cli_out_refuses_nonexistent_parent_dir(tmp_path: Path) -> None:
+    # M3: --out does NOT silently create parent dirs -- refuse cleanly (no traceback).
+    out = tmp_path / "does_not_exist" / "m.tmdl"
+    r = _run_cli(
+        "generate",
+        "--contract",
+        str(CONTRACTS / "base_revenue.yaml"),
+        "--out",
+        str(out),
+    )
+    assert r.returncode == 1
+    assert "refused" in r.stderr.lower()
+    assert r.stdout.strip() == ""
+    assert not out.exists()
 
 
 def test_cli_out_writes_then_refuses_overwrite(tmp_path: Path) -> None:

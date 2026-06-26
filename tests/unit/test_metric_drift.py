@@ -413,6 +413,34 @@ def test_base_escalate_unknown_predicate() -> None:
     assert check_measure_drift(bad, DEF_BASE_DISC_TXN).status == "escalate"
 
 
+# --- I1: a malformed `filter` is a fail-closed ESCALATE, never a raise --------
+
+
+def test_base_malformed_filter_scalar_escalates() -> None:
+    # A scalar `filter` is unrecognized shape -> _contract_filters returns None
+    # -> escalate (fail-closed). It must NOT raise.
+    malformed = {
+        "kind": "base",
+        "aggregation": "count_rows",
+        "source": {"table": "gold.fct_sales_rss"},
+        "filter": "discount_applied",
+    }
+    assert check_measure_drift(DAX_BASE_DISC_TXN, malformed).status == "escalate"
+
+
+def test_ratio_malformed_denominator_filter_escalates() -> None:
+    # A ratio whose denominator `filter` is a single dict (not a list) is
+    # malformed -> escalate (fail-closed). It must NOT raise.
+    malformed = {
+        "kind": "ratio",
+        "denominator": {
+            "aggregation": "count_rows",
+            "filter": {"column": "discount_applied", "op": "is_not_null"},
+        },
+    }
+    assert check_measure_drift(DAX_DISCOUNTED, malformed).status == "escalate"
+
+
 # --- ZERO-REGRESSION: kind-absent path is byte-identical + sole new reader ---
 def test_kind_absent_ratio_path_unchanged() -> None:
     # the existing committed ratio still passes exactly as before
