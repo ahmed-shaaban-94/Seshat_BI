@@ -4,13 +4,22 @@
 > task, open only the files it names, then end on a metric contract, generated
 > DAX shape, analyzer verdict, model-review checklist, or blocked verdict. Do not
 > read the whole DAX base.
+>
+> **Boundary — metric meaning lives upstream.** The *business meaning* of a KPI
+> (definition, additivity, grain, required fields, ambiguity, owner rulings) is
+> owned by `skills/retail-kpi-knowledge/`, not here. This layer *implements* a
+> ready business contract: it validates the contract's model prerequisites and
+> generates/reviews the measure. If a "define a KPI" request arrives with no
+> upstream business contract, **stop and route to `skills/retail-kpi-knowledge/`**;
+> do not invent the KPI's meaning in DAX. Row 2 below assumes the business contract
+> already exists and now needs DAX-side validation / a measure.
 
 ## Route by task
 
 | I need to... | Open only these | End on |
 |---|---|---|
 | **1. Ground a model before DAX** | `references/retail-schema.md`, `knowledge/dax-core-concepts.md` | mapped model roles / known missing model metadata |
-| **2. Define a metric contract** | `patterns/metric-contract-patterns.json`, `knowledge/dax-core-concepts.md`, `checklists/metric-contract-checklist.md` | metric contract (grain, additivity, filter behavior, validation notes) via `checklists/metric-contract-checklist.md` |
+| **2. Validate a ready business contract for DAX (model features, filter behavior)** — *business meaning is defined upstream in `skills/retail-kpi-knowledge/`* | `patterns/metric-contract-patterns.json`, `knowledge/dax-core-concepts.md`, `checklists/metric-contract-checklist.md` | DAX-side contract validation (model features, filter behavior, validation notes) via `checklists/metric-contract-checklist.md`; if no upstream business contract exists, route back to `retail-kpi-knowledge` |
 | **3. Write a basic measure** | `patterns/metric-contract-patterns.json`, `patterns/dax-patterns.json`, `knowledge/dax-best-practices.md` | generated measure + contract assumptions |
 | **4. Write time intelligence** | `patterns/dax-patterns.json`, `knowledge/dax-core-concepts.md`, `knowledge/dax-retail-examples.md` | measure shape + date-table/model prerequisites |
 | **5. Write ranking / segmentation / ABC** | `patterns/dax-patterns.json`, `knowledge/dax-retail-examples.md` | generated DAX shape + required model assumptions |
@@ -32,7 +41,7 @@
 | Ranking changes unexpectedly | Write ranking / segmentation / ABC (row 5) |
 | DISTINCTCOUNT too high/low | Ground a model before DAX (row 1) + review existing DAX (row 6) |
 | Measure slow | Tune DAX performance (row 9) |
-| Visual KPI requested but no metric definition exists | Define a metric contract (row 2) |
+| Visual KPI requested but no metric definition exists | Define the business meaning first in `skills/retail-kpi-knowledge/` (then return for row 2) |
 | Date intelligence requested but no date table confirmed | Check semantic model prerequisites (row 8) |
 
 ## DAX stop rules
