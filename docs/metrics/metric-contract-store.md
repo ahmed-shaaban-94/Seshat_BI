@@ -150,6 +150,7 @@ gates -- it only supplies the artifact Stage 5 was waiting for.
 
 - The atomic template: `../../templates/metric-contract.yaml`
 - The pack template + example: `../../templates/kpi-pack.yaml`
+- The generic KPI menu to copy from: `retail-kpi-catalog.md`
 - The stage that reads contracts: `../readiness/semantic-model-ready.md`
 - Status + evidence + blockers vocabulary: `../readiness/readiness-model.md`
 - The four-status template idiom: `../../templates/readiness-status.yaml`
