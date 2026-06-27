@@ -331,6 +331,9 @@ Palette: `deep_navy #001E35` | `rich_gold #C69214` | `teal #0B9A9A` | `ivory #F7
 - Glossary (terms, abbreviations, rule ids): [`docs/glossary.md`](docs/glossary.md).
 - Contributing (setup, local checks, PR flow): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - FAQ (common questions, with sources): [`docs/faq.md`](docs/faq.md).
+- Release notes: [`RELEASE_NOTES.md`](RELEASE_NOTES.md) -- and the v0.1 snapshot [`docs/releases/v0.1.md`](docs/releases/v0.1.md).
+- Local verification (mirrors CI intent): [`docs/quality/local-verification.md`](docs/quality/local-verification.md).
+- Guided demo (second worked example): [`docs/demo/retail-store-sales-demo.md`](docs/demo/retail-store-sales-demo.md).
 - Before a PR, `retail check` must pass and committed text must be ASCII / UTF-8
   without BOM.
 - License: Apache-2.0 (see [LICENSE](LICENSE)).
