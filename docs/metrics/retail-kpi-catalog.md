@@ -54,7 +54,7 @@ never a check, never an approval.
 
 | Metric | Intent | Additive? | Typical gold binding |
 |--------|--------|-----------|----------------------|
-| `ActiveCustomerCount` | number of distinct customers with a transaction in the filter | additive (count) | `dim_customer` key |
+| `ActiveCustomerCount` | number of distinct customers with a transaction in the filter | non-additive (distinct count, recomputed at the filter grain) | `dim_customer` key |
 | `SalesPerCustomer` | `TotalSales / ActiveCustomerCount` | non-additive | derived |
 | `RepeatPurchaseRate` **[owner ruling]** | share of customers with more than one transaction | non-additive | needs durable customer identity; **PII publish-safety ruling required** |
 | `NewVsReturningSales` **[owner ruling]** | sales split by first-ever vs repeat customer | additive within split | needs a first-purchase definition (owner-supplied) |
