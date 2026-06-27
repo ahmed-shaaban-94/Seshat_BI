@@ -23,6 +23,7 @@ target deferred · resolve **[planned]** routes by returning a planned/deferred 
 | Prepare Python handoff (single-node source-prep) | relevant `contracts/*.md` + `references/source-field-requirements.md` | handoff note to Python (required fields + dtype/quality assumptions — not Python code) |
 | Prepare Big-data handoff (distributed / at-scale aggregation & reconciliation) | relevant `contracts/*.md` + `references/source-field-requirements.md` | handoff note to Big-data (required fields, grain + additivity for distributed aggregation, scale reconciliation checks — not job code; only when too large for single-node) |
 | Confirm required source fields | `references/source-field-requirements.md` | metric-contract-review-checklist |
+| Assess which KPIs a source table can support | `references/kpi-coverage-scorecard-template.md` + `references/source-field-requirements.md` | per-table coverage scorecard (statuses + named blockers, never a score; grants no readiness) |
 
 ## 2. Symptom routes
 
