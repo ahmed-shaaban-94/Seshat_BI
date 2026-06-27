@@ -47,17 +47,28 @@ The canonical blank is `references/metric-contract-template.md`.
 - **Needs business definition** — a required policy (VAT, returns, cost method,
   same-store, snapshot date) is unresolved; the KPI is blocked until the owner decides.
 
-## Handoff to DAX
+## Handoff to implementation (SQL / DAX / Python)
 
-A completed contract hands off to the DAX/semantic layer with:
+A contract does not feed only DAX. The same governed contract hands off to **all three**
+implementation layers, each consuming the slice it owns. This layer provides the meaning;
+it never writes the code.
 
-- the business-terms formula (never DAX code from this layer),
-- the required fact/dimension fields and which are assumptions,
-- the grain and additivity call (so the measure aggregates correctly),
-- filter/exclusion rules (so filter context is built right),
+| Receiving layer | Slice of the contract it consumes | What it owns (this layer never does) |
+|---|---|---|
+| **SQL knowledge** (`skills/bi-sql-knowledge/`) | required fields, grain, filters/exclusions, validation/reconciliation checks | the physical source binding, silver/gold transform logic, reconciliation queries |
+| **DAX knowledge** (`skills/bi-dax-knowledge/`) | business-terms formula, additivity call, filter/exclusion rules, recommended dimensions | the measure, filter context, relationships, semantic-model prerequisites |
+| **Python knowledge** (`skills/bi-python-knowledge/`) | required fields + their dtypes/quality assumptions, grain for any pre-aggregation | dataframe source-prep, cleaning/standardization, dtype decisions |
+
+Every handoff carries the same core payload:
+
+- the business-terms formula (never DAX/SQL/Python code from this layer),
+- the required fields and which are confirmed / assumption / derived,
+- the grain and additivity call (so each layer aggregates / models correctly),
+- filter/exclusion rules,
 - known ambiguities still open (so they are not silently coded around).
 
-The DAX layer owns the actual measure, filter context, and relationships. This layer
-owns only the contract. A contract that fails the metric-contract-review-checklist is
-**not** ready for handoff, and no contract grants dashboard-readiness — that is the
-Readiness layer's decision.
+The implementation layers own the code; this layer owns only the contract. The SQL layer
+in particular owns the **logical → physical field binding** (see `references/source-map.md`);
+this layer references logical fields only. A contract that fails the
+metric-contract-review-checklist is **not** ready for handoff, and no contract grants
+dashboard-readiness — that is the Readiness layer's decision.

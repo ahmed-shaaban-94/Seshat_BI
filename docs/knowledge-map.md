@@ -28,7 +28,7 @@ ONLY the file(s) that `INDEX.md` names — never the whole knowledge base.
 | 9. SQL anti-pattern review | SQL | `skills/bi-sql-knowledge/INDEX.md` | analyzer-style SQL verdict |
 | 10. DAX measure generation | DAX | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | generated measure + contract assumptions |
 | 11. DAX measure review | DAX | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | analyzer-style DAX verdict |
-| 12. Metric contract definition (business meaning) | Retail KPI | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | `skills/retail-kpi-knowledge/checklists/metric-contract-review-checklist.md` (+ DAX handoff note) |
+| 12. Metric contract definition (business meaning) | Retail KPI | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | `skills/retail-kpi-knowledge/checklists/metric-contract-review-checklist.md` (+ implementation handoff note to SQL / DAX / Python) |
 | 12a. KPI additivity / grain / ambiguity | Retail KPI | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric-contract-review / metric-ambiguity checklist verdict |
 | 12b. KPI-pack selection (MVP / first dashboard) | Retail KPI | `skills/retail-kpi-knowledge/INDEX.md` | `skills/retail-kpi-knowledge/checklists/kpi-pack-review-checklist.md` |
 | 12c. Measure generation / semantic-model prerequisites for a *ready* business contract | DAX | `skills/bi-dax-knowledge/INDEX.md` | generated/reviewed measure + model prerequisites |
@@ -87,9 +87,10 @@ Power BI execution: route to `docs/roadmap/roadmap.md` and treat as gated **F016
 - **Readiness** owns stage and gating.
 - **Retail KPI knowledge** owns the *business meaning* of a KPI: definition, additivity,
   grain, required fields, ambiguity resolution, owner rulings, and KPI-pack selection.
-  It produces a governed metric contract and a DAX handoff note; it never writes DAX/SQL/
-  Python, grants readiness, or designs dashboards. Initial seed (10 live contracts);
-  planned KPIs stay deferred.
+  It produces a governed metric contract and hands off to **all three** implementation
+  layers — SQL (fields/grain/transform/reconciliation), DAX (the measure), Python
+  (source-prep of the required fields). It never writes DAX/SQL/Python, grants readiness,
+  or designs dashboards. Initial seed (10 live contracts); planned KPIs stay deferred.
 - **SQL knowledge** owns SQL correctness and reconciliation reasoning.
 - **DAX knowledge** owns measures, DAX review, and DAX model prerequisites — it
   *implements* a ready business contract from Retail KPI knowledge; it does not define or

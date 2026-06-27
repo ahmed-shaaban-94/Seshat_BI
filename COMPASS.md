@@ -43,7 +43,7 @@ Stages:
 | Source profiling | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source profile |
 | Source mapping / grain / PII / unresolved questions | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source map + unresolved questions |
 | SQL validation / SQL reconciliation / transformation logic | `skills/bi-sql-knowledge/SKILL.md` then `skills/bi-sql-knowledge/INDEX.md` | SQL validation / reconciliation checklist |
-| KPI business meaning / metric-contract definition / additivity / grain / ambiguity / KPI-pack selection | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric contract (business meaning) + DAX handoff note |
+| KPI business meaning / metric-contract definition / additivity / grain / ambiguity / KPI-pack selection | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric contract (business meaning) + implementation handoff note (SQL / DAX / Python) |
 | DAX / measure generation / measure review / semantic-model prerequisites (after the business contract is ready) | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | generated/reviewed measure + semantic-model handoff |
 | Python / pandas / dataframe source-prep reasoning, cleaning, aggregation-grain review | `skills/bi-python-knowledge/SKILL.md` then `skills/bi-python-knowledge/INDEX.md` | cleaning / aggregation-grain review artifact (planned routes deferred) |
 | Dashboard / visual design / audience / layout | `.claude/skills/powerbi-dashboard-design/` (gated "design from contracts" verb: `.claude/skills/dashboard-design/`) | dashboard blueprint |
@@ -61,7 +61,7 @@ they never run a query, run DAX, run Python, or touch a database.
 
 | Skill | Foundation concept | Use for |
 |---|---|---|
-| `skills/retail-kpi-knowledge/` | **business KPI meaning** + metric contracts | defining a KPI in business terms, additivity/grain classification, ambiguity resolution (gross vs net, VAT, returns, cost method, same-store), required-field lists, KPI-pack selection, DAX handoff prep (*initial seed*) |
+| `skills/retail-kpi-knowledge/` | **business KPI meaning** + metric contracts | defining a KPI in business terms, additivity/grain classification, ambiguity resolution (gross vs net, VAT, returns, cost method, same-store), required-field lists, KPI-pack selection, implementation handoff prep for SQL / DAX / Python (*initial seed*) |
 | `skills/bi-sql-knowledge/` | **table grain** + aggregation correctness | source profiling, grain/keys/uniqueness, joins & fan-out, COUNT/NULL semantics, dedup, validation & reconciliation queries, silver/gold transform logic, SQL anti-patterns |
 | `skills/bi-dax-knowledge/` | **filter context** + context transition | measure generation/review, time-intelligence, ranking/segmentation, semantic-model prerequisites, DAX performance (implements a business contract from `retail-kpi-knowledge`) |
 | `skills/bi-python-knowledge/` | **dataframe grain** + source-prep reasoning | pandas/dataframe source-prep reasoning, cleaning/standardization review, aggregation-grain review, Python BI analyzer candidates, reasoning training/eval seed (*initial seed*) |
@@ -97,8 +97,10 @@ same-store), or choosing an MVP KPI pack. Route through
 `kpi-pack-review-checklist` verdict.
 
 This is the **first stop** for metric-contract definition. A completed business
-contract then hands off to `skills/bi-dax-knowledge/` for the measure and
-semantic-model prerequisites — the DAX layer implements meaning, it does not
+contract then hands off to **whichever layer implements its slice** — `skills/bi-sql-knowledge/`
+for required fields, grain, transform and reconciliation; `skills/bi-dax-knowledge/` for the
+measure and semantic-model prerequisites; `skills/bi-python-knowledge/` for source-prep
+(dtypes/cleaning of the required fields). Those layers implement meaning, they do not
 redefine it. Treat this layer as an **initial seed**: 10 live metric contracts; the
 KPIs named in `patterns/metric-contract-candidates.json` are planned/deferred and
 their routes return a planned note, never a fabricated contract.

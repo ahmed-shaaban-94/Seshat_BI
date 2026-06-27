@@ -7,6 +7,14 @@ the named artifact. Do not pre-load the whole `knowledge/` directory.
 > this PR. Everything under **Planned routes** is **not yet implemented** — do not
 > open those files; they do not exist yet. When a planned slice lands, its route
 > moves up into the live tables.
+>
+> **Boundary — KPI meaning lives upstream.** A KPI's *business meaning* (definition,
+> additivity, required fields, grain intent, ambiguity, owner rulings) is owned by
+> `skills/retail-kpi-knowledge/`. This layer owns dataframe source-prep: cleaning,
+> dtype/quality reasoning, and aggregation grain. A KPI contract hands its required
+> fields + dtype/quality assumptions here for source-prep. If a request is really "what
+> does this KPI mean", route to `skills/retail-kpi-knowledge/` first — do not infer the
+> KPI's meaning from column names in Python.
 
 ---
 

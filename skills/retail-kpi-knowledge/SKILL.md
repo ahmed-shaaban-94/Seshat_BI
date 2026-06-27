@@ -39,7 +39,8 @@ The agent needs to:
 - decide whether a KPI is safe for dashboard use
 - choose an MVP KPI pack for a first dashboard
 - detect ambiguous or dangerous KPI meaning (gross vs net, VAT, returns, cost method)
-- prepare a handoff to the DAX / semantic model layer
+- prepare a handoff to an implementation layer (SQL for fields/grain/transform, DAX for
+  the measure, Python for source-prep)
 
 ## Do not use when
 
@@ -62,7 +63,8 @@ SKILL.md  ->  INDEX.md  ->  relevant knowledge / contract / pack file(s)  ->  me
 2. Go to `INDEX.md` and pick the matching task / symptom / domain / pack route.
 3. Open only the file(s) that route names.
 4. End on a deliverable: a completed metric contract, a checklist result, a verdict,
-   or a DAX handoff note. Never end inside raw knowledge.
+   or an implementation handoff note (to SQL, DAX, or Python). Never end inside raw
+   knowledge.
 
 ## Boundaries
 

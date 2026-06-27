@@ -18,7 +18,9 @@ target deferred · resolve **[planned]** routes by returning a planned/deferred 
 | Decide if a KPI can be summed | `knowledge/kpi-additivity-and-grain.md` | metric-contract-review-checklist |
 | Resolve VAT / returns / cost ambiguity | `knowledge/kpi-ambiguities.md` | metric-ambiguity-checklist |
 | Write a brand-new KPI contract | `references/metric-contract-template.md` | metric-contract-review-checklist |
-| Prepare DAX handoff | relevant `contracts/*.md` + `references/metric-contract-template.md` | handoff note to DAX (not DAX code) |
+| Prepare DAX handoff (measure) | relevant `contracts/*.md` + `references/metric-contract-template.md` | handoff note to DAX (formula, additivity, filters — not DAX code) |
+| Prepare SQL handoff (required fields, grain, transform, reconciliation) | relevant `contracts/*.md` + `references/source-field-requirements.md` | handoff note to SQL (fields, grain, exclusions, validation — not SQL code) |
+| Prepare Python handoff (source-prep) | relevant `contracts/*.md` + `references/source-field-requirements.md` | handoff note to Python (required fields + dtype/quality assumptions — not Python code) |
 | Confirm required source fields | `references/source-field-requirements.md` | metric-contract-review-checklist |
 
 ## 2. Symptom routes
