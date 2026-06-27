@@ -48,8 +48,8 @@ absorbed all four without a C086-specific rule firing.
 canonical reference; for the contracts → model → dashboard → handoff second half, this
 doc is the reference.
 
-> **Namespace note.** "RC1–RC16" are the **ADR 0002 cleaning defaults** (`docs/decisions/
-> 0002-retail-cleaning-defaults.md`). The static governance checker uses a separate
+> **Namespace note.** "RC1–RC16" are the **ADR 0002 cleaning defaults**
+> (`docs/decisions/0002-retail-cleaning-defaults.md`). The static governance checker uses a separate
 > `S*`/`D*`/`C*`/`G*`/`R*` rule namespace (in `src/retail/rules/`). A cleaning default
 > reads `RC<n>`; a checker rule reads e.g. `S8`. The two do not collide (feature 002).
 
@@ -204,7 +204,8 @@ here*: contracts and the governed model exist and bind before any design. F009 (
 store) + F010 (semantic-model readiness) + the `metric_drift` machine-readable
 definition that ties a contract's numerator/denominator to the DAX.
 
-**Evidence.** the 5 `metrics/*.yaml`; `powerbi/RetailStoreSales.SemanticModel` (TMDL);
+**Evidence.** the 5 `mappings/retail_store_sales/metrics/*.yaml`;
+`powerbi/RetailStoreSales.SemanticModel` (TMDL);
 `readiness-status.yaml` `semantic_model_ready` + the `approvals[]` entry (data_owner,
 2026-06-25).
 
@@ -229,9 +230,9 @@ design review was **APPROVED by the data owner** (binding-map sign-off block).
 **authoring only** — no publish, no Power BI Desktop, no DB, no execution adapter
 (that is the deferred, gated F016).
 
-**Evidence.** `design/dashboard-layout.md`, `design/visual-list.md`,
-`design/visual-contract-binding-map.md`; `readiness-status.yaml` `dashboard_ready` +
-`approvals[]` (data_owner, 2026-06-25).
+**Evidence.** `mappings/retail_store_sales/design/` (`dashboard-layout.md`,
+`visual-list.md`, `visual-contract-binding-map.md`); `readiness-status.yaml`
+`dashboard_ready` + `approvals[]` (data_owner, 2026-06-25).
 
 **Future tables — copy / watch.** *Copy:* one business question per page region; every
 measure-bearing visual binds to one contract; keep detail cross-tabs to a single
@@ -261,7 +262,7 @@ agent records the `warning` and the `next_action` — it does **not** advance th
 
 **Evidence.** `readiness-status.yaml` `publish_ready` (`status: warning`, the
 `blocking_reasons[]` explaining the retraction, and the `approvals[]` note recording the
-retracted approval); `metrics/DiscountedTransactionRate.yaml` (the corrected
+retracted approval); `mappings/retail_store_sales/metrics/DiscountedTransactionRate.yaml` (the corrected
 formula_intent + the `expected_value` 0.5037 the `retail value-check` L4 proxy asserts).
 
 **Future tables — copy / watch.** *Copy:* when a contract changes, walk *forward* and

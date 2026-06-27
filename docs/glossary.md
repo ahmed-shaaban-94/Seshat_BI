@@ -5,8 +5,8 @@ Each entry is one line; follow the linked source for the authoritative detail. E
 are grouped, then alphabetical within a group.
 
 > **Authoritative sources** (this page summarizes, it does not replace them): the spine
-> — `docs/readiness/readiness-model.md`; the cleaning defaults — `docs/decisions/
-> 0002-retail-cleaning-defaults.md`; the static rules — `src/retail/rules/` (live
+> — `docs/readiness/readiness-model.md`; the cleaning defaults —
+> `docs/decisions/0002-retail-cleaning-defaults.md`; the static rules — `src/retail/rules/` (live
 > registry) and the `retail-govern` skill (id → fix); the method —
 > `docs/medallion-playbook.md`.
 
