@@ -328,6 +328,7 @@ Palette: `deep_navy #001E35` | `rich_gold #C69214` | `teal #0B9A9A` | `ivory #F7
   **scope-free** -- no `docs(018):` parentheses (governance rule P2). An automated
   `[bot] ...` subject prefix is exempt.
 - Conventions: [`docs/conventions.md`](docs/conventions.md).
+- Glossary (terms, abbreviations, rule ids): [`docs/glossary.md`](docs/glossary.md).
 - Before a PR, `retail check` must pass and committed text must be ASCII / UTF-8
   without BOM.
 - License: Apache-2.0 (see [LICENSE](LICENSE)).
