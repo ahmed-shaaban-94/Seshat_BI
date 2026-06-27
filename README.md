@@ -330,6 +330,7 @@ Palette: `deep_navy #001E35` | `rich_gold #C69214` | `teal #0B9A9A` | `ivory #F7
 - Conventions: [`docs/conventions.md`](docs/conventions.md).
 - Glossary (terms, abbreviations, rule ids): [`docs/glossary.md`](docs/glossary.md).
 - Contributing (setup, local checks, PR flow): [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- FAQ (common questions, with sources): [`docs/faq.md`](docs/faq.md).
 - Before a PR, `retail check` must pass and committed text must be ASCII / UTF-8
   without BOM.
 - License: Apache-2.0 (see [LICENSE](LICENSE)).
