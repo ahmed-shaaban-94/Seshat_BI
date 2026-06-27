@@ -82,7 +82,7 @@ is the foundation that already ships; D is the new primary surface this kit is n
                                  v
   A  GOVERNANCE CORE         +-- STATIC surface --------+-- LIVE surface --------+  <- FOUNDATION
      (the enforced gate --   | retail check             | retail validate        |    (already on main)
-      THE SHIPPED UNIT)      | 31 rules over committed  | wraps a live DB/Desktop |
+      THE SHIPPED UNIT)      | 33 rules over committed  | wraps a live DB/Desktop |
                              | TMDL / PBIR / SQL / git   | for PK/coverage/recon  |
                              | stdlib-only, CI-able      | [BUILT; live run later] |
                              +-----------+--------------+------------------------+
@@ -164,7 +164,7 @@ static-vs-live taxonomy already established in the worked example (Sec 7/Sec 8) 
 governance spec (Sec 4):
 
 - **STATIC validators** -- checkable from committed text alone, CI-able, the powerful
-  core that already exists as `retail check` (31 rules). The statically-checkable ADR
+  core that already exists as `retail check` (33 rules). The statically-checkable ADR
   defaults are now wired in (feature 003, after the namespace collision was resolved):
   **S5** enforces RC7 type discipline, **S6** enforces RC14 star-structure (`-1` member),
   **S7** enforces RC15 (`generate_series` date-dim). Each is a SQL-family rule that cites
