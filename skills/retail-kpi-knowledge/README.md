@@ -53,8 +53,8 @@ Live (seeded) metric contracts:
 10. Gross Margin % — `contracts/gross-margin-percent.md`
 
 Also seeded: router/shell files, five knowledge concept files, eleven domain
-overviews, seven KPI packs, three review checklists, five reference files, and three
-pattern JSON files.
+overviews, seven KPI packs, three review checklists, six reference files (incl. the
+KPI coverage scorecard template), and three pattern JSON files.
 
 ## Planned / deferred coverage
 
