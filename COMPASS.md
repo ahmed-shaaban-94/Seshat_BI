@@ -43,7 +43,7 @@ Stages:
 | Source profiling | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source profile |
 | Source mapping / grain / PII / unresolved questions | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source map + unresolved questions |
 | SQL validation / SQL reconciliation / transformation logic | `skills/bi-sql-knowledge/SKILL.md` then `skills/bi-sql-knowledge/INDEX.md` | SQL validation / reconciliation checklist |
-| KPI business meaning / metric-contract definition / additivity / grain / ambiguity / KPI-pack selection | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric contract (business meaning) + implementation handoff note (SQL / DAX / Python) |
+| KPI business meaning / metric-contract definition / additivity / grain / ambiguity / KPI-pack selection | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric contract (business meaning) + implementation handoff note (SQL / DAX / Python / Big-data) |
 | DAX / measure generation / measure review / semantic-model prerequisites (after the business contract is ready) | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | generated/reviewed measure + semantic-model handoff |
 | Python / pandas / dataframe source-prep reasoning, cleaning, aggregation-grain review (single-node) | `skills/bi-python-knowledge/SKILL.md` then `skills/bi-python-knowledge/INDEX.md` | cleaning / aggregation-grain review artifact (planned routes deferred) |
 | Big-data / distributed / larger-than-memory: engine selection, partitioning/shuffle, skew, distributed joins/aggregation, file formats, incremental, scale validation | `skills/bi-bigdata-knowledge/SKILL.md` then `skills/bi-bigdata-knowledge/INDEX.md` | engine-selection / partitioning / join-skew / pipeline-review / validation checklist or verdict |
@@ -62,7 +62,7 @@ they never run a query, run DAX, run Python, or touch a database.
 
 | Skill | Foundation concept | Use for |
 |---|---|---|
-| `skills/retail-kpi-knowledge/` | **business KPI meaning** + metric contracts | defining a KPI in business terms, additivity/grain classification, ambiguity resolution (gross vs net, VAT, returns, cost method, same-store), required-field lists, KPI-pack selection, implementation handoff prep for SQL / DAX / Python (*initial seed*) |
+| `skills/retail-kpi-knowledge/` | **business KPI meaning** + metric contracts | defining a KPI in business terms, additivity/grain classification, ambiguity resolution (gross vs net, VAT, returns, cost method, same-store), required-field lists, KPI-pack selection, implementation handoff prep for SQL / DAX / Python / Big-data (*initial seed*) |
 | `skills/bi-sql-knowledge/` | **table grain** + aggregation correctness | source profiling, grain/keys/uniqueness, joins & fan-out, COUNT/NULL semantics, dedup, validation & reconciliation queries, silver/gold transform logic, SQL anti-patterns |
 | `skills/bi-dax-knowledge/` | **filter context** + context transition | measure generation/review, time-intelligence, ranking/segmentation, semantic-model prerequisites, DAX performance (implements a business contract from `retail-kpi-knowledge`) |
 | `skills/bi-python-knowledge/` | **dataframe grain** + source-prep reasoning | pandas/dataframe source-prep reasoning, cleaning/standardization review, aggregation-grain review, Python BI analyzer candidates, reasoning training/eval seed (*initial seed*) |

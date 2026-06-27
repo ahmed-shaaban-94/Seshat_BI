@@ -99,7 +99,8 @@ No control totals; success ≠ correctness. *Fix:* distributed control-total par
 
 ### BD-AP-020 — Using big-data tooling to bypass the gate / define metrics
 Self-approving, or encoding metric/semantic logic in the job. *Fix:* hand record to gate;
-metrics belong to DAX (BD-CN-069, `references/cross-layer-map.md`). → BD-AR-020.
+a KPI's *meaning* belongs to `retail-kpi-knowledge` and its *measure* to DAX — never define
+either in a distributed job (BD-CN-069, `references/cross-layer-map.md`). → BD-AR-020.
 
 ---
 

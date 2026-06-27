@@ -49,7 +49,7 @@ named artifact. Do not pre-load the whole `knowledge/` directory.
 | Grain / fan-out / additivity / null semantics (engine-independent) | `references/cross-layer-map.md` → `bi-python-knowledge` |
 | What a KPI *means* (definition, additivity, grain intent, required fields) | `skills/retail-kpi-knowledge/` — implement its ready contract at scale; never invent the meaning here |
 | SQL transformation or SQL reconciliation logic | SQL knowledge layer |
-| Metric definitions / semantic model | DAX knowledge layer |
+| The measure / semantic-model logic for a ready contract | DAX knowledge layer (DAX implements; it does not define the KPI's meaning — that is `retail-kpi-knowledge`) |
 | Whether work may proceed | Readiness layer (gating) |
 
 ---
@@ -68,5 +68,6 @@ references/  schema, IDs, sources/copyright, cross-layer map, research notes, tr
 - If a single route answers the need, do not open a second file "for context".
 - If you cannot name the artifact you will end on, you are not ready to start.
 - If the honest answer is "this fits on one machine", route to `bi-python-knowledge`.
-- If the task is metric definition, semantic logic, or gating — stop; it belongs to
+- If the task is metric *meaning*/definition — stop; it belongs to `retail-kpi-knowledge`.
+  If it is the measure/semantic logic, or gating — stop; it belongs to
   DAX / readiness.

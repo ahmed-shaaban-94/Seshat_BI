@@ -219,7 +219,7 @@
       "severity": "high",
       "domain": "boundary",
       "signal": "Job self-approves, or encodes metric/semantic business logic.",
-      "why": "Readiness owns gating; DAX owns metrics. This layer reasons and hands off.",
+      "why": "Readiness owns gating; retail-kpi owns metric meaning and DAX owns the measure. This layer reasons and hands off.",
       "verdict_prompt": "Is the reconciliation record handed to the gate, with no metric/semantic logic encoded here?",
       "refs": ["BD-CN-069", "PY-CN-070"]
     }

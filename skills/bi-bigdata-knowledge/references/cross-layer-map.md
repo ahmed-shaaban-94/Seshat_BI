@@ -16,12 +16,20 @@ SQL. This layer cites them by their `PY-` IDs and only adds the distributed twis
 | Fan-out (row multiplication) | `PY-CN-046`, `PY-CN-051` | join correctness | fan-out at scale also causes shuffle blow-up, not just wrong sums |
 | Additivity | `PY-CN-053` | what may be summed | partial/tree aggregation must preserve additivity |
 | count vs nunique vs size | `PY-CN-055`, `PY-CN-056` | counting correctness | distinct counts are expensive at scale (approx vs exact) |
-| Null / blank / sentinel semantics | `PY-CN-038`..`044` | data-quality reasoning | same rules; checks run as scalable aggregates |
+| Null / blank / sentinel semantics | `PY-CN-039`, `PY-CN-040`, `PY-CN-043` (others in the `038–044` range planned in the Python seed) | data-quality reasoning | same rules; checks run as scalable aggregates |
 | Reconciliation by control totals | `PY-CN-068` | validation currency | totals computed distributed; sampling supplements |
 | Schema drift | `PY-CN-022` | source stability | handled via table-format schema evolution |
 
 When reasoning about any of the above, do **not** re-derive it here — cite the `PY-` ID and
 move to the distributed concern.
+
+> **Borrowed-ID status (honesty note).** `PY-` IDs are *provenance tags* for the shared
+> single-node spine, not navigation links to open. `bi-python-knowledge` is an **initial
+> seed**, so some cited spine concepts are **not yet authored there** (e.g. parts of the
+> null-semantics range, some key-hygiene and reconciliation concepts). A `PY-` tag with no
+> authored target means **"borrowed from the shared spine, definition planned in the Python
+> seed"** — treat it as the named concept, not as a broken reference, and never fabricate the
+> pandas definition here. As the Python seed fills in, these tags resolve to authored entries.
 
 ## What this layer owns (not in the Python layer)
 
