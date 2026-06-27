@@ -146,6 +146,7 @@ planned but not yet built, see the [Roadmap](#roadmap).)
 | **Companion Modules & Adapters (F025-F030)** | Six docs-first skills: PR readiness reviewer, readiness viewer, approval console, evidence-pack generator, and optional **dbt** / **Dagster** adapters (advisory only -- they never create truth). |
 | **F034 authoring slice** | The trace template, Dashboard Ready evidence item, and the read-only visual-implementation-review workflow (the built page itself stays a human Power BI Desktop action). |
 | **C086 pharmacy worked example** | A complete, filled run of the pipeline -- proof of the pattern, not the universal schema. |
+| **retail_store_sales worked example** | The second example, and the first to traverse the FULL seven-stage spine (to Dashboard Ready, Publish Ready `warning`) -- proves genericity on a different domain (no returns; PII kept; English-only). |
 
 A green static check is necessary but not sufficient: semantic correctness needs
 the live validation boundary when a database is available.
@@ -202,6 +203,7 @@ allowed action:
 3. `docs/readiness/readiness-model.md` -- the seven-stage spine.
 4. `docs/architecture/readiness-pipeline.md` -- how readiness sits on the kit.
 5. `docs/worked-examples/c086-pharmacy.md` -- the first filled example (not the schema).
+6. `docs/worked-examples/retail-store-sales.md` -- the second example; the full spine to Dashboard Ready.
 
 <details>
 <summary><b>Typical agent flow</b></summary>

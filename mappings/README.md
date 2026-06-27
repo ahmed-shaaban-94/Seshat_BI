@@ -29,5 +29,6 @@ mappings/
 
 - **Decision:** [`../docs/decisions/0003-mapping-artifact-location.md`](../docs/decisions/0003-mapping-artifact-location.md) -- why `mappings/<table>/`.
 - **Blanks:** [`../templates/`](../templates/) -- the generic templates to copy.
-- **Filled instance (narrated):** [`../docs/worked-examples/c086-pharmacy.md`](../docs/worked-examples/c086-pharmacy.md) -- what a complete set looks like.
+- **Filled instance (narrated):** [`../docs/worked-examples/c086-pharmacy.md`](../docs/worked-examples/c086-pharmacy.md) -- what a complete set looks like (build half, to Gold).
+- **Full-spine instance (narrated):** [`../docs/worked-examples/retail-store-sales.md`](../docs/worked-examples/retail-store-sales.md) -- the second example, end to end through Dashboard Ready (+ Publish `warning`).
 - **The gate:** [`../docs/architecture/tower-bi-agent-kit.md`](../docs/architecture/tower-bi-agent-kit.md) Sec 5.
