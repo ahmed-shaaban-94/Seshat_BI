@@ -13,6 +13,20 @@ inventory snapshots** — the defining constraint of this domain.
 | GMROI | — | Planned (needs inventory cost snapshots) |
 | On-Hand Qty / On-Hand Cost (base) | — | Planned |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. This whole domain is planned in the seed (it needs an inventory
+snapshot fact), so every question is a deferred note — never a fabricated contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How many times did we sell through our stock? | — | Planned (Inventory Turnover — needs COGS + average inventory cost) |
+| How often is an item out of stock? | — | Planned (needs stock status + assortment list) |
+| How much of received stock has sold? | — | Planned (needs beginning inventory) |
+| What return are we earning on inventory investment? | — | Planned (GMROI — needs inventory cost snapshots) |
+| How much stock (qty / cost) is on hand right now? | — | Planned (On-Hand Qty / Cost) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - A10 Inventory snapshot date — frequency and meaning (on-hand vs on-shelf vs warehouse);

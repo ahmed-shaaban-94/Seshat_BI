@@ -14,6 +14,20 @@ conventions every other domain inherits.
 | Net Sales Growth % | — | Planned |
 | Sales per Square Meter | — | Planned (needs store floor-area field) |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. A question never implies a formula and never invents a contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How much did we sell before any deductions? | `contracts/gross-sales.md` | Seeded |
+| How much did we sell after returns and deductions? | `contracts/net-sales.md` | Seeded |
+| How many units did we sell? | `contracts/quantity-sold.md` | Seeded |
+| What is the average value of a transaction? | `contracts/average-transaction-value.md` | Seeded |
+| How fast is net sales growing vs a prior period? | — | Planned (Net Sales Growth %) |
+| How much do we sell per square meter of floor space? | — | Planned (needs store floor-area field) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - A1 VAT included vs excluded — assume pre-tax unless owner states otherwise.

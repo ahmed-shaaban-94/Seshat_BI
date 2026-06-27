@@ -15,6 +15,22 @@ Branch-level cuts of seeded KPIs (Net Sales, Transactions Count, ATV, Discount R
 Returns Rate %, Gross Margin %) are available now by slicing those contracts on the
 branch key.
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract (sliced on the
+branch key) or an honest planned marker. A question never implies a formula and
+never invents a contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How much does each branch sell? | `contracts/net-sales.md` (sliced by branch key) | Seeded (base) |
+| How do comparable stores grow year on year? | — | Planned (Needs business definition: same-store rule) |
+| How productive is each branch per square meter? | — | Planned (needs floor-area field) |
+| How does each branch compare on ATV? | `contracts/average-transaction-value.md` (sliced by branch key) | Seeded (base) |
+| How does each branch compare on discount rate? | `contracts/discount-rate.md` (sliced by branch key) | Seeded (base) |
+| How does each branch compare on returns rate? | `contracts/returns-rate-value.md` (sliced by branch key) | Seeded (base) |
+| How does each branch compare on gross margin %? | `contracts/gross-margin-percent.md` (sliced by branch key) | Seeded (base) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - A9 Branch name vs branch key — aggregate on the key only.

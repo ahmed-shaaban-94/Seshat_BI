@@ -11,6 +11,17 @@ receipt vs line confusion breaks every metric here.
 | Average Transaction Value | `contracts/average-transaction-value.md` | Seeded |
 | Average Basket Size (Units) | — | Planned |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. A question never implies a formula and never invents a contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How many transactions did we process in the period? | `contracts/transactions-count.md` | Seeded |
+| What does the average customer spend per transaction? | `contracts/average-transaction-value.md` | Seeded |
+| How many units are in a typical basket? | — | Planned (Average Basket Size (Units)) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - Grain: count distinct receipts (`transaction_id`), never transaction lines.

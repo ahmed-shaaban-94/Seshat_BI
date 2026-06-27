@@ -9,6 +9,16 @@ as actuals.
 |-----|----------|--------|
 | Net Sales vs Target % | — | Planned (needs target fact) |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. This domain needs a target/budget fact, so its question is a
+deferred note — never a fabricated contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| Are we hitting our sales target? | — | Planned (Net Sales vs Target % — needs target fact) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - Grain match: compare actuals and targets at the **same** grain; mismatched grain is a

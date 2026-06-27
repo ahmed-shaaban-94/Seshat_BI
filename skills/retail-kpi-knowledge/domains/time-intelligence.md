@@ -10,6 +10,17 @@ with additivity (cumulative measures are semi-additive).
 | YTD Net Sales | — | Planned (reuses Net Sales over fiscal calendar) |
 | Net Sales Growth % (period-over-period) | — | Planned |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. These views need a marked date table + fiscal attributes, so each
+question is a deferred note — never a fabricated contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How are we doing so far this (fiscal) year? | — | Planned (YTD Net Sales — reuses Net Sales over fiscal calendar) |
+| How does this period compare to the last? | — | Planned (Net Sales Growth %, period-over-period) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - Fiscal vs calendar year — use the business's fiscal calendar.

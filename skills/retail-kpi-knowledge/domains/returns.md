@@ -12,6 +12,18 @@ reversals and which date axis is used.
 | Net Sales Impact of Returns | — | Planned |
 | Returns by Reason Code | — | Planned (needs reason-code field) |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. A question never implies a formula and never invents a contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| What share of sales value is returned? | `contracts/returns-rate-value.md` | Seeded |
+| What share of units sold is returned? | — | Planned (Returns Rate % (Units)) |
+| How much do returns reduce net sales? | — | Planned (Net Sales Impact of Returns) |
+| Why are customers returning items? | — | Planned (needs reason-code field) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - A2 Returns as negative sales vs separate fact — prefer separate fact / explicit

@@ -12,6 +12,19 @@ never external business performance.
 | Unknown Member Usage | — | Planned |
 | Daily Row Count vs Historical Average | — | Planned |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract or an honest
+planned marker. These are internal BI-operations questions (never business
+performance); all are deferred notes — never a fabricated contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| How often are key dimensions missing? | — | Planned (Missing Key Dimensions Rate %) |
+| How much data arrived late? | — | Planned (Late Data Arrival Count) |
+| How often is the "Unknown" member used? | — | Planned (Unknown Member Usage) |
+| Is today's row count abnormal vs history? | — | Planned (Daily Row Count vs Historical Average) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - Distinguish allowed nulls (walk-in customer) from genuine data defects.

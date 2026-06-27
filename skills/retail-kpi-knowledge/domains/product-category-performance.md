@@ -13,6 +13,20 @@ pricing decisions.
 | Sell-Through Rate % | — | Planned (needs beginning-inventory field) |
 | GMROI by Category | — | Planned (needs inventory cost snapshots) |
 
+## Decision questions this domain answers
+
+Enter from the business question; each routes to a seeded contract (sliced on the
+product/category key) or an honest planned marker. A question never implies a
+formula and never invents a contract.
+
+| Decision question | Routes to | Status |
+|-------------------|-----------|--------|
+| Which products / categories sell the most? | `contracts/net-sales.md` (sliced by product key) | Seeded (base) |
+| Which products / categories are most profitable? | `contracts/gross-margin-percent.md` (sliced by product/category) | Seeded (base) |
+| Which products are returned most? | — | Planned (Returns Rate % (Units) by Product) |
+| How much of bought stock has sold? | — | Planned (needs beginning-inventory field) |
+| What return on inventory does each category earn? | — | Planned (GMROI — needs inventory cost snapshots) |
+
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
 - A8 Product name vs product key — group on the key; one product → one category path.
