@@ -58,6 +58,10 @@ Supporting references:
 - `COMPASS.md` — the shortest operational entry point.
 - `docs/readiness/readiness-pipeline.md` and `docs/architecture/readiness-pipeline.md`
   — the stage sequence and transitions.
+- `docs/glossary.md` — terms, abbreviations, and the static rule-id families.
+- `docs/faq.md` — common questions, each answer source-cited.
+- `docs/worked-examples/README.md` — the two end-to-end worked examples (index).
+- `docs/metrics/retail-kpi-catalog.md` — the generic retail KPI menu to copy contracts from.
 - Smoke test: `docs/quality/agent-routing-smoke-test.md` — a manual routing/governance check for this layer.
 
 Dashboard design: `.claude/skills/powerbi-dashboard-design/` exists and is the
