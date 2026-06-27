@@ -43,7 +43,8 @@ Stages:
 | Source profiling | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source profile |
 | Source mapping / grain / PII / unresolved questions | `docs/readiness/readiness-model.md` + `docs/knowledge-map.md` | source map + unresolved questions |
 | SQL validation / SQL reconciliation / transformation logic | `skills/bi-sql-knowledge/SKILL.md` then `skills/bi-sql-knowledge/INDEX.md` | SQL validation / reconciliation checklist |
-| DAX / metric contracts / semantic model prerequisites | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | metric contract / semantic model handoff |
+| KPI business meaning / metric-contract definition / additivity / grain / ambiguity / KPI-pack selection | `skills/retail-kpi-knowledge/SKILL.md` then `skills/retail-kpi-knowledge/INDEX.md` | metric contract (business meaning) + implementation handoff note (SQL / DAX / Python) |
+| DAX / measure generation / measure review / semantic-model prerequisites (after the business contract is ready) | `skills/bi-dax-knowledge/SKILL.md` then `skills/bi-dax-knowledge/INDEX.md` | generated/reviewed measure + semantic-model handoff |
 | Python / pandas / dataframe source-prep reasoning, cleaning, aggregation-grain review | `skills/bi-python-knowledge/SKILL.md` then `skills/bi-python-knowledge/INDEX.md` | cleaning / aggregation-grain review artifact (planned routes deferred) |
 | Dashboard / visual design / audience / layout | `.claude/skills/powerbi-dashboard-design/` (gated "design from contracts" verb: `.claude/skills/dashboard-design/`) | dashboard blueprint |
 | Power BI execution / publish | STOP unless `semantic_model_ready` and publish gates have passed | blocked verdict or BI handoff pack |
@@ -60,8 +61,9 @@ they never run a query, run DAX, run Python, or touch a database.
 
 | Skill | Foundation concept | Use for |
 |---|---|---|
+| `skills/retail-kpi-knowledge/` | **business KPI meaning** + metric contracts | defining a KPI in business terms, additivity/grain classification, ambiguity resolution (gross vs net, VAT, returns, cost method, same-store), required-field lists, KPI-pack selection, implementation handoff prep for SQL / DAX / Python (*initial seed*) |
 | `skills/bi-sql-knowledge/` | **table grain** + aggregation correctness | source profiling, grain/keys/uniqueness, joins & fan-out, COUNT/NULL semantics, dedup, validation & reconciliation queries, silver/gold transform logic, SQL anti-patterns |
-| `skills/bi-dax-knowledge/` | **filter context** + context transition | metric contracts, measure generation/review, time-intelligence, ranking/segmentation, semantic-model prerequisites, DAX performance |
+| `skills/bi-dax-knowledge/` | **filter context** + context transition | measure generation/review, time-intelligence, ranking/segmentation, semantic-model prerequisites, DAX performance (implements a business contract from `retail-kpi-knowledge`) |
 | `skills/bi-python-knowledge/` | **dataframe grain** + source-prep reasoning | pandas/dataframe source-prep reasoning, cleaning/standardization review, aggregation-grain review, Python BI analyzer candidates, reasoning training/eval seed (*initial seed*) |
 
 Mandatory flow inside any of these skills: **`SKILL.md` → `INDEX.md` → ONLY the file(s)
@@ -82,6 +84,31 @@ routes remain deferred until implemented.
 
 This layer is reasoning/review only. It does not execute Python, define metrics,
 approve readiness gates, replace SQL/DAX, or own dashboard design.
+
+### Retail KPI knowledge (business meaning — first stop for metric definition)
+
+Use `skills/retail-kpi-knowledge/SKILL.md` whenever the task is *what a retail KPI
+means* rather than *how to implement it*: defining a KPI in business terms,
+classifying additivity (fully / semi / non-additive), declaring grain, listing the
+required source fields, resolving ambiguity (gross vs net, VAT, returns, cost method,
+same-store), or choosing an MVP KPI pack. Route through
+`skills/retail-kpi-knowledge/INDEX.md` and open only the named files; end on a
+`metric-contract-review-checklist` / `metric-ambiguity-checklist` /
+`kpi-pack-review-checklist` verdict.
+
+This is the **first stop** for metric-contract definition. A completed business
+contract then hands off to **whichever layer implements its slice** — `skills/bi-sql-knowledge/`
+for required fields, grain, transform and reconciliation; `skills/bi-dax-knowledge/` for the
+measure and semantic-model prerequisites; `skills/bi-python-knowledge/` for source-prep
+(dtypes/cleaning of the required fields). Those layers implement meaning, they do not
+redefine it. Treat this layer as an **initial seed**: 10 live metric contracts; the
+KPIs named in `patterns/metric-contract-candidates.json` are planned/deferred and
+their routes return a planned note, never a fabricated contract.
+
+This layer is reasoning/definition + review only. It does not write DAX/SQL/Python,
+approve readiness gates, or design dashboards. Stop and hand off when a KPI's policy
+(VAT, returns, cost method, same-store, snapshot date) is an undecided owner ruling —
+mark the contract **Needs business definition**; never invent the policy.
 
 ## Hard stops
 

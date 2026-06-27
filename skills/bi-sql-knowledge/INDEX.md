@@ -3,6 +3,14 @@
 > Read this BEFORE opening any knowledge file. Find the row that matches the task or the
 > symptom, open **only** the file(s) it names, then end on the output contract / checklist in
 > the last column. Do not read the whole base.
+>
+> **Boundary — KPI meaning lives upstream.** A KPI's *business meaning* (definition,
+> additivity, required fields, grain intent, ambiguity, owner rulings) is owned by
+> `skills/retail-kpi-knowledge/`. This layer owns SQL correctness and the **physical field
+> binding** (logical field → real column), the silver/gold transform, and reconciliation.
+> If a request is really "what does this KPI mean / which fields and grain does it need",
+> route to `skills/retail-kpi-knowledge/` first, then implement here against a ready
+> contract — do not invent the KPI's meaning in SQL.
 
 ## Route by task
 
