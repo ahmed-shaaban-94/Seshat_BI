@@ -43,7 +43,7 @@ suggest pricing problems or data issues; aggregated values should sit between 0%
 - Cross-check with promotion analytics / finance.
 - Confirm aggregated rate stays within 0–100%.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Ratio measure referencing the Discount Amount and Gross Sales base measures; recomputed in
 filter context. Watch filter context when promo vs non-promo dimensions are combined. No
 DAX authored here.

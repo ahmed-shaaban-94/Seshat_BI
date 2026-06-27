@@ -47,7 +47,7 @@ from revenue: volume can rise while value falls under heavy discounting.
 - Check for negative quantities (returns leaking into the measure).
 - Confirm units sold ≥ 0 at every aggregation level.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Base additive count → SUM measure on the sales fact. If returns are stored as negative
 quantities in the same fact, define separate Units Sold and Units Returned measures
 filtered on transaction type rather than a naive SUM. No DAX authored here.

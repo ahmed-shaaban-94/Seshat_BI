@@ -52,7 +52,7 @@ branch. Compare with unit-based return rate (planned) to detect price-mix effect
 - Flag branches / products with implausibly high or low return rates.
 - Confirm returns link to original sales where possible.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Prefer a separate returns fact or an explicit transaction-type flag; define Net Sales and
 Return Value as separate measures and derive the rate from them. Manage sign conventions
 carefully. Flag the returns-modelling and date-axis decisions as prerequisites. No DAX

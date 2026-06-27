@@ -32,7 +32,7 @@ Every contract in `contracts/` uses this fixed structure:
 - Interpretation
 - Common mistakes
 - Validation checks
-- Semantic model / DAX handoff notes
+- Implementation handoff notes (SQL / DAX / Python)
 - Dashboard use
 - Priority
 - Owner

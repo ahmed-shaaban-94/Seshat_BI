@@ -44,9 +44,13 @@ exist.]
 **Validation checks**
 [Reconciliation to source, sample spot-checks, bound checks, empty-period behaviour.]
 
-**Semantic model / DAX handoff notes**
-[Fact/dimension fields, grain, additivity, filter rules, open ambiguities for the DAX
-layer. No DAX code.]
+**Implementation handoff notes (SQL / DAX / Python)**
+[The same payload feeds all three implementation layers, each taking its slice:
+SQL — required fields, grain, filters/exclusions, validation/reconciliation (+ it owns the
+physical field binding); DAX — business formula, additivity, filter rules; Python —
+required fields + their dtype/quality assumptions for source-prep. List the
+fact/dimension fields, grain, additivity, filter rules, and open ambiguities. No
+SQL/DAX/Python code.]
 
 **Dashboard use**
 [Which pages/tiles would use it.]

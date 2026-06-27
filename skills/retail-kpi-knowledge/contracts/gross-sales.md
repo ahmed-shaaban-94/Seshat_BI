@@ -53,7 +53,7 @@ discount intensity. A large or rising gap signals aggressive discounting.
 - Spot-check receipts: line qty × list price = stored gross value.
 - Confirm pre-go-live periods show zero, not blank or noise.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Base additive amount → implement as a SUM measure on the sales fact, sliced by a proper
 date dimension with single-direction relationships. Confirm the gross amount field is
 pre-discount and pre-VAT before coding. No DAX is authored in this layer.

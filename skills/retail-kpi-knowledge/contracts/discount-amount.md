@@ -52,7 +52,7 @@ discount value with flat volume signals margin erosion.
 - Flag negative discounts or discounts exceeding gross sales at transaction level.
 - Compare promo vs non-promo discount distribution.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Sum of line + header discount; consider separate promo-funded vs retailer-funded measures
 only if the source supports the split. Flag the header double-count risk so the measure
 aggregates header discount at header grain. No DAX authored here.

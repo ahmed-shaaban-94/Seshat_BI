@@ -46,7 +46,7 @@ it is the denominator for ATV and basket size.
 - Check for zero transactions on known open days (anomaly).
 - Confirm the id is header-level, not duplicated by line granularity.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Implement as a distinct count over the header key. If the sales fact is line-grained,
 flag that a header table or a guaranteed-unique header key is needed so the distinct
 count is correct. No DAX authored here.

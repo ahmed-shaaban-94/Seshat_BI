@@ -45,7 +45,7 @@ core retail profitability measure.
 - Check margin by category for expected patterns (high in accessories, low in commodities).
 - Confirm COGS is captured at the same grain as net sales.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Define base Net Sales and COGS measures, then Gross Margin = Net Sales − COGS. Confirm the
 cost method with finance before coding; if unknown, this KPI is Needs business definition.
 No DAX authored here.

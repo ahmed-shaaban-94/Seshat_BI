@@ -41,7 +41,7 @@ and pricing. The weighted average margin must equal total margin ÷ total net sa
 - Confirm weighted average margin = total gross margin ÷ total net sales.
 - Confirm aggregated margin % is plausible (typically 0–100% for retail merchandise).
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Derive from the existing Gross Margin and Net Sales base measures; do not duplicate the
 margin logic per visual. Watch filter contexts where some costs may be missing (partial
 periods, special channels). No DAX authored here.

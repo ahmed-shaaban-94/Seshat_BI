@@ -53,7 +53,7 @@ Define once and reuse rather than re-deriving.
 - Compare gross vs net and inspect discount ratio by branch for anomalies.
 - Confirm net sales never exceeds gross sales for any transaction.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Implement as a base SUM measure, with separate Gross Sales and Discount measures for
 transparency; build derived KPIs on top of this base rather than re-deriving the logic.
 Confirm VAT treatment and the discount fields before coding. No DAX authored here.

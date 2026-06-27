@@ -48,7 +48,7 @@ cross-sell and promotion effectiveness.
 - Cross-check against any POS standard ATV report.
 - Inspect transaction-level outliers for data errors.
 
-**Semantic model / DAX handoff notes**
+**Implementation handoff notes (SQL / DAX / Python)**
 Define as a ratio of the Net Sales base measure over a distinct count of the header key;
 recomputed in filter context, never pre-aggregated. Flag the header-grain requirement for
 the distinct count. No DAX authored here.
