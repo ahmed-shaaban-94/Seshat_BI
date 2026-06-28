@@ -302,11 +302,21 @@ const plan = await agent(
 // "Ratified" can never be produced by this workflow -- only a human edit, after we return.
 phase('Ratify ledger')
 
-// Pure-JS gate: the structural guarantee. drafted-and-clean -> READY_FOR_RATIFY; anything
+// Pure-JS gate: the structural guarantee. drafted-AND-clean -> READY_FOR_RATIFY; anything
 // short -> BLOCKED. Computed in code, never by the agent (it cannot soften this).
+//  - analyze must be CLEAN (zero critical AND zero high) -- a spec analyze already flagged
+//    unsafe must never reach a ratify path. ('findings' or any critical/high => BLOCKED.)
+//  - a FORCED-INELIGIBLE idea (operator used allow_ineligible on a REJECT) can NEVER be
+//    ratify-ready: it is the exact hard-principle violation pre-flight says is unratifiable.
+//    The override let the run PROCEED to produce an auditable draft; it never clears the gate.
+const analyzeClean = plan
+  && plan.analyze_verdict === 'clean'
+  && (plan.analyze_critical || 0) === 0
+  && (plan.analyze_high || 0) === 0
 const planOk = plan
+  && !forced_ineligible
   && plan.status === 'drafted'
-  && plan.analyze_verdict !== 'not-run'
+  && analyzeClean
   && (plan.plan_review_verdict === 'PASS' || plan.plan_review_verdict === 'PASS-WITH-NOTES')
 const gateOutcome = planOk ? 'READY_FOR_RATIFY' : 'BLOCKED'
 
