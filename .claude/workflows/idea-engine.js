@@ -579,25 +579,34 @@ const LENSES = [
 function genPrompt(role, extra='') {
   return `You are ${role}\nGenerate 6-8 ideas for Seshat BI. Each MUST respect the hard principles (no executor, no gate bypass, generic-only, no fabricated confidence). Mix NOW and HORIZON. ${extra}${MEMORY_LINE}\n\n=== REPO MAP ===\n${exploreMap}`
 }
+// classify a lens result: 'failed' = agent returned null (schema/death), 'empty' =
+// a valid response with no ideas, 'ok' = real ideas. This separates a FAILURE from a
+// lens that legitimately had nothing -- they used to both vanish via .filter(Boolean).
+// (Honest scope: we cannot know WHY a null came back, only that one did -> 'failed'.)
+function classify(r, key) {
+  if (!r) return { _key: key, _status: 'failed', ideas: [] }
+  const ideas = Array.isArray(r.ideas) ? r.ideas : []
+  return { ...r, _key: key, _status: ideas.length ? 'ok' : 'empty' }
+}
 const round1 = await parallel(LENSES.map(l => () =>
   agent(genPrompt(l.role), { label: `${l.label}:r1`, phase: 'Generate', schema: IDEA_SCHEMA, ...SCOUT })
-    .then(r => r ? { ...r, _key: l.key } : null)
+    .then(r => classify(r, l.key))
 ))
 
 // ===================== 3. CROSS-POLLINATE =====================
 phase('Cross-pollinate')
-const round1Json = JSON.stringify(round1.filter(Boolean).map(r => ({ lens: r.lens || r._key, ideas: r.ideas })), null, 2)
+const round1Json = JSON.stringify(round1.filter(r => r._status === 'ok').map(r => ({ lens: r.lens || r._key, ideas: r.ideas })), null, 2)
 const crossRound = await parallel(LENSES.map(l => () =>
   agent(
     genPrompt(l.role,
       `You have now SEEN what the other two lenses proposed (below). React to them: combine a strong idea from another lens with your own perspective, fill a gap they left, or push a half-idea further. Generate 3-5 NEW cross-disciplinary ideas (do NOT repeat ideas already listed). The best ideas live at the seams between disciplines.\n\n=== ALL ROUND-1 IDEAS ===\n${round1Json}`),
     { label: `${l.label}:cross`, phase: 'Cross-pollinate', schema: IDEA_SCHEMA, ...SCOUT }
-  ).then(r => r ? { ...r, _key: l.key } : null)
+  ).then(r => classify(r, l.key))
 ))
 
 // ===================== 4. COMPLETENESS CRITIC -> targeted pass =====================
 phase('Completeness')
-const sofar = [...round1, ...crossRound].filter(Boolean)
+const sofar = [...round1, ...crossRound].filter(r => r._status === 'ok')
 const sofarJson = JSON.stringify(sofar.map(r => ({ lens: r.lens || r._key, ideas: (r.ideas||[]).map(i => i.title) })), null, 2)
 const gaps = await agent(
   `You are a COMPLETENESS CRITIC. Below are all idea TITLES generated so far for Seshat BI, plus the repo map. Your job is to find what's MISSING -- readiness stages with few ideas, repo gaps/tensions nobody addressed, idea TYPES underrepresented (e.g. all features and no DX, or all technical and no business value), and obvious adjacent ideas no lens reached. List 5-10 specific missing angles as short prompts ("nobody proposed anything for X / for the Y gap"). Do not generate full ideas -- just name the blind spots precisely.\n\n=== REPO MAP ===\n${exploreMap}\n\n=== IDEA TITLES SO FAR ===\n${sofarJson}`,
@@ -608,12 +617,35 @@ const fillRound = await parallel(LENSES.map(l => () =>
   agent(genPrompt(l.role,
     `A completeness critic identified these BLIND SPOTS in the ideas generated so far. From YOUR lens, generate 2-4 ideas that specifically fill the gaps most relevant to you (do not repeat existing ideas).\n\n=== BLIND SPOTS ===\n${gaps}`),
     { label: `${l.label}:fill`, phase: 'Completeness', schema: IDEA_SCHEMA, ...SCOUT }
-  ).then(r => r ? { ...r, _key: l.key } : null)
+  ).then(r => classify(r, l.key))
 ))
 
-const allIdeas = [...round1, ...crossRound, ...fillRound].filter(Boolean).flatMap(r =>
+const allIdeas = [...round1, ...crossRound, ...fillRound].filter(r => r._status === 'ok').flatMap(r =>
   (r.ideas || []).map(i => ({ ...i, source_lens: r.lens || r._key }))
 )
+
+// ---- run health (census): expected vs survived lens headcount per round, with a
+// fail-loud DEGRADED banner. A dead/empty lens used to vanish silently. ----
+function census(label, expected, arr) {
+  const failed = arr.filter(r => r._status === 'failed').length
+  const empty = arr.filter(r => r._status === 'empty').length
+  const ok = arr.filter(r => r._status === 'ok').length
+  return { label, expected, ok, empty, failed }
+}
+const run_health = (() => {
+  const rounds = [
+    census('generate', LENSES.length, round1),
+    census('cross-pollinate', LENSES.length, crossRound),
+    census('fill', LENSES.length, fillRound),
+  ]
+  const anyFailed = rounds.some(r => r.failed > 0)
+  const anyShort = rounds.some(r => r.ok < r.expected)
+  const degraded = anyFailed || anyShort
+  const banner = degraded
+    ? `DEGRADED RUN: ${rounds.filter(r => r.ok < r.expected).map(r => `${r.label} ${r.ok}/${r.expected} lenses ok${r.failed ? ` (${r.failed} failed)` : ''}`).join('; ')}. Treat this bank as partial.`
+    : ''
+  return { rounds, degraded, banner }
+})()
 
 // ===================== 5. SYNTHESIZE =====================
 phase('Synthesize')
@@ -769,6 +801,33 @@ function tally(ideas) {
   return { v, h }
 }
 
+// selfMetrics: PURE JS rollup of the run's OWN quality -- counts over data already in
+// memory, fabricating nothing. Reports how the run did, not just what it produced.
+function selfMetrics(reviewObj, rawCount, runHealth) {
+  const ideas = (reviewObj && Array.isArray(reviewObj.scored_ideas)) ? reviewObj.scored_ideas : []
+  const scored = ideas.length
+  const { v } = tally(ideas)
+  const ineligible = ideas.filter(i => i.eligible === false).length
+  const cons = { consistent: 0, 'minor-tension': 0, conflict: 0 }
+  const disp = { survived: 0, weakened: 0, killed: 0 }
+  const layers = {}
+  for (const i of ideas) {
+    if (i.consistency in cons) cons[i.consistency]++
+    if (i.survived_verification in disp) disp[i.survived_verification]++
+    const L = i.strengthens_layer || 'none'
+    layers[L] = (layers[L] || 0) + 1
+  }
+  const pct = (n, d) => d ? Math.round((n / d) * 100) : 0
+  return {
+    yield_funnel: { raw_pre_dedupe: rawCount, scored, adopt: v.ADOPT, consider: v.CONSIDER, park: v.PARK, reject: v.REJECT },
+    eligibility_rejection_rate_pct: pct(ineligible, scored),
+    consistency_mix: cons,
+    survived_verification_mix: disp,
+    layer_coverage: layers,                 // populated once layer-tag ships (FU2)
+    degraded: !!(runHealth && runHealth.degraded),
+  }
+}
+
 // One idea -> its markdown block. Mirrors the existing idea-backlog.md per-idea shape:
 //   ### <title>
 //   `<horizon>` - **V<n> / F<n>** - consistency: <c> - <eligibility tag>
@@ -826,6 +885,8 @@ function renderBacklog(review, opts) {
     '',
     `_Generated by the \`idea-engine\` workflow. ${dateLine}_`,
     '',
+    // Fail-loud: a degraded run (a dead/empty lens) is announced at the top, not hidden.
+    ...(opts.health && opts.health.degraded ? [`> **${norm(opts.health.banner)}**`, ''] : []),
     // Honest funnel: raw and scored are both real JS counts; the sentence does not
     // imply a measured conversion between them.
     `**${scoredM} ideas scored** (generated across ${rounds} rounds; raw pre-dedupe ${rawN}). Verdicts: ADOPT ${v.ADOPT}, CONSIDER ${v.CONSIDER}, PARK ${v.PARK}, REJECT ${v.REJECT}. Horizon: NOW ${h.NOW}, HORIZON ${h.HORIZON}.`,
@@ -863,15 +924,35 @@ function renderBacklog(review, opts) {
        }).join('\n')].join('\n')
     : null
 
-  return [HEADER, PORTFOLIO, LEGEND, ...SECTIONS, ...(APPENDIX ? [APPENDIX] : [])].join('\n\n') + '\n'
+  // Run health & self-metrics: how this run did (deterministic counts). Written into the
+  // file so it is a durable signal, not an editor-optional header.
+  const m = opts.metrics
+  const METRICS = m ? (() => {
+    const yf = m.yield_funnel
+    const layerLine = Object.keys(m.layer_coverage || {}).length > 1 || (m.layer_coverage && !m.layer_coverage.none)
+      ? `\n- Layer coverage: ${Object.entries(m.layer_coverage).map(([k, n]) => `${k} ${n}`).join(', ')}`
+      : ''
+    return ['## Run health & self-metrics', '',
+      `- Yield: ${yf.raw_pre_dedupe} raw -> ${yf.scored} scored (ADOPT ${yf.adopt}, CONSIDER ${yf.consider}, PARK ${yf.park}, REJECT ${yf.reject}).`,
+      `- Eligibility-rejection rate: ${m.eligibility_rejection_rate_pct}%.`,
+      `- Consistency: ${m.consistency_mix.consistent} consistent, ${m.consistency_mix['minor-tension']} minor-tension, ${m.consistency_mix.conflict} conflict.`,
+      `- Verification: ${m.survived_verification_mix.survived} survived, ${m.survived_verification_mix.weakened} weakened, ${m.survived_verification_mix.killed} killed.${layerLine}`,
+      `- Run health: ${m.degraded ? 'DEGRADED (see banner above)' : 'all lenses reported'}.`,
+    ].join('\n')
+  })() : null
+
+  return [HEADER, PORTFOLIO, LEGEND, ...SECTIONS, ...(APPENDIX ? [APPENDIX] : []), ...(METRICS ? [METRICS] : [])].join('\n\n') + '\n'
 }
 
+const self_metrics = selfMetrics(review, allIdeas.length, run_health)
 const backlog_markdown = renderBacklog(review, {
   date: DATE,
   ascii: ASCII,
   rawCount: allIdeas.length,
   rounds: 3,                 // r1 + cross + fill generation rounds
   prior: memory,             // PR4: cross-run memory -> SHIPPED/SETTLED appendix
+  health: run_health,        // FU1: fail-loud DEGRADED banner
+  metrics: self_metrics,     // FU1: deterministic run-quality rollup
 })
 
 return {
@@ -887,7 +968,9 @@ return {
   panel_splits: aggregated.splits,           // ideas where the panel disagreed (eligibility/score)
   review,                                    // aggregated, renderer-shaped (JS gate + clamp applied)
   raw_idea_count: allIdeas.length,
-  rounds: { r1: round1.filter(Boolean).length, cross: crossRound.filter(Boolean).length, fill: fillRound.filter(Boolean).length },
+  rounds: { r1: round1.filter(r => r._status === 'ok').length, cross: crossRound.filter(r => r._status === 'ok').length, fill: fillRound.filter(r => r._status === 'ok').length },
+  run_health,                                // FU1: per-round census + degraded flag
+  self_metrics,                              // FU1: deterministic run-quality rollup
   focus: FOCUS,
   // Deterministic output: orchestrator writes backlog_markdown to backlog_path.
   backlog_markdown,
