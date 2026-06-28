@@ -106,8 +106,16 @@ const HANDOFF_FACTS = {
       type: 'array',
       items: {
         type: 'object', additionalProperties: false,
-        required: ['name', 'exists', 'bytes'],
-        properties: { name: { type: 'string', enum: ARTIFACTS }, exists: { type: 'boolean' }, bytes: { type: 'number' } },
+        required: ['name', 'exists', 'bytes', 'committed'],
+        properties: {
+          name: { type: 'string', enum: ARTIFACTS },
+          exists: { type: 'boolean' },
+          bytes: { type: 'number' },
+          // committed = the file is tracked AND clean on the branch (git ls-files finds it
+          // AND git status shows no pending change). The build runs in a fresh worktree off
+          // the COMMITTED branch, so an uncommitted artifact would be invisible to it.
+          committed: { type: 'boolean' },
+        },
       },
     },
     spec_md_raw: { type: 'string', description: 'FULL raw text of spec.md, or "" if missing. JS runs H3/H4 over it.' },
@@ -144,7 +152,11 @@ const facts = await agent(
   `FEATURE: ${INPUT.feature}\nSPEC DIR: ${INPUT.spec_dir}\n\n` +
   `Return HANDOFF_FACTS:\n` +
   `- dir_exists: does ${REPO}/${INPUT.spec_dir}/ exist?\n` +
-  `- files: for EACH of ${ARTIFACTS.join(', ')} under the spec dir, {name, exists, bytes}.\n` +
+  `- files: for EACH of ${ARTIFACTS.join(', ')} under the spec dir, {name, exists, bytes, committed}. ` +
+  `committed = the file is TRACKED on the branch AND has no pending change: true only if ` +
+  `\`git ls-files --error-unmatch <path>\` succeeds AND \`git status --porcelain <path>\` is empty. ` +
+  `An uncommitted/dirty artifact must be committed:false (the build runs off the committed branch, so ` +
+  `working-tree-only changes would be invisible to it).\n` +
   `- spec_md_raw: the FULL verbatim text of spec.md (or "" if missing). Do not truncate.\n` +
   `- clarifications_raw: the verbatim text of ONLY the "## Clarifications" section of spec.md (or "").\n` +
   `- plan_review_verdict_line: the verbatim line(s) of plan-review.md that contain the word "Verdict" (or "").\n` +
@@ -171,7 +183,9 @@ if (!facts || typeof facts !== 'object') {
   return refuse('H1', 'the handoff reader returned nothing -- cannot verify the spec on disk', [],
     ['Re-invoke; if it persists, the spec dir may be unreadable.'])
 }
-const fileOk = n => { const x = (facts.files || []).find(y => y.name === n); return !!(x && x.exists && x.bytes > 0) }
+const fileRec = n => (facts.files || []).find(y => y.name === n)
+const fileOk = n => { const x = fileRec(n); return !!(x && x.exists && x.bytes > 0) }
+const fileCommitted = n => { const x = fileRec(n); return !!(x && x.committed === true) }
 const g = facts.git || {}
 const prov = facts.status_line_provenance || {}
 
@@ -182,6 +196,12 @@ if (!facts.dir_exists) return refuse('H1', `spec dir ${INPUT.spec_dir} not found
 const missing = ARTIFACTS.filter(n => !fileOk(n))
 if (missing.length) return refuse('H2', `artifact set incomplete -- the chain did not finish: missing/empty ${missing.join(', ')}`,
   missing, ['Run idea-to-spec (or speckit-finish-chain) to produce spec+plan+tasks+analysis+plan-review.'])
+// H2b: every artifact must be COMMITTED + clean on the branch. The build runs in a fresh
+// worktree off the committed branch, so an uncommitted/dirty tasks.md or plan.md would pass
+// the working-tree preflight but be absent (or stale) when /speckit-implement runs.
+const uncommitted = ARTIFACTS.filter(n => !fileCommitted(n))
+if (uncommitted.length) return refuse('H2', `artifact(s) not committed/clean on the branch: ${uncommitted.join(', ')} -- the build runs off the committed tree and would not see working-tree-only changes`,
+  uncommitted, ['Commit the spec artifacts on the feature branch (git add specs/<dir>/ && commit) before re-invoking; do not leave them dirty.'])
 // H3: human-ratified (the load-bearing gate) -- Ratified present, no contradictory Draft/BLOCKED,
 //     and the line was introduced by a HUMAN (git-blame provenance), not the workflow.
 const specRaw = facts.spec_md_raw || ''
@@ -290,13 +310,16 @@ const build = await agent(
   `STEP A -- worktree safety FIRST: assert git rev-parse --abbrev-ref HEAD is the ratified feature ` +
   `branch (carrying ${INPUT.spec_dir}/spec.md) and NOT main/detached. If not, STOP: status:'failed', ` +
   `blocked_reason:'worktree-not-on-feature-branch', write nothing.\n\n` +
-  `STEP A0 -- PIN the feature dir (critical): /speckit-implement's prerequisite script resolves ` +
-  `FEATURE_DIR from .specify/feature.json (a PERSISTED file that may hold a STALE prior feature), NOT ` +
-  `from the spec dir you pass. So BEFORE invoking it, OVERWRITE .specify/feature.json on THIS worktree ` +
-  `with {"feature_directory":"${INPUT.spec_dir}"} (exactly as speckit-finish-chain does its step 0). ` +
-  `Confirm it reads back as ${INPUT.spec_dir}. If you skip this, implement could build a stale task ` +
-  `list while the ledger reports ${INPUT.feature} -- a silent wrong-feature build. This pin is ` +
-  `worktree-local config; commit nothing for it.\n\n` +
+  `STEP A0 -- PIN the feature dir via the ENV OVERRIDE (critical, and do NOT dirty tracked config): ` +
+  `/speckit-implement's prereq script resolves the feature in this order (verified, common.ps1 L290): ` +
+  `(1) the SPECIFY_FEATURE_DIRECTORY env var, then (2) the PERSISTED .specify/feature.json (which is a ` +
+  `TRACKED file that may hold a STALE prior feature). So EXPORT SPECIFY_FEATURE_DIRECTORY=${INPUT.spec_dir} ` +
+  `for every command in this run BEFORE invoking the skill -- the env override wins, so you get the ` +
+  `right feature WITHOUT modifying the tracked .specify/feature.json (leaving it dirty risks it being ` +
+  `swept into a task commit, or tested-with-but-absent-from the PR). Do NOT overwrite the file; do NOT ` +
+  `commit any config change. If you cannot set the env, FAIL closed (status:'failed', ` +
+  `blocked_reason:'cannot pin SPECIFY_FEATURE_DIRECTORY') rather than mutate the tracked file -- never ` +
+  `risk a silent wrong-feature build (ledger would report ${INPUT.feature} while a stale list ran).\n\n` +
   `STEP B -- handle the SKILL's interactive STOP: /speckit-implement has a hard "Wait for user ` +
   `response" prompt when checklists are incomplete. You have NO user. Do NOT auto-answer it. Record it ` +
   `as a tasks_blocked entry {reason:'checklist-incomplete-stop'} and return status:'partial' -- the ` +
