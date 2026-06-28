@@ -341,9 +341,20 @@ const build = await agent(
 // gated (CI has no --cov-fail-under).
 function deselectsAreExplained(v) {
   const ds = (v && Array.isArray(v.pytest_deselected_ids)) ? v.pytest_deselected_ids : []
-  return ds.every(id => CI_ONLY_TESTS.includes(id))   // deselected subset of allow-list
+  // (1) every reported deselect must be in the CI-only allow-list, AND (2) the --deselect
+  // tokens actually present in the argv must MATCH the reported ids -- otherwise a hidden
+  // argv "--deselect foo.py::test_bar" omitted from pytest_deselected_ids would skip a real
+  // test undetected (the argvCore strip would remove it, hiding the subset run). Both the
+  // reported set and the argv set must be exactly the allow-list (or empty).
+  const argv = (v && v.pytest_argv) || ''
+  const argvDeselects = [...argv.matchAll(/(?:^|\s)--deselect(?:\s+|=)(\S+)/g)].map(m => m[1])
+  const sorted = a => a.slice().sort().join('')
+  const idsAllAllowed = ds.every(id => CI_ONLY_TESTS.includes(id))
+  const argvAllAllowed = argvDeselects.every(id => CI_ONLY_TESTS.includes(id))
+  const argvMatchesIds = sorted(argvDeselects) === sorted(ds)   // no hidden argv deselect
+  return idsAllAllowed && argvAllAllowed && argvMatchesIds
 }
-function completionGate(b) {
+function completionGate(b, expectedBranch) {
   const v = b && b.verify
   const reasons = []
 
@@ -374,9 +385,19 @@ function completionGate(b) {
     /(?:^|\s)\d+ passed\b/.test(summary) && !/\b(failed|error|errors)\b/i.test(summary))
   const deselectExplained = deselectsAreExplained(v)
   const testsOk = !!(summaryGreen && deselectExplained && v && v.ruff_format_exit === 0 && v.ruff_check_exit === 0)
-  if (!testsOk) reasons.push(`tests/lint not green: "${summary || 'no verify record'}"` +
-    (v && !argvIsFullUnitRun ? ` (argv was NOT a full "pytest -m unit" run: "${argv}")` : '') +
-    (v && !deselectExplained ? ' (UNEXPLAINED deselect -- not the CI-only allow-list)' : ''))
+  if (!testsOk) {
+    // install_ok stays a hard requirement (CI must install), but a FAILED install is most
+    // often the env mismatch: this builds code for a >=3.13 package, so `pip install -e
+    // ".[dev]"` cannot succeed on the documented local 3.12 -- name that distinctly so a
+    // human sees "wrong interpreter" rather than a confusing generic "tests not green".
+    if (v && v.install_ok === false) {
+      reasons.push('pip install -e ".[dev]" failed -- run implement on a >=3.13 dev toolchain (the package requires-python >=3.13; local 3.12 cannot install/build/test it). This is an environment gate, not a code failure.')
+    } else {
+      reasons.push(`tests/lint not green: "${summary || 'no verify record'}"` +
+        (v && !argvIsFullUnitRun ? ` (argv was NOT a full "pytest -m unit" run: "${argv}")` : '') +
+        (v && !deselectExplained ? ' (UNEXPLAINED deselect -- not the CI-only allow-list)' : ''))
+    }
+  }
 
   // (c) the EXACT CI gate set: retail check (or deferred-to-ci) + retail semantic-check
   const checkGreen = !!(v && (v.retail_check_exit === 0 || v.retail_check_commit_range_resolved === false))
@@ -392,17 +413,21 @@ function completionGate(b) {
   const noWall = !!(b && b.principle_v_wall === false && (!Array.isArray(b.open_for_human) || b.open_for_human.length === 0))
   if (!noWall) reasons.push(`Principle-V wall: ${b && b.open_for_human ? b.open_for_human.join('; ') : 'unresolved judgment call'}`)
 
-  // (f) worktree never on main at verify time (belt-and-suspenders to H6)
-  const onFeatureBranch = !!(v && v.head_branch && v.head_branch !== 'main')
-  if (!onFeatureBranch) reasons.push(`HEAD at verify time is "${v ? v.head_branch : '?'}" -- must never be main`)
+  // (f) the build+verify happened on the EXPECTED ratified branch, not just "not main".
+  // If verify ran on some other feature branch, the PR-ready branch the ledger advertises
+  // may not contain the tested commits -- defeating the per-task commit guarantee. Compare
+  // head_branch to the expected branch (and always reject main as a backstop).
+  const headOk = !!(v && v.head_branch && v.head_branch !== 'main' &&
+    (!expectedBranch || v.head_branch === expectedBranch))
+  if (!headOk) reasons.push(`HEAD at verify time is "${v ? v.head_branch : '?'}" -- must be the ratified branch "${expectedBranch || '(expected)'}", never main or another branch`)
 
   if (reasons.length === 0) return { outcome: 'READY_FOR_PR', reasons: [] }
   // hard red (fix-first) vs partial (honest progress / wall -- resume continues)
-  const hardRed = !testsOk || !checkGreen || !semanticGreen || !wiringGreen || !onFeatureBranch ||
+  const hardRed = !testsOk || !checkGreen || !semanticGreen || !wiringGreen || !headOk ||
     (b && Array.isArray(b.tasks_blocked) && b.tasks_blocked.some(t => t.reason === 'test-fail' || t.reason === 'gate-fail'))
   return { outcome: hardRed ? 'BLOCKED' : 'PARTIAL', reasons }
 }
-const gate = completionGate(build)
+const gate = completionGate(build, branch)   // branch = the ratified branch from the H6 gate
 
 // ===================== STAGE 4: PR-READY LEDGER (read-only assembler; STOPS) =======
 phase('PR-ready ledger')
