@@ -45,19 +45,30 @@ function coerce(a) {
     const t = v.trim()
     // bare-string fast path -- fold to ASCII here too (this is the MOST COMMON input; an
     // early return without folding would leak a smart-dash/arrow into the authored spec).
-    if (t && !t.startsWith('{')) return { value: { title: asciiFold(t), feature_name: null, date: null, allow_ineligible: false } }
+    if (t && !t.startsWith('{')) return { value: { title: asciiFold(t), feature_name: null, date: null, allow_ineligible: false, section: null, eligible: null, id: '--' } }
     try { v = JSON.parse(t) } catch (e) { return { error: `args was a string that did not JSON.parse: ${String(e)}` } }
   }
   if (typeof v === 'string') v = { title: v }                     // JSON that decoded to a bare string
   if (!v || typeof v !== 'object' || Array.isArray(v))            // arrays are finish-chain's shape, not ours
-    return { error: 'pass an idea TITLE string, or { title, feature_name?, date?, allow_ineligible? }' }
+    return { error: 'pass an idea TITLE string, or { title, feature_name?, date?, allow_ineligible?, section?, id? }' }
   if (typeof v.title !== 'string' || !v.title.trim())
     return { error: 'title is required (the idea title from docs/roadmap/idea-backlog.md)' }
+  // Optional pre-parsed fields: the orchestrator already parsed the backlog to choose this
+  // idea, so it MAY pass { section, id } directly -- the DETERMINISTIC path that skips the
+  // large-file re-read (an agent cannot reliably echo a 300KB+ backlog; it summarizes, and
+  // parseBacklog then sees zero headings). A valid section is trusted and validated exactly
+  // as a parsed heading would be; a missing/malformed section falls back to the agent read.
+  const SECTIONS = ['ADOPT', 'CONSIDER', 'PARK', 'REJECT']
+  const section = (typeof v.section === 'string' && SECTIONS.includes(v.section.trim().toUpperCase()))
+    ? v.section.trim().toUpperCase() : null
   return { value: {
     title: asciiFold(v.title.trim()),
     feature_name: typeof v.feature_name === 'string' ? asciiFold(v.feature_name.trim()) : null,
     date: (typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)) ? v.date : null,
     allow_ineligible: v.allow_ineligible === true,
+    section,                                                       // null => must read the backlog
+    eligible: section ? section !== 'REJECT' : null,              // same rule parseBacklog uses
+    id: (typeof v.id === 'string' && v.id.trim()) ? asciiFold(v.id.trim()) : '--',
   } }
 }
 
@@ -77,26 +88,8 @@ const DATE_NOTE = INPUT.date
 // each run), so the TITLE is the key and the id is only a secondary convenience match.
 phase('Pre-flight')
 
-const READ_SCHEMA = {
-  type: 'object', additionalProperties: false,
-  required: ['found', 'content'],
-  properties: {
-    found: { type: 'boolean', description: 'false if docs/roadmap/idea-backlog.md does not exist' },
-    content: { type: 'string', description: 'the FULL verbatim file content, or "" if not found' },
-  },
-}
-const backlogRead = await agent(
-  `Read the file ${REPO}/${BACKLOG_PATH} and return its FULL verbatim content in \u0027content\u0027 ` +
-  `(found:true). If the file does not exist, return found:false and content:\u0022\u0022. Do NOT summarize, ` +
-  `truncate, reformat, or interpret -- return the raw bytes as text. Read nothing else.`,
-  { label: 'preflight:read-backlog', phase: 'Pre-flight', schema: READ_SCHEMA, model: 'opus', effort: 'low' }
-)
-if (!backlogRead || !backlogRead.found || !backlogRead.content) {
-  const reason = `${BACKLOG_PATH} not found or empty -- run the idea-engine first to produce a bank.`
-  log(`idea-to-spec: ${reason}`)
-  return { outcome: 'BLOCKED', blocked: { status: 'idea-not-found', stage_failed: 'pre-flight', title: INPUT.title, reason, evidence: [], human_options: ['Run Workflow({name:"idea-engine"}) to generate docs/roadmap/idea-backlog.md, then re-invoke with the chosen idea title.'] } }
-}
-
+// parseBacklog / locate / blocked are defined first so BOTH the deterministic path and the
+// agent-read fallback can use them. parseBacklog/locate are only exercised by the fallback.
 function parseBacklog(raw) {
   const ideas = []
   let section = null
@@ -139,25 +132,65 @@ function locate(ideas, input) {
   return { notFound: scored.slice(0, 3).map(s => `${s.i.id}. ${s.i.title_raw}`) }
 }
 
-const ideas = parseBacklog(backlogRead.content)
-const loc = locate(ideas, INPUT)
-
 // --- the refuse matrix (deterministic; refusals cost zero further agents) ---
 function blocked(status, reason, evidence, options) {
   return { outcome: 'BLOCKED', blocked: { status, stage_failed: 'pre-flight', title: INPUT.title, reason, evidence: evidence || [], human_options: options || [] } }
 }
-if (loc.notFound) {
-  log(`idea-to-spec: idea not found -- \u0022${INPUT.title}\u0022`)
-  return blocked('idea-not-found', `No idea in the backlog matched \u0022${INPUT.title}\u0022.`, loc.notFound,
-    ['Re-invoke with one of the closest titles above, exactly as written in the backlog.'])
+
+let chosen = null
+if (INPUT.section) {
+  // DETERMINISTIC PATH (no agent): the orchestrator parsed the backlog, chose this idea, and
+  // handed over its { title, section, id }. There is no large-file echo for an agent to
+  // truncate/summarize, so this is the reliable path. The eligibility refuse matrix below
+  // still runs over this single record exactly as it would over a re-parsed idea.
+  chosen = {
+    id: INPUT.id || '--',
+    title_raw: INPUT.title,                       // already ASCII-folded in coerce
+    title_fold: asciiFold(INPUT.title).toLowerCase(),
+    section: INPUT.section,
+    eligible: INPUT.eligible === true,
+  }
+  log(`idea-to-spec: chosen idea passed by orchestrator -- ${chosen.id} [${chosen.section}] (deterministic, no backlog re-read)`)
+} else {
+  // FALLBACK PATH (agent read): a bare-title invocation with no section. Workflow scripts have
+  // no fs, so a read-only agent fetches the committed backlog text and parseBacklog/locate
+  // decide. CAVEAT: on a large (300KB+) backlog the agent may truncate/summarize despite the
+  // instruction, in which case parseBacklog sees zero headings and locate returns notFound --
+  // the BLOCKED evidence below names that mode so the human re-invokes with { title, section }.
+  const READ_SCHEMA = {
+    type: 'object', additionalProperties: false,
+    required: ['found', 'content'],
+    properties: {
+      found: { type: 'boolean', description: 'false if docs/roadmap/idea-backlog.md does not exist' },
+      content: { type: 'string', description: 'the FULL verbatim file content, or "" if not found' },
+    },
+  }
+  const backlogRead = await agent(
+    `Read the file ${REPO}/${BACKLOG_PATH} and return its FULL verbatim content in \u0027content\u0027 ` +
+    `(found:true). If the file does not exist, return found:false and content:\u0022\u0022. Do NOT summarize, ` +
+    `truncate, reformat, or interpret -- return the raw bytes as text. Read nothing else.`,
+    { label: 'preflight:read-backlog', phase: 'Pre-flight', schema: READ_SCHEMA, model: 'opus', effort: 'low' }
+  )
+  if (!backlogRead || !backlogRead.found || !backlogRead.content) {
+    const reason = `${BACKLOG_PATH} not found or empty -- run the idea-engine first to produce a bank.`
+    log(`idea-to-spec: ${reason}`)
+    return blocked('idea-not-found', reason, [], ['Run Workflow({name:"idea-engine"}) to generate docs/roadmap/idea-backlog.md, then re-invoke with the chosen idea title.'])
+  }
+  const ideas = parseBacklog(backlogRead.content)
+  const loc = locate(ideas, INPUT)
+  if (loc.notFound) {
+    log(`idea-to-spec: idea not found -- \u0022${INPUT.title}\u0022`)
+    return blocked('idea-not-found', `No idea in the backlog matched \u0022${INPUT.title}\u0022. (If the backlog is large the read agent may have truncated it -- re-invoke passing { title, section } from the bank to use the deterministic path.)`, loc.notFound,
+      ['Re-invoke with one of the closest titles above (exactly as written), OR pass { title, section } to skip the read.'])
+  }
+  if (loc.ambiguous) {
+    const ev = loc.ambiguous.map(i => `${i.id}. ${i.title_raw}`)
+    log(`idea-to-spec: idea ambiguous -- ${ev.length} matches`)
+    return blocked('idea-ambiguous', `\u0022${INPUT.title}\u0022 matched ${ev.length} ideas; refusing to guess which you meant.`, ev,
+      ['Re-invoke with the full exact title (or the heading id like "A1") to disambiguate.'])
+  }
+  chosen = loc.match
 }
-if (loc.ambiguous) {
-  const ev = loc.ambiguous.map(i => `${i.id}. ${i.title_raw}`)
-  log(`idea-to-spec: idea ambiguous -- ${ev.length} matches`)
-  return blocked('idea-ambiguous', `\u0022${INPUT.title}\u0022 matched ${ev.length} ideas; refusing to guess which you meant.`, ev,
-    ['Re-invoke with the full exact title (or the heading id like "A1") to disambiguate.'])
-}
-const chosen = loc.match
 if (!chosen.eligible && !INPUT.allow_ineligible) {
   log(`idea-to-spec: idea ineligible -- ${chosen.id} (${chosen.section})`)
   return blocked('ineligible', `\u0022${chosen.id}. ${chosen.title_raw}\u0022 is in the ${chosen.section} section -- the bank judged it ineligible (it crosses a hard principle). You cannot ratify a hard-principle violation.`,
