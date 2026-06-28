@@ -206,17 +206,24 @@ const DISSENT_SCHEMA = {
 // reduces to one verdict per idea. Median scores; eligibility gate (pass/fail/split);
 // demote-only clamp (fail -> REJECT, split -> at most CONSIDER); majority verdict else
 // the MORE CAUTIOUS of the tie. No Date/random; deterministic.
-function aggregatePanel(panel) {
+function aggregatePanel(panel, expectedReviewers) {
   const live = (panel || []).filter(Boolean)
-  // union of titles, first-seen order preserved (reviewer 0 then 1 then 2)
+  // A panelist that died (null) is a gate-integrity problem, not a smaller panel: if the
+  // strict principle auditor fails, the remaining reviewers must not be treated as a
+  // complete eligibility ruling. Track the shortfall so the gate can refuse to pass.
+  const expected = Number.isFinite(expectedReviewers) ? expectedReviewers : live.length
+  const panel_failed = Math.max(0, expected - live.length)
+  // union of titles, first-seen order preserved (reviewer 0 then 1 then 2). Carry each
+  // reviewer's standpoint/key DOWN onto its rows so attribution survives grouping.
   const order = []
   const seen = new Set()
   const byTitle = {}
   for (const reviewer of live) {
+    const standpoint = reviewer.reviewer_standpoint || reviewer._key || 'reviewer'
     for (const si of (reviewer.scored_ideas || [])) {
       if (!si || !si.title) continue
       if (!seen.has(si.title)) { seen.add(si.title); order.push(si.title) }
-      ;(byTitle[si.title] = byTitle[si.title] || []).push(si)
+      ;(byTitle[si.title] = byTitle[si.title] || []).push({ ...si, reviewer_standpoint: si.reviewer_standpoint || standpoint })
     }
   }
   const median = nums => {
@@ -232,7 +239,13 @@ function aggregatePanel(panel) {
     const rows = byTitle[title]
     const n = rows.length
     const eligibleCount = rows.filter(r => r.eligible === true).length
-    const eligibility_gate = eligibleCount === n ? 'pass' : (eligibleCount === 0 ? 'fail' : 'split')
+    // A row count short of the expected panel means a reviewer (possibly the principle
+    // auditor) never ruled -> this is NOT a clean pass. Unanimous-eligible among a SHORT
+    // panel is downgraded to 'split' (needs human review) so a missing auditor can never
+    // let an idea through the gate as if fully cleared.
+    const fullPanel = n >= expected
+    let eligibility_gate = eligibleCount === n ? 'pass' : (eligibleCount === 0 ? 'fail' : 'split')
+    if (eligibility_gate === 'pass' && !fullPanel) eligibility_gate = 'split'
 
     const value_score = median(rows.map(r => r.value_score))
     const feasibility_score = median(rows.map(r => r.feasibility_score))
@@ -252,7 +265,10 @@ function aggregatePanel(panel) {
       verdict = rows.map(r => r.verdict).sort((a, b) => (cautionRank[b] ?? 2) - (cautionRank[a] ?? 2))[0]
     }
     // demote-only clamp by the eligibility gate (can only move toward caution).
-    if (eligibility_gate === 'fail' && !['PARK', 'REJECT'].includes(verdict)) verdict = 'REJECT'
+    // fail = all reviewers ineligible -> REJECT outright (a hard-principle failure does
+    // not get to sit in PARK; the contract is fail -> REJECT). split = mixed/short panel
+    // -> at most CONSIDER, never ADOPT.
+    if (eligibility_gate === 'fail' && verdict !== 'REJECT') verdict = 'REJECT'
     if (eligibility_gate === 'split' && verdict === 'ADOPT') verdict = 'CONSIDER'
 
     // worst disposition any reviewer recorded
@@ -278,7 +294,7 @@ function aggregatePanel(panel) {
     }
   })
   const splits = ideas.filter(i => i.eligibility_gate === 'split' || i.score_spread >= 4).map(i => i.title)
-  return { ideas, splits }
+  return { ideas, splits, panel_failed, reviewers_seen: live.length, reviewers_expected: expected }
 }
 
 // ===================== 1. GROUND (multi-agent explore + JS merge + verify) =====================
@@ -736,7 +752,7 @@ rationale; first_step for ADOPT/CONSIDER. An idea the skeptic KILLED should not 
 // LLM sampling pass (an LLM cannot miscompute a median or call a 2-1 split a "majority").
 // The clamp only DEMOTES toward caution, so it is orchestration, not self-approval.
 phase('Aggregate')
-const aggregated = aggregatePanel(panel)   // -> { ideas:[...], counts, splits }
+const aggregated = aggregatePanel(panel, PANELISTS.length)   // -> { ideas, splits, panel_failed, ... }
 
 // One tiny agent writes ONLY the dissent prose + portfolio summary; it touches no number.
 const dissentAgent = aggregated.ideas.length ? await agent(
@@ -762,7 +778,8 @@ const review = {
   scored_ideas: aggregated.ideas.map(i => ({
     title: i.title,
     horizon: i.horizon,
-    eligible: i.eligibility_gate !== 'fail',   // renderer tags INELIGIBLE when false
+    eligible: i.eligibility_gate === 'pass',   // ONLY a full clean pass reads as eligible
+    eligibility_gate: i.eligibility_gate,      // pass | fail | split -- renderer shows all three
     consistency: i.consistency,
     value_score: i.value_score,
     feasibility_score: i.feasibility_score,
@@ -851,7 +868,7 @@ const norm = ASCII ? toAscii : (s => (typeof s === 'string' ? s : ''))
 // Counts are pure JS arithmetic over the structured review array -- never narrated
 // by an agent (the verdict/horizon enums are closed and total, so counts are total).
 function tally(ideas) {
-  const v = { ADOPT: 0, CONSIDER: 0, PARK: 0, REJECT: 0 }
+  const v = { ADOPT: 0, CONSIDER: 0, PARK: 0, REJECT: 0, SHIPPED: 0 }
   const h = { NOW: 0, HORIZON: 0 }
   for (const i of ideas) {
     if (i.verdict in v) v[i.verdict]++
@@ -866,7 +883,11 @@ function selfMetrics(reviewObj, rawCount, runHealth) {
   const ideas = (reviewObj && Array.isArray(reviewObj.scored_ideas)) ? reviewObj.scored_ideas : []
   const scored = ideas.length
   const { v } = tally(ideas)
-  const ineligible = ideas.filter(i => i.eligible === false).length
+  // gate failures (all reviewers ineligible) AND splits (a reviewer dissented) are both
+  // "not a clean eligibility pass" -- counted apart so a split is not hidden as clean.
+  const gateOf = i => i.eligibility_gate || (i.eligible === false ? 'fail' : 'pass')
+  const ineligible = ideas.filter(i => gateOf(i) === 'fail').length
+  const eligibility_split = ideas.filter(i => gateOf(i) === 'split').length
   const cons = { consistent: 0, 'minor-tension': 0, conflict: 0 }
   const disp = { survived: 0, weakened: 0, killed: 0 }
   const layers = {}
@@ -878,8 +899,9 @@ function selfMetrics(reviewObj, rawCount, runHealth) {
   }
   const pct = (n, d) => d ? Math.round((n / d) * 100) : 0
   return {
-    yield_funnel: { raw_pre_dedupe: rawCount, scored, adopt: v.ADOPT, consider: v.CONSIDER, park: v.PARK, reject: v.REJECT },
+    yield_funnel: { raw_pre_dedupe: rawCount, scored, adopt: v.ADOPT, consider: v.CONSIDER, park: v.PARK, reject: v.REJECT, shipped: v.SHIPPED },
     eligibility_rejection_rate_pct: pct(ineligible, scored),
+    eligibility_split_count: eligibility_split,
     consistency_mix: cons,
     survived_verification_mix: disp,
     layer_coverage: layers,                 // populated once layer-tag ships (FU2)
@@ -894,9 +916,14 @@ function selfMetrics(reviewObj, rawCount, runHealth) {
 //   **Panel dissent:** <dissent>        (only when the panel disagreed)
 //   **First step:** <first_step or 'None.'>
 function renderIdea(i) {
-  const eligTag = i.eligible === false
+  // Three-state eligibility: a 2-1 split is NOT a clean pass -- it reads as needs-human-review,
+  // not "respects principles", so a dissenting hard-principle finding stays visible.
+  const gate = i.eligibility_gate || (i.eligible === false ? 'fail' : 'pass')
+  const eligTag = gate === 'fail'
     ? '**INELIGIBLE -- violates a hard principle**'
-    : 'respects principles'
+    : (gate === 'split'
+      ? '**ELIGIBILITY SPLIT -- a reviewer flagged a hard-principle concern; needs human review**'
+      : 'respects principles')
   const meta = `\`${i.horizon}\` - **V${i.value_score} / F${i.feasibility_score}** - consistency: ${norm(i.consistency)} - ${eligTag}`
   const lines = [
     `### ${norm(i.title)}`,
@@ -947,8 +974,9 @@ function renderBacklog(review, opts) {
     // Fail-loud: a degraded run (a dead/empty lens) is announced at the top, not hidden.
     ...(opts.health && opts.health.degraded ? [`> **${norm(opts.health.banner)}**`, ''] : []),
     // Honest funnel: raw and scored are both real JS counts; the sentence does not
-    // imply a measured conversion between them.
-    `**${scoredM} ideas scored** (generated across ${rounds} rounds; raw pre-dedupe ${rawN}). Verdicts: ADOPT ${v.ADOPT}, CONSIDER ${v.CONSIDER}, PARK ${v.PARK}, REJECT ${v.REJECT}. Horizon: NOW ${h.NOW}, HORIZON ${h.HORIZON}.`,
+    // imply a measured conversion between them. SHIPPED is shown only when nonzero so the
+    // count stays equal to the rendered sections (no scored idea silently disappears).
+    `**${scoredM} ideas scored** (generated across ${rounds} rounds; raw pre-dedupe ${rawN}). Verdicts: ADOPT ${v.ADOPT}, CONSIDER ${v.CONSIDER}, PARK ${v.PARK}, REJECT ${v.REJECT}${v.SHIPPED ? `, SHIPPED ${v.SHIPPED}` : ''}. Horizon: NOW ${h.NOW}, HORIZON ${h.HORIZON}.`,
   ].join('\n')
 
   const PORTFOLIO = ['## Reviewer portfolio verdict', '', `> ${norm((review && review.summary) || '')}`].join('\n')
@@ -964,11 +992,17 @@ function renderBacklog(review, opts) {
   ].join('\n')
 
   // Sections in fixed order; preserve input order within each (no sort, no RNG).
-  // Empty sections are omitted.
-  const SECTIONS = ['ADOPT', 'CONSIDER', 'PARK', 'REJECT'].map(verdict => {
+  // Empty sections are omitted. SHIPPED is included so a panel-detected duplicate-of-
+  // shipped candidate is never silently dropped from the rendered set (it is scored, so
+  // it must appear somewhere); it renders last as a distinct "already shipped" bucket.
+  const SECTION_TITLES = {
+    ADOPT: '## ADOPT', CONSIDER: '## CONSIDER', PARK: '## PARK', REJECT: '## REJECT',
+    SHIPPED: '## SHIPPED (panel judged this a duplicate of shipped work)',
+  }
+  const SECTIONS = ['ADOPT', 'CONSIDER', 'PARK', 'REJECT', 'SHIPPED'].map(verdict => {
     const group = ideas.filter(i => i.verdict === verdict)
     if (!group.length) return null
-    return [`## ${verdict}`, '', group.map(renderIdea).join('\n\n')].join('\n')
+    return [SECTION_TITLES[verdict], '', group.map(renderIdea).join('\n\n')].join('\n')
   }).filter(Boolean)
 
   // SHIPPED / SETTLED appendix from Memory (prior ideas no longer open). Omitted when
