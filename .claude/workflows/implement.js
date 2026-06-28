@@ -290,6 +290,13 @@ const build = await agent(
   `STEP A -- worktree safety FIRST: assert git rev-parse --abbrev-ref HEAD is the ratified feature ` +
   `branch (carrying ${INPUT.spec_dir}/spec.md) and NOT main/detached. If not, STOP: status:'failed', ` +
   `blocked_reason:'worktree-not-on-feature-branch', write nothing.\n\n` +
+  `STEP A0 -- PIN the feature dir (critical): /speckit-implement's prerequisite script resolves ` +
+  `FEATURE_DIR from .specify/feature.json (a PERSISTED file that may hold a STALE prior feature), NOT ` +
+  `from the spec dir you pass. So BEFORE invoking it, OVERWRITE .specify/feature.json on THIS worktree ` +
+  `with {"feature_directory":"${INPUT.spec_dir}"} (exactly as speckit-finish-chain does its step 0). ` +
+  `Confirm it reads back as ${INPUT.spec_dir}. If you skip this, implement could build a stale task ` +
+  `list while the ledger reports ${INPUT.feature} -- a silent wrong-feature build. This pin is ` +
+  `worktree-local config; commit nothing for it.\n\n` +
   `STEP B -- handle the SKILL's interactive STOP: /speckit-implement has a hard "Wait for user ` +
   `response" prompt when checklists are incomplete. You have NO user. Do NOT auto-answer it. Record it ` +
   `as a tasks_blocked entry {reason:'checklist-incomplete-stop'} and return status:'partial' -- the ` +
@@ -381,12 +388,15 @@ function completionGate(b, expectedBranch) {
   // so scanning the raw argv would false-positive on the allowed deselect. After stripping,
   // the remainder must be a full "pytest -m unit" with no -k, no ::node-id, no bare .py file.
   const argvCore = argv.replace(/(^|\s)--deselect(\s+|=)\S+/g, ' ')
-  // Reject narrowing/cached-subset flags too: -k, ::node-id, a bare .py file, AND the
-  // cache-based subset flags (--lf/--last-failed/--ff/--failed-first/--sw/--stepwise) which
-  // run only a CACHED subset and would report "N passed" without the full unit suite.
+  // Reject narrowing/subset flags: -k, ::node-id, a bare .py file; the cache-subset flags
+  // (--lf/--last-failed/--ff/--failed-first/--sw/--stepwise) that rerun only a CACHED subset;
+  // AND the collection-ignore flags (--ignore / --ignore-glob) that drop paths at collection
+  // -- all can produce "N passed" without the full unit suite. Only a clean "pytest -m unit"
+  // (plus the sanctioned --deselect, already stripped) is the CI-equivalent run.
   const argvIsFullUnitRun = /(^|\s)-m\s+unit(\s|$)/.test(argvCore) &&
     !/(^|\s)-k(\s|=)/.test(argvCore) && !/::/.test(argvCore) && !/(^|\s)[^\s-]\S*\.py(\s|$)/.test(argvCore) &&
-    !/(^|\s)(--lf|--last-failed|--ff|--failed-first|--sw|--stepwise|--stepwise-skip)(\s|$)/.test(argvCore)
+    !/(^|\s)(--lf|--last-failed|--ff|--failed-first|--sw|--stepwise|--stepwise-skip)(\s|$)/.test(argvCore) &&
+    !/(^|\s)--ignore(-glob)?(\s|=)/.test(argvCore)
   const summaryGreen = !!(v && v.install_ok && v.pytest_collected >= 0 && argvIsFullUnitRun &&
     /(?:^|\s)\d+ passed\b/.test(summary) && !/\b(failed|error|errors)\b/i.test(summary))
   const deselectExplained = deselectsAreExplained(v)
@@ -462,8 +472,10 @@ const ledger = await agent(
   `Write pr_summary with these sections, stop-on-fail top-down: (1) FROM SPEC: feature + branch + the ` +
   `ratified status line (a human wrote it; implement did not); (2) OUTCOME + the blocking reasons first ` +
   `if not READY_FOR_PR; (3) TASKS: done/total + blocked ids; (4) TESTS: status + the NAMED ci-only ` +
-  `deselected tests ("runs green in CI on 3.13; deselected locally on 3.12 -- NOT a failure, NOT a faked ` +
-  `pass"), failures named individually; (5) GOVERNANCE: retail check / semantic-check / wiring / ` +
+  `deselected test, flagged as a RESIDUAL RISK the human must weigh: "this subprocess import-isolation ` +
+  `test is deselected locally and is verified ONLY by CI (3.13); if a change regresses it, CI -- not ` +
+  `this local run -- is what catches it. It is NOT a faked local pass." List any real failures ` +
+  `individually; (5) GOVERNANCE: retail check / semantic-check / wiring / ` +
   `never-execute each its own line, plus "retail validate: needs-db-deferred (informational, per ` +
   `Principle VIII)"; (6) PRINCIPLE-V STOPS: surfaced questions or "(none)"; (7) DIFF SUMMARY: the ` +
   `per-task commit subjects on the branch; (8) NEXT ACTION.\n` +
