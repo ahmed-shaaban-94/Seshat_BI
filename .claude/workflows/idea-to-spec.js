@@ -250,39 +250,44 @@ const plan = await agent(
   `\n=== GROUNDING (from the read-only grounder; the seed for the spec) ===\n${JSON.stringify(grounding, null, 2)}\n\n` +
   `RUN THESE STAGES IN ORDER, committing on THIS branch after each that writes a file; SKIP any stage ` +
   `whose output already exists (resume-safe), counting it in stages_done:\n\n` +
-  `STAGE 2 -- BRANCH (your FIRST action): run the Spec-Kit feature script to create + switch to the ` +
-  `feature branch and auto-number it (next is 041+; it scans specs+branches for max+1 -- do NOT pass a ` +
-  `number, do NOT hand-roll). Use the short name "${kebabHint}" (keep the path short; Windows 260-char ` +
-  `rule). If it exits non-zero (e.g. name collision), STOP: return status:'failed', blocked_reason with ` +
-  `the stderr, write no spec. Record feature (NNN-kebab) + branch.\n\n` +
-  `STAGE 3 -- /speckit-specify: author spec.md from the grounding seed. specify is what CREATES ` +
-  `specs/NNN-*/ + .specify/feature.json -- do not pre-create them. Run NON-INTERACTIVELY: make informed ` +
-  `guesses for ordinary gaps but NEVER block on a prompt and NEVER answer a Principle-V [NEEDS ` +
-  `CLARIFICATION] marker (grain / PII / rollup / identity) -- leave those markers in place for stage 4. ` +
-  `Put the idea title verbatim (ASCII) in the spec's Input line.\n\n` +
-  `STAGE 4 -- /speckit-clarify (advisor-driven): for each ambiguity (max 5, highest Impact*Uncertainty ` +
+  `STAGE 2 -- SPECIFY (this creates the branch via its hook -- do NOT create one yourself): run ` +
+  `/speckit-specify to author spec.md from the grounding seed. IMPORTANT (repo-specific): ` +
+  `.specify/extensions.yml enables a NON-OPTIONAL before_specify hook (speckit.git.feature) with ` +
+  `auto_execute_hooks:true, so /speckit-specify ITSELF creates + switches to the numbered feature ` +
+  `branch (next is 041+, auto-numbered by scanning specs+branches for max+1) BEFORE it writes the ` +
+  `spec, then creates specs/NNN-*/ + .specify/feature.json. Do NOT run the feature script separately ` +
+  `and do NOT pre-create the dir -- a second manual branch would split the artifacts across two ` +
+  `branches and point the ratify handoff at the wrong worktree. Pass the short name "${kebabHint}" to ` +
+  `the hook (keep the path short; Windows 260-char rule). If branch/spec creation fails (e.g. name ` +
+  `collision, hook non-zero), STOP: return status:'failed', blocked_reason with the error, write no ` +
+  `further artifacts. AFTER specify returns, record the ACTUAL feature (NNN-kebab) + branch it created ` +
+  `(read .specify/feature.json / the current branch -- do not assume; the hook owns the number). Run ` +
+  `NON-INTERACTIVELY: make informed guesses for ordinary gaps but NEVER block on a prompt and NEVER ` +
+  `answer a Principle-V [NEEDS CLARIFICATION] marker (grain / PII / rollup / identity) -- leave those ` +
+  `markers in place for stage 3. Put the idea title verbatim (ASCII) in the spec's Input line.\n\n` +
+  `STAGE 3 -- /speckit-clarify (advisor-driven): for each ambiguity (max 5, highest Impact*Uncertainty ` +
   `first): reason as the advisor against the constitution / readiness spine / RC defaults / the roadmap ` +
   `stage, pick the RECOMMENDED answer, record {question, recommended_answer, reasoning, reversible}, and ` +
   `integrate it into the spec. ${DATE_NOTE} HARD CARVE-OUT (Principle V -- do NOT answer; record to ` +
   `open_for_human and into the spec's ## Clarifications block): grain/uniqueness, PII publish-safety, ` +
-  `business rollup/segment, product identity. Also harvest any Principle-V markers stage 3 left in place. ` +
+  `business rollup/segment, product identity. Also harvest any Principle-V markers stage 2 (specify) left in place. ` +
   `If a clarify question is BUILD-BLOCKING (the spec cannot be meaningfully written without the human's ` +
   `ruling), STOP: status:'blocked', blocked_reason:'clarify-principle-v-wall' + the wall question(s) ` +
   `recorded -- do NOT fabricate a spec around the unknown.\n\n` +
-  `STAGE 5 -- /speckit-plan then /speckit-tasks (idempotent, skip-if-exists). Stay INSIDE this one idea's ` +
+  `STAGE 4 -- /speckit-plan then /speckit-tasks (idempotent, skip-if-exists). Stay INSIDE this one idea's ` +
   `first-step scope (YAGNI: add the seam, not the implementation). Do NOT assume any DEFERRED capability ` +
   `exists (F016 Power BI Execution Adapter; F031-F033 spec-only runtimes).\n\n` +
-  `STAGE 6 -- /speckit-analyze (READ-ONLY on spec/plan/tasks): run the real cross-artifact consistency ` +
+  `STAGE 5 -- /speckit-analyze (READ-ONLY on spec/plan/tasks): run the real cross-artifact consistency ` +
   `pass; capture its full report into analysis.md (the only write it produces -- our repo convention). ` +
   `Record analyze_verdict (clean if 0 critical & 0 high, else findings), analyze_critical, analyze_high.\n\n` +
-  `STAGE 7 -- ADVERSARIAL PLAN-REVIEW (your final step; you already own the branch + commit): be a SINGLE ` +
+  `STAGE 6 -- ADVERSARIAL PLAN-REVIEW (your final step; you already own the branch + commit): be a SINGLE ` +
   `default-adverse skeptic over spec/plan/tasks (READ-ONLY -- report fixes, never edit). Check five axes: ` +
   `hidden-principle-violation, assumes-deferred-capability, c086-leak, fabricated-confidence, over-scope. ` +
   `Write your findings to plan-review.md committed on the branch (durable; the handoff reads it). Set ` +
   `plan_review_verdict PASS / PASS-WITH-NOTES / BLOCKED. A draft missing analyze or tasks is automatic ` +
   `BLOCKED. On a CRITICAL you are unsure of, say so in notes -- never retry, never override.\n\n` +
-  `COMMIT DISCIPLINE: "docs(NNN): specify" after stage 3, "docs(NNN): clarify" after 4, "docs(NNN): ` +
-  `plan+tasks" after 5, "docs(NNN): analyze" after 6, "docs(NNN): plan-review" after 7. Never merge/push/` +
+  `COMMIT DISCIPLINE: "docs(NNN): specify" after stage 2, "docs(NNN): clarify" after 3, "docs(NNN): ` +
+  `plan+tasks" after 4, "docs(NNN): analyze" after 5, "docs(NNN): plan-review" after 6. Never merge/push/` +
   `touch main.\n\n` +
   `CONSTRAINTS (every authored artifact): ASCII + UTF-8 no BOM (-- and ->, no glyphs; rule IX). ` +
   `Generic-only (no C086/pharmacy specifics in a generic artifact; rule 7). No fabricated confidence / ` +
