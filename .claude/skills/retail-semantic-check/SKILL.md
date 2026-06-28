@@ -2,7 +2,7 @@
 name: retail-semantic-check
 description: >-
   Compute the Semantic Model Ready (Stage 5) readiness verdict for a committed
-  Power BI PBIP model in the Retail_Tower_analytics repo. Use after Gold Ready is
+  Power BI PBIP model in the Seshat BI repo. Use after Gold Ready is
   `pass`, when someone asks whether the semantic model is ready, to check that every
   measure binds to an approved metric contract, or before any dashboard/PBIP work.
   READ-ONLY and invoke-and-interpret only: it runs the existing `retail check` gate,

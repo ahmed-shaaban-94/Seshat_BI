@@ -1,4 +1,4 @@
-# CLAUDE.md — Retail Tower Analytics
+# CLAUDE.md — Seshat BI
 
 Repo-specific rules. Global rules in `~/.claude/CLAUDE.md` still apply.
 

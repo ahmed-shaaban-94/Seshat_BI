@@ -2,7 +2,7 @@
 name: dashboard-design
 description: >-
   Design a Power BI dashboard FROM approved metric contracts in the
-  Retail_Tower_analytics repo. Use when someone asks to design a report/page,
+  Seshat BI repo. Use when someone asks to design a report/page,
   bind visuals to metrics, or produce a dashboard layout for a subject area whose
   semantic model is ready. This skill is HARD-GATED on semantic_model_ready: pass
   (no approved metric contracts -> no design); it authors reviewable design

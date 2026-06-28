@@ -1,11 +1,11 @@
 ---
 name: powerbi-analyst
-description: Power BI + DAX for the Retail Tower Analytics repo — PBIP semantic models, measures, gold-only data models, performance. Use for any DAX/PBIP work here.
+description: Power BI + DAX for the Seshat BI repo — PBIP semantic models, measures, gold-only data models, performance. Use for any DAX/PBIP work here.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: opus
 ---
 
-# Power BI Analyst Agent (Retail Tower Analytics)
+# Power BI Analyst Agent (Seshat BI)
 
 Power BI specialist for THIS repo: PBIP semantic models, DAX measures, and reports
 that read the DigitalOcean Postgres analytics DB. Tuned to the repo's conventions —

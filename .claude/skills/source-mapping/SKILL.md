@@ -3,7 +3,7 @@ name: source-mapping
 description: >-
   Drive a raw retail source table through the source-mapping gate before any
   silver SQL exists. Use when someone asks to map, model, profile, or onboard a
-  new bronze table toward Power BI in the Retail_Tower_analytics repo -- profile
+  new bronze table toward Power BI in the Seshat BI repo -- profile
   the source, decide grain/PK, fill the five mapping artifacts into
   mappings/<table>/, and stop at the gate. This skill ENFORCES the rule that no
   silver.* SQL is written until the map is reviewed and approved. It profiles and

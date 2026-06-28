@@ -104,7 +104,7 @@ const ADVISOR_SCHEMA = {
 phase('Draft chain (per spec, isolated)')
 const drafts = await parallel(IDEAS.map(idea => () => agent(
   `You are drafting ONE spec via the Spec-Kit chain in an ISOLATED git worktree (you were ` +
-  `launched with worktree isolation). Repo: Retail_Tower_analytics.\n\n` +
+  `launched with worktree isolation). Repo: Seshat_BI.\n\n` +
   `FEATURE: ${idea.number}-${idea.name}\nDESCRIPTION: ${idea.description}\n` +
   `SPEC DIR: specs/${idea.number}-${idea.name}/\n\n` +
   `=== IDEMPOTENT / RESUME-SAFE EXECUTION (do this exactly) ===\n` +
@@ -140,7 +140,7 @@ const liveDrafts = drafts.filter(Boolean)
 phase('Advisor review')
 const reviews = await parallel(liveDrafts.map(d => () => agent(
   `You are the ADVISOR reviewing a batch-drafted spec's auto-answered clarifications for ` +
-  `Retail_Tower_analytics. Be a skeptic -- the chain auto-answered with defaults; catch any that ` +
+  `Seshat_BI. Be a skeptic -- the chain auto-answered with defaults; catch any that ` +
   `are wrong, risky, or a disguised human judgment call.\n\n` +
   `Draft decision record:\n${JSON.stringify(d)}\n\n` +
   `For EACH auto_decision: verdict = confirm | change (give the better answer) | flag-for-human ` +

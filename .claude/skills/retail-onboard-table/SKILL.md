@@ -3,7 +3,7 @@ name: retail-onboard-table
 description: >-
   Walk a NEW raw retail table across the FIRST readiness transition -- Source Ready
   (Stage 1) through Mapping Ready (Stage 2) -- and seed its per-table
-  readiness-status, in the Retail_Tower_analytics repo. Use when someone says
+  readiness-status, in the Seshat BI repo. Use when someone says
   "onboard <schema>.<table>", "take this new table from nothing to a reviewed map",
   or "start the readiness journey for a table". This is the stage-transition FRONT
   DOOR: it sequences profile -> map -> gate, writes the readiness-status record, and

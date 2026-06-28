@@ -47,11 +47,35 @@ re-verification of every headline claim against the source code** before any edi
 | `docs/superpowers/plans/2026-06-22-analytics-skeleton.md` | links `docs/conventions.md`, `docs/superpowers/specs/` (lines 537–538) | `../../conventions.md`, `../specs/` | Absolute-style paths broke from the nested location |
 | `docs/decisions/0012-p2-commit-types.md` | two references to `memory/p2-rule-no-commit-scopes.md` (lines 36, 76) | references removed; the decision context is already stated inline | Target file never existed (also flagged in the external-audit report) |
 
-## Open — needs a human decision (not auto-fixed)
+## Naming — RESOLVED by the owner (unify on "Seshat BI")
 
-| Item | Why it was not auto-fixed |
-|------|---------------------------|
-| **Product/repo naming: "Retail Tower Analytics"** appears in `CLAUDE.md` (header), `.claude/agents/powerbi-analyst.md`, and three `docs/superpowers/` plans/specs — a **third** label alongside "Seshat BI" (the product) and "Tower BI Agent Kit" (the prior internal name). It is also used pervasively as the *repo/service* name in skill descriptions. Whether it is a deliberate repo-vs-product distinction or stale branding is a **product-identity judgment call** (Principle V), so it is surfaced here rather than renamed unilaterally. **Suggested resolution:** decide whether "Retail Tower Analytics" is the repo/service name (keep, and state the distinction once in the glossary) or stale (rename to Seshat BI everywhere). |
+The "Retail Tower Analytics" label was a stale third name. The owner decided to
+**unify on "Seshat BI"**, applied to **active/live surfaces only**, following the
+naming policy already recorded in
+`docs/superpowers/specs/2026-06-26-repo-rename-seshat-bi-preflight.md`:
+
+**Unified in this change:**
+- `CLAUDE.md` header → "Seshat BI".
+- `.claude/agents/powerbi-analyst.md` (description + heading) → "Seshat BI".
+- `.claude/skills/retail-govern/SKILL.md` brand strings ("Retail Tower governance
+  checker" / "Retail Tower's conventions") → "Seshat BI".
+- 12 active `.claude/skills/*/SKILL.md` — the stale repo slug "Retail_Tower_analytics
+  repo" → "Seshat BI repo".
+- 3 active `.claude/workflows/*.js` — log/prompt token "Retail_Tower_analytics" →
+  the current repo slug "Seshat_BI".
+
+**Deliberately left unchanged (per the preflight policy):**
+- **Historical archives** — dated `docs/superpowers/{plans,specs}/*`, `.superpowers/sdd/`,
+  `specs/0xx` — point-in-time records (including the original "Retail Tower Analytics
+  Skeleton" plan title and the Windows-path build steps).
+- **The Python package / CLI `retail`** — permanent; "Seshat_BI" is only a brand alias.
+- **`.specify/memory/constitution.md`** "Retail Tower **OS** orchestrator" — a
+  reference to a *separate external* system this service is explicitly NOT bound to,
+  not a brand string for this product.
+- **`docs/architecture/tower-bi-agent-kit.md`** — already reconciled (its header states
+  the rename and its Phase-0 body intentionally preserves the original name).
+- **"Tower BI Agent Kit"** mentions — the documented prior internal name, kept where it
+  explains the rebrand.
 
 ## Not a defect / deliberately not touched
 

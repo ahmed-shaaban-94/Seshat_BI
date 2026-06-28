@@ -119,7 +119,7 @@ const draftsForLens = (batch && Array.isArray(batch.drafts)) ? batch.drafts : []
 const reviewsForLens = (batch && Array.isArray(batch.reviews)) ? batch.reviews : []
 
 const drift = await agent(
-  `You are the BIG-PICTURE DRIFT SENTINEL for Retail_Tower_analytics -- the final ` +
+  `You are the BIG-PICTURE DRIFT SENTINEL for Seshat_BI -- the final ` +
   `lens after a batch of specs was drafted. Your ONE job: confirm the whole batch ` +
   `stayed coherent and on-direction, and surface any spec that drifted. You judge ` +
   `the batch as a SET, catching problems no per-spec review can see.\n\n` +
