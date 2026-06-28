@@ -3,7 +3,7 @@ name: retail-validate
 description: >-
   Run the LIVE data checks against a materialized retail table and interpret the
   findings. Use after silver + gold exist for a mapped table in the
-  Retail_Tower_analytics repo, when someone asks to validate or reconcile a
+  Seshat BI repo, when someone asks to validate or reconcile a
   table, or when a V-RC2 / V-RC15 / V-RC16 finding appears. Invoke-and-interpret
   only: this skill runs `retail validate` against a live Postgres DB and maps each
   finding id to its fix. It does NOT build models, write SQL, or auto-fix.

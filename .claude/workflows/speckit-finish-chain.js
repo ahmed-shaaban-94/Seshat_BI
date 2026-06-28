@@ -103,7 +103,7 @@ const finished = await pipeline(
   (spec) => agent(
     `You are FINISHING the Spec-Kit chain for ONE existing spec, in an ISOLATED git worktree ` +
     `(you were launched with worktree isolation -- you have your own checkout and your own ` +
-    `.specify/feature.json). Repo: Retail_Tower_analytics.\n\n` +
+    `.specify/feature.json). Repo: Seshat_BI.\n\n` +
     `FEATURE: ${spec.number}-${spec.name}\nSPEC DIR: specs/${spec.number}-${spec.name}/\n\n` +
     `This spec ALREADY HAS spec.md, plan.md, and tasks.md. Your job is to FINISH the chain: an ` +
     `explicit advisor-driven clarify, then (only if missing) plan/tasks, then the read-only analyze.\n\n` +
@@ -215,7 +215,7 @@ const CONSISTENCY_SCHEMA = {
 }
 
 const sentinel = await agent(
-  `You are the BIG-PICTURE CONSISTENCY SENTINEL for Retail_Tower_analytics, run AFTER finishing the ` +
+  `You are the BIG-PICTURE CONSISTENCY SENTINEL for Seshat_BI, run AFTER finishing the ` +
   `Spec-Kit chain on a batch of EXISTING specs. Your ONE job: judge the batch as a SET and surface any ` +
   `spec that drifted or any cross-spec incoherence -- including incoherence introduced by the per-spec ` +
   `clarify answers. You catch what no single-spec /speckit-analyze can see.\n\n` +

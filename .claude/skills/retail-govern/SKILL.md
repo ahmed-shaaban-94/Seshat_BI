@@ -1,9 +1,9 @@
 ---
 name: retail-govern
 description: >-
-  Run the Retail Tower governance checker and interpret its findings. Use when
+  Run the Seshat BI governance checker and interpret its findings. Use when
   someone asks to check, validate, or gate Power BI / DAX / TMDL / PBIR / SQL
-  work in the Retail_Tower_analytics repo, when `retail check` reports a rule
+  work in the Seshat BI repo, when `retail check` reports a rule
   violation, or when you need to know what a rule id (D8, C2, S2, G1, …) means
   and where to fix it. Invoke-and-interpret only: this skill does NOT build
   models, run pbi-cli, or auto-fix — it runs the checker and maps ids to fixes.
@@ -11,7 +11,7 @@ description: >-
 
 # retail-govern
 
-Retail Tower's conventions are enforced by a static checker, `retail check`. This
+Seshat BI's conventions are enforced by a static checker, `retail check`. This
 skill teaches you to **run it, read its findings, and map each rule id to the file
 and fix it points at**. The authoritative catalog is spec §5 in
 `docs/superpowers/specs/2026-06-23-pbi-governance-layer-design.md`.

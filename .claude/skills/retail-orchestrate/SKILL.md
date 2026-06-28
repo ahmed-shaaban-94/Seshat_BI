@@ -5,7 +5,7 @@ description: >-
   build -> validate -> Power BI) by composing the existing verb-skills, and
   self-heal against the governance gate's exit code. Use when someone asks to take
   a table end-to-end, "orchestrate", "run the whole pipeline", or drive the
-  medallion playbook in the Retail_Tower_analytics repo. The AGENT is the runtime:
+  medallion playbook in the Seshat BI repo. The AGENT is the runtime:
   this skill sequences and instructs; it never spawns a loop runtime, never
   self-grants the mapping approval, and HARD-STOPS at human judgment calls.
 ---

@@ -3,7 +3,7 @@ name: retail-build-warehouse
 description: >-
   Author the silver + gold migration SQL for a mapped retail table from its
   APPROVED source-map, then STOP before executing. Use after a table's mapping
-  gate is CLEARED in the Retail_Tower_analytics repo and someone asks to build the
+  gate is CLEARED in the Seshat BI repo and someone asks to build the
   silver/gold SQL, write the migration, or fill the retail-orchestrate build seam.
   Author-and-stop: it writes warehouse/migrations/*.sql FILES only, never connects
   to a database, never applies the SQL, and HARD-STOPS at any judgment call the map

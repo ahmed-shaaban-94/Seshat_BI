@@ -2,7 +2,7 @@
 name: grain-confidence-reviewer
 description: >-
   Surface grain-uniqueness CONFIDENCE as evidence and DIFF two source-map.yaml
-  versions for a Mapping Ready reviewer in the Retail_Tower_analytics repo. Use when
+  versions for a Mapping Ready reviewer in the Seshat BI repo. Use when
   someone asks "is the grain confident?", "what changed in this map?", or is about to
   review/approve a table's mapping. It READS the already-measured PK-uniqueness signal
   (PkProof from profile.py / the committed source-profile.md) and reads two map

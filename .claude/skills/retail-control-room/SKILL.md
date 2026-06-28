@@ -2,7 +2,7 @@
 name: retail-control-room
 description: >-
   Show the consolidated, cross-table data-quality control room for the
-  Retail_Tower_analytics repo -- one worst-first roll-up of every table's stage,
+  Seshat BI repo -- one worst-first roll-up of every table's stage,
   status, static WARNs, live findings, open blockers, and next action, plus a
   portfolio-wide open-blockers list. Use when someone asks "show the control room",
   "what is broken across all tables", or "which table do I fix next". READ-ONLY and

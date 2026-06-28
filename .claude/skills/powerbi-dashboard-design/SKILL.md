@@ -4,7 +4,7 @@ description: >-
   The Power BI VISUAL/DESIGN layer of the Tower BI Readiness System. Use when
   someone asks about dashboard design, page layout, a background/canvas asset, a
   theme/colors choice, a screenshot critique, a mobile layout, or a Power BI
-  handoff in the Retail_Tower_analytics repo. This skill ROUTES a design request
+  handoff in the Seshat BI repo. This skill ROUTES a design request
   into exactly ONE of four surfaces (report visuals, external background/canvas,
   theme JSON, implementation handoff) and opens the matching workflow. It is a
   router and a vocabulary, not a builder: it never edits a PBIP/PBIR file, never
