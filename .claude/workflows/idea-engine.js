@@ -940,12 +940,12 @@ const BACKLOG_PATH = 'docs/roadmap/idea-backlog.md'
 // dropped) so a stray smart-quote/ellipsis/non-breaking-space can never break the contract.
 // The FOLD glyph literals are the only non-ASCII in this file.
 const FOLD = [
-  ['—', '--'], ['–', '--'], ['―', '--'],   // em / en / horizontal bar
-  ['→', '->'], ['·', '-'], ['•', '-'],     // arrow / middle dot / bullet
-  ['‘', "'"], ['’', "'"], ['‚', "'"],      // smart single quotes
-  ['“', '"'], ['”', '"'], ['„', '"'],      // smart double quotes
-  ['…', '...'],                                  // ellipsis
-  [' ', ' '], [' ', ' '], [' ', ' '],   // non-breaking / thin / narrow-nbsp
+  ['\u2014', '--'], ['\u2013', '--'], ['\u2015', '--'],   // em / en / horizontal bar
+  ['\u2192', '->'], ['\u00b7', '-'], ['\u2022', '-'],     // arrow / middle dot / bullet
+  ['\u2018', "'"], ['\u2019', "'"], ['\u201a', "'"],      // smart single quotes
+  ['\u201c', '"'], ['\u201d', '"'], ['\u201e', '"'],      // smart double quotes
+  ['\u2026', '...'],                                  // ellipsis
+  ['\u00a0', ' '], ['\u2009', ' '], ['\u202f', ' '],   // non-breaking / thin / narrow-nbsp
 ]
 function toAscii(s) {
   if (typeof s !== 'string') return ''

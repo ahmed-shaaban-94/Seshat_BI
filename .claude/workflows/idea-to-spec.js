@@ -20,11 +20,11 @@ const BACKLOG_PATH = 'docs/roadmap/idea-backlog.md'
 // land anywhere tracked. The FOLD table's search chars are the only non-ASCII in this
 // file; everything the workflow AUTHORS is folded through them to ASCII.
 const FOLD = [
-  ['—', '--'], ['–', '--'],   // em / en dash
-  ['→', '->'], ['·', '-'],     // rightwards arrow / middle dot
-  ['‘', "'"], ['’', "'"],     // smart single quotes
-  ['“', '"'], ['”', '"'],     // smart double quotes
-  ['…', '...'],                     // ellipsis
+  ['\u2014', '--'], ['\u2013', '--'],   // em / en dash
+  ['\u2192', '->'], ['\u00b7', '-'],     // rightwards arrow / middle dot
+  ['\u2018', "'"], ['\u2019', "'"],     // smart single quotes
+  ['\u201c', '"'], ['\u201d', '"'],     // smart double quotes
+  ['\u2026', '...'],                     // ellipsis
 ]
 function asciiFold(s) {
   if (typeof s !== 'string') return ''

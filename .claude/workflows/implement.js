@@ -42,11 +42,11 @@ const CI_ONLY_TESTS = [
 
 // ---- ASCII fold (Principle IX) -- folds dirty upstream text + a catch-all -------
 const FOLD = [
-  ['—', '--'], ['–', '--'], ['―', '--'],
-  ['→', '->'], ['·', '-'], ['•', '-'],
-  ['‘', "'"], ['’', "'"], ['‚', "'"],
-  ['“', '"'], ['”', '"'], ['„', '"'],
-  ['…', '...'],
+  ['\u2014', '--'], ['\u2013', '--'], ['\u2015', '--'],
+  ['\u2192', '->'], ['\u00b7', '-'], ['\u2022', '-'],
+  ['\u2018', "'"], ['\u2019', "'"], ['\u201a', "'"],
+  ['\u201c', '"'], ['\u201d', '"'], ['\u201e', '"'],
+  ['\u2026', '...'],
   [' ', ' '], [' ', ' '], [' ', ' '],   // nbsp / thin / narrow-nbsp
 ]
 function asciiFold(s) {
@@ -380,7 +380,7 @@ function deselectsAreExplained(v) {
   // reported set and the argv set must be exactly the allow-list (or empty).
   const argv = (v && v.pytest_argv) || ''
   const argvDeselects = [...argv.matchAll(/(?:^|\s)--deselect(?:\s+|=)(\S+)/g)].map(m => m[1])
-  const sorted = a => a.slice().sort().join('')
+  const sorted = a => a.slice().sort().join('\u0001')
   const idsAllAllowed = ds.every(id => CI_ONLY_TESTS.includes(id))
   const argvAllAllowed = argvDeselects.every(id => CI_ONLY_TESTS.includes(id))
   const argvMatchesIds = sorted(argvDeselects) === sorted(ds)   // no hidden argv deselect
