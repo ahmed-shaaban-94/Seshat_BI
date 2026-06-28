@@ -14,6 +14,10 @@
 *.yaml   text eol=lf
 *.cfg    text eol=lf
 
+# Workflow scripts are loaded by the Claude Code Workflow tool, which rejects the
+# carriage-return byte as a control char -- force LF so they load on Windows checkouts.
+.claude/workflows/*.js   text eol=lf
+
 # Binary artifacts — never normalize.
 *.pbix   binary
 *.abf    binary
