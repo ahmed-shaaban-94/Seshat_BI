@@ -15,6 +15,13 @@ unless policy states otherwise.
 Net Sales = Gross Sales − total discount (line + header), pre-tax. Equivalently, sum of
 net sales amount per qualifying line where net = gross − discounts.
 
+**Derives from**
+KPI-MC-01 (Gross Sales), KPI-MC-06 (Discount Amount) -- transcribed from this contract's
+formula "Net Sales = Gross Sales - total discount (line + header), pre-tax". Net Sales is
+itself a derived KPI and is in turn the base for KPI-MC-05, KPI-MC-08, KPI-MC-09,
+KPI-MC-10. (Reference IDs, never filenames. See references/kpi-derivation-lineage.md for
+the full graph.)
+
 **Required fields**
 - net sales amount per line *(assumption)* — or gross + line discount + header discount to
   derive

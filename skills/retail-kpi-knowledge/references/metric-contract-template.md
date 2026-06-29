@@ -19,6 +19,13 @@ which policies apply.]
 **Formula in business terms**
 [Words and simple math. No code. Reference base KPIs where possible.]
 
+**Derives from**
+[List the base KPI(s) this metric is computed from, by stable KPI-MC ID -- e.g.
+`KPI-MC-02, KPI-MC-04`. State `none -- base KPI` for a metric computed directly from fact
+fields. Reference IDs, never filenames. Only record an edge already stated in this
+contract's committed prose; declaring a new derivation relationship is a metric-owner
+ruling (Principle V), not an authoring step.]
+
 **Required fields**
 [Each field marked confirmed / assumption / derived. Do not assert unconfirmed fields
 exist.]
