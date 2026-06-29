@@ -101,9 +101,10 @@ step → apply → next (the walk both cleans the table and refines the pipeline
 
 The rule is **per-column vs global by dependency**: global when a decision is table-wide
 (PII policy) or cross-row (filters); per-column when it depends only on that column's own
-keep. Naming: gold/BI columns use PascalCase with `_` by logic (`Product_ID`,
-`Gross_Sales`, `Sale_SK`); the date dim carries no `-1`/sentinel member (markable as a
-Power BI date table).
+keep. Naming: warehouse SQL identifiers are snake_case (`product_id`, `gross_sales`,
+`sale_sk`) -- rule S1 flags quoted non-snake_case columns; PascalCase is a Power BI
+model-layer display choice, never a SQL identifier. The date dim carries no
+`-1`/sentinel member (markable as a Power BI date table).
 
 ### 2.0 Grain (FIRST — do not skip or defer)
 
