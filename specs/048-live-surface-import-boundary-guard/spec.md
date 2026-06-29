@@ -67,8 +67,8 @@ it the same import placed lazily inside a function body; assert no Finding.
 
 1. **Given** a live-surface module with a module-scope `import psycopg2`,
    **When** the static checker runs, **Then** the rule emits a Finding naming
-   that module and the offending import, and the gate's exit reflects the rule's
-   ratified severity.
+   that module and the offending import at ERROR severity, and the gate's exit
+   reflects an ERROR finding.
 2. **Given** a live-surface module that imports `psycopg2` lazily inside a
    function (the approved pattern), **When** the static checker runs, **Then**
    the rule emits NO Finding for that module.
@@ -180,9 +180,11 @@ nor any rule fixture names a domain-specific table, column, or KPI.
 - **FR-010**: Each Finding MUST be a new immutable value object identifying the
   rule id, the severity, the offending module path (locator), and the offending
   import name; the rule MUST NOT mutate shared state.
-- **FR-011**: The rule's emitted severity MUST be a single ratified posture
-  applied uniformly (see Clarifications -- severity posture is a governance
-  decision recorded for human ratification, not chosen here).
+- **FR-011**: The rule MUST emit severity ERROR uniformly for every violation
+  (clarified 2026-06-30: matches sibling B1's ERROR posture; a module-scope
+  driver import in a driver-free module is a proven invariant breach, not a
+  suspect pattern). The exit-code mapping for ERROR is the existing gate
+  behavior; this feature adds no new severity tier.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -227,11 +229,9 @@ Principle V -- the agent does not self-grant these). Stage clarify records a
 recommended answer for the advisor-decidable ones and leaves the human-reserved
 ones open.
 
-- **Severity posture**: Should the rule emit ERROR or WARNING? The idea source's
-  first-step suggests ERROR (a module-scope driver import in a live surface is a
-  proven invariant breach, like B1). Principle VIII's default posture is WARN for
-  static "suspect pattern" rules and ERROR for "proven defect" live checks. This
-  is a governance posture call. See Session 2026-06-30.
+- **Severity posture** (RESOLVED 2026-06-30 -> ERROR): see Session 2026-06-30.
+  The advisor resolved this to ERROR, matching sibling B1; full reasoning is in
+  the session bullet below.
 - **[HUMAN RATIFY] Live-surface set membership**: Is the closed set exactly
   `{validate, value_proxy, semantic, dax_gen}`, or should other modules with a
   lazy-driver pattern (e.g. `metric_drift.py`) or future live surfaces be
@@ -248,7 +248,29 @@ ones open.
 
 ### Session 2026-06-30
 
-(Populated by `/speckit-clarify`.)
+- Q: Severity posture -- should the rule emit ERROR or WARNING for a module-scope
+  connection-capable import in a live-surface module? -> A: ERROR. Reasoning: the
+  direct sibling B1 (also a static rule) emits ERROR for the identical defect
+  class (module-scope driver import) in the static-core modules. Principle VIII's
+  "static rules WARN" applies to suspect patterns that carry an ADR "override
+  when" clause; a module-scope driver import in a driver-free module has no
+  legitimate override case -- it is a proven breach of an absolute invariant, not
+  a suspect pattern. Matching B1's ERROR keeps the two halves of the
+  never-execute / import-boundary guard consistent. Reversible: easy (a single
+  severity constant). FR-011 is hereby resolved to ERROR; the rule applies ERROR
+  uniformly to every violation it emits.
+
+The following are deliberately LEFT OPEN for a named human (constitution
+Principle V -- the agent does not self-grant these) and are NOT answered here:
+
+- **[HUMAN RATIFY] Live-surface set membership**: the exact closed set
+  (`{validate, value_proxy, semantic, dax_gen}` vs. also including
+  `metric_drift.py` or future live surfaces). Scope correctness is a governance
+  decision; recorded, not decided.
+- **[HUMAN RATIFY] Registered rule id**: the B-family registry id (the idea-bank
+  label "B3" is not necessarily the registry id). Recorded, not decided.
+- **[HUMAN RATIFY] Readiness stage**: whether this advances a readiness stage or
+  advances none (it occupies no roadmap F-row). Recorded, not decided.
 
 ## Assumptions
 
