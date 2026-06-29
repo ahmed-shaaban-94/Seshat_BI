@@ -40,3 +40,7 @@
   it is gated on human ratification, not on the planning workflow.
 - Items marked incomplete here are intentional and tracked; they do not block
   /speckit-clarify or /speckit-plan from running on the resolvable portion.
+- Clarify session (date pending) resolved 3 non-judgment ambiguities (artifact
+  format/location, comparison method, no-finding marker -> FR-011/FR-012) and
+  REFUSED 4 Principle-V judgment calls (grain, L3 coverage, readiness mapping,
+  update protocol), which remain in ## Clarifications for human resolution.

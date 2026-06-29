@@ -198,8 +198,13 @@ confirm it passes; remove the throwaway rule and regenerate.
   [NEEDS CLARIFICATION: coverage of the non-registry L3 surface is a Principle-V
   scope ruling. Recorded to Clarifications; not to be answered by the agent.]
 - **FR-011**: When a rule cannot be forced to emit a finding over a minimal
-  synthetic fixture, the record MUST represent that state explicitly rather than
-  recording an absence that would mask a future downgrade.
+  synthetic fixture, the record MUST represent that state with an EXPLICIT
+  no-finding marker entry (per clarify Q3) rather than omitting the rule, so the
+  lock still fails closed if that rule later begins or ceases to emit a finding.
+- **FR-012**: The committed golden record MUST be compared by parsing both the
+  committed artifact and the freshly observed posture into data and comparing the
+  data structures (not raw text), so a cross-platform line-ending round-trip
+  cannot flake the comparison (per clarify Q2, mirroring the manifest sibling).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -272,6 +277,39 @@ confirm it passes; remove the throwaway rule and regenerate.
 -->
 
 ### Session (date pending)
+
+> Operator: this session was run by the planning advisor. Fill the real date.
+> The advisor RESOLVED the non-judgment ambiguities below (recording reasoning
+> and reversibility) and REFUSED the Principle-V judgment calls, which remain
+> UNANSWERED for human resolution.
+
+#### Advisor-resolved (non-judgment defaults)
+
+- **Q1 -- Artifact format and location.** Recommended: a committed JSON file in
+  the same directory as the existing rule manifest (the established committed
+  golden-artifact directory), serialized with the SAME deterministic discipline
+  the manifest uses (sorted by id, stable key order, UTF-8 without BOM, `\n`
+  endings, single trailing newline). Reasoning: maximal symmetry with the shipped
+  sibling minimizes review surface and reuses a proven cross-platform-stable
+  format; RC default favors mirroring an existing accepted pattern over inventing
+  a new one. Reversible: easy (format is internal to the test + generator).
+  Integrated into FR-001/FR-005 and Assumptions.
+
+- **Q2 -- Comparison method (line-ending robustness).** Recommended: compare by
+  parsing the committed artifact and the freshly observed posture into data and
+  comparing the data structures (not raw text), so a Windows CRLF round-trip
+  under the repo autocrlf policy cannot flake the test -- exactly as the manifest
+  snapshot sibling does. Reasoning: the sibling already proved this is the stable
+  approach on this repo/OS. Reversible: easy. Integrated into FR-003/FR-005.
+
+- **Q3 -- Representing a rule that cannot be forced to fire.** Recommended: the
+  record carries an EXPLICIT no-finding marker entry for such a rule rather than
+  omitting it, so the lock still fails closed if that rule later starts emitting
+  (or stops emitting) a finding. Reasoning: silent omission would create exactly
+  the blind spot the lock exists to remove; an explicit marker preserves
+  fail-closed coverage. Reversible: easy. Integrated into FR-011/SC-006.
+
+#### Principle-V judgment calls (REFUSED -- human resolution required)
 
 The following are Principle-V judgment calls (grain / scope / readiness mapping /
 update protocol). They are RECORDED for human resolution and intentionally left
