@@ -224,19 +224,43 @@ posture (recorded in Clarifications).
 
 ## Clarifications
 
-The following are deferred to human ruling (Principle V / governance-posture
-decisions the spec must not self-answer). They are recorded here and reconciled in
-the clarify stage where a recommended default is proposed without binding the human.
+The three items below are governance-posture / roadmap-ownership decisions
+(Principle V class) that the spec must NOT self-answer as binding. The clarify
+stage acts as advisor: it records a RECOMMENDED default with reasoning so the plan
+can proceed, but each remains an open `[NEEDS CLARIFICATION]` marker for a human to
+ratify. The recommended defaults are all easily reversible (a severity flip, a
+scope widen, or a roadmap-ledger edit) and do not block authoring the spec.
+
+### Session 2026-06-30
+
+- Q: Roadmap stage -- does A3 advance a readiness stage, or is it a routing-integrity
+  rule outside the 7-stage spine like A1/B1? -> A (advisor recommendation, NOT
+  ratified): outside the 7-stage readiness spine; A3 advances no stage, exactly like
+  its A1/B1 siblings. The idea-backlog card's "V7 / F7" label is not a confirmed
+  roadmap F-row and is not trusted. RESERVED FOR HUMAN -- recorded, not binding.
+- Q: Bijection scope -- compare only the knowledge map "Route by task" id column, or
+  also the COMPASS fast-routing table? -> A (advisor recommendation, NOT ratified):
+  v1 scope is the "Route by task" table only (the idea's verbatim first step). A
+  COMPASS reconciliation is a YAGNI widening that adds false-positive surface; defer
+  it. RESERVED FOR HUMAN -- recorded, not binding.
+- Q: Severity posture -- are BOTH difference directions ERROR, or is one a WARNING?
+  -> A (advisor recommendation, NOT ratified): ERROR in both directions
+  (map-only id AND manifest-only id), matching A1's fail-closed posture. A
+  one-direction WARNING would let half the drift class ship silently. RESERVED FOR
+  HUMAN -- consistent with the severity-posture-lock work; recorded, not binding.
+
+The original open markers stand until a human rules:
 
 - [NEEDS CLARIFICATION: Roadmap stage. This idea carries no confirmed roadmap
   F-number. Does A3 advance a readiness stage, or is it a routing-integrity rule
   outside the 7-stage spine like A1/B1 (which advance no stage)? The idea-backlog
-  card labels it "V7 / F7" but the grounding could not confirm an F7 row owns it.]
+  card labels it "V7 / F7" but the grounding could not confirm an F7 row owns it.
+  Advisor default: outside the spine, advances no stage.]
 - [NEEDS CLARIFICATION: Bijection scope. Should A3 compare ONLY the knowledge map's
   "Route by task" id column against the manifest, or also reconcile the COMPASS
   fast-routing table the map header says the manifest mirrors? Widening adds coverage
-  but more false-positive surface.]
+  but more false-positive surface. Advisor default: "Route by task" only for v1.]
 - [NEEDS CLARIFICATION: Severity posture. Confirm BOTH difference directions
   (map-only id AND manifest-only id) are ERROR, versus one direction being WARNING.
-  The default adopted is ERROR-both, matching A1; a human should ratify this,
-  consistent with the severity-posture-lock work.]
+  Advisor default: ERROR-both, matching A1; a human should ratify this, consistent
+  with the severity-posture-lock work.]
