@@ -56,7 +56,7 @@ All domain overviews are **[seeded]** as summaries; deep per-KPI contracts beyon
 | Targets & budgets | `domains/targets-and-budgets.md` |
 | Time intelligence | `domains/time-intelligence.md` |
 | Data quality / control room | `domains/data-quality-control.md` |
-| Customer | **[planned]** — see the customer section of the `knowledge/retail-kpi-domains.md` meta-reference; no dedicated `domains/customer.md` file yet |
+| Customer | `domains/customer.md` -- **[seeded]** overview; per-KPI contracts [planned] |
 
 ## 4. KPI pack routes
 
@@ -78,7 +78,7 @@ skills/retail-kpi-knowledge/
   INDEX.md            this router
   README.md           seed scope and disclaimers
   knowledge/          cross-cutting reasoning (concepts, contracts, additivity, ambiguity, domains)
-  domains/            per-domain KPI overviews (11 files)
+  domains/            per-domain KPI overviews (12 files)
   contracts/          10 seeded metric contracts
   packs/              7 KPI pack definitions
   checklists/         contract review, pack review, ambiguity
