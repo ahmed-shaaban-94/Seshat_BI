@@ -102,29 +102,18 @@ _SQL_S3 = "CREATE VIEW gold.plain_name AS SELECT 1;\n"
 _SQL_S4A_BADNAME = "SELECT 1;\n"  # planted at warehouse/migrations/bad_name.sql
 # S4b multi-class: a bronze bare CREATE (ERROR) AND a gold bare CREATE not in a
 # transaction (WARNING) in one file -> the rule emits BOTH classes.
-_SQL_S4B = (
-    "CREATE TABLE bronze.thing (id text);\n"
-    "CREATE TABLE gold.thing (id text);\n"
-)
+_SQL_S4B = "CREATE TABLE bronze.thing (id text);\nCREATE TABLE gold.thing (id text);\n"
 _SQL_S5 = "SELECT amount_val::float8 FROM gold.thing;\n"
 _SQL_S6 = "CREATE TABLE gold.dim_thing (thing_sk integer);\n"
 _SQL_S7 = (
-    "INSERT INTO gold.dim_date (day_key)\n"
-    "SELECT DISTINCT day_key FROM gold.thing;\n"
+    "INSERT INTO gold.dim_date (day_key)\nSELECT DISTINCT day_key FROM gold.thing;\n"
 )
 _SQL_S8 = "INSERT INTO gold.dim_date (day_key) VALUES (-1);\n"
 
 # A TMDL table file with one offending measure/column per D-rule, planted under a
 # *.SemanticModel/definition/ path so iter_model_files / iter_m_sources pick it up.
-_TMDL_D1 = (
-    "table T\n"
-    "\tmeasure badName = 1\n"
-    "\t\tdisplayFolder: F\n"
-)
-_TMDL_D2 = (
-    "table T\n"
-    "\tmeasure Good = 1\n"
-)  # no displayFolder -> D2 ERROR
+_TMDL_D1 = "table T\n\tmeasure badName = 1\n\t\tdisplayFolder: F\n"
+_TMDL_D2 = "table T\n\tmeasure Good = 1\n"  # no displayFolder -> D2 ERROR
 _TMDL_D3 = (
     "table T\n"
     "\tmeasure OneA = SUM(T[c])\n"
@@ -132,22 +121,9 @@ _TMDL_D3 = (
     "\tmeasure OneB = SUM(T[c])\n"
     "\t\tdisplayFolder: F\n"
 )
-_TMDL_D4 = (
-    "table T\n"
-    "\tmeasure Ratio = 1 / 2\n"
-    "\t\tdisplayFolder: F\n"
-)
-_TMDL_D5 = (
-    "table T\n"
-    "\tcolumn val\n"
-    "\t\tdataType: int64\n"
-    "\t\tsummarizeBy: sum\n"
-)
-_TMDL_D6 = (
-    "table T\n"
-    "relationship rel\n"
-    "\tcrossFilteringBehavior: bothDirections\n"
-)
+_TMDL_D4 = "table T\n\tmeasure Ratio = 1 / 2\n\t\tdisplayFolder: F\n"
+_TMDL_D5 = "table T\n\tcolumn val\n\t\tdataType: int64\n\t\tsummarizeBy: sum\n"
+_TMDL_D6 = "table T\nrelationship rel\n\tcrossFilteringBehavior: bothDirections\n"
 _TMDL_D7 = (
     "table T\n"
     "\tmeasure Ti = TOTALYTD(SUM(T[c]), T[d])\n"
@@ -156,7 +132,7 @@ _TMDL_D7 = (
 _TMDL_D8 = (
     "table T\n"
     "\tpartition p = m\n"
-    "\t\tsource = let s = Sql.Database(Server, Db), q = s{[Schema=\"bronze\"]} in q\n"
+    '\t\tsource = let s = Sql.Database(Server, Db), q = s{[Schema="bronze"]} in q\n'
 )
 _TMDL_D9 = (
     "table T\n"
@@ -176,7 +152,7 @@ _TMDL_D11 = (
 _TMDL_C1 = (
     "table T\n"
     "\tpartition p = m\n"
-    "\t\tsource = let s = Sql.Database(\"a_host\", \"a_db\") in s\n"
+    '\t\tsource = let s = Sql.Database("a_host", "a_db") in s\n'
 )
 
 # A module-scope forbidden import in a governed rules-package path -> B1 ERROR.
@@ -186,9 +162,7 @@ _PY_B1 = "import socket\n\n\ndef f():\n    return 1\n"
 _PBIR_R1 = '{"datasetReference": {"byConnection": {"connectionString": "x"}}}\n'
 
 # An expressions.tmdl with a real (non-placeholder) parameter value -> G6 ERROR.
-_EXPR_G6 = (
-    'expression Server = "a-real-host" meta [IsParameterQuery=true]\n'
-)
+_EXPR_G6 = 'expression Server = "a-real-host" meta [IsParameterQuery=true]\n'
 
 # A UTF-8 BOM-prefixed json file -> G3 ERROR.
 _JSON_G3 = "﻿{}\n"
@@ -266,12 +240,28 @@ def _observe_rule(rule_id: str, fn) -> set[str]:
             _write(repo, "warehouse/a.sql", _SQL_S8)
             tracked = ["warehouse/a.sql"]
         elif rule_id in (
-            "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D9", "D10", "D11",
+            "D1",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6",
+            "D7",
+            "D9",
+            "D10",
+            "D11",
         ):
             body = {
-                "D1": _TMDL_D1, "D2": _TMDL_D2, "D3": _TMDL_D3, "D4": _TMDL_D4,
-                "D5": _TMDL_D5, "D6": _TMDL_D6, "D7": _TMDL_D7, "D9": _TMDL_D9,
-                "D10": _TMDL_D10, "D11": _TMDL_D11,
+                "D1": _TMDL_D1,
+                "D2": _TMDL_D2,
+                "D3": _TMDL_D3,
+                "D4": _TMDL_D4,
+                "D5": _TMDL_D5,
+                "D6": _TMDL_D6,
+                "D7": _TMDL_D7,
+                "D9": _TMDL_D9,
+                "D10": _TMDL_D10,
+                "D11": _TMDL_D11,
             }[rule_id]
             rel = "powerbi/M.SemanticModel/definition/tables/t.tmdl"
             _write(repo, rel, body)
