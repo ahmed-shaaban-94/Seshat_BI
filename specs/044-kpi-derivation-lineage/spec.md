@@ -14,7 +14,7 @@ numbered from current max `043`)
 
 **Created**: 2026-06-29
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-06-29)
 
 **Input**: User description: "KPI Derivation-Lineage Contract (base-vs-derived dependency graph)"
 
@@ -45,6 +45,19 @@ in committed prose) is carried as a stop-and-ask marker the agent must not cross
   present in committed prose, each citing its source line; anything beyond that is a stop-and-ask.
   This is the Principle-V boundary the duplication/eligibility lenses verified ("edges are
   human-declared facts ... not fabricated").
+
+### Owner ruling (Ahmed Shaaban, 2026-06-29)
+
+- **RESOLVED -- Principle-V boundary affirmed.** The metric owner rules that the authoring agent
+  transcribes ONLY edges already stated in committed contract prose, each citing its source line,
+  and invents NO new derivation edge into the template, a contract, or the lineage doc. Declaring a
+  derivation relationship not already recorded in committed prose remains reserved for the metric
+  owner and is out of scope for implementation.
+- **ACCEPTED -- Net Sales (KPI-MC-02) concept-match edges.** The owner accepts the flagged nuance:
+  the Net Sales -> KPI-MC-01 (Gross Sales) and -> KPI-MC-06 (Discount Amount) edges rest on a
+  concept/name match inside Net Sales's verbatim formula "Gross Sales - total discount", rather
+  than an explicit cross-reference like ATV's "from Net Sales contract". Both are sound
+  transcriptions from committed prose; the concept-match is approved as a real edge.
 
 ### Session 2026-06-29
 
