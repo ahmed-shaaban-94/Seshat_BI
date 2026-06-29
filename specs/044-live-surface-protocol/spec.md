@@ -237,4 +237,30 @@ ERROR `Finding` with `rule_id` `V-L4`.
 
 ### Session 2026-06-29
 
-(To be completed by `/speckit-clarify`.)
+- Q: Should the no-rows result be asserted against the existing ERROR `Finding`
+  contract, or should the test pursue the originating idea's literal
+  "blocked-deferred Finding" outcome?
+  A: Assert against the existing ERROR contract (`V-RC16` / `V-L4`,
+  `Severity.ERROR`). There is no `BLOCKED`/`DEFERRED` `Severity` member, and the
+  production surface emits ERROR on no rows. Pursuing a "blocked-deferred"
+  outcome would require introducing a new status -- a behavior change to the
+  live surface that contradicts the test-only / opens-nothing basis on which
+  this work was adopted. The test corrects the idea's phrasing; it does not
+  implement it. (Reversible: easy -- a test-only assertion choice; reflected in
+  FR-004, FR-005, FR-008.)
+- Q: Should the recording fake assert ONLY that the call-site stays on the
+  `QueryRunner.run` Protocol method, or also assert the exact SQL text each
+  call-site emits?
+  A: Assert Protocol conformance (the call-site uses only `.run()`) plus the
+  `Finding` contract (severity and `rule_id`). Do NOT assert exact SQL text:
+  coupling the test to query wording is brittle and adds no governance value
+  beyond the conformance + Finding assertions. (Reversible: easy -- the SQL-text
+  assertion can be added later if a concrete need arises; reflected in FR-006,
+  FR-012.)
+
+### Deferred to human ruling (Principle V)
+
+- None. This feature is test-only over generic fixtures against an
+  already-built surface; it touches no real data and raises no grain /
+  uniqueness, PII publish-safety, business rollup/segment, or product-identity
+  question.
