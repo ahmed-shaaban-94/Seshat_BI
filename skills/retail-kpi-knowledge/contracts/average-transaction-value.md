@@ -12,6 +12,12 @@ period. Also called average receipt value or average basket value (in currency).
 **Formula in business terms**
 ATV = Net Sales ÷ Transactions Count, both over the same qualifying scope.
 
+**Derives from**
+KPI-MC-02 (Net Sales), KPI-MC-04 (Transactions Count) -- transcribed from this contract's
+formula "ATV = Net Sales / Transactions Count" and its required field "net sales amount
+(from Net Sales contract)". (Reference IDs, never filenames. See
+references/kpi-derivation-lineage.md for the full graph.)
+
 **Required fields**
 - net sales amount *(from Net Sales contract)*
 - transaction id at header level *(confirmed concept)*
