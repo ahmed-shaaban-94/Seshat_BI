@@ -124,7 +124,7 @@ const HANDOFF_FACTS = {
     },
     spec_md_raw: { type: 'string', description: 'FULL raw text of spec.md, or "" if missing. JS runs H3/H4 over it.' },
     clarifications_raw: { type: 'string', description: 'raw text of the ## Clarifications section ONLY, verbatim, or "".' },
-    plan_review_verdict_line: { type: 'string', description: 'the raw line(s) of plan-review.md containing "Verdict", verbatim, or "".' },
+    plan_review_verdict_line: { type: 'string', description: 'the verbatim "## Verdict" SECTION of plan-review.md (heading through next "## " heading or EOF), or "". Capture the whole section -- the verdict value can sit on the line below the heading.' },
     git: {
       type: 'object', additionalProperties: false,
       required: ['current_branch', 'branch_resolved', 'spec_dir_on_branch', 'origin_main_available', 'ahead', 'behind', 'detached'],
@@ -164,7 +164,10 @@ const facts = await agent(
   `working-tree-only changes would be invisible to it).\n` +
   `- spec_md_raw: the FULL verbatim text of spec.md (or \u0022\u0022 if missing). Do not truncate.\n` +
   `- clarifications_raw: the verbatim text of ONLY the \u0022## Clarifications\u0022 section of spec.md (or \u0022\u0022).\n` +
-  `- plan_review_verdict_line: the verbatim line(s) of plan-review.md that contain the word \u0022Verdict\u0022 (or \u0022\u0022).\n` +
+  `- plan_review_verdict_line: the verbatim text of the WHOLE "## Verdict" section of plan-review.md ` +
+  `(from the "## Verdict" heading to the next "## " heading or end-of-file; "" if none). Capture the ` +
+  `SECTION (the verdict value often sits on the line BELOW the heading); return raw text, do NOT ` +
+  `interpret or extract the value -- the gate parses it. Do NOT capture only lines containing the word\u0022Verdict\u0022 (or \u0022\u0022).\n` +
   `- git: current_branch (git rev-parse --abbrev-ref HEAD); branch_resolved (true unless detached); ` +
   `spec_dir_on_branch (does ${INPUT.spec_dir}/spec.md exist on the checked-out branch?); ` +
   `origin_main_available (does origin/main resolve?); ahead/behind (git rev-list --count origin/main...HEAD; ` +
