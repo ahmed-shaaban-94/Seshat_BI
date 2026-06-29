@@ -6,17 +6,23 @@
 
 ## Summary
 
-Make the record-and-STOP semantics already in prose at `docs/readiness/publish-ready.md` a
-concrete, copy-me artifact: a GENERIC template `templates/handoff/publish-receipt.md` that records
-the terminal publish-authorization state of a table (the table, the pack it terminalizes by path,
-the CITED `publish_ready` `approvals[]` entry, a deliberately-empty sign-off / owner line, an
-explicit "no automated publish today (F016 absent)" statement, and a four-status verdict +
-`evidence[]` + `blocking_reasons[]`) and STOPS. Plus a one-line, NON-GATING note in
-`docs/readiness/publish-ready.md` pointing at the receipt. The technical approach is pure
-docs/templates authoring -- no code, no `retail check` rule, no CLI verb, no DB connection, no
-executor. The load-bearing constraint is Principle V: the agent verifies the `approvals[]` slot
-EXISTS and is recorded by a named human and CITES it; it never populates the sign-off. The empty
-field IS the gate.
+Make the record-and-STOP semantics already in prose at `docs/readiness/publish-ready.md`
+concrete by FOLDING them into the EXISTING "Publish approval" section of
+`templates/handoff/bi-handoff-pack.md` (line 87) -- the one non-inherited thing the pack
+already adds. Per the owner ruling (B, 2026-06-29), this is NOT a new standalone artifact:
+that existing section already carries the `approvals[]` `{stage: publish_ready, owner, at}`
+shape, the never-self-grant gate ("the agent CANNOT self-grant -- it STOPS"), the
+blocked-not-pass rule, and the rule #9 no-number constraint. The slice only ADDS the two
+missing words-on-the-page: (a) a record-and-STOP label framing that section as the TERMINAL
+publish-authorization record, and (b) an explicit "no automated publish today; F016 (the
+official Power BI MCP / connection adapter) is the deferred, gated, execution-only owner and
+is verified ABSENT from `src/` -- this records authorization and STOPS" line. Plus a one-line,
+NON-GATING note in `docs/readiness/publish-ready.md` pointing at that pack section (not at a
+new file). The technical approach is pure docs/templates editing -- no code, no `retail check`
+rule, no CLI verb, no DB connection, no executor. The load-bearing constraint is Principle V:
+the section's owner line stays deliberately empty; the agent verifies the `approvals[]` slot
+EXISTS and is recorded by a named human and CITES it; it never populates the sign-off. The
+empty field IS the gate.
 
 ## Technical Context
 
@@ -45,9 +51,13 @@ docs/templates before automation).
 confidence/health number (rule 9); no new gate / status / rule (no divergent source of truth);
 no executor / publish / DB (rule 6, Principle II).
 
-**Scale/Scope**: Two committed artifacts -- one new generic template + one one-line non-gating
-doc note. The first filled instance (`retail_store_sales`, C086) is a per-table copy, not part of
-this generic-authoring slice's required deliverable.
+**Scale/Scope**: Two EDITS to existing committed artifacts -- ADD the record-and-STOP label +
+the F016-absent line to the existing "Publish approval" section of
+`templates/handoff/bi-handoff-pack.md`, and ADD one one-line non-gating note to
+`docs/readiness/publish-ready.md`. No new file is created (ruling B). The first filled
+instance (`retail_store_sales`, C086) is the EXISTING per-table pack copy
+(`mappings/<table>/handoff/bi-handoff-pack.md`), not part of this generic-editing slice's
+required deliverable.
 
 ## Constitution Check
 
@@ -55,18 +65,20 @@ this generic-authoring slice's required deliverable.
 
 | Principle | Status | How this plan satisfies it |
 |-----------|--------|----------------------------|
-| I. Agent-First, Gate-Enforced | PASS | Adds NO new gate; the existing `retail check` exit code stays the authority. The agent proposes the receipt; a human disposes the sign-off. |
-| II. Depend, Never Fork | PASS | No executor adapter is vendored, forked, or invoked. F016 is named as the deferred owner of any publish; the receipt records-and-STOPs. |
+| I. Agent-First, Gate-Enforced | PASS | Adds NO new gate; the existing `retail check` exit code stays the authority. The agent proposes the recorded authorization in the pack section; a human disposes the sign-off. |
+| II. Depend, Never Fork | PASS | No executor adapter is vendored, forked, or invoked. F016 is named as the deferred owner of any publish; the pack section records authorization and STOPs. |
 | III. Medallion, Postgres-First, Gold-Only | PASS (N/A) | No schema, no DB read/write. Nothing reads silver/bronze. |
 | IV. Source Mapping Before Silver | PASS (N/A) | No silver SQL is written. (Note: the idea text mislabels the seam "Principle IV"; the never-self-grant seam is Principle V -- corrected in spec FR-010.) |
-| V. Agent Stops at Judgment Calls | PASS -- load-bearing | The receipt's sign-off / owner line is deliberately UN-FILLABLE by the agent (FR-002). Three judgment calls (authority class; roadmap promotion / F-number; receipt-vs-pack boundary) are REFUSED and recorded in spec Clarifications -> Open for human. |
+| V. Agent Stops at Judgment Calls | PASS -- load-bearing | The pack section's sign-off / owner line is deliberately UN-FILLABLE by the agent (FR-002) and ALREADY states "the agent CANNOT self-grant -- it STOPS". Three judgment calls (authority class; roadmap promotion / F-number; receipt-vs-pack boundary) were REFUSED and ruled by the owner (Clarifications -> RESOLVED). |
 | VI. Defaults Then Deviations | PASS (N/A) | No cleaning/modeling defaults are touched. |
-| VII. C086 Is An Example, Not The Schema | PASS | The template is generic placeholders only; C086 (`retail_store_sales`) is cited by reference, never inlined (FR-009, SC-007). |
+| VII. C086 Is An Example, Not The Schema | PASS | The edited section is generic placeholders only; C086 (`retail_store_sales`) is cited by reference, never inlined (FR-009, SC-007). |
 | VIII. Static-First Governance, Live Deferred | PASS | Docs/templates only; no new rule, no CLI verb, no Python, no DB/live validator. `retail check` exits 0, rule count UNCHANGED (FR-008, SC-005). |
 | IX. Secrets and Reproducibility | PASS | ASCII + UTF-8 no BOM, short repo-relative paths, no real host/secret baked in (FR-013, SC-009). |
-| Readiness System clause | PASS | Reuses the four-status set verbatim; adds NO new stage, status, blocking reason, or required artifact; the doc note is non-gating (FR-004, FR-006, SC-005). No fabricated confidence number (FR-005). |
+| Readiness System clause | PASS -- single-source | Reuses the four-status set verbatim; adds NO new stage, status, blocking reason, or required artifact; the doc note is non-gating (FR-004, FR-006, SC-005). No fabricated confidence number (FR-005). Ruling B is MORE single-source-compliant: by folding record-and-STOP into the one existing "Publish approval" section it avoids a third presentation of the sign-off facts, making drift structurally impossible. |
 
-**Verdict**: No violations. No Complexity Tracking entries required.
+**Verdict**: No violations. No Complexity Tracking entries required. (Ruling B strengthens the
+single-source posture relative to the earlier standalone-file design -- it keeps ONE source of
+truth for publish sign-off.)
 
 ## Project Structure
 
@@ -85,60 +97,85 @@ specs/041-publish-approval-receipt-record-and/
 
 No `research.md`, `data-model.md`, `quickstart.md`, or `contracts/` is produced: there is no
 unknown to research (every seam is verified against the live repo in the grounding), no data model
-(the receipt cites existing entities defined elsewhere), and no contract/endpoint (no code).
+(the pack section cites existing entities defined elsewhere), and no contract/endpoint (no code).
 
 ### Source Code (repository root)
 
-No source code is added or changed. The authored/edited committed text is:
+No source code is added or changed. No new file is created (ruling B: no standalone
+publish-receipt.md is ever authored). The edited committed text is:
 
 ```text
 templates/handoff/
-|-- bi-handoff-pack.md          # EXISTING sibling (not changed; the pack the receipt terminalizes)
-|-- handoff-review-checklist.md # EXISTING sibling (not changed)
-`-- publish-receipt.md          # NEW -- the generic record-and-STOP receipt template (this slice)
+|-- bi-handoff-pack.md          # EDIT -- ADD the record-and-STOP label + the F016-absent line to
+|                               #   its EXISTING "Publish approval" section (line 87); that section
+|                               #   already holds the approvals[] {stage,owner,at} shape, the
+|                               #   never-self-grant gate, blocked-not-pass, and rule #9 no-number
+`-- handoff-review-checklist.md # EXISTING sibling (not changed)
 
 docs/readiness/
-`-- publish-ready.md            # EDIT -- add one non-gating evidence-style note pointing at the receipt
+`-- publish-ready.md            # EDIT -- ADD one non-gating evidence-style note pointing at the
+                                #   pack's "Publish approval" section as the record-and-STOP record
 
-# (Per-table filled instance -- NOT part of this generic-authoring slice's required output:)
-mappings/<table>/handoff/publish-receipt.md   # a future copy-and-fill, cites the recorded approval
+# (Per-table filled instance -- the EXISTING per-table pack copy, NOT a separate file, and NOT
+#  part of this generic-editing slice's required output:)
+mappings/<table>/handoff/bi-handoff-pack.md   # the copy whose Publish approval section cites the
+                                              #   recorded approval and records the STOP
 ```
 
-**Structure Decision**: A docs/templates authoring slice. The new template lands in
-`templates/handoff/` beside its two existing siblings (the copy-per-table convention is already
-established there and in `mappings/<table>/handoff/`). The only existing-file edit is a one-line
-non-gating note in the stage-authority doc. No `src/`, no `tests/`, no `warehouse/`, no CLI.
+**Structure Decision**: A docs/templates editing slice. There is NO new file (ruling B). The only
+edits are (1) ADD the record-and-STOP label + the F016-absent line to the EXISTING "Publish
+approval" section of `templates/handoff/bi-handoff-pack.md`, and (2) ADD one non-gating note in
+the stage-authority doc pointing at that section. The per-table instance is the established
+per-table copy of the pack (`mappings/<table>/handoff/bi-handoff-pack.md`); there is no separate
+per-table file. No `src/`, no `tests/`, no `warehouse/`, no CLI.
 
 ## Phase 0 -- Research (no open technical unknowns)
 
 All seams were verified read-only against the live repo during grounding:
 `docs/readiness/publish-ready.md` (the record-and-STOP prose + the data-owner/governance owner),
 `templates/readiness-status.yaml` (`approvals[]` shape, stage `publish_ready`, "the agent cannot
-self-grant"), `templates/handoff/bi-handoff-pack.md` (the existing "Publish approval" section in
-the identical shape), `templates/handoff/handoff-review-checklist.md` (the sibling gate), F027
-(approval-console, SHIPPED, writes `approvals[]`), and F016 (verified ABSENT from `src/`). The
-only OPEN items are the three Principle V judgment calls, which are human rulings, not research.
+self-grant"), `templates/handoff/bi-handoff-pack.md` (the EXISTING "Publish approval" section at
+line 87 -- already in the identical `approvals[]` shape, already stating the never-self-grant gate
+and the blocked-not-pass / rule #9 constraints; this is the section the slice edits),
+`templates/handoff/handoff-review-checklist.md` (the sibling gate), F027 (approval-console,
+SHIPPED, writes `approvals[]`), and F016 (verified ABSENT from `src/`). The only OPEN items were
+the three Principle V judgment calls; all three are now ruled by the owner (Clarifications ->
+RESOLVED), including the receipt-vs-pack boundary, which the owner ruled FOLD-INTO-THE-PACK (B).
 
 ## Phase 1 -- Design
 
-The receipt template's sections (all generic placeholders):
+The design is "what to ADD to the EXISTING `Publish approval` section of
+`templates/handoff/bi-handoff-pack.md`", not a new file. The section ALREADY carries the
+structural pieces -- they are NOT re-authored:
 
-1. **Header** -- table identity, source family, the pack it terminalizes (relative path),
-   assembled-on / assembled-by.
-2. **Prior-stage gate** -- a restated check that stages 1-6 are each `pass` (cited from
-   `readiness-status.yaml`), never re-decided here.
-3. **Cited publish approval (READ-ONLY)** -- a quote/pointer to the `publish_ready` `approvals[]`
-   entry with the owner line shown as a placeholder the agent does NOT fill; an explicit note that
-   the agent verifies-the-slot-exists and STOPS (Principle V; composes with F027).
-4. **No-executor statement** -- explicit "no automated publish today; F016 is the deferred,
-   gated, execution-only owner and is not built" (rule 6, Principle II).
-5. **Terminal verdict** -- the four-status set + `evidence[]` + `blocking_reasons[]`; `pass` only
-   when a named-human approval is recorded; no numeric score (rule 9).
-6. **See also** -- the pack, the checklist, the stage authority, F016/F027, and the C086 cited
-   instance (by reference).
+ALREADY PRESENT (verified at line 87; unchanged by this slice):
+- the `approvals[]` `{stage: "publish_ready", owner: "<data_owner | governance>", at}` shape,
+  with the owner line as a placeholder the agent does NOT fill;
+- the never-self-grant gate -- "the agent CANNOT self-grant it (Principle V) -- it STOPS and
+  requests the named owner";
+- the blocked-not-pass rule -- absent approval -> `publish_ready` is `blocked`, NOT `pass`;
+- the four-status verdict + `evidence[]` carried by the pack's "Readiness verdict" section, with
+  NO numeric confidence/health score (rule #9).
+
+WHAT THIS SLICE ADDS to that section (the only two changes):
+1. **Record-and-STOP label / framing** -- a short line framing this section as the TERMINAL
+   publish-authorization RECORD: when a named human has recorded the `publish_ready` approval,
+   this section IS the durable, reviewable record that the table reached publish authorization
+   and the agent STOPPED here. It is reviewed in git like any handoff artifact; it triggers
+   nothing.
+2. **The F016-absent line** -- an explicit "no automated publish today; F016 (the official Power
+   BI MCP / connection adapter) is the deferred, gated, execution-only owner of any publish and is
+   verified ABSENT from `src/` -- this section records authorization and STOPS" statement (rule #6,
+   Principle II). The section text must NEVER imply an executor exists.
+
+The non-gating doc note (`docs/readiness/publish-ready.md`) is one `evidence[]`-style line
+pointing at this pack section as the concrete record-and-STOP record -- it adds NO new gate, NO
+new blocking reason, NO new status, and NO new required artifact.
 
 Re-check after design: the Constitution Check above still holds -- the design adds no gate, no
-status, no rule, no executor, and keeps the sign-off agent-un-fillable.
+status, no rule, no executor, no new file, and keeps the sign-off agent-un-fillable. By editing the
+ONE existing section rather than creating a parallel artifact, ruling B is more single-source-
+compliant than the earlier design (it removes the third-presentation duplication the repo rejects).
 
 ## Complexity Tracking
 

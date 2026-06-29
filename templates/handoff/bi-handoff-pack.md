@@ -86,6 +86,16 @@ design). Every deployed column appears EXACTLY once; no non-deployed column is l
 
 ## Publish approval (the one non-inherited thing the pack adds)
 
+**This section IS the terminal publish-authorization record -- the record-and-STOP
+token.** It records that a table reached publish authorization and the agent STOPS
+here; it triggers nothing and crosses no automation boundary. The sign-off / owner
+line below is the never-self-grant gate (Principle V -- Agent Stops at Judgment Calls):
+the agent verifies the recorded approval exists and CITES it, but never self-grants it.
+
+No automated publish today; F016 (the official Power BI MCP / connection adapter;
+`pbi-cli` no longer preferred) is the deferred, gated, execution-only owner and is
+verified ABSENT -- this section records authorization and STOPS.
+
 A named, dated human sign-off authorizing publish, recorded in the table's
 `readiness-status.yaml` `approvals[]` for stage `publish_ready`. The agent CANNOT
 self-grant it (Principle V) -- it STOPS and requests the named owner.
