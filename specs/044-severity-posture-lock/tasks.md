@@ -3,8 +3,12 @@
 **Input**: Design documents from `specs/044-severity-posture-lock/`
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories + the
-REFUSED Principle-V clarifications). The grain and L3-coverage rulings MUST be
-resolved by a human before the record's key is finalized (T004 is a gate).
+Principle-V clarifications). The grain and L3-coverage rulings have been RESOLVED
+by the planning advisor under explicit human authorization (spec `## Clarifications`
+-> "Advisor-resolved Principle-V calls"): grain = `rule_id -> sorted SET of
+severity classes`; L3 surface IN as a named `L3:verdict_to_finding` section. T004
+and T010 are therefore UNBLOCKED. Ratification (Status -> Ratified, session date)
+remains a human-only act and is NOT a prerequisite for implementation tasks.
 
 **Tests**: This feature IS a test (a golden-equality snapshot test) plus an
 observation generator. The snapshot test is authored TEST-FIRST (fails closed
@@ -30,17 +34,19 @@ artifact is `docs/rules/severity-posture.json`. One `.gitattributes` line.
 
 ---
 
-## Phase 0: HUMAN GATE (Principle V) -- BLOCKING
+## Phase 0: Principle-V rulings -- RESOLVED (advisor-authorized)
 
-**Purpose**: The record's grain and L3 coverage are REFUSED judgment calls in
-spec `## Clarifications`. They MUST be ruled by a human before the key is fixed.
+**Purpose**: The record's grain and L3 coverage were REFUSED judgment calls in
+spec `## Clarifications`. They have been resolved by the planning advisor under
+explicit human authorization, so the key is fixed and T004/T010 are unblocked.
 
-- [ ] T000 [GATE] Obtain the human ruling on (a) the record GRAIN -- rule_id ->
-  set of classes, OR (rule_id, branch/message-key) -> class, OR
-  (rule_id, fixture-case) -> class (FR-009); and (b) whether the non-registry L3
-  governance surface (drift -> ERROR / escalate -> WARNING) is IN or OUT of the
-  record's coverage (FR-010). Record the ruling in spec `## Clarifications`
-  (fill the session date). DO NOT proceed to T004 until both are ruled.
+- [x] T000 [RESOLVED] The two Principle-V judgment calls are ruled (spec
+  `## Clarifications` -> "Advisor-resolved Principle-V calls"): (a) record GRAIN
+  = `rule_id -> sorted SET of severity classes` (option (a)); (b) the non-registry
+  L3 governance surface (drift -> ERROR / escalate -> WARNING) is IN scope,
+  recorded as a named `L3:verdict_to_finding` second section. Resolved by the
+  planning advisor under human authorization; this is NOT ratification (Status
+  stays Draft, the session date stays pending -- both human-only).
   [Principle V; FR-009; FR-010]
 
 ---
@@ -70,12 +76,13 @@ before authoring.
 **Purpose**: Fix the record's grain (post-gate) and the deterministic
 serialization contract that BOTH the generator and the snapshot test depend on.
 
-- [ ] T004 Encode the human-ruled GRAIN (from T000) as the record's key, and
-  document the single deterministic ordering + serialization contract in a module
-  docstring on `src/retail/severity_posture.py`: sorted by id (then by sub-key for
-  per-branch/per-case grains), UTF-8 no-BOM, `\n` endings, single trailing
-  newline, stable key order. Severity classes serialized by their string value.
-  (Principle IX) [FR-001, FR-005, FR-009] -- BLOCKED BY T000.
+- [ ] T004 Encode the resolved GRAIN (from T000: `rule_id -> sorted SET of
+  severity classes`) as the record's key, and document the single deterministic
+  ordering + serialization contract in a module docstring on
+  `src/retail/severity_posture.py`: entries sorted by id; each entry's class set
+  sorted by the severity string value; UTF-8 no-BOM, `\n` endings, single trailing
+  newline, stable key order. (Principle IX) [FR-001, FR-005, FR-009] -- UNBLOCKED
+  (T000 resolved).
 - [ ] T005 Add `.gitattributes` entry: `docs/rules/severity-posture.json text
   eol=lf` so the committed bytes are stable across Windows
   (`core.autocrlf=true`) and Linux. [FR-005]
@@ -98,7 +105,10 @@ an actionable message naming the rule and the class delta; regenerate -> passes.
 - [ ] T007 [US1] Create synthetic, generic planted fixtures under
   `tests/fixtures/severity/` (only for rules that need a file/context to fire) --
   minimal, NON-exempt-path, and containing NO example-domain table/column/value.
-  [FR-006, FR-008, SC-005]
+  Because `is_test_path` exempts these from the live rules, add a fixture-
+  genericity assertion in the lock test that scans the fixture FILES themselves
+  for example-domain identifiers (the fixtures are not otherwise scanned).
+  [FR-006, FR-008, SC-005, SC-007]
 - [ ] T008 [US1] Author `tests/unit/test_severity_posture.py` (marked
   `@pytest.mark.unit`) TEST-FIRST, copying the proven clear+reload pattern from
   `test_rules_manifest_snapshot.py`: derive the live observed posture, read the
@@ -109,11 +119,14 @@ an actionable message naming the rule and the class delta; regenerate -> passes.
   affected rule + recorded-vs-observed class(es) (drifted/missing/stale) and
   instruct the developer to regenerate and commit the record in the same change.
   [FR-003, FR-004]
-- [ ] T010 [US1] If T000 ruled L3 IN scope: observe the L3 surface by calling
-  `semantic.verdict_to_finding` over a drift verdict and an escalate verdict and
-  record its posture in a separate explicit section. If ruled OUT: record the
-  explicit exclusion note in the artifact so the gap is visible. EITHER WAY add NO
-  `@register` to `semantic.py`. [FR-010; ADR-0007] -- BLOCKED BY T000.
+- [ ] T010 [US1] Observe the L3 surface (T000 ruled it IN): call
+  `semantic.verdict_to_finding(name, locator, verdict)` over a `drift` verdict and
+  an `escalate` verdict -- both constructed in-process as frozen
+  `metric_drift.Verdict(status=..., detail=...)` values (NO YAML/DB/model/agent,
+  so Principle VIII holds) -- and record the posture as a named section keyed
+  `L3:verdict_to_finding -> [ERROR, WARNING]`. Add NO `@register` to `semantic.py`
+  and NO new `EXPECTED_RULE_ID` (ADR-0007). [FR-010; ADR-0007] -- UNBLOCKED
+  (T000 resolved).
 
 ---
 
@@ -144,9 +157,11 @@ single-rule severity change -> diff confined to that rule's entry.
 **Goal**: A newly added registered rule cannot enter with an unrecorded severity.
 
 - [ ] T015 [US3] Add a unit assertion that every registered rule has exactly one
-  record entry (or explicit no-finding marker) -- i.e. the record's covered-rule
-  set equals the live registered-rule-id set, failing closed on a missing or stale
-  rule. [SC-006, FR-003]
+  entry (or explicit no-finding marker) in the record's REGISTERED-RULES section --
+  i.e. that section's covered-rule-id set equals the live registered-rule-id set,
+  failing closed on a missing or stale rule. The named L3 section
+  (`L3:verdict_to_finding`) is asserted SEPARATELY (it is not a registered rule),
+  so it neither satisfies nor breaks the registered-set equality. [SC-006, FR-003]
 - [ ] T016 [US3] Add a "no new gating rule" assertion mirroring the manifest
   sibling: the registered rule count is unchanged and no new `EXPECTED_RULE_ID`
   was introduced by this feature (test-only). [FR-007, SC-004]
@@ -162,16 +177,21 @@ stable.
   count UNCHANGED (no new rule, no new `EXPECTED_RULE_ID`, no `@register` added to
   `semantic.py`). [SC-004, FR-007]
 - [ ] T018 Run `pytest -m unit` -> the snapshot test passes on a clean checkout;
-  confirm the multi-class rule (S4b) records BOTH ERROR and WARNING (not collapsed)
-  and that there is no line-ending flakiness (data-comparison, not raw text).
-  [SC-001, FR-009, FR-012]
+  confirm the multi-class rule (S4b) records BOTH ERROR and WARNING (not collapsed),
+  the L3 section records `L3:verdict_to_finding -> [ERROR, WARNING]`, the fixture-
+  genericity assertion passes (no example-domain identifier in any planted fixture
+  file, SC-007), and there is no line-ending flakiness (data-comparison, not raw
+  text). [SC-001, SC-007, FR-009, FR-010, FR-012]
 
 ---
 
 ## Dependencies
 
-- **T000 (HUMAN GATE) blocks T004 and T010** -- the grain and L3-coverage rulings
-  must exist before the record key and L3 handling are finalized.
+- **T000 is RESOLVED (advisor-authorized), so T004 and T010 are UNBLOCKED** -- the
+  grain (`rule_id -> sorted SET of classes`) and L3-coverage (IN, named section)
+  rulings are fixed. No human gate remains before implementation; only
+  ratification (Status/date) is still human-only and is not an implementation
+  dependency.
 - Phase 2 (T004 grain + serialization contract) blocks Phases 3 and 4.
 - Phase 3 (T008 snapshot test) is authored RED before Phase 4 produces the record
   (T013 turns it GREEN) -- the test-first ordering.
@@ -186,4 +206,8 @@ stable.
 - No `--check` CI-verify subcommand mode for the first step.
 - No reordering/refactor of existing rules to ease observation.
 - No DB/network/Power BI/agent integration; no dependency on F016 or F031-F033.
-- No agent resolution of the grain or L3-coverage rulings (human-only).
+- No `@register` for L3 and no new `EXPECTED_RULE_ID` for the L3 entry (ADR-0007),
+  even though L3 is now in scope as a record section.
+- No setting of Status to Ratified and no filling of the session date -- those
+  stay human-only even though the grain/L3-coverage judgment calls are
+  advisor-resolved.

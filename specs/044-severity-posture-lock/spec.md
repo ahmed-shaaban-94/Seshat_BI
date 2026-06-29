@@ -132,10 +132,12 @@ confirm it passes; remove the throwaway rule and regenerate.
 ### Edge Cases
 
 - **A single rule id emits more than one severity class.** At least one shipped
-  rule emits both ERROR and WARNING from different violation branches; some rule
-  families mix classes. The golden record's grain MUST represent this without
-  collapsing it to one class. The grain (key/uniqueness) is a load-bearing
-  design ruling -- see Clarifications.
+  rule emits both ERROR and WARNING from different violation branches (and at
+  least one other registered rule emits an INFO empty-case alongside an ERROR
+  branch); some rule families mix classes. The golden record's grain MUST
+  represent this without collapsing it to one class. The grain (key/uniqueness)
+  is resolved to `rule_id -> sorted SET of classes` (option (a)) -- see
+  Clarifications (Advisor-resolved).
 - **A rule emits no finding over the planted input.** The observation harness
   must force the rule to fire; if a rule cannot be made to fire over a minimal
   synthetic fixture, the record must represent that explicitly rather than
@@ -144,8 +146,11 @@ confirm it passes; remove the throwaway rule and regenerate.
 - **A non-registry severity surface (the L3 governance posture) is also
   gate-bearing.** A separate, non-registered code surface maps a drift outcome
   to ERROR and an escalate outcome to WARNING. It is equally load-bearing for the
-  gate but is NOT reachable by iterating the rule registry. Whether the lock
-  covers it is a scope ruling -- see Clarifications.
+  gate but is NOT reachable by iterating the rule registry. It IS in scope: it is
+  covered as a named second section of the record (key `L3:verdict_to_finding`),
+  observed by driving the verdict-to-finding mapping in-process -- a pure function
+  over a verdict value, so no live query/model/agent is needed (Principle VIII
+  holds). See Clarifications (Advisor-resolved).
 - **Test-fixture exemption interaction.** Rules that scan files skip paths under
   the test tree by design. The observation harness must plant fixtures in a way
   that actually triggers each rule (not in an exempt location that suppresses the
@@ -177,26 +182,42 @@ confirm it passes; remove the throwaway rule and regenerate.
   `\n` line endings, single trailing newline).
 - **FR-006**: The golden record MUST key ONLY on generic rule ids and severity
   classes. It MUST NOT contain any example-domain-specific table, column, or
-  value (Principle VII -- the example domain is an example, not the schema).
+  value (Principle VII -- the example domain is an example, not the schema). The
+  planted fixtures used to force rules to fire MUST likewise be synthetic/generic,
+  and -- because `is_test_path` exempts them from the live rules -- the lock test
+  MUST itself assert the fixture FILES contain no example-domain identifier (see
+  SC-007).
 - **FR-007**: This feature MUST add NO new registered (gating) rule and NO new
   expected-rule-id entry. It is a test-only golden assertion plus a generator,
   exactly like the manifest-snapshot sibling.
 - **FR-008**: The observation harness MUST use only synthetic/minimal planted
   fixtures and MUST perform no live query, no model execution, no agent run, and
   no live database access (Principle VIII -- static-first; live deferred).
-- **FR-009**: The golden record's GRAIN (its key and uniqueness) MUST faithfully
-  represent rules that emit more than one severity class.
-  [NEEDS CLARIFICATION: grain is a Principle-V human ruling -- key options are
-  (a) rule_id -> the SET of severity classes the rule can emit, (b)
-  (rule_id, violation-branch/message) -> severity, or (c)
-  (rule_id, planted-fixture-case) -> severity. Recorded to Clarifications; not
-  to be answered by the agent.]
-- **FR-010**: The lock's COVERAGE boundary MUST be explicit -- specifically
-  whether it covers ONLY the registered rules (registry-reachable) or ALSO the
-  non-registered L3 governance severity surface (drift -> ERROR / escalate ->
-  WARNING), which is equally gate-bearing but not registry-reachable.
-  [NEEDS CLARIFICATION: coverage of the non-registry L3 surface is a Principle-V
-  scope ruling. Recorded to Clarifications; not to be answered by the agent.]
+- **FR-009**: The golden record's GRAIN (its key and uniqueness) MUST be
+  `rule_id -> the SORTED SET of severity classes that rule emits when forced to
+  fire` (option (a), resolved by the planning advisor -- see Clarifications). The
+  record MUST NOT collapse a multi-class rule to a single class: a rule that emits
+  more than one class (e.g. the shipped SQL guard-form rule, which emits both
+  ERROR and WARNING from different violation branches) MUST record the full sorted
+  set `[ERROR, WARNING]`. This grain catches a class DISAPPEARING from a rule's set
+  (an ERROR dropping out of `{ERROR, WARNING}` so the set becomes `{WARNING}`) and
+  a class being ADDED. RESIDUAL TRADEOFF (stated honestly): this grain CANNOT catch
+  a per-branch downgrade that leaves the SET unchanged -- but for the lock's core
+  protection (an ERROR vanishing) the set necessarily changes, because dropping the
+  last ERROR-emitting branch removes ERROR from the set.
+- **FR-010**: The lock's COVERAGE boundary covers (1) the REGISTERED rules
+  (registry-reachable via `all_rules()`) AND (2) the non-registered L3 governance
+  severity surface (the verdict-to-finding mapping: drift -> ERROR / escalate ->
+  WARNING), recorded as a SECOND, explicitly-named section of the same golden
+  record (resolved by the planning advisor -- see Clarifications). The L3 surface
+  is in scope because it emits ERROR and is therefore gate-bearing: a silent L3
+  ERROR-to-WARNING downgrade is the same Principle-I bypass the lock exists to
+  stop. L3 is modelled as a distinct named pseudo-rule entry (key `L3:verdict_to_finding`)
+  whose severity set is OBSERVED by driving the verdict-to-finding mapping with a
+  `drift` verdict and an `escalate` verdict in-process. This adds NO `@register`
+  and NO new expected-rule-id (ADR-0007 stays intact): the registry-reachable rule
+  count is unchanged; the L3 entry is recorded ALONGSIDE the registered rules, not
+  AS one.
 - **FR-011**: When a rule cannot be forced to emit a finding over a minimal
   synthetic fixture, the record MUST represent that state with an EXPLICIT
   no-finding marker entry (per clarify Q3) rather than omitting the rule, so the
@@ -215,16 +236,28 @@ confirm it passes; remove the throwaway rule and regenerate.
 - **Registered rule**: A rule reachable by iterating the rule registry; carries
   an id and a title but NO severity field. Its severity posture exists only in
   the findings it emits at run time.
-- **Severity posture (per rule)**: The set/structure of severity classes a rule
-  emits when forced to fire -- the thing the golden record captures. Its exact
-  grain is a human ruling (see Clarifications).
+- **Severity posture (per rule)**: The SORTED SET of severity classes a rule
+  emits when forced to fire -- the thing the golden record captures. The grain is
+  `rule_id -> sorted set of classes` (option (a), advisor-resolved -- see
+  Clarifications); a multi-class rule records the whole set, never one class.
 - **Golden severity record**: The committed, generic, deterministic artifact
   recording the observed posture; the fail-closed comparison target. A sibling
-  to the existing committed golden rule artifacts.
+  to the existing committed golden rule artifacts. It carries TWO explicitly-named
+  sections: the registered-rule postures (keyed by rule id) and the L3
+  governance-surface posture (keyed `L3:verdict_to_finding`).
 - **L3 governance severity surface**: A separate, non-registered code surface
   mapping a drift outcome to the ERROR class and an escalate outcome to the
-  WARNING class. Gate-bearing but not registry-reachable; in-scope-or-not is a
-  human ruling (see Clarifications).
+  WARNING class. Gate-bearing but not registry-reachable. It IS in scope
+  (advisor-resolved -- see Clarifications), recorded as the record's named second
+  section with severity set `[ERROR, WARNING]`, observed by driving the
+  verdict-to-finding mapping over both verdict statuses. It is NOT registered
+  (`@register`) and adds no expected-rule-id (ADR-0007).
+- **Planted fixture (genericity)**: A synthetic, minimal input planted on a
+  NON-exempt path to force a file-scanning rule to fire. Because the test-fixture
+  exemption (`is_test_path`) suppresses the live rules under the test tree, the
+  fixture FILES themselves are not scanned by the rules -- so the lock test MUST
+  itself assert the planted fixtures contain no example-domain identifier (see
+  SC-007).
 
 ## Success Criteria *(mandatory)*
 
@@ -243,8 +276,15 @@ confirm it passes; remove the throwaway rule and regenerate.
   (no example table, column, or value names) -- only generic rule ids and
   severity classes.
 - **SC-006**: Every registered rule has exactly one corresponding entry (or
-  explicit no-finding marker) in the golden record -- 0 unrecorded registered
-  rules.
+  explicit no-finding marker) in the golden record, AND the L3 governance surface
+  has exactly one named entry (`L3:verdict_to_finding`) in the record's second
+  section -- 0 unrecorded registered rules and 0 unrecorded gate-bearing surfaces.
+- **SC-007**: The planted fixture files under the test fixtures tree contain 0
+  example-domain identifiers (no example table, column, or value names) -- asserted
+  by the lock test scanning the fixture FILES themselves, not only the generated
+  record. This closes the residual leak that `is_test_path` exempts fixtures from
+  the live rules, so a fixture file is never scanned for genericity unless the
+  lock test does it (plan-review LOW, axis 3).
 
 ## Assumptions
 
@@ -252,17 +292,22 @@ confirm it passes; remove the throwaway rule and regenerate.
   artifacts (the same directory that holds the rule manifest), as a natural
   sibling. Exact filename/format is an implementation detail to be set in the
   plan, constrained by FR-005/FR-006.
-- The intended update protocol mirrors the existing manifest discipline: an
-  intentional severity change edits the rule AND regenerates the golden record in
-  the SAME reviewed change, so an unintentional downgrade fails the test while an
-  intentional one is a small two-part diff.
+- The intended update protocol mirrors the existing manifest discipline and is
+  CONFIRMED (advisor-resolved -- see Clarifications): an intentional severity
+  change edits the rule AND regenerates the golden record in the SAME PR/change
+  (mirroring the EXPECTED_RULE_IDS + rules-manifest.json discipline), so an
+  UNINTENTIONAL downgrade fails CI while an INTENTIONAL one is a small reviewed
+  two-part diff. The failure message names the affected rule, the recorded-vs-
+  observed severity-set delta, and the single regeneration command.
 - The observation harness reuses the existing clear-and-reload registry pattern
   already proven by the manifest-snapshot sibling, so the test is order-proof and
   does not depend on global registry state left by sibling tests.
-- This is an UNMAPPED test-hardening item: no roadmap feature row maps to it
-  (parallel to the manifest-snapshot sibling). The backlog "value/feasibility"
-  score is NOT a roadmap feature number. Which readiness stage (if any) this
-  advances is a human decision recorded to Clarifications.
+- This is an UNMAPPED test-hardening item BY DESIGN (advisor-resolved -- see
+  Clarifications): no roadmap feature row maps to it, exactly parallel to the
+  manifest-snapshot sibling (spec 043), which also has no roadmap F-row. The
+  backlog "value/feasibility" score is NOT a roadmap feature number. It advances
+  no readiness stage and is NOT gated behind any open idea -- it is a clean,
+  shippable hardening item. No F-number is invented for it.
 - The example domain remains an example only; no example-domain schema is
   promoted into a generic artifact.
 - No deferred capability is assumed (no Power BI execution adapter, no spec-only
@@ -280,8 +325,11 @@ confirm it passes; remove the throwaway rule and regenerate.
 
 > Operator: this session was run by the planning advisor. Fill the real date.
 > The advisor RESOLVED the non-judgment ambiguities below (recording reasoning
-> and reversibility) and REFUSED the Principle-V judgment calls, which remain
-> UNANSWERED for human resolution.
+> and reversibility). The four Principle-V judgment calls were SUBSEQUENTLY
+> resolved by the planning advisor under EXPLICIT human authorization (see the
+> "Advisor-resolved Principle-V calls" subsection). The advisor did NOT and MUST
+> NOT set Status to Ratified or fill the session date -- those remain for the
+> human (the ratify gate fails closed on an AI-authored Ratified line).
 
 #### Advisor-resolved (non-judgment defaults)
 
@@ -311,26 +359,90 @@ confirm it passes; remove the throwaway rule and regenerate.
 
 #### Principle-V judgment calls (REFUSED -- human resolution required)
 
-The following are Principle-V judgment calls (grain / scope / readiness mapping /
-update protocol). They are RECORDED for human resolution and intentionally left
-UNANSWERED by the planning agent. The operator MUST fill the session date and
-resolve these before ratification.
+None outstanding. The four Principle-V judgment calls originally recorded here
+(grain / scope / readiness mapping / update protocol) have been resolved by the
+planning advisor under explicit human authorization; see the next subsection.
+This subsection is retained (empty) so the carve-out history is auditable.
 
-- **GRAIN / UNIQUENESS (FR-009)**: What is the golden record's key? A flat
-  rule_id -> single-severity map is WRONG for rules that emit multiple classes.
-  Options: (a) rule_id -> SET of severity classes it can emit; (b)
-  (rule_id, violation-branch/message) -> severity; (c)
-  (rule_id, planted-fixture-case) -> severity. This is the load-bearing decision:
-  too coarse misses a per-branch downgrade; too fine is unmaintainable.
-- **SCOPE / COVERAGE (FR-010)**: Does the lock cover ONLY the registered rules
-  (registry-reachable), or ALSO the non-registered L3 governance severity surface
-  (drift -> ERROR / escalate -> WARNING)? The L3 surface is equally gate-bearing
-  but is a separate, non-registry surface.
-- **READINESS MAPPING**: No roadmap feature row maps to this test-only item. A
-  human must decide whether to (a) file it as an unmapped test-hardening item
-  (like the manifest-snapshot sibling), (b) attach it to a governance/quality
-  readiness row, or (c) gate it behind the idea-bank-to-roadmap hard link first.
-- **FAIL / UPDATE PROTOCOL**: Confirm the intended workflow on a deliberate
-  severity change -- the golden record is edited in the SAME change as the rule
-  change (mirroring the manifest discipline), so an unintentional downgrade fails
-  the test while an intentional one is a reviewed diff.
+#### Advisor-resolved Principle-V calls (human-authorized)
+
+> These four Principle-V judgment calls were resolved by the planning advisor
+> under EXPLICIT human authorization on (date pending). Each records the
+> {decision, option chosen, rationale, reversibility}. This authorization does
+> NOT extend to ratification: Status stays Draft and the date stays pending --
+> only a human commit may set the Ratified line (the ratify gate's git-blame
+> provenance check fails closed on an AI-authored Ratified line).
+
+- **GRAIN / UNIQUENESS (FR-009)** -- *option (a) chosen*.
+  - **Decision**: the golden record keys `rule_id -> the SORTED SET of severity
+    classes that rule emits when forced to fire`.
+  - **Option chosen**: (a) `rule_id -> SET of severity classes`, over (b)
+    `(rule_id, violation-branch/message) -> severity` and (c)
+    `(rule_id, planted-fixture-case) -> severity`.
+  - **Rationale**: (a) faithfully models the shipped multi-class SQL guard-form
+    rule's `{ERROR, WARNING}` (verified live: WITHIN A SINGLE file scan it emits
+    ERROR on a bronze bare DDL branch and WARNING on the silver/gold-non-transaction
+    and unknown-zone branches) without collapsing it, so a flat id->class map
+    provably loses information; another registered rule additionally carries an
+    INFO empty-case branch alongside ERROR branches, reinforcing that a SET is the
+    right grain. (a) is the COARSEST grain that still catches the failure the lock
+    exists to stop: a class DISAPPEARING from a rule's set (an ERROR dropping out
+    of `{ERROR, WARNING}` -> `{WARNING}`) and a class being ADDED. It avoids the
+    unstable sub-keys of (b) (message text) and (c) (fixture-case) that the
+    plan-review MEDIUM finding warns would flake the lock on innocuous wording
+    edits. RESIDUAL TRADEOFF (stated honestly in FR-009): (a) cannot catch a
+    per-branch downgrade that leaves the SET unchanged -- but dropping the last
+    ERROR branch necessarily removes ERROR from the set, so the core ERROR-vanish
+    protection holds.
+  - **Reversible**: easy (the grain is internal to the generator + test; the
+    record is regenerated from live observation, never hand-typed).
+
+- **SCOPE / COVERAGE (FR-010)** -- *registered rules + named L3 surface*.
+  - **Decision**: cover the REGISTERED rules now (registry-reachable via
+    `all_rules()`) AND ALSO the non-registered L3 governance surface
+    (verdict-to-finding: drift -> ERROR / escalate -> WARNING) as a SECOND,
+    explicitly-named section keyed `L3:verdict_to_finding`.
+  - **Option chosen**: registered-rules-plus-named-L3-surface, over
+    registered-only.
+  - **Rationale**: the L3 surface emits ERROR and is therefore gate-bearing -- a
+    silent L3 ERROR-to-WARNING downgrade is the SAME Principle-I bypass the lock
+    exists to stop, even though L3 is not registry-reachable. The Principle-VIII
+    fallback (registered-only if L3 cannot be driven without live execution) does
+    NOT trigger: reading the source confirms the verdict-to-finding mapping is a
+    PURE function over a verdict VALUE (a frozen `status`/`detail` dataclass), so
+    it is driven in-process by constructing a `drift` verdict and an `escalate`
+    verdict -- no YAML load, no DB, no model, no agent (Principle VIII holds). L3
+    is modelled as a distinct pseudo-rule entry observed by driving both verdict
+    statuses; it is NOT given a `@register` and adds NO expected-rule-id, so
+    ADR-0007 stays intact and the registry-reachable rule count is unchanged.
+  - **Reversible**: easy (the L3 section is an extra observed entry; dropping it
+    is a one-line change to the generator + a record regen).
+
+- **READINESS MAPPING** -- *option (a): unmapped test-hardening item*.
+  - **Decision**: file this as an UNMAPPED test-hardening item, exactly parallel
+    to the manifest-snapshot sibling (spec 043), which also has no roadmap F-row.
+  - **Option chosen**: (a) unmapped test-hardening item, over (b) attach to a
+    governance/quality readiness row, over (c) gate behind the
+    idea-bank-to-roadmap hard link.
+  - **Rationale**: inventing an F-number would fabricate a roadmap mapping that
+    does not exist, and gating behind an unrelated open idea (option (c)) would
+    block a clean, shippable hardening item for no reason. The sibling 043 set
+    the precedent: a test-only golden-assertion hardening item is unmapped by
+    design. No fabricated readiness score is introduced (Hard rule #9).
+  - **Reversible**: easy (a mapping can be added later if a governance/quality
+    readiness row is created; nothing in the code depends on the mapping).
+
+- **FAIL / UPDATE PROTOCOL** -- *same-PR two-part diff (confirmed)*.
+  - **Decision**: the golden record is regenerated and committed in the SAME
+    PR/change as any deliberate rule severity edit (mirroring the
+    EXPECTED_RULE_IDS + rules-manifest.json discipline), so an UNINTENTIONAL
+    downgrade fails CI while an INTENTIONAL one is a small reviewed two-part diff.
+  - **Option chosen**: same-PR regeneration (confirm the manifest-mirrored
+    protocol), over a separate follow-up change.
+  - **Rationale**: this is the established discipline for the sibling golden
+    artifacts; it keeps an accidental downgrade red in CI without forcing a
+    rule author to chase a second PR for an intentional change. The failure
+    message MUST name the affected rule, the recorded-vs-observed severity-set
+    delta, and the single regeneration command (FR-003 / FR-004).
+  - **Reversible**: easy (the protocol is a convention enforced by the test's
+    fail-closed message; no code lock-in).

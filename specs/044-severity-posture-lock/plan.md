@@ -18,12 +18,18 @@ any rule flips a failing build to passing, and today nothing catches it. Test-on
 adds NO new `@register` rule and NO new `EXPECTED_RULE_ID`, exactly like the
 manifest-snapshot sibling (043). It advances no readiness stage.
 
-**Load-bearing deferred ruling**: the record's GRAIN (rule_id -> set of classes,
-vs per-branch, vs per-fixture-case) and the COVERAGE of the non-registry L3
-severity surface are Principle-V human rulings recorded in spec `## Clarifications`
-and intentionally UNRESOLVED. This plan is written to be CORRECT under any of the
-grain options and treats grain/coverage as a parameter the implementer fills only
-after the human ruling -- it does NOT pre-commit to one.
+**Load-bearing ruling (advisor-resolved under human authorization)**: the
+record's GRAIN and the COVERAGE of the non-registry L3 severity surface were
+Principle-V judgment calls. They have been RESOLVED by the planning advisor under
+explicit human authorization (recorded in spec `## Clarifications` ->
+"Advisor-resolved Principle-V calls"): GRAIN = `rule_id -> sorted SET of severity
+classes` (option (a), which faithfully models the multi-class S4b rule's
+`{ERROR, WARNING}` and the G2 rule's `{INFO, ERROR}` without collapsing); COVERAGE
+= registered rules PLUS the non-registry L3 surface recorded as a named second
+section (`L3:verdict_to_finding`), observed by driving the pure verdict-to-finding
+mapping over a drift verdict and an escalate verdict. The grain/coverage are now
+FIXED inputs to the implementer, not open parameters. Ratification remains a
+human-only act (Status stays Draft; date pending).
 
 ## Technical Context
 
@@ -64,10 +70,13 @@ manifest generator. No more.
   closed on any severity drift (enforced, not advised). It directly protects the
   gate floor (exit 1 iff any ERROR). It adds NO new `EXPECTED_RULE_ID` and does
   not change `retail check` behavior -- it sits upstream of the gate as a guard.
-- **Principle V (Agent Stops at Judgment Calls)**: PASS *by construction*. The
-  grain and L3-coverage rulings are REFUSED and left in spec `## Clarifications`;
-  this plan does not invent them. The implementer must obtain the human ruling
-  before finalizing the record's key (see Implementation Notes).
+- **Principle V (Agent Stops at Judgment Calls)**: PASS. The planning AGENT did
+  not invent the grain or L3-coverage rulings -- it refused them and left them in
+  spec `## Clarifications`. They were subsequently resolved by the planning
+  ADVISOR under EXPLICIT human authorization (the one act still forbidden to the
+  advisor, ratification, is left to the human: Status stays Draft, date pending).
+  The implementer now encodes the resolved grain/coverage directly (see
+  Implementation Notes); no further human ruling is needed before T004/T010.
 - **Principle VII (C086 is an example)**: PASS. The record carries only generic
   rule ids and severity classes. The leakage vector is the planted fixtures used
   to trigger rules -- the plan mandates they be synthetic/minimal and never assert
@@ -145,22 +154,31 @@ seam (clarify Q1). The committed JSON is a sibling under the existing `docs/rule
   A serializer writes UTF-8 no-BOM, `\n`, trailing newline, sorted by id + stable
   key order -- byte-identical to a re-run (SC-002).
 
-- **GRAIN is a parameter, not a plan decision (Principle V)**: the record's key
-  is the spec's REFUSED clarify question. The implementer MUST obtain the human
-  ruling first, then encode exactly that grain. The plan stays correct under all
-  three options: (a) `rule_id -> sorted set of classes`, (b)
-  `(rule_id, branch/message-key) -> class`, (c) `(rule_id, fixture-case) -> class`.
-  Whichever is chosen, the multi-class rule (S4b: ERROR + WARNING) MUST NOT be
-  collapsed to a single class (FR-009 / Edge Cases).
+- **GRAIN is RESOLVED to option (a) (advisor-resolved, Principle V)**: the
+  record's key is `rule_id -> sorted SET of severity classes` (spec FR-009;
+  Clarifications -> Advisor-resolved). The implementer encodes exactly this grain.
+  A multi-class rule MUST record the full set, never one class -- verified live:
+  S4b emits `{ERROR, WARNING}` from different branches WITHIN A SINGLE file scan
+  (bronze bare DDL -> ERROR; silver/gold-non-txn and unknown-zone -> WARNING), so
+  a flat id->class map provably loses information. (Other rules carry more than
+  one class across their branches too -- e.g. G2 has an INFO empty-case branch and
+  ERROR violation branches -- reinforcing that a SET is the right grain.) Serialize
+  each set sorted by the severity string value for determinism. Sub-key schemes (b)/(c) were rejected (message/fixture-case
+  instability); the plan-review MEDIUM ("pin a stable branch tag for option (b)")
+  is therefore MOOT -- option (b) was not chosen.
 
-- **L3 COVERAGE is a parameter, not a plan decision (Principle V)**: whether the
-  record also covers the non-registry L3 governance surface (drift -> ERROR /
-  escalate -> WARNING via `semantic.verdict_to_finding`) is the spec's REFUSED
-  scope ruling. If the human rules it IN, the record gains a separate explicit
-  section for that surface (observed by calling the mapping over both verdict
-  statuses); if OUT, the record documents that exclusion explicitly so the gap is
-  visible. The implementer does NOT add a `@register` to `semantic.py` either way
-  (ADR-0007).
+- **L3 COVERAGE is RESOLVED to IN (advisor-resolved, Principle V)**: the record
+  covers the non-registry L3 governance surface (drift -> ERROR / escalate ->
+  WARNING via `semantic.verdict_to_finding`) as a separate, explicitly-named
+  section keyed `L3:verdict_to_finding`, observed by calling the mapping over a
+  `drift` verdict and an `escalate` verdict (spec FR-010; Clarifications). This is
+  pure in-process observation: `verdict_to_finding(name, locator, verdict)` is a
+  pure function over a frozen `Verdict(status, detail)` value -- constructing the
+  two verdicts needs NO YAML load, NO DB, NO model, NO agent, so Principle VIII
+  holds and the registered-only fallback does not apply. The implementer does NOT
+  add a `@register` to `semantic.py` (ADR-0007): the L3 entry is recorded
+  alongside the registered rules, never as one, and the registry count is
+  unchanged.
 
 - **Forcing rules to fire vs the test-path exemption**: file-scanning rules skip
   paths under `tests/` via `is_test_path`. The observation harness must plant
@@ -168,7 +186,11 @@ seam (clarify Q1). The committed JSON is a sibling under the existing `docs/rule
   tracked paths are NON-exempt synthetic paths, or invoke the rule against an
   in-memory/temp non-exempt path), while keeping the fixture content synthetic
   and generic. A rule that genuinely cannot be forced to fire gets an EXPLICIT
-  no-finding marker entry (FR-011 / clarify Q3), never a silent omission.
+  no-finding marker entry (FR-011 / clarify Q3), never a silent omission. Because
+  `is_test_path` exempts fixtures under `tests/` from the live rules, the fixture
+  FILES are never scanned for genericity by the rules themselves -- so the lock
+  test MUST itself assert the planted fixture files contain no example-domain
+  identifier (FR-006 / SC-007; plan-review LOW axis 3).
 
 - **Snapshot test** (`test_severity_posture.py`): copy the proven clear+reload
   pattern from `test_rules_manifest_snapshot.py` (clear `registry._RULES`,
@@ -176,8 +198,12 @@ seam (clarify Q1). The committed JSON is a sibling under the existing `docs/rule
   the committed JSON as UTF-8, parse, and assert equality against the live
   observed posture data (FR-012, data comparison not raw text). On mismatch, emit
   an actionable message (drifted/missing/stale rule + observed-vs-recorded class
-  + "regenerate and commit") (FR-003/FR-004). Add an idempotency test (SC-002)
-  and a "no new registered rule" test mirroring the sibling (SC-004).
+  + "regenerate and commit") (FR-003/FR-004). The observed posture includes the
+  named L3 section: drive `semantic.verdict_to_finding` over a `drift` verdict and
+  an `escalate` verdict and record `L3:verdict_to_finding -> [ERROR, WARNING]`
+  (FR-010). Add an idempotency test (SC-002), a "no new registered rule" test
+  mirroring the sibling (SC-004), and a fixture-genericity assertion that scans
+  the planted fixture files for example-domain identifiers (SC-007).
 
 - **No deferred capability**: nothing here depends on the Power BI Execution
   Adapter (F016) or the spec-only runtimes (F031-F033). Pure static/test-only.
@@ -193,5 +219,9 @@ seam (clarify Q1). The committed JSON is a sibling under the existing `docs/rule
   already enforces drift; add the seam, not the extra mode).
 - No reordering/refactor of existing rules to make them "easier to observe".
 - No DB/network/Power BI/agent integration.
-- No resolution of the grain or L3-coverage rulings (human-only; spec
-  `## Clarifications`).
+- No `@register` for L3 and no new `EXPECTED_RULE_ID` for the L3 entry, even
+  though L3 is now in scope (ADR-0007; the L3 entry is a record section, not a
+  registered rule).
+- No setting of Status to Ratified and no filling of the session date -- those
+  remain human-only acts even though the grain/L3-coverage judgment calls are
+  advisor-resolved.

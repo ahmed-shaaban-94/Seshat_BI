@@ -31,16 +31,21 @@
 
 ## Notes
 
-- Two [NEEDS CLARIFICATION] markers remain in FR-009 (grain/uniqueness) and
-  FR-010 (L3 coverage scope). These are DELIBERATE Principle-V carve-outs:
-  load-bearing human design rulings that the planning agent is forbidden to
-  answer. They are recorded in the spec's ## Clarifications block for human
-  resolution and are NOT defects to be auto-resolved before planning.
-- The "No [NEEDS CLARIFICATION] markers remain" item stays unchecked by design;
-  it is gated on human ratification, not on the planning workflow.
-- Items marked incomplete here are intentional and tracked; they do not block
-  /speckit-clarify or /speckit-plan from running on the resolvable portion.
+- The two [NEEDS CLARIFICATION] markers formerly in FR-009 (grain/uniqueness) and
+  FR-010 (L3 coverage scope) have been RESOLVED in place by the planning advisor
+  under EXPLICIT human authorization (FR-009 = rule_id -> sorted SET of severity
+  classes; FR-010 = registered rules + a named `L3:verdict_to_finding` second
+  section). The resolutions are recorded in the spec's ## Clarifications block
+  ("Advisor-resolved Principle-V calls"). No bracketed markers remain in the spec.
+- The "No [NEEDS CLARIFICATION] markers remain" item stays unchecked by design:
+  although the markers are gone, this box is the RATIFICATION gate, which is a
+  human-only act (the ratify gate fails closed on an AI-authored Ratified line).
+  The advisor authorization does NOT extend to ratification; Status stays Draft
+  and the session date stays pending for the human.
+- Items marked incomplete here are intentional and tracked.
 - Clarify session (date pending) resolved 3 non-judgment ambiguities (artifact
   format/location, comparison method, no-finding marker -> FR-011/FR-012) and
-  REFUSED 4 Principle-V judgment calls (grain, L3 coverage, readiness mapping,
-  update protocol), which remain in ## Clarifications for human resolution.
+  originally REFUSED 4 Principle-V judgment calls (grain, L3 coverage, readiness
+  mapping, update protocol); those 4 were subsequently advisor-resolved under
+  human authorization and now appear under "Advisor-resolved Principle-V calls"
+  in ## Clarifications.
