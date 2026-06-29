@@ -6,7 +6,7 @@
 
 **Created**: 2026-06-29
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-06-29)
 
 **Input**: User description: "Text/JSON Output Equivalence Property Test"
 
@@ -21,18 +21,16 @@ clarification are recorded under the dated session below.
 
 ### Owner judgment calls (Principle V -- NOT answered by the agent; for the owner at ratification)
 
-- **[OPEN -- Principle V] Roadmap promotion + feature number.** Should this internal
+- **[RESOLVED -- Principle V] Roadmap promotion + feature number.** Should this internal
   governance-core hardening test be promoted to a roadmap F-row (and given an F-number), or stay
-  an unmapped repo-hygiene item like the prior B-series? The agent's conservative default
-  recommendation is **stay spec-only / unmapped** (commit nothing additional; promotion stays
-  available later), but the roadmap is the human-curated commitment ledger and the agent MUST NOT
-  self-promote. Owner to rule.
+  an unmapped repo-hygiene item like the prior B-series? **OWNER RULING (2026-06-29): stay
+  unmapped repo-hygiene item** -- no roadmap F-row, no F-number; advances no readiness stage,
+  matching the prior idea-bank B-series (B1/B2) precedent. Promotion remains available later as a
+  fresh human decision. (Ruling supplied by the repo owner via Session 1; recorded here verbatim.)
 
-### Session (date pending)
+### Session 2026-06-29
 
-> OPERATOR ACTION REQUIRED: fill the real date into this heading at ratification. The spec author
-> cannot invent a date (scripts cannot call `new Date()`); today's supplied context date is
-> 2026-06-29 but the operator owns the authoritative session date.
+> Session date filled at ratification by the repo owner (Ahmed Shaaban, 2026-06-29).
 >
 > The advisor recommendations below were integrated into the spec body during clarification
 > (highest Impact*Uncertainty first). The Principle-V item above was REFUSED by the agent and
