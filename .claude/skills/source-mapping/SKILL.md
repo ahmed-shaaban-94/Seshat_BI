@@ -85,9 +85,10 @@ table AND lets the pipeline itself be refined.
 7. **Named-human review** -- recording the judgment-call ANSWERS is NOT map approval. No
    `silver.*` SQL until the full map is reviewed.
 
-**Naming:** gold/BI column names use PascalCase with `_` applied by logic per name
-(single-concept joined: `Brand`; multi-concept / id / key: `Product_ID`, `Gross_Sales`,
-`Sale_SK`). This differs from silver snake_case.
+**Naming:** warehouse SQL identifiers are **snake_case** (`product_id`, `gross_sales`,
+`sale_sk`) -- rule **S1** flags quoted non-snake_case columns (a quoted mixed-case name
+forces a case-sensitive Postgres column, a footgun). PascalCase is a **Power BI
+model-layer** display choice (rename in the semantic model), NEVER a SQL identifier.
 
 > Per-column vs global is by DEPENDENCY, not preference: global when a decision is
 > table-wide (PII policy) or cross-row (filters); per-column when it depends only on that
