@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-29
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-06-29)
 
 **Input**: User description: "Live-Surface Protocol Conformance Test (fake QueryRunner)"
 
