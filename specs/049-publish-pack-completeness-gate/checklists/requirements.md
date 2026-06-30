@@ -13,7 +13,9 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain (the two contract questions are
+      advisor-resolved with recommendations; the two Principle-V items are recorded
+      as Open-for-human, not as in-line markers)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,11 +33,13 @@
 
 ## Notes
 
-- Intentional [NEEDS CLARIFICATION] markers remain on (1) the authoritative
-  required-section set, (2) the severity posture, and (3) the GAP-location
-  mechanism. These are ratify-gate decisions (mirroring B3's closed-set-at-ratify
-  pattern) plus the Principle-V publish-safety boundary, which the planning
-  workflow is forbidden to answer. They are recorded in `## Clarifications`
-  (Open for human + DEFERRED to ratify) and carried into the plan.
-- Items marked incomplete require spec updates before `/speckit-plan` ONLY for
-  ordinary gaps; the remaining markers are deliberate ratify-gate carve-outs.
+- The two contract questions -- (1) authoritative required-section set + GAP
+  location and (2) severity posture -- were resolved by the advisor in the Session
+  2026-06-30 block with explicit RECOMMENDATIONS (six index rows a-f at index
+  granularity, GAP read from the structured "Resolved?" cell; severity ERROR). Both
+  are reversible and are CONFIRMED by the human at the ratify gate (mirroring B3's
+  closed-set-at-ratify pattern).
+- Two Principle-V judgment calls are NOT answered by the workflow and are recorded
+  under "Open for human": (a) the readiness-stage + roadmap-provenance assignment,
+  and (b) confirmation of the publish-safety boundary (approval-slot present-and-
+  non-placeholder only, never inspect/validate/populate the sign-off).

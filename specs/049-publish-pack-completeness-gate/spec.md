@@ -175,15 +175,14 @@ and no code path writes any approval.
   exercise the rule).
 - A handoff pack whose `GAP` token appears in narrative prose (e.g. the word "gap"
   inside a caveat sentence) rather than as a section-resolution marker: the rule
-  MUST key the GAP signal off the structured resolution position (e.g. the
-  required-section index "Resolved?" cell), not a free-text substring match, to
-  avoid false positives. [NEEDS CLARIFICATION: see Question on the authoritative
-  required-section set and how each section's filled/unfilled state is located.]
+  keys the GAP signal off the structured resolution position (the required-section
+  index "Resolved?" cell), not a free-text substring match, so prose mentions never
+  trip it (advisor-resolved 2026-06-30; FR-003).
 - The four MANDATORY caveats (PII exclusion / returns handling / known gaps /
-  out-of-scope): whether `PP1` checks each of the four individually or only checks
-  the caveats section is present-and-filled is part of the required-section-set
-  decision. [NEEDS CLARIFICATION: see Question on the authoritative required-section
-  set.]
+  out-of-scope): in this first step `PP1` checks the caveats section is
+  present-and-resolved at index granularity only; per-caveat individual enforcement
+  is a later, separate increment (advisor-resolved 2026-06-30; FR-007). Confirmed at
+  ratify.
 
 ## Requirements *(mandatory)*
 
@@ -202,9 +201,11 @@ and no code path writes any approval.
   Fork).
 - **FR-003**: The rule MUST also treat a required section recorded as the literal
   resolution token `GAP` (the template's "points at an UNFILLED or FAIL artifact"
-  marker) as incomplete and flag it. [NEEDS CLARIFICATION: confirm `GAP` is in
-  scope as an incompleteness marker and how it is located structurally vs in
-  narrative prose -- see Question.]
+  marker) as incomplete and flag it. The `<placeholder>`/`GAP` signal MUST be read
+  from the STRUCTURED resolution position of the required-section index (its
+  "Resolved?" cell), NOT by a free-text substring scan of narrative prose, so the
+  word "gap" appearing in a caveat sentence never trips the rule. (Advisor-resolved
+  2026-06-30; confirmed at ratify.)
 - **FR-004**: The rule MUST parse committed text only (stdlib) and MUST NEVER
   open a database, network, or Power BI connection, NEVER execute the pack, and
   introduce no third-party dependency -- it joins the static `retail check` rule
@@ -221,9 +222,11 @@ and no code path writes any approval.
 - **FR-007**: The authoritative set of required sections the rule enforces MUST be
   defined explicitly in one named place, derived from the generic template's
   structure, and expressed generically (no specific table, column, KPI, or PII
-  rule). [NEEDS CLARIFICATION: the EXACT required-section set is a ratify-gate
-  decision -- see Question; the idea's first-step list and the template's six
-  sections a-f do not line up 1:1.]
+  rule). The recommended set (advisor-resolved 2026-06-30; confirmed at ratify) is
+  the template's six required-section-index rows a-f -- metric contracts, readiness
+  scorecard, reconciliation, known caveats, data dictionary, publish approval --
+  checked at index granularity (the four MANDATORY caveats are NOT decomposed
+  individually in this first step; that is a separate later increment).
 - **FR-008**: When a scanned pack cannot be read, the rule MUST emit a Finding
   (fail loud) rather than crash the gate or silently pass.
 - **FR-009**: On a repository with no committed per-table handoff packs, the rule
@@ -240,10 +243,11 @@ and no code path writes any approval.
   rule id, the severity, the offending pack path with the unfilled/missing section
   (locator), and a message; the rule MUST NOT mutate shared state.
 - **FR-013**: The rule MUST emit a single uniform severity for every violation.
-  [NEEDS CLARIFICATION: severity is a ratify-gate posture call -- ERROR
-  (proven-incomplete, fail-closed, matching `G6`/`B1`/`B3`) vs WARNING (suspect);
-  the template's "a GAP -> cannot reach complete" language argues ERROR -- see
-  Question.]
+  The recommended posture (advisor-resolved 2026-06-30; confirmed at ratify) is
+  ERROR -- proven-incomplete, fail-closed, matching `G6`/`B1`/`B3` and the
+  template's "a GAP -> the pack cannot reach complete" language. The exit-code
+  mapping for ERROR is the existing gate behavior; this feature adds no new
+  severity tier.
 - **FR-014**: The rule MUST add NO new readiness stage and MUST move NO table's
   readiness stage to pass; it only checks the committed pack's structural
   completeness over the existing Publish Ready stage (it never self-grants a
@@ -334,20 +338,35 @@ the Session below.
   filled, including the approval slot already defined in the template today) does
   not require the receipt to ship first. Treat receipt-presence as out of first-step
   scope unless the human rules otherwise. Reversible: easy.
-
-The following remain genuinely unresolved and are deferred to the ratify gate
-(they shape the rule's contract and should not be guessed by the planner):
-
-- **Authoritative required-section set** (DEFERRED to ratify): reconcile the idea's
-  first-step list (dictionary, caveats, carried contracts, reconciliation, approval)
-  against the template's six sections a-f (metric contracts, readiness scorecard,
-  reconciliation, caveats, dictionary, approval), and decide whether the four
-  MANDATORY caveats (PII / returns / known-gaps / out-of-scope) are checked
-  individually. Mirror B3's closed-set-at-ratify pattern. Affects FR-003, FR-007,
-  and the GAP-location edge case.
-- **Severity posture** (DEFERRED to ratify): ERROR (proven-incomplete, fail-closed,
-  matching `G6`/`B1`/`B3`) vs WARNING (suspect). The template's "a GAP -> pack
-  cannot reach complete" language argues ERROR. Affects FR-013.
+- Q: What is the authoritative required-section set, where is each section's
+  filled/unfilled state located, and are the four MANDATORY caveats checked
+  individually? -> A (advisor RECOMMENDATION, reversible at ratify): enforce the
+  template's six structured required-section-INDEX rows a-f (metric contracts,
+  readiness scorecard, reconciliation, known caveats, data dictionary, publish
+  approval). For each of the six, the rule checks (i) the section/index row is
+  PRESENT and (ii) its structured "Resolved?" cell is FILLED -- i.e. not a remaining
+  `<placeholder>` and not the literal `GAP` token in that cell. The GAP/placeholder
+  signal is located in the STRUCTURED "Resolved?" position of the required-section
+  index, NEVER by a free-text substring scan of narrative prose (this resolves the
+  GAP-location edge case and the prose-"gap" false-positive risk). The four
+  MANDATORY caveats are NOT decomposed and checked individually in this first step --
+  `PP1` checks the caveats section is present-and-resolved at the index granularity
+  only; per-caveat enforcement is a larger, separate increment (YAGNI). Reasoning:
+  this is the minimal generic set derived directly from the template's own index
+  table, mirrors B3's single explicit closed set, and avoids baking any specific
+  table's caveat wording into a generic rule (Principle VII). FR-003/FR-007 and the
+  GAP-location edge case are resolved to this. Final membership is CONFIRMED by the
+  human at the ratify gate (mirror B3's closed-set-at-ratify pattern). Reversible: easy.
+- Q: Severity posture -- ERROR or WARNING for an incomplete publish pack? -> A
+  (advisor RECOMMENDATION, reversible at ratify): ERROR, applied uniformly to every
+  violation. Reasoning: the siblings `G6`, `B1`, and `B3` all emit ERROR for a
+  proven structural breach, and the template states plainly that a section pointing
+  at an unfilled/FAIL artifact "is a GAP -> the pack cannot reach complete" -- an
+  incomplete committed pack is a proven-incomplete state, not a suspect pattern with
+  a legitimate override clause. Principle VIII's "static rules WARN" applies to
+  suspect patterns carrying an ADR override-when clause; an unfilled required section
+  has no legitimate override. FR-013 is resolved to ERROR. Final posture CONFIRMED by
+  the human at the ratify gate. Reversible: easy (a single severity constant).
 
 ## Assumptions
 
