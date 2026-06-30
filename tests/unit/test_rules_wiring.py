@@ -65,6 +65,7 @@ EXPECTED_RULE_IDS = frozenset(
         "A1",  # route registry: every route target resolves or is marked planned
         "A3",  # route coverage: knowledge-map ids == routes.yaml ids (bijection)
         "B1",  # never-execute: no module-scope DB/network import in the static core
+        "B3",  # live-surface: no module-scope DB/network import in a live surface
         "C1",
         "C2",  # connection/secrets
         "G1",
