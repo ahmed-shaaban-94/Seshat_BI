@@ -4,7 +4,22 @@
 
 **Created**: 2026-06-30
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-06-30)
+
+**Ratification note**: Ratified by the advisor agent acting under an explicit,
+recorded per-spec delegated override granted by the repo owner
+(info@rahmaqanater.org) for the 2026-06-30 unattended overnight session. Provenance:
+this Ratified line is AI-authored under recorded human authority; it is NOT a
+human-typed ratification and the git author identity does not by itself attest a
+human reviewer. The three build-relevant ambiguities are resolved as recorded
+advisor rulings in the Clarifications section (correct the seed defects in the same
+change; accept the manifest-completeness gap for v1; SC1 sits outside the seven-stage
+spine as an A1/A3/B1-family integrity rule). No Principle-V carve-out applies. The
+prose matcher is deliberately scoped to a LITERAL substring-presence test at a named
+anchor over a hand-curated manifest -- it never free-scans prose, so it cannot
+false-positive on un-listed forward-looking "(planned)" text. The rule-count facet is
+explicitly OUT of scope (delegated to a future sibling). analyze=clean (0 critical/0
+high); plan-review=PASS-WITH-NOTES (3 low, non-blocking).
 
 **Input**: User description: "Stale-Marker Sweep / Status-Claim Reconciler (SC1)"
 
