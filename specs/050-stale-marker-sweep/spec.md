@@ -123,13 +123,13 @@ doc -> one ERROR.
 - **FR-014**: The rule MUST self-register through the existing rule-registration mechanism (a decorator side effect on import of its submodule); no edit to the registry module is required.
 - **FR-015**: The single-source-of-truth set of expected rule ids (in the rule-wiring test) MUST gain `SC1` in the same change that introduces the rule, so the wiring/drift test continues to pass. (The live set holds 35 ids today; SC1 takes it to 36.)
 - **FR-016**: The manifest MUST be GENERIC prose-claim machinery. Neither the rule code nor any kit-level seed manifest entry may hardcode or special-case a worked-example-specific (C086 / pharmacy) document path, artifact, or value. The rule schema must be applicable to any document making a status claim.
-- **FR-017**: The seed manifest MUST include the confirmed generic seed defect: the capability-state document that calls the shipped Net Sales end-to-end trace "(planned)" while that trace is a tracked, shipped artifact. The spec leaves to the plan stage [NEEDS CLARIFICATION: should introducing SC1 also CORRECT the seeded stale prose in the same change so the gate is green on the feature branch, or only register the claim and let a follow-up fix the prose? -- this is a delivery-sequencing decision, see Clarifications].
+- **FR-017**: The seed manifest MUST include the confirmed generic seed defect: the capability-state document that calls the shipped Net Sales end-to-end trace "(planned)" while that trace is a tracked, shipped artifact. The change that introduces SC1 MUST also CORRECT the seeded stale prose (flip the offending "(planned)" wording to reflect the shipped reality) in the SAME change, so the gate is green on the feature branch at merge. Rationale: an enforced rule that ships RED on main would block every subsequent change; the seed defect and its fix land together (a tracked-document text correction, not a re-decision). See Clarifications (Q1).
 - **FR-018**: SC1 MUST be accompanied by unit tests that exercise: a stale planned marker (ERROR), an honest planned claim (no finding), a false built claim (ERROR), an honest built claim (no finding), a missing/untracked manifest (ERROR), malformed YAML (ERROR), an absent anchor (ERROR), and an invalid/missing field (ERROR).
 
 ### Out of Scope
 
 - **The rule-count claim facet.** Stale numeric-count claims in prose (for example a document asserting a specific number of rules that no longer matches the live set) are explicitly DELEGATED to a separate sibling idea (T5.5) and are NOT covered by SC1. SC1 covers only the file-exists-vs-status prose-claim class. Rationale: a general prose number/phrase matcher risks false positives on legitimate forward-looking prose; keeping SC1 to path-resolution-against-tracked-files (the proven A1 shape) keeps it safe.
-- **Manifest completeness / coverage.** Nothing in SC1 verifies that the manifest enumerates every status claim in the repo. SC1 checks only the claims that are listed. This leaves a known drift gap (a claim no one added to the manifest is not checked). The spec records this gap; it does NOT build a coverage rule. [NEEDS CLARIFICATION: accept the manifest-completeness drift gap for SC1's first step, or pair SC1 with a coverage check in a later idea? -- recommended: accept the gap now, mirror how A1 shipped before its A3 coverage sibling.]
+- **Manifest completeness / coverage.** Nothing in SC1 verifies that the manifest enumerates every status claim in the repo. SC1 checks only the claims that are listed. This leaves a known drift gap (a claim no one added to the manifest is not checked). The spec records this gap; it does NOT build a coverage rule. The drift gap is ACCEPTED for SC1's first step, mirroring how A1 shipped (route resolution) before its A3 coverage sibling (manifest bijection) was added later. A coverage check, if wanted, is a separate future idea -- not part of SC1. See Clarifications (Q2).
 - **Any live capability.** No database provisioning, no ingestion, no Power BI execution adapter (F016), no spec-only runtimes (F031-F033). SC1 is static-only.
 - **Amending any ratified decision.** If SC1's seed reconciles a claim that happens to live in a governance document, fixing the stale prose is a tracked-document text correction, not a re-decision or version bump of any ratified principle.
 
@@ -156,9 +156,47 @@ doc -> one ERROR.
 - SC1 reuses the existing tracked-files population mechanism (derived from the version-control file list, repo-relative POSIX paths) -- the same source A1 resolves targets against -- so artifact-existence resolution behaves identically to A1.
 - The YAML parsing dependency already used lazily by sibling rules (A1, the contract loader) is available as a development/optional dependency and is imported the same lazy way.
 - The manifest is authored and maintained by humans; SC1 does not generate or auto-populate it. Ownership of keeping the manifest current is a human responsibility (see the open completeness question).
-- SC1 maps to no roadmap F-number and advances no readiness stage; it is recorded as an idea-bank integrity rule (sibling to A1 / A3 / B1), consistent with how those rules were recorded. [NEEDS CLARIFICATION: confirm SC1 is correctly OUTSIDE the seven-stage readiness spine and recorded as an idea-bank rule, or assign it an explicit home.]
+- SC1 maps to no roadmap F-number and advances no readiness stage; it is recorded as an idea-bank integrity rule (sibling to A1 / A3 / B1), OUTSIDE the seven-stage Source -> ... -> Publish readiness spine. This is the confirmed home: SC1 is governance/observability-integrity machinery, structurally identical to A1/A3/B1, none of which sit on the readiness spine. See Clarifications (Q3).
 
 ## Clarifications
 
-<!-- Principle-V carve-outs and build-relevant ambiguities are recorded here.
-     Markers left in the body above are resolved in the clarify stage. -->
+### Session 2026-06-30
+
+Three build-relevant ambiguities were resolved by the advisor against the
+constitution, the readiness spine, and how the sibling A1/A3 rules shipped. None
+is a Principle-V carve-out (SC1 touches no data grain, PII, business rollup, or
+product identity -- it reconciles prose status claims against file existence), so
+none is deferred to a human ruling.
+
+- **Q1 (delivery sequencing of the seed fix)**: Should introducing SC1 also
+  correct the seeded stale prose in the same change, or only register the claim?
+  **Recommended answer**: Correct it in the same change. **Reasoning**: An enforced
+  ERROR rule that ships RED on main would block every later change until someone
+  fixes the prose; the seed defect and its one-line prose correction must land
+  together so the gate is green at merge. Fixing the wording is a tracked-document
+  text correction, not a re-decision of any ratified content. **Reversible**: easy
+  (the prose fix is a small text edit). Integrated into FR-017.
+
+- **Q2 (manifest-completeness drift gap)**: Accept that nothing checks the
+  manifest is complete, or pair SC1 with a coverage rule now? **Recommended
+  answer**: Accept the gap for SC1's first step. **Reasoning**: A1 shipped route
+  resolution before its A3 coverage/bijection sibling existed; the same staged
+  path applies here. Building a coverage rule now is scope creep (YAGNI) and a
+  separate idea. **Reversible**: easy (a coverage rule can be added later as a
+  sibling without changing SC1). Integrated into Out of Scope.
+
+- **Q3 (readiness-spine placement)**: Is SC1 correctly outside the seven-stage
+  readiness spine, recorded as an idea-bank integrity rule? **Recommended
+  answer**: Yes -- outside the spine, sibling to A1/A3/B1. **Reasoning**: SC1 is
+  governance/observability-integrity machinery with no roadmap F-number and
+  advances no Source->...->Publish stage, structurally identical to the routing
+  /never-execute integrity rules that are all recorded off-spine. **Reversible**:
+  easy (a future roadmap edit could map it if ever wanted). Integrated into
+  Assumptions.
+
+### Deferred to human ruling (Principle V)
+
+None. SC1 surfaces no grain/uniqueness, PII publish-safety, business
+rollup/segment, or product-identity question. The rule resolves declared status
+claims against the tracked-file set and committed text only.
+
