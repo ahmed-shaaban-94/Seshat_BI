@@ -110,9 +110,13 @@ key and cites evidence (a PR number and/or commit SHA), and that the file is val
 ### Functional Requirements
 
 - **FR-001**: The system MUST provide a structured, machine-readable ledger file at
-  `docs/roadmap/shipped-ideas.yaml` keyed by a stable idea-id, with each entry recording
-  `pr_sha` (PR number and/or commit SHA evidence) and `f_row` (the roadmap F-row a human
-  has placed the idea at, or `none`).
+  `docs/roadmap/shipped-ideas.yaml` keyed by the idea's existing backlog short-code
+  (e.g. `A1`, `B2`, `F7`, `IL1`) -- the same token the prose appendix and ship-status
+  already use; no new keying scheme is invented. Each entry MUST record a `status`
+  (`shipped` or `settled`), `pr_sha` (PR number and/or commit SHA evidence), and `f_row`
+  (the roadmap F-row a human has placed the idea at, or `none`). SETTLED-rejected ideas
+  (e.g. F5/F6) are recorded too so the engine stops re-litigating them, not only re-pitching
+  shipped ones.
 - **FR-002**: The idea-engine Memory stage MUST read `shipped-ideas.yaml` and use it as
   known-history input to the scoring lenses, so already-shipped ideas are labeled and
   de-emphasized rather than re-pitched as new.
@@ -137,10 +141,13 @@ key and cites evidence (a PR number and/or commit SHA), and that the file is val
   of ledger entries -- are entries strictly human-curated (like status-claims.yaml /
   parked-on.yaml), or may the engine append? If the engine appends, does that cross the
   single-owner-of-ship-status line? -- Principle-V judgment call, recorded for human.]
-- **FR-009**: The relationship between `shipped-ideas.yaml` and the existing prose
-  "## SHIPPED / SETTLED" appendix in `idea-backlog.md` MUST be defined and non-contradictory
-  (one authoritative source, or an explicit reconciliation). [NEEDS CLARIFICATION: does the
-  yaml REPLACE the prose appendix, or sit alongside it as a second source? -- affects scope.]
+- **FR-009**: When the structured ledger and the prose "## SHIPPED / SETTLED" appendix in
+  `idea-backlog.md` disagree on an idea-id, the engine MUST treat `shipped-ideas.yaml` as
+  authoritative for its machine read and MUST surface the disagreement as a
+  memory-integrity signal; it MUST NOT silently rewrite either source. [NEEDS CLARIFICATION:
+  whether the yaml ultimately REPLACES the prose appendix entirely, or the two sources
+  co-exist long-term -- a scope/ownership call left for the human; the mechanical read
+  precedence above holds regardless.]
 - **FR-010**: The optional static IL1 reconciler rule (a fail-closed check on a SHIPPED row
   lacking evidence, mirroring SC1/DF1) is OUT OF SCOPE for this feature and MUST NOT be
   built here. If it is later approved as a separate rule-budget decision, it MUST register
@@ -148,9 +155,10 @@ key and cites evidence (a PR number and/or commit SHA), and that the file is val
 
 ### Key Entities
 
-- **Shipped-idea ledger entry**: One record in `shipped-ideas.yaml`. Attributes: stable
-  idea-id (key), `pr_sha` evidence (PR number and/or commit SHA), `f_row` (a human-placed
-  roadmap F-row label, or `none`). No sample data, no domain specifics.
+- **Shipped-idea ledger entry**: One record in `shipped-ideas.yaml`, keyed by the idea's
+  backlog short-code. Attributes: `status` (`shipped` | `settled`), `pr_sha` evidence
+  (PR number and/or commit SHA), `f_row` (a human-placed roadmap F-row label, or `none`).
+  No sample data, no domain specifics.
 - **Idea-engine Memory stage**: The existing history-aware stage (`phase('Memory')`) that
   reads prior bank prose + Ground ship-status and labels/de-emphasizes already-handled
   ideas. This feature adds one read input (the structured ledger) to it; it remains a
@@ -195,6 +203,31 @@ key and cites evidence (a PR number and/or commit SHA), and that the file is val
   boundary) are recorded here for a human and are NOT answered by the planning agent.
   Ordinary ambiguities are resolved in /speckit-clarify and appended under a session block.
 -->
+
+### Session 2026-06-30
+
+Advisor-resolved ordinary ambiguities (recommended answers, integrated into the spec):
+
+- Q: What is the stable key for a ledger entry (the idea-id keying scheme)?
+  -> A: The idea's existing short-code from the backlog (e.g. `A1`, `B2`, `F7`, `IL1`) --
+  the same token the prose appendix and ship-status already use. Reuse, do not invent a
+  new scheme. (Reasoning: matches the tokens A1/B1/B2/F7/F8 the engine already keys
+  known-history on; minimizes reconciliation surface against the prose appendix; reversible.)
+- Q: Does the ledger record SETTLED-rejected ideas (F5/F6) too, or only SHIPPED?
+  -> A: Both, with an explicit `status` field per entry (`shipped` | `settled`). The
+  engine's known-history must stop re-litigating settled REJECTs as well as re-pitching
+  shipped ideas, so the same ledger carries both with their evidence. (Reasoning: the prose
+  appendix already records both SHIPPED and SETTLED; a structured ledger that dropped
+  SETTLED would lose half the memory the Memory stage needs; reversible.)
+- Q: When the structured ledger and the prose appendix disagree on an idea-id, which is
+  authoritative for the engine's read (mechanical precedence, distinct from the human
+  scope question of whether the yaml replaces the prose)?
+  -> A: The structured `shipped-ideas.yaml` is authoritative for the engine's machine read;
+  on a conflict the engine uses the yaml value and SURFACES the disagreement as a
+  memory-integrity signal (it never silently rewrites either source). (Reasoning: a machine
+  read needs one deterministic source of truth; surfacing rather than auto-fixing preserves
+  the human-rules-everything and fail-loud invariants; reversible. NOTE: whether the yaml
+  ultimately REPLACES the prose appendix entirely is the separate human scope call below.)
 
 ### Open for human (Principle V -- not answered by the agent)
 

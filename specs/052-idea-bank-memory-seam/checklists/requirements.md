@@ -32,6 +32,8 @@
 ## Notes
 
 - Two [NEEDS CLARIFICATION] markers remain by design (FR-008 ledger authorship, FR-009
-  replace-vs-alongside). These are Principle-V / scope judgment calls deliberately left for
-  /speckit-clarify and the human ratify gate; they do NOT block planning of the core seam.
+  yaml-replaces-prose). These are Principle-V / scope judgment calls deliberately left for
+  the human ratify gate; they do NOT block planning of the core seam. The /speckit-clarify
+  session (2026-06-30) resolved three ordinary ambiguities (keying scheme, shipped-vs-settled
+  scope, machine-read precedence on conflict) and integrated them into FR-001/FR-009.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
