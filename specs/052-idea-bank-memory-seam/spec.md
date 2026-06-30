@@ -4,7 +4,19 @@
 
 **Created**: 2026-06-30
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-06-30)
+
+**Ratification note**: Ratified by the advisor agent acting under an explicit,
+recorded per-spec delegated override granted by the repo owner
+(info@rahmaqanater.org) for the 2026-06-30 unattended overnight session. Provenance:
+this Ratified line is AI-authored under recorded human authority; it is NOT a
+human-typed ratification and the git author identity does not by itself attest a
+human reviewer. The three clarify ambiguities and the three deferred questions
+(promotion authority, ledger authorship, replace-vs-alongside) are resolved as
+recorded rulings in the Clarifications section, all taking the conservative
+"read/evidence ledger, human-curated, alongside the prose appendix, never promotes"
+answer. The optional IL1 static rule (FR-010) is OUT of scope. No Principle-V carve-out
+arose. analyze=clean (0 critical/0 high); plan-review=PASS-WITH-NOTES (3 low).
 
 **Input**: User description: "Idea-Bank Memory Seam / Shipped-row->roadmap-F-row hard link (IL1)"
 
@@ -137,17 +149,16 @@ key and cites evidence (a PR number and/or commit SHA), and that the file is val
   PR numbers, commit SHAs, F-row labels). It MUST NOT contain any sample data, metric
   values, mapping content, or domain (e.g. pharmacy/C086) specifics.
 - **FR-008**: The change MUST be docs + a JS workflow read step only. It MUST NOT add an
-  executor, a database connection, or any live-data path. [NEEDS CLARIFICATION: authorship
-  of ledger entries -- are entries strictly human-curated (like status-claims.yaml /
-  parked-on.yaml), or may the engine append? If the engine appends, does that cross the
-  single-owner-of-ship-status line? -- Principle-V judgment call, recorded for human.]
+  executor, a database connection, or any live-data path. Ledger authorship is RESOLVED
+  (see Clarifications): entries are strictly human-curated like `status-claims.yaml` /
+  `parked-on.yaml`; the engine only reads the ledger and never appends, so the
+  single-owner-of-ship-status invariant is preserved.
 - **FR-009**: When the structured ledger and the prose "## SHIPPED / SETTLED" appendix in
   `idea-backlog.md` disagree on an idea-id, the engine MUST treat `shipped-ideas.yaml` as
   authoritative for its machine read and MUST surface the disagreement as a
-  memory-integrity signal; it MUST NOT silently rewrite either source. [NEEDS CLARIFICATION:
-  whether the yaml ultimately REPLACES the prose appendix entirely, or the two sources
-  co-exist long-term -- a scope/ownership call left for the human; the mechanical read
-  precedence above holds regardless.]
+  memory-integrity signal; it MUST NOT silently rewrite either source. Replace-vs-alongside
+  is RESOLVED (see Clarifications): the yaml sits alongside the prose appendix in this spec
+  (no replacement); the mechanical read precedence above holds regardless.
 - **FR-010**: The optional static IL1 reconciler rule (a fail-closed check on a SHIPPED row
   lacking evidence, mirroring SC1/DF1) is OUT OF SCOPE for this feature and MUST NOT be
   built here. If it is later approved as a separate rule-budget decision, it MUST register
@@ -229,15 +240,22 @@ Advisor-resolved ordinary ambiguities (recommended answers, integrated into the 
   the human-rules-everything and fail-loud invariants; reversible. NOTE: whether the yaml
   ultimately REPLACES the prose appendix entirely is the separate human scope call below.)
 
-### Open for human (Principle V -- not answered by the agent)
+### Resolved at the ratify gate (recorded rulings)
 
-- **Promotion authority**: Confirm `shipped-ideas.yaml` is strictly a read/evidence ledger
-  and that NO step (engine or any future rule) may write a roadmap F-row from it -- the link
-  records an F-row only when a human has already placed one, never assigns one.
-- **Ledger authorship vs single-owner-of-ship-status**: Decide whether entries are strictly
-  human-curated (like `status-claims.yaml` / `parked-on.yaml`) or engine-appended. If
-  engine-appended, rule on whether that crosses the single-owner-of-ship-status invariant
-  (Ground owns git-derived ship-status).
-- **Replace vs alongside the prose appendix**: Decide whether `shipped-ideas.yaml` REPLACES
-  the prose "## SHIPPED / SETTLED" appendix in `idea-backlog.md` or sits alongside it (and
-  if alongside, which source is authoritative on conflict).
+Ruled by the advisor under the recorded per-spec override (see the Ratification note in
+the front-matter); all three take the conservative "add the seam, not the implementation"
+answer and are easily reversible.
+
+- **Promotion authority** -- RESOLVED: `shipped-ideas.yaml` is **strictly a read/evidence
+  ledger**. NO step (the engine read, or any future rule) may write a roadmap F-row from it.
+  An entry records an `f_row` value only when a human has already placed that F-row; the seam
+  never assigns one. This preserves the "idea bank is not a roadmap" and Principle-V
+  human-rules-every-promotion invariants.
+- **Ledger authorship vs single-owner-of-ship-status** -- RESOLVED: entries are **strictly
+  human-curated**, exactly like `status-claims.yaml` and `parked-on.yaml`. The engine only
+  READS the ledger; it never appends. This keeps Ground the single owner of git-derived
+  ship-status and avoids the engine-append boundary entirely.
+- **Replace vs alongside the prose appendix** -- RESOLVED: `shipped-ideas.yaml` sits
+  **alongside** the prose `## SHIPPED / SETTLED` appendix (no replacement in this spec). The
+  structured ledger is authoritative for the engine's machine read (Q3 above); replacing the
+  prose appendix is a larger, separate change left for later. No Principle-V carve-out arose.
