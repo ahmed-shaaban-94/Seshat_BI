@@ -109,6 +109,17 @@ def test_unparseable_source_fails_loud(tmp_path) -> None:
     assert findings[0].locator == _TARGET
 
 
+def test_tracked_but_missing_file_fails_loud(tmp_path) -> None:
+    # A live-surface path tracked but absent on disk must fail loud (an ERROR
+    # Finding), never crash the gate and never pass vacuously.
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(_TARGET,))
+    findings = list(check_live_surface_imports(ctx))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "B3"
+    assert findings[0].severity is Severity.ERROR
+    assert findings[0].locator == _TARGET
+
+
 # --- C5: allowed stdlib string work (urllib.parse) -> no Finding --------------
 
 

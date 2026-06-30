@@ -60,17 +60,19 @@ _LIVE_SURFACE: frozenset[str] = frozenset(
 def check_live_surface_imports(ctx: RuleContext) -> Iterable[Finding]:
     findings: list[Finding] = []
     for rel in sorted(p for p in ctx.tracked_files if p in _LIVE_SURFACE):
-        source = (ctx.repo_root / rel).read_text(encoding="utf-8")
         try:
+            source = (ctx.repo_root / rel).read_text(encoding="utf-8")
             names = module_scope_violations(source)
-        except SyntaxError as exc:
-            # A live-surface module that does not parse fails loud as a Finding
-            # rather than crashing the gate (never a vacuous green).
+        except (SyntaxError, OSError) as exc:
+            # A live-surface module that cannot be read or parsed fails loud as a
+            # Finding rather than crashing the gate (never a vacuous green). OSError
+            # covers a tracked-but-missing/unreadable file; SyntaxError covers
+            # unparseable source.
             findings.append(
                 Finding(
                     rule_id="B3",
                     severity=Severity.ERROR,
-                    message=f"could not parse module to verify lazy imports: {exc}",
+                    message=f"could not read/parse module for lazy-import check: {exc}",
                     locator=rel,
                 )
             )
