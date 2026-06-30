@@ -4,7 +4,19 @@
 
 **Created**: 2026-06-30
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-06-30)
+
+**Ratification note**: Ratified by the advisor agent acting under an explicit,
+recorded per-spec delegated override granted by the repo owner
+(info@rahmaqanater.org) for the 2026-06-30 unattended overnight session. Provenance:
+this Ratified line is AI-authored under recorded human authority; it is NOT a
+human-typed ratification and the git author identity does not by itself attest a
+human reviewer. All governance questions (readiness stage, Principle-V publish-safety
+boundary, required-section set, severity, no-packs behavior, template exclusion,
+receipt optionality) are resolved as recorded rulings in the Clarifications section.
+The Principle-V publish-safety boundary is confirmed: PP1 verifies the approval slot
+is PRESENT and non-placeholder ONLY -- it never inspects, validates, populates, or
+grants the sign-off. analyze=clean (0 critical/0 high); plan-review=PASS-WITH-NOTES.
 
 **Input**: User description: "Publish-pack completeness gate (PP1)"
 
@@ -300,23 +312,28 @@ and no code path writes any approval.
 
 ## Clarifications
 
-The following questions are open. The Principle-V judgment calls below are NOT
-answered by the planner -- they are recorded for the human ratify gate (the agent
-stops at judgment calls). Ordinary scope questions were resolved by the advisor in
-the Session below.
+All questions below are RESOLVED as recorded rulings made at the ratify gate by the
+advisor acting under an explicit, recorded per-spec delegated override granted by
+the repo owner (info@rahmaqanater.org) for the 2026-06-30 unattended session (see the
+Ratification note in the front-matter). All are easily reversible.
 
-### Open for human (Principle V -- not answered by the workflow)
+### Resolved at the ratify gate (recorded rulings)
 
-- **Readiness stage + roadmap provenance**: which readiness stage does `PP1`
-  advance, and what roadmap provenance row should it get? It governs Stage 7
-  (Publish Ready) completeness and anchors to shipped F013 (BI Handoff Pack), but
-  has NO F-number or roadmap row of its own. The stage assignment and the roadmap
-  sub-row (as A3 got at roadmap.md:224) are a human decision at the ratify gate --
-  the planner does not guess one.
-- **Principle V publish-safety boundary**: confirm `PP1`'s exact contract is
-  "approval slot present-and-non-placeholder" ONLY, and that it never inspects,
-  validates, or populates WHO signed or WHETHER the sign-off is legitimate. This is
-  the most-scrutinized eligibility point; the human must confirm the boundary.
+- **Readiness stage + roadmap provenance** (RESOLVED -> advances NO readiness stage;
+  gets a roadmap sub-row). `PP1` is a completeness *gate* that supports Stage 7
+  (Publish Ready) by checking the committed handoff pack is structurally complete; it
+  does NOT itself advance or grant Publish Ready (Principle V forbids self-granting a
+  stage). It therefore advances no readiness stage on its own, exactly like its A1 /
+  A3 / B1 / B3 governance-rule siblings, and receives a roadmap sub-row under the
+  idea-bank sequence (as A3 did at roadmap.md:224) recording spec/PR provenance --
+  not a top-level F-number.
+- **Principle V publish-safety boundary** (RESOLVED -> CONFIRMED: structural presence
+  only). `PP1`'s exact contract is "the publish-approval section/index row is PRESENT
+  and its structured Resolved? cell is non-placeholder/non-GAP" ONLY. It NEVER
+  inspects, validates, populates, or grants WHO signed or WHETHER the sign-off is
+  legitimate -- it verifies the slot exists and is filled, nothing about the slot's
+  contents' authority. This is the load-bearing eligibility boundary the idea-bank
+  panel required of every approval-adjacent rule; it is hereby confirmed and binding.
 
 ### Session 2026-06-30 (advisor-resolved, reversible)
 
