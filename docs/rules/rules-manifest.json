@@ -12,6 +12,10 @@
     "title": "No module-scope DB/network import in the static core (never-execute)"
   },
   {
+    "id": "B3",
+    "title": "No module-scope DB/network import in a live-surface module (keep it lazy)"
+  },
+  {
     "id": "C1",
     "title": "Connection must use parameter identifiers, not string literals"
   },
