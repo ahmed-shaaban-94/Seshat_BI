@@ -164,10 +164,9 @@ DF1 present, and the wiring test's expected-id set length increases by exactly o
 
 ### Edge Cases
 
-- **Empty manifest edge list**: an honest "no parked-on edges declared yet" state. The
-  posture for an empty-but-present manifest (clean pass vs fail-loud) is resolved in
-  Clarifications; SC1's precedent is that a present, well-formed manifest with zero
-  entries passes clean.
+- **Empty manifest edge list**: an honest "no parked-on edges declared yet" state. Per
+  Clarifications Q4, a present, well-formed manifest with zero edges passes CLEAN (zero
+  findings) -- only a missing/untracked/malformed manifest fails loud (FR-004).
 - **Multiple edges sharing one blocker (F016)**: the common case -- several targets
   parked on the same blocker. Each edge is evaluated independently; one bad edge does
   not suppress findings for the others.
@@ -208,8 +207,12 @@ DF1 present, and the wiring test's expected-id set length increases by exactly o
   unresolvable blocker evidence).
 - **FR-007**: DF1 MUST emit an ERROR finding for a parked-but-shipped contradiction --
   an edge that asserts a target is parked on its blocker while the repository's tracked
-  state shows the park no longer holds (per the shipped-evidence criterion resolved in
-  Clarifications).
+  state shows the park no longer holds. The contradiction criterion (resolved in
+  Clarifications Q2) is: each edge declares an OPTIONAL `shipped_when_tracked`
+  artifact path; if that path is present in the tracked set, the park is contradicted
+  (the target shipped) and DF1 fails loud. An edge that omits `shipped_when_tracked`
+  asserts a park with no machine-checkable ship-signal yet and is reconciled only on
+  its blocker/evidence/anchor (FR-005, FR-006).
 - **FR-008**: DF1 MUST be categorical -- it emits findings (ERROR) or none; it MUST NOT
   emit, compute, or store any confidence/probability/readiness score.
 - **FR-009**: DF1 MUST check only edges explicitly listed in the manifest; it MUST NOT
@@ -230,10 +233,11 @@ DF1 present, and the wiring test's expected-id set length increases by exactly o
 - **FR-014**: The feature MUST NOT add, wire, start, or vendor F016 or any F031-F033
   runtime; the only new runtime artifacts are the DF1 rule, its manifest, and the
   wiring/snapshot updates.
-- **FR-015**: DF1's severity disposition is [NEEDS CLARIFICATION: confirm ERROR (a
-  nonexistent blocker or parked-but-shipped contradiction is a proven defect, matching
-  SC1) vs WARNING -- a Principle-VIII posture call]. The default carried through this
-  spec is ERROR.
+- **FR-015**: DF1 findings MUST be severity ERROR (resolved in Clarifications Q1). A
+  nonexistent blocker, missing evidence, absent anchor, or parked-but-shipped
+  contradiction is a proven defect (a false statement of fact in committed governance
+  docs), not a suspect pattern; ERROR matches SC1's posture and Principle VIII's
+  "ERROR is defensible for a proven contradiction" stance.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -309,10 +313,74 @@ DF1 present, and the wiring test's expected-id set length increases by exactly o
   by the workflow; if any arises it is recorded and left open for the human.
 -->
 
+### Session 2026-06-30
+
+Advisor-resolved ambiguities (recorded for the human ratify gate). Each is an
+engineering/posture call within delegated authority; none is a Principle-V carve-out.
+
+- **Q1 -- DF1 severity: ERROR or WARNING?** Resolved: **ERROR**. A nonexistent
+  blocker, missing evidence, absent anchor, or parked-but-shipped contradiction is a
+  proven false statement of fact in committed governance docs, not a suspect pattern.
+  ERROR matches the SC1 sibling exactly and is the defensible Principle-VIII posture
+  for a proven contradiction. Reversible: easy (one severity constant). Folded into
+  FR-015.
+
+- **Q2 -- How is a "parked-but-shipped" contradiction detected without executing
+  anything?** Resolved: each edge MAY declare an OPTIONAL `shipped_when_tracked`
+  artifact path; if that path is present in the tracked-file set, the target has
+  shipped and the still-asserted park is contradicted (DF1 ERROR). This is the
+  static, tracked-file-presence analog of SC1's `planned`-but-now-tracked stale
+  marker. An edge that omits `shipped_when_tracked` makes a park assertion with no
+  machine-checkable ship-signal yet and is reconciled only on blocker/evidence/anchor
+  presence. This keeps the criterion categorical and read-only (no execution, no
+  score). Reversible: easy (manifest field + one branch). Folded into FR-007.
+
+- **Q3 -- Which parked-on edges are in scope for v1?** Resolved: the F016 bottleneck
+  cluster only -- the edges whose evidence is already tracked: pbi-tools extract
+  (`docs/superpowers/specs/2026-06-26-pbi-tools-extract-spike-deferred.md`), L3 new
+  operators (`docs/superpowers/specs/2026-06-26-l3-new-operators-deferred.md`), and
+  F031-F033 (`specs/025-adapter-maintenance-policy/spec.md`,
+  `specs/026-adapter-compatibility-matrix/spec.md`,
+  `specs/027-release-maturity-management/spec.md`). The F034 built-page edge (a human
+  Desktop action, not a deferred-spec blocker) is EXCLUDED from v1 -- it is a different
+  blocker class (human action, not F016) and would muddy the generic "parked on a
+  shared deferred blocker" semantics. v1 = F016 -> {pbi-tools, L3-ops, F031, F032,
+  F033}, all citing tracked evidence so the shipped manifest reconciles clean (SC-005).
+  Reversible: easy (manifest entries are additive). Recorded; no FR change beyond
+  Assumptions.
+
+- **Q4 -- Posture for a present-but-empty manifest (zero edges)?** Resolved: a
+  present, well-formed manifest with an empty edge list passes CLEAN (zero findings),
+  matching SC1's precedent that a present, well-formed manifest with no entries is
+  honest "nothing declared yet," not a defect. A MISSING/untracked/malformed manifest
+  still fails loud (FR-004). This keeps the fail-loud surface on structural breakage,
+  not on emptiness. Reversible: easy (one guard). Consistent with FR-004; clarified in
+  the Edge Cases note.
+
+- **Q5 -- Does adding DF1 + its manifest require a constitution amendment / new ADR,
+  and does DF1 advance a readiness stage?** Resolved: **No amendment, no new ADR, no
+  stage advance.** DF1 is a within-posture addition exactly as SC1 was under spec 050:
+  it adds one enforced static integrity rule of the A1/A3/SC1 family without changing
+  any principle text, gate definition, or the seven-stage spine. Principle VIII already
+  authorizes new static ERROR rules; the rule inventory is tracked by the
+  set-length-derived wiring count + the rule-registry snapshot, which this change
+  updates. DF1 advances NO readiness stage -- it is a governance-hygiene rule outside
+  the stage model (the idea-bank item has no roadmap F-number; whether it later earns
+  an F-row is the bank's own IL1 question, left open for the human below). Reversible:
+  n/a (a no-op decision). Recorded.
+
 ### Principle-V carve-out (open for human, not answered by the workflow)
 
-- None identified at specify time. DF1 reconciles roadmap/feature dependency edges
-  against tracked files; it computes no grain/uniqueness key, publishes no
-  PII-bearing data, performs no business rollup/segmentation, and resolves no product
-  identity. If clarify surfaces any such question it will be recorded here and left
-  for the human, never answered by the workflow.
+- None identified. DF1 reconciles roadmap/feature dependency edges against tracked
+  files; it computes no grain/uniqueness key, publishes no PII-bearing data, performs
+  no business rollup/segmentation, and resolves no product identity. No grain/PII/
+  rollup/identity question arose at specify or clarify time.
+
+### Open for the human (non-Principle-V judgment calls deferred to ratify)
+
+- **Roadmap F-number / stage placement (IL1).** This is an idea-bank item with no
+  roadmap F-number. Whether the Parked-On Map earns its own F-row (closing the bank's
+  IL1 idea-bank-to-roadmap hard-link gap) or ships purely as a governance-hygiene rule
+  outside the stage model is an orchestration decision left to the human at ratify.
+  The spec ships it as a stage-independent integrity rule (Q5); assigning an F-row is
+  an additive, non-blocking follow-up.

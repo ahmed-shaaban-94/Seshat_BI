@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,9 +31,11 @@
 
 ## Notes
 
-- One intentional [NEEDS CLARIFICATION] marker remains (FR-015, DF1 severity
-  ERROR vs WARNING) -- a Principle-VIII posture call to be resolved in the
-  clarify stage. The default carried through the spec is ERROR (matching SC1).
+- All [NEEDS CLARIFICATION] markers resolved in the 2026-06-30 clarify session
+  (FR-015 severity = ERROR; FR-007 parked-but-shipped criterion via optional
+  `shipped_when_tracked`; v1 edge inventory; empty-manifest posture; no
+  amendment/stage-advance).
 - No Principle-V carve-out (grain/PII/rollup/identity) applies to DF1; recorded
   in the spec's Clarifications block.
-- Items marked incomplete require spec updates before `/speckit-plan`.
+- One non-Principle-V judgment call left open for the human at ratify: the IL1
+  roadmap F-number / stage placement for this idea-bank item.
