@@ -115,8 +115,11 @@ omission:** an ambiguity that does not bear on a contract is simply absent from 
 
 **Non-pass blocker rule (FR-013 fail-safe):** an ambiguity with `number_moving: true` and
 `decision_status: undecided` records a `blocking_reason` and forces `readiness.status:
-blocked`. A named owner may record `number_moving: false` to make it non-blocking; the agent
-never downgrades and never invents a ruling to clear it. **No fake confidence (rule #9):**
+blocked`. A named owner may record `number_moving: false` to make it non-blocking, but ONLY
+with a non-empty `evidence[]` recording who downgraded it and when -- the downgrade is itself
+a human ruling carrying the same attribution bar as a `decided` ruling, so the agent can never
+silently clear a blocker by flipping the boolean. The agent never sets `number_moving: false`
+and never invents a ruling to clear an entry. **No fake confidence (rule #9):**
 `decision_status` is exactly `decided | undecided` -- no third word, no numeric
 confidence/certainty field.
 

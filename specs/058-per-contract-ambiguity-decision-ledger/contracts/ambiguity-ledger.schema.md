@@ -31,13 +31,19 @@ ambiguities:                          # zero or more entries; only APPLICABLE am
 - `ruling` -- REQUIRED when `decision_status: decided`. Plain-language business INTENT only.
   A DAX expression, SQL, a visual/page spec, or a `powerbi/` path is REJECTED (define/check
   boundary, FR-003).
-- `evidence` -- REQUIRED (non-empty) when `decision_status: decided`. Records the owner-and-date
-  and any committed support. A decided entry with empty evidence is a defect (mirrors the
-  readiness `pass` rule).
+- `evidence` -- REQUIRED (non-empty) when `decision_status: decided` OR when an `undecided`
+  entry sets `number_moving: false`. Records the owner-and-date and any committed support. A
+  decided entry with empty evidence is a defect (mirrors the readiness `pass` rule); an
+  `undecided` + `number_moving: false` entry with empty evidence is likewise a defect (the
+  downgrade is unattributed -- see `number_moving`). Only an `undecided` + `number_moving:
+  true` entry legitimately carries `evidence: []`.
 - `number_moving` -- REQUIRED boolean. `true` if the candidate rulings would change a reported
   number for this contract. Per FR-013 (fail-safe), a `number_moving: true` + `undecided`
-  entry forces the contract's `readiness.status: blocked`; a named owner may record
-  `number_moving: false` to make it non-blocking, but the agent never downgrades it.
+  entry forces the contract's `readiness.status: blocked`. A named owner may record
+  `number_moving: false` to make an undecided entry non-blocking, but ONLY with a non-empty
+  `evidence[]` recording who downgraded it and when -- that downgrade is a human ruling with
+  the same attribution bar as a `decided` ruling. The agent never sets `number_moving: false`
+  and never downgrades a blocking entry.
 
 ## Cross-field / cross-artifact invariants
 
