@@ -1,6 +1,6 @@
 # Tasks: Live-validation evidence recorder (validate.py Findings -> readiness-status block)
 
-**Feature**: `053-live-validation-evidence-recorder-validate`
+**Feature**: `057-live-validation-evidence-recorder`
 **Spec**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md)
 
 Dependency-ordered, TDD-first. Scope is the pure transform seam only (YAGNI:

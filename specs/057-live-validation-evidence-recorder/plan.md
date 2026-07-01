@@ -1,8 +1,8 @@
 # Implementation Plan: Live-validation evidence recorder (validate.py Findings -> readiness-status block)
 
-**Branch**: `053-live-validation-evidence-recorder-validate` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
+**Branch**: `057-live-validation-evidence-recorder` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/053-live-validation-evidence-recorder-validate/spec.md`
+**Input**: Feature specification from `specs/057-live-validation-evidence-recorder/spec.md`
 
 ## Summary
 
@@ -74,7 +74,7 @@ recorded as open questions rather than resolved by the agent).
 ### Documentation (this feature)
 
 ```text
-specs/053-live-validation-evidence-recorder-validate/
+specs/057-live-validation-evidence-recorder/
 |-- spec.md              # feature spec (stage 2/3 output)
 |-- plan.md              # this file
 |-- tasks.md             # stage 4 output

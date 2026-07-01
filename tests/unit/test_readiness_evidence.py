@@ -81,6 +81,18 @@ def test_dsn_overlapping_components_redacted():
     assert "host.internal" not in blob  # nor a mangled remnant of it
 
 
+# T005c: percent-encoded DSN credentials are redacted in their DECODED form too
+def test_dsn_percent_encoded_credentials_redacted():
+    # DSN encodes user "svc/etl" and password "p@ss" as %2F / %40; a driver message
+    # prints the DECODED values.
+    dsn = "postgresql://svc%2Fetl:p%40ss@dbhost/prod"
+    findings = [_err("auth failed for user svc/etl with p@ss", "t.a")]
+    b = build_gold_ready_block(findings, "schema.tbl", run_mode="live", dsn=dsn)
+    blob = " ".join(b["blocking_reasons"])
+    assert "svc/etl" not in blob
+    assert "p@ss" not in blob
+
+
 # T006: deferred mode -> blocked with deferred-boundary reason, no clean evidence
 def test_deferred_mode_blocked_no_clean_evidence():
     b = build_gold_ready_block([], "schema.tbl", run_mode="deferred")

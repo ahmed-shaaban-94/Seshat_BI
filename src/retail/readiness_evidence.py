@@ -32,7 +32,7 @@ Ratified rulings (spec 057 ## Clarifications):
 from __future__ import annotations
 
 from typing import Optional
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from .core import Finding, Severity
 
@@ -53,16 +53,18 @@ def _scrub(text: str, dsn: Optional[str]) -> str:
         parts = urlsplit(dsn)
     except ValueError:
         return out
-    # Redact components LONGEST-first: if one component is a substring of another (e.g.
-    # username "db" inside host "dbhost.internal"), replacing the short one first would
-    # mangle the longer one so its own replacement can no longer match, leaking part of
-    # the host. Sorting by descending length replaces the most-specific value first.
-    components = sorted(
-        {c for c in (parts.password, parts.username, parts.hostname) if c},
-        key=len,
-        reverse=True,
-    )
-    for component in components:
+    # Collect each sensitive component in BOTH its raw (percent-encoded) form -- as it
+    # appears in the DSN string -- and its URL-decoded form, since a driver commonly
+    # prints the DECODED credential (e.g. DSN "svc%2Fetl" -> message "svc/etl"). Redact
+    # LONGEST-first so a component that is a substring of another (username "db" inside
+    # host "dbhost.internal") does not mangle the longer one before it can be matched.
+    raw = (parts.password, parts.username, parts.hostname)
+    values: set[str] = set()
+    for c in raw:
+        if c:
+            values.add(c)
+            values.add(unquote(c))
+    for component in sorted(values, key=len, reverse=True):
         out = out.replace(component, "<redacted>")
     return out
 

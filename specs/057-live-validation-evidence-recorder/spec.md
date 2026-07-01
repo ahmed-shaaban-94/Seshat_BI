@@ -1,6 +1,6 @@
 # Feature Specification: Live-validation evidence recorder (validate.py Findings -> readiness-status block)
 
-**Feature Branch**: `053-live-validation-evidence-recorder-validate` (spec dir renumbered to `057-live-validation-evidence-recorder` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
+**Feature Branch**: `057-live-validation-evidence-recorder` (spec dir renumbered to `057-live-validation-evidence-recorder` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
