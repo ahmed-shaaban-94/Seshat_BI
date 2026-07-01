@@ -107,8 +107,11 @@ reached only by reference.
       restated), and `docs/worked-examples/c086-pharmacy.md` as the cited concrete instance.
       (FR-008, FR-010)
 - [ ] T010 [US3] C086-leak scan: confirm the template body contains only `<placeholder>`
-      tokens and generic KPI/domain names -- zero pharmacy table/category/field names inlined.
-      (FR-008, SC-004)
+      tokens and generic KPI/domain names -- zero pharmacy table/category/field names inlined;
+      any concrete pharmacy instance is reached ONLY by reference to
+      `docs/worked-examples/c086-pharmacy.md`, never copied inline. ALSO confirm the template
+      invents no grouping / rollup / segment / ordering beyond the flat F7 domain-file routes
+      (FR-011 + FR-015 flat-list ruling). (FR-008, FR-011, SC-004)
 
 **Checkpoint**: US3 acceptance scenarios 1-2 pass.
 
@@ -116,9 +119,12 @@ reached only by reference.
 
 ## Phase 6: Principle-V open items + polish
 
-- [ ] T011 [P] In the template, mark the PII posture (FR-014) and any blocked-pending
-      severity/priority ordering (FR-015) as human rulings (Principle V) -- present them as
-      open items the template does NOT resolve; mirror the spec `## Clarifications` deferral.
+- [ ] T011 [P] In the template, ENCODE the two human rulings (resolved 2026-07-01, Principle
+      V; see spec FR-014 / FR-015): (a) a fixed PII-posture line stating "answerable today" is
+      an answerability statement only and asserts NO publish-safety judgment, inheriting the
+      caveats-note PII-exclusion stance; (b) render the blocked-pending list as a FLAT observed
+      list with no severity/priority/rank ordering. Do NOT present these as open items -- they
+      are ruled; the template reflects the rulings.
 - [ ] T012 [P] Final constraints pass on BOTH authored files: ASCII + UTF-8 no BOM (`--`,
       `->`, no glyphs; rule IX), short paths, and a full sweep for any numeric
       coverage/confidence figure (must be zero; rule #9, SC-002). Confirm `retail check` rule

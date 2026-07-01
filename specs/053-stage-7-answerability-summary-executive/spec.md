@@ -4,7 +4,23 @@
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent acting under an explicit,
+recorded per-session delegated override granted by the repo owner
+(info@rahmaqanater.org) for the 2026-07-01 "release the kraken" session, covering
+the seven idea-to-spec specs produced this session. Provenance: this Ratified line
+is AI-authored under recorded human authority; it is NOT a human-typed ratification
+and the git author identity does not by itself attest a human reviewer. The two
+Principle-V open items are resolved as recorded rulings in the Clarifications
+section / FR-014 / FR-015, both taking the conservative answer (explicit PII
+no-publish-safety-judgment posture; flat blocked-pending list, no severity/priority
+ordering). No new `retail check` rule is added (count stays 38). analyze=clean
+(0 critical/0 high, 1 low); plan-review=PASS-WITH-NOTES (2 low, both addressed:
+C086-by-reference tightened in T010, FR-011 no-grouping confirmation added, T011
+re-scoped to encode the rulings). The override is per-session and per-this-set only,
+not a standing waiver; it covers ratification, not the merge decision (normal CI
+gate still applies).
 
 **Input**: User description: "Stage 7 Answerability Summary (executive-readable)"
 
@@ -180,12 +196,15 @@ or field names; confirm none are present and any concrete instance is cited by r
 
 ### Principle-V requirements (left for human ruling; see Clarifications)
 
-- **FR-014** [NEEDS CLARIFICATION: PII publish-safety -- does an executive "answerable
-  today" list risk implying fields are safe to expose, and must the template carry an
-  explicit inherit-the-caveats-note PII posture asserting no publish-safety judgment?]
-- **FR-015** [NEEDS CLARIFICATION: business rollup/segment ordering -- should the
-  blocked-pending list carry any severity/priority ordering, or stay a flat observed list?
-  Ordering could imply an analyst judgment the agent must not make.]
+- **FR-014** (human-ruled 2026-07-01): The template MUST carry an explicit PII posture:
+  it inherits the caveats-note PII-exclusion stance and states, in a fixed template line,
+  that "answerable today" is an answerability statement ONLY and asserts NO publish-safety
+  judgment -- no field is implied safe to expose by appearing in any list. Publish-safety
+  remains an un-delegatable human judgment (Principle V).
+- **FR-015** (human-ruled 2026-07-01): The blocked-pending list MUST stay a FLAT observed
+  list with NO severity/priority/rank ordering (list order carries no meaning beyond source
+  order). Which blocker matters most is a priority judgment the agent must not make; if an
+  owner later wants an ordering, that is a separate human-supplied input, out of scope here.
 
 ### Key Entities
 
@@ -257,16 +276,18 @@ spine, and the F8 no-score discipline):
   KPI internals; F7 already routes each decision question to a contract or Planned marker, so
   no new mapping is invented (Principle VII, no rollup). Reversible: easy.
 
-Deferred to human (Principle-V judgment calls -- grain/PII/rollup/identity; NOT answered by
-the planning agent):
+Human-ruled 2026-07-01 (Principle-V judgment calls -- resolved by the repo owner under the
+recorded per-session ratify override; encoded into FR-014 / FR-015 above):
 
-- **PII publish-safety (FR-014)**: whether/how the template must inherit the caveats-note
-  PII-exclusion posture and assert no publish-safety judgment. An executive "answerable
-  today" list could be misread as "safe to expose"; whether the template must carry an
-  explicit PII posture is a publish-safety judgment reserved for a human.
-- **Business rollup/segment ordering (FR-015)**: whether the blocked-pending list may carry
-  any severity/priority ordering, or must stay a flat observed list. Ordering implies a
-  priority judgment (which blocker matters most) the agent must not make unilaterally.
+- **PII publish-safety (FR-014)**: RULED -- the template MUST inherit the caveats-note
+  PII-exclusion posture and carry a fixed line asserting that "answerable today" is an
+  answerability statement only and makes NO publish-safety judgment (no field is implied
+  safe to expose). Rationale: the conservative posture removes the "safe to expose"
+  misread while keeping publish-safety a human judgment (Principle V). Reversible: easy.
+- **Business rollup/segment ordering (FR-015)**: RULED -- the blocked-pending list stays a
+  FLAT observed list with no severity/priority/rank ordering. Rationale: ordering is a
+  "which blocker matters most" priority judgment the agent must not make unilaterally; a
+  later owner-supplied ordering would be a separate, out-of-scope input. Reversible: easy.
 
 ## Out of Scope
 
