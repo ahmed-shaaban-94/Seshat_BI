@@ -15,9 +15,10 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain -- INTENTIONAL: FR-015/016/017 are
-      Principle-V human judgment calls, left for /speckit-clarify (stage 3)
-- [x] Requirements are testable and unambiguous (except the deferred FR-015/016/017)
+- [x] No [NEEDS CLARIFICATION] markers remain -- FR-015/016/017 resolved by advisor
+      ruling in Clarifications Session 2026-07-01; governance meanings recorded to
+      open_for_human for optional human override (non-blocking)
+- [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (outcome-framed)
 - [x] All acceptance scenarios are defined
@@ -35,7 +36,6 @@
 
 ## Notes
 
-- Three [NEEDS CLARIFICATION] markers remain by design (FR-015/016/017). They are
-  Principle-V carve-outs recorded in the spec's ## Clarifications block. Stage 3
-  (/speckit-clarify) reasons a recommended answer for the non-carve-out ambiguities
-  and records the pure Principle-V carve-outs to open_for_human.
+- All three ambiguities (FR-015/016/017) resolved by advisor ruling in Clarifications
+  Session 2026-07-01. The governance MEANINGS they encode are recorded to
+  open_for_human for optional (non-blocking) human override. No markers remain.

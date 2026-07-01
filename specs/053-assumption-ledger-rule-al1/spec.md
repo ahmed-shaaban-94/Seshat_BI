@@ -200,8 +200,10 @@ ruling) appears in the rule or in any generic artifact it edits.
   judgment call the rule is structurally forbidden to make (Principle V), so AL1
   fails closed (ERROR) rather than self-resolving.
 - **FR-009**: AL1 MUST emit an ERROR Finding, whose locator names the offending
-  contract, when an unresolved-assumption marker coexists with a settled measure
-  binding on the same contract.
+  contract, when the unresolved-assumption marker (FR-015: `readiness.status ==
+  "blocked"` with non-empty `blocking_reasons[]`) coexists with a settled measure
+  binding (FR-016: a filled, non-placeholder `binds_to.gold_table` + non-empty
+  `binds_to.columns`) on the same contract.
 - **FR-010**: A tracked-but-unreadable or unparseable metric contract MUST produce
   a loud ERROR Finding (file + reason), never a silent pass.
 - **FR-011**: AL1 MUST bake in no C086/pharmacy specifics (dataset path, measure
@@ -210,33 +212,38 @@ ruling) appears in the rule or in any generic artifact it edits.
 - **FR-012**: AL1 MUST advance no readiness stage, grant no approval, and touch no
   F016 (Power BI Execution Adapter) or any deferred runtime; it is an idea-bank
   sequence rule with no roadmap F-number.
-- **FR-013**: The marker convention AL1 keys on MUST be DEFINED before it is
-  CHECKED. If the convention is a NEW literal token, it MUST be added to the
-  GENERIC template `templates/metric-contract.yaml` ONLY -- never to a per-table
-  contract. [Resolution of WHICH convention is a Clarification below.]
+- **FR-013**: The marker convention AL1 keys on MUST be an EXISTING contract field
+  state, not a new token (see Clarifications C1); therefore NO new marker-convention
+  token is added to any file. Should a future ruling instead choose a new literal
+  token, it MUST be added to the GENERIC template `templates/metric-contract.yaml`
+  ONLY -- never to a per-table contract.
 - **FR-014**: All authored artifacts MUST be ASCII + UTF-8 without BOM (use `--`
   and `->`, no non-ASCII glyphs; rule IX).
 
-*Requirements deferred to Clarifications (Principle V -- human judgment calls the
-agent MUST NOT self-answer):*
+*The following were the highest-impact ambiguities. They are resolved by advisor
+ruling in the Clarifications block (Session 2026-07-01). The underlying governance
+MEANINGS are also recorded to open_for_human for optional human override, per
+Principle V.*
 
-- **FR-015**: What EXACTLY counts as an "unresolved-assumption marker" on a metric
-  contract: [NEEDS CLARIFICATION: (a) an EXISTING field state --
-  `readiness.status: blocked` with a non-empty `blocking_reasons[]` -- or (b) a NEW
-  literal token added to the generic `templates/metric-contract.yaml`. These are
-  materially different specs; the whole check hinges on this and it is a human
-  ruling, not an agent default.]
-- **FR-016**: What EXACTLY counts as a coexisting "settled measure binding" that,
-  together with the marker, triggers the ERROR: [NEEDS CLARIFICATION: e.g. a filled
-  `binds_to.gold_table` + non-empty `binds_to.columns`, and/or a
-  `readiness.status` advanced past the `not_started` default. The coexistence
-  condition must be drawn so AL1 fires on binding-atop-open but NEVER on an honest
-  blocked draft -- a Principle-V judgment call, not an agent default.]
-- **FR-017**: Whether AL1 ships standalone against the template-defined marker, or
-  is gated on its unshipped DEFINE half (backlog item T1.2, "Per-Contract
-  Ambiguity Decision Ledger"): [NEEDS CLARIFICATION: if standalone with no marked
-  contracts on main, confirm the zero-findings-on-main baseline is a genuine pass,
-  not a vacuous one; if gated, AL1 waits for T1.2's define half to ship first.]
+- **FR-015** (resolved, C1): The "unresolved-assumption marker" is the EXISTING
+  open-state field mechanism the metric contract already defines:
+  `readiness.status == "blocked"` with a non-empty `readiness.blocking_reasons[]`.
+  AL1 keys on this existing field state; it introduces NO new token. (Advisor
+  ruling; the underlying governance meaning -- "a blocked contract is an unresolved
+  assumption" -- is recorded to open_for_human for optional human override.)
+- **FR-016** (resolved, C2): The coexisting "settled measure binding" that, together
+  with the marker, triggers the ERROR is a FILLED `binds_to`: a `binds_to.gold_table`
+  that is a real `gold.<...>` value (not the `<...>` angle-bracket placeholder) AND a
+  non-empty, non-placeholder `binds_to.columns` list. AL1 emits the ERROR only when a
+  `blocked` contract (per FR-015) ALSO carries such a filled binding. An honest
+  blocked draft whose `binds_to` is still a placeholder does NOT trip AL1. (Advisor
+  ruling; recorded to open_for_human for optional human override.)
+- **FR-017** (resolved, C3): AL1 ships STANDALONE. Because the marker (FR-015) is an
+  existing field the contract mechanism already supports, AL1 has a real convention
+  to check on day one and is NOT gated on the unshipped T1.2 define-half. The
+  zero-AL1-findings-on-main baseline is a GENUINE pass: the on-main contracts are
+  `status: pass` (not `blocked`), so none present the blocked+bound contradiction --
+  not a vacuous pass from an absent convention.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -306,29 +313,60 @@ agent MUST NOT self-answer):*
   (contracts + their generic template);
   `src/retail/metric_drift.py` `load_definition()` (lazy-yaml contract loader,
   reusable).
-- **DEFINE prerequisite**: the unresolved-assumption marker convention does not
-  exist on metric contracts today; it must be defined (in the generic template)
-  before AL1 can check it (see FR-013, FR-015).
-- **Open dependency question**: gating on the unshipped T1.2 define-half
-  (see FR-017).
+- **DEFINE prerequisite (RESOLVED)**: the marker keys on the EXISTING
+  `readiness.status: blocked` + `blocking_reasons[]` mechanism (C1/FR-015), so no
+  new convention must be defined first -- the define-then-check gap is closed.
+- **T1.2 gating (RESOLVED)**: AL1 ships standalone; it is NOT gated on the unshipped
+  T1.2 "Per-Contract Ambiguity Decision Ledger" define-half (C3/FR-017).
 
 ## Clarifications
 
-The following are Principle-V human judgment calls and/or the highest-impact
-ambiguities. Items carved out under Principle V are recorded here for a human
-ruling and MUST NOT be self-answered by the agent.
+### Session 2026-07-01
 
-### Principle-V carve-outs (recorded for human ruling)
+Three ambiguities drove the check semantics. Each is resolved by advisor ruling
+(the advisor holds recorded decision authority for engineering/convention calls).
+Because each ruling encodes a governance MEANING (what an unresolved assumption is,
+and when it should block a binding), the underlying meaning is ALSO recorded to
+open_for_human below for optional human override -- the advisor rulings are the
+default the spec builds on; a human may later re-decide without re-planning.
 
-- **What counts as the "unresolved-assumption marker"** (FR-015): (a) an existing
-  `readiness.status: blocked` + non-empty `blocking_reasons[]`, or (b) a NEW
-  literal token added to the generic template. This convention does not exist yet
-  and defines the entire check.
-- **What coexisting "settled measure binding" triggers the ERROR** (FR-016): a
-  filled `binds_to` and/or a `readiness.status` past `not_started`. The condition
-  must fail closed on binding-atop-open but never on an honest blocked draft.
-- **Standalone vs gated on T1.2** (FR-017): does AL1 ship against the
-  template-defined marker now, or wait for its unshipped define-half? If standalone
-  with no marked contracts, confirm the zero-findings-on-main baseline is genuine.
+- **C1 (FR-015) -- What counts as the "unresolved-assumption marker"?**
+  Decision: the EXISTING open-state field the contract already defines --
+  `readiness.status == "blocked"` with a non-empty `readiness.blocking_reasons[]`.
+  No new token is introduced.
+  Reasoning: the sibling rules key on existing structure rather than inventing
+  conventions (SC1/DF1 reconcile against existing manifests; PP1 reuses G6's
+  existing `<...>` placeholder mechanism). `readiness.status: blocked` +
+  `blocking_reasons[]` is, per the template's own authoring notes, THE mechanism a
+  contract uses to record an unresolved human judgment call. Keying on it avoids a
+  define-then-check gap (no new template edit, no vacuous baseline) and is the
+  lowest-risk, most-reversible convention. Reversible: easy (a dedicated token can
+  be layered on later without breaking this reading).
+- **C2 (FR-016) -- What coexisting binding triggers the ERROR?**
+  Decision: a FILLED `binds_to` -- a real `gold.<...>` `binds_to.gold_table` (NOT
+  the `<...>` angle-bracket placeholder) AND a non-empty, non-placeholder
+  `binds_to.columns` list -- present on a contract that is (C1) `blocked`.
+  Reasoning: this fires exactly on "a settled gold binding presented atop a
+  self-declared open question" and never on an honest blocked draft whose binding
+  is still a placeholder. It reuses the same angle-bracket placeholder polarity PP1
+  already established, so the placeholder test is a known, consistent primitive.
+  Reversible: easy.
+- **C3 (FR-017) -- Standalone or gated on the unshipped T1.2 define-half?**
+  Decision: STANDALONE. Because C1 keys on an existing field, AL1 has a real
+  convention to check on day one and is not gated on T1.2. The zero-AL1-findings
+  baseline on `main` is GENUINE: on-main contracts are `status: pass`, so none
+  present the blocked+bound contradiction -- not vacuous from an absent convention.
+  Reasoning: gating on an unshipped backlog item would strand AL1; keying on the
+  existing mechanism removes the dependency entirely. Reversible: easy.
 
-<!-- Clarify session entries are appended below by /speckit-clarify. -->
+### Principle-V carve-outs (recorded to open_for_human -- optional human override)
+
+The advisor rulings above are the spec's working defaults. The GOVERNANCE MEANINGS
+they encode are recorded here for a human to confirm or override; they are not
+blocking, and the build proceeds on the advisor defaults:
+
+- Whether "a `blocked` metric contract" is the correct definition of "an unresolved
+  assumption" for gate purposes (C1's governance meaning).
+- Whether "a `blocked` contract that also carries a filled `gold` binding" is the
+  correct thing to ERROR on -- i.e. whether binding-atop-blocked is always a defect
+  or sometimes a legitimate in-progress state (C2's governance meaning).
