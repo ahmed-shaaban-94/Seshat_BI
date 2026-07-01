@@ -1,10 +1,26 @@
 # Feature Specification: Live-validation evidence recorder (validate.py Findings -> readiness-status block)
 
-**Feature Branch**: `053-live-validation-evidence-recorder-validate`
+**Feature Branch**: `053-live-validation-evidence-recorder-validate` (spec dir renumbered to `057-live-validation-evidence-recorder` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent under the explicit, recorded per-session
+delegated override granted by the repo owner (info@rahmaqanater.org) for the 2026-07-01
+"release the kraken" batch of seven idea-to-spec specs. Provenance: this Ratified line is
+AI-authored under recorded human authority; NOT a human-typed ratification -- the git author
+identity does not by itself attest a human reviewer. Three Principle-V rulings: FR-012 = the
+recorder NEVER sets `pass` (populates evidence[], leaves status <= warning; pass is a human
+action); FR-013 = EMIT-only (returns a proposed gold_ready block; never writes
+readiness-status.yaml); FR-014 = an empty V-RC2 is recorded as the observation "no duplicate
+observed on current rows", never as a ratified grain claim. Premise corrected: validate.py /
+run_live_checks do NOT tally -1 unknown-member counts and no existing writer exists -- the
+recorder is a greenfield pure serializer over the four live checks' Finding[]. Adds
+`src/retail/readiness_evidence.py` + tests; NO new retail check rule (count stays 39 after
+056); driver-free / B3 import-boundary preserved; DSN redaction preserved. analyze=clean
+(0 critical/0 high); plan-review=PASS-WITH-NOTES. Override is per-session/per-this-set only;
+it covers ratification, not merge (normal CI gate still applies).
 
 **Input**: User description: "Live-validation evidence recorder (validate.py Findings -> readiness-status block)"
 
@@ -176,24 +192,21 @@ that would read as a clean pass.
   run occurred), the recorder MUST represent the state as `blocked` with a
   `blocking_reasons[]` entry naming the deferred boundary, and MUST NOT emit
   evidence that reads as a completed clean run.
-- **FR-012**: The recorder MUST NOT set a `gold_ready` status to `pass` on its
-  own where the readiness model treats a `pass` as an authoritative claim; the
-  disposition of who/what may set `pass` is governed by [NEEDS CLARIFICATION:
-  pass-set authority -- may the recorder set gold_ready.status to pass on a
-  zero-ERROR run given gold-ready.md calls the stage "mechanical -- no human
-  approval", or must it only populate evidence[]/blocking_reasons[] and leave
-  status-setting to a human/approval action? (Principle V self-grant boundary)].
-- **FR-013**: The delivery mode of the produced block -- whether the recorder
-  WRITES `mappings/<table>/readiness-status.yaml` directly or only EMITS a
-  proposed block (structured output) for a human/skill to apply -- is [NEEDS
-  CLARIFICATION: write-vs-emit -- direct write to the filled copy risks a
-  Principle V self-grant; emit-only keeps the human in the loop. Which is the
-  first-step scope?].
-- **FR-014**: Whether an empty V-RC2 result may be recorded as evidence that the
-  declared grain/uniqueness holds (versus only "no duplicate observed on current
-  rows") is [NEEDS CLARIFICATION: grain-claim semantics -- a grain/uniqueness
-  claim is a Principle V human-ratified judgment; does an empty V-RC2 count as
-  grain evidence or only as an observation? Who ratifies the grain claim?].
+- **FR-012** (human-ruled 2026-07-01): The recorder **MUST NOT set `gold_ready.status`
+  to `pass`** on its own. On a zero-ERROR run it populates `evidence[]` (and `warnings[]`)
+  and leaves the status at most `warning` (advanced-with-recorded-evidence); setting `pass`
+  is a human/approval action. Even though gold-ready.md calls the stage "mechanical", a
+  recorder self-granting `pass` crosses the Principle-V self-grant boundary -- the
+  conservative rule is: emit evidence, never grant the pass.
+- **FR-013** (human-ruled 2026-07-01): **EMIT-only.** The recorder returns / prints a
+  PROPOSED `gold_ready` block (structured output) for a human or skill to apply; it does
+  NOT write `mappings/<table>/readiness-status.yaml`. Direct write to the filled copy would
+  risk a Principle-V self-grant; emit-only keeps the human in the loop. (Matches the
+  serializer framing and T015 "writes nothing to readiness-status.yaml".)
+- **FR-014** (human-ruled 2026-07-01): An empty V-RC2 result is recorded as the
+  OBSERVATION **"no duplicate observed on current rows"**, NOT as evidence that the declared
+  grain/uniqueness holds. A grain/uniqueness claim is a human-ratified judgment (Principle V);
+  the recorder states what was observed, never the ratified claim.
 
 ### Key Entities *(include if feature involves data)*
 

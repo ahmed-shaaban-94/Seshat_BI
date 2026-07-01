@@ -72,6 +72,8 @@ Verdict: clean. Scope is the seam, not the implementation.
 
 ## Verdict
 
+**Verdict**: PASS-WITH-NOTES
+
 No critical or high finding on any axis. Two low/legibility notes carried into
 the record, both non-blocking. All required artifacts present.
 
