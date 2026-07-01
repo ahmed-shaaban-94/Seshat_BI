@@ -1,10 +1,24 @@
 # Feature Specification: DQ-Signal Interpretation Note (-1 unknown-member counts as business caveat)
 
-**Feature Branch**: `053-dq-signal-interpretation-note-1`
+**Feature Branch**: `053-dq-signal-interpretation-note-1` (spec dir renumbered to `054-dq-signal-interpretation-note` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent under the explicit, recorded
+per-session delegated override granted by the repo owner (info@rahmaqanater.org) for the
+2026-07-01 "release the kraken" session (the batch of seven idea-to-spec specs). Provenance:
+this Ratified line is AI-authored under recorded human authority; it is NOT a human-typed
+ratification and the git author identity does not by itself attest a human reviewer. The two
+Principle-V open items are resolved as recorded rulings in FR-010 / FR-011 (stage of record =
+Stage 7 Publish Ready, no F-number assigned; direction-of-distortion = totals preserved /
+sliced views distorted, categorical only). The idea-premise error ("validate.py /
+run_live_checks already tally the -1 count") is corrected in the spec: no such tally exists;
+the count's home is a hand-filled data-issues.md row. Docs/template only -- no runtime code,
+no new retail check rule (count stays 38). analyze=clean (0 critical/0 high); plan-review=
+PASS-WITH-NOTES. Override is per-session/per-this-set only; it covers ratification, not merge
+(normal CI gate still applies).
 
 **Input**: User description: "DQ-Signal Interpretation Note (-1 unknown-member counts as business caveat)"
 
@@ -164,20 +178,20 @@ person/customer dims.
   never inlining its specifics.
 - **FR-009**: The template MUST be ASCII, UTF-8 without BOM, use `--` and `->` (no
   glyphs), and emit no numeric confidence/health/readiness score.
-- **FR-010**: The template MUST state which readiness stage it is filed under: the
-  count is PRODUCED at Stage 4 (Gold Ready, live validate) and CONSUMED as a caveat
-  at Stage 7 (Publish Ready). [NEEDS CLARIFICATION: which readiness stage this
-  artifact is formally filed under -- authored generically now, filled after the
-  Stage-4 live run, consumed at Stage 7 is the recommended framing, but no roadmap
-  F-row covers it; a human must confirm the stage of record and whether an F-number
-  is assigned.]
-- **FR-011**: The `direction-of-distortion` semantics MUST be defined precisely so
-  the caveat states whether the distortion affects a measure TOTAL (unaffected --
-  the `-1` member absorbs the row so totals reconcile) or a SLICED/grouped view
-  (distorted -- the `-1` bucket steals share from real members).
-  [NEEDS CLARIFICATION: the precise correctness claim the caveat makes about
-  total-vs-sliced impact -- this is a business-meaning ruling reserved for a human
-  (Principle V).]
+- **FR-010** (human-ruled 2026-07-01): The template's **stage of record is Stage 7
+  (Publish Ready)** -- it is the caveat/stakeholder-communication surface that CONSUMES
+  the signal. The count is PRODUCED at Stage 4 (Gold Ready, live validate) and the
+  template is authored generically now / filled after the Stage-4 live run / consumed at
+  Stage 7. **No roadmap F-number is assigned** (the idea bank is not the roadmap;
+  Principle V / roadmap prose). The template states this producer->consumer framing.
+- **FR-011** (human-ruled 2026-07-01): The `direction-of-distortion` semantics are fixed
+  to this precise, observed correctness claim: the `-1` unknown member **preserves measure
+  TOTALS** (the row is absorbed into the `-1` bucket, so grand totals still reconcile) but
+  **distorts any view SLICED / grouped by the affected dimension** (the `-1` bucket steals
+  share from the real members, understating them and overstating "unknown"). The template
+  states this categorical total-vs-sliced claim only -- it names no magnitude and forecasts
+  nothing (stays clear of the F5/F6 ML boundary); attributing the distortion to a specific
+  business KPI remains an analyst (Principle V) fill.
 
 ### Key Entities *(include if feature involves data)*
 

@@ -67,6 +67,8 @@ not an automatic BLOCKED.
 
 ## Overall verdict
 
+**Verdict**: PASS-WITH-NOTES
+
 PASS-WITH-NOTES. All six stages present (specify, clarify, plan, tasks, analyze,
 plan-review); analyze CLEAN (0 critical / 0 high). Two low, build-time NOTES for the
 implementer:
