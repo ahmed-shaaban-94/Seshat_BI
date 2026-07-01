@@ -4,7 +4,19 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-02)
+
+> Ratified under the recorded ADOPT-batch autonomous authority dated 2026-07-02
+> (owner directive: build+ratify+merge the entire ADOPT bucket autonomously; the
+> advisor exercises the delegated per-spec ratify authority). This is a recorded
+> per-spec override within that batch, not a standing waiver of the ratify gate.
+> The two open items are non-build-blocking and resolved conservatively: (1) no
+> roadmap F-row/governance-row is added (YAGNI -- the meta-gate is test-only
+> infrastructure like manifest.py/severity_posture.py, neither of which carries an
+> F-number); (2) confirmed distinct from the shipped T5.5 snapshot manifest -- E1's
+> new value is the package-symmetry seam (import-tuple == __all__ == on-disk
+> submodules), which grounding verified is currently unguarded. analyze: clean
+> (0 critical/0 high); plan-review: PASS.
 
 **Input**: User description: "5-Place Wiring Meta-Gate / Registry Lockstep Self-Check"
 
