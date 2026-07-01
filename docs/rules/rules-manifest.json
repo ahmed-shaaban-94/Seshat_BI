@@ -8,6 +8,10 @@
     "title": "Knowledge-map route ids and the routing manifest ids are in bijection"
   },
   {
+    "id": "AL1",
+    "title": "Metric contract with an unresolved assumption also carries a settled binding"
+  },
+  {
     "id": "B1",
     "title": "No module-scope DB/network import in the static core (never-execute)"
   },
