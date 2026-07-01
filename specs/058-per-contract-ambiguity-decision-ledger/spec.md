@@ -4,7 +4,22 @@
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent under the explicit, recorded per-session
+delegated override granted by the repo owner (info@rahmaqanater.org) for the 2026-07-01
+"release the kraken" batch of seven idea-to-spec specs. Provenance: this Ratified line is
+AI-authored under recorded human authority; NOT a human-typed ratification -- the git author
+identity does not by itself attest a human reviewer. Spec dir renumbered to
+`058-per-contract-ambiguity-decision-ledger` to avoid the 053 collision across the parallel
+kraken runs (roadmap F-number wins on disagreement). Rulings: FR-013 = fail-safe (a
+number-moving ambiguity blocks until a named owner rules; owner may downgrade, agent never);
+FR-014 = left exploratory, no F-number (extends the shipped F009 store template only). Premise
+corrected: the ambiguity catalogue is **A1-A11** (A11 = same-store), not the title's "A1-A10" --
+the ledger keys to the full A1-A11 range. This is the DEFINE half; the CHECK half (AL1) is a
+separate spec. Docs/template only -- no runtime code, no new retail check rule (count stays
+38). analyze=clean (0 critical/0 high); plan-review=PASS-WITH-NOTES. Override is
+per-session/per-this-set only; it covers ratification, not merge (normal CI gate still applies).
 
 **Input**: User description: "Per-Contract Ambiguity Decision Ledger (force A1-A10 to a recorded ruling)"
 
@@ -244,14 +259,18 @@ feature.
 *The following requirements depend on human rulings and are recorded as open in
 Clarifications rather than resolved here:*
 
-- **FR-013**: The criterion that distinguishes a number-MOVING (blocking) ambiguity
-  from a cosmetic (recordable-but-non-blocking) one on a given contract MUST be a
-  human ruling, not an agent default. [NEEDS CLARIFICATION: the headline-moving
-  criterion is a business judgment reserved for a named owner]
-- **FR-014**: The readiness stage or roadmap placement this ledger advances MUST be
-  set by a human (an amendment to the existing store feature, a new roadmap row, or
-  left exploratory). [NEEDS CLARIFICATION: roadmap placement is a human decision; the
-  feature extends a shipped store but is not itself roadmap-mapped]
+- **FR-013** (human-ruled 2026-07-01, fail-safe default): An ambiguity is treated as
+  **number-MOVING (blocking)** whenever its candidate rulings would change any reported
+  number for that contract -- it records a `blocking_reason` and forces `status: blocked`
+  until a named owner records the ruling. An ambiguity is non-blocking only when a named
+  owner explicitly records it cosmetic. The default is conservative (unresolved
+  number-affecting ambiguity blocks); the owner may downgrade, the agent never does. No
+  numeric threshold is introduced (categorical: affects-a-number vs not).
+- **FR-014** (human-ruled 2026-07-01): The ledger is **left exploratory -- NO roadmap
+  F-number is assigned**. It extends the shipped F009 Metric Contract Store template
+  (adding the `ambiguities[]` block) but is not itself a roadmap feature row (the idea bank
+  is not the roadmap; Principle V / roadmap prose). A human may later fold it into F009 or
+  assign an F-row; until then it stays an exploratory DEFINE-layer amendment.
 
 ### Key Entities *(include if feature involves data)*
 

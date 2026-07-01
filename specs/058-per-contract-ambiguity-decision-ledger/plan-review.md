@@ -90,6 +90,8 @@ No over-scope found.
 
 ## Verdict
 
+**Verdict**: PASS-WITH-NOTES
+
 **plan_review_verdict: PASS-WITH-NOTES**
 
 All five adversarial axes pass. Three low, non-blocking notes recorded for the implementer.
