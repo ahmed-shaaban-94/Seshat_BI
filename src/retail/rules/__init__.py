@@ -22,6 +22,7 @@ from . import (  # noqa: F401  (imported for side effects)
     publish_pack,
     routes,
     routes_coverage,
+    scorecard,
     sql,
     status_claims,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "publish_pack",
     "routes",
     "routes_coverage",
+    "scorecard",
     "sql",
     "status_claims",
 ]
