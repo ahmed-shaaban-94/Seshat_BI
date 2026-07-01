@@ -80,6 +80,7 @@ EXPECTED_RULE_IDS = frozenset(
         "SC1",  # status-claim reconciler: prose claim matches tracked-file evidence
         "DF1",  # parked-on reconciler: dependency edges match tracked-file evidence
         "SL1",  # coverage-scorecard linter: scorecard is structurally well-formed
+        "AL1",  # assumption-ledger: unresolved-assumption marker + a settled binding
     }
 )
 
