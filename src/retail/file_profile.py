@@ -90,6 +90,14 @@ def _validate_columns(
     a candidate-PK column absent from the header is a profiling error, not a silent
     pass -- surface it so the agent records a finding.
     """
+    # An empty header (no columns at all) means the header row was blank -- a stray
+    # leading newline or a BOM-only first line. Reject with a clear message rather than
+    # letting the per-name loop no-op and surface a misleading "PK not in header []".
+    if len(reader_columns) == 0:
+        raise ValueError(
+            "empty header -- the file has no column names at the chosen header row "
+            "(a blank leading line or wrong header_row). Fix header-row detection."
+        )
     for i, name in enumerate(reader_columns):
         if name is None or str(name).strip() == "":
             raise ValueError(
@@ -266,34 +274,84 @@ def make_excel_reader(path: str, *, sheet: str, header_row: int = 0) -> FrameRea
     Cells are read as their string form; a blank cell becomes '' (read_only,
     values_only), preserving the RC5 measure. ``header_row`` is 0-based over the
     sheet's rows and skips banner rows above the header.
+
+    Robustness (adversarial review H2/M1/M2/L1):
+    - Trailing all-empty rows from an overshot stored dimension (styled/cleared cells
+      below the data) are TRIMMED -- otherwise they inflate row_count and fabricate
+      missingness with no ragged signal (H2).
+    - Trailing all-empty header cells from a stray far-column value are right-stripped
+      before validation, so a leftover note in a far cell does not crash a valid sheet
+      (M2).
+    - A formula cell with NO cached value (a workbook not last-saved by Excel) reads as
+      None under data_only=True; rather than silently profiling a populated computed
+      column as 100% missing (M1), we RAISE so the caller records a caveat and reads
+      with cached values / confirms the column, never a fabricated missingness number.
+    - A merged data cell returns its value only in the anchor cell (None elsewhere);
+      this OVER-reports missingness (a conservative, never-a-bypass bias) -- documented,
+      not silently corrected (L1). Un-merge upstream if it matters.
     """
     from openpyxl import load_workbook  # lazy: only when an Excel file is profiled
 
     wb = load_workbook(filename=path, read_only=True, data_only=True)
-    if sheet not in wb.sheetnames:
-        raise ValueError(
-            f"sheet {sheet!r} not in workbook (sheets: {wb.sheetnames!r}) -- "
-            f"enumerate sheets and name the in-scope one, never assume sheet 0"
-        )
-    ws = wb[sheet]
+    try:
+        if sheet not in wb.sheetnames:
+            raise ValueError(
+                f"sheet {sheet!r} not in workbook (sheets: {wb.sheetnames!r}) -- "
+                f"enumerate sheets and name the in-scope one, never assume sheet 0"
+            )
+        ws = wb[sheet]
 
-    def _cell_str(v: object) -> str:
-        # A blank cell is None in openpyxl -> '' (RC5). Everything else stringified;
-        # numbers/dates keep their landed text form for a faithful all-text profile.
-        return "" if v is None else str(v)
+        def _cell_str(v: object) -> str:
+            # A blank cell is None in openpyxl -> '' (RC5). Everything else stringified;
+            # numbers/dates keep their landed text form for a faithful all-text profile.
+            return "" if v is None else str(v)
 
-    all_rows = [
-        tuple(_cell_str(v) for v in row) for row in ws.iter_rows(values_only=True)
-    ]
-    wb.close()
+        all_rows = [
+            tuple(_cell_str(v) for v in row) for row in ws.iter_rows(values_only=True)
+        ]
+    finally:
+        wb.close()
+
+    def _all_empty(r: tuple[str, ...]) -> bool:
+        return all(c.strip() == "" for c in r)
 
     if header_row >= len(all_rows):
         raise ValueError(
             f"header_row={header_row} is beyond the sheet's {len(all_rows)} row(s)"
         )
-    header = all_rows[header_row]
-    data_rows = tuple(all_rows[header_row + 1 :])
 
+    # M1 BEFORE the H2 trim (fix-interaction: the H2 trailing-trim below would pop the
+    # all-empty formula rows, leaving M1 nothing to see and silently profiling 0 rows).
+    # If the sheet HAD data rows but every one is empty, that is the formula-workbook
+    # (data_only -> all None) case -- raise rather than trim it away to a silent 0-row
+    # profile or a fabricated 100% missingness. A single uncached-formula column mixed
+    # with real columns is ambiguous with a legitimately-blank column, so only the
+    # whole-region-empty case (unambiguous) raises.
+    raw_data = all_rows[header_row + 1 :]
+    if raw_data and all(_all_empty(r) for r in raw_data):
+        raise ValueError(
+            "every data cell is empty under data_only=True -- the workbook likely "
+            "holds formulas with no cached values (not last saved by Excel). Re-save "
+            "with cached values or profile the computed export, rather than recording "
+            "a fabricated 100% missingness (or a silent zero-row profile)."
+        )
+
+    # H2: drop trailing rows that are entirely empty (dimension overshoot from styled/
+    # cleared trailing cells). Only from the END -- an interior all-empty row is handled
+    # as a not-a-row skip in profile_file (CSV blank-line parity). Safe now: the
+    # all-empty-region case already raised above, so this only trims genuine overshoot.
+    while all_rows and _all_empty(all_rows[-1]):
+        all_rows.pop()
+
+    # M2: right-strip trailing empty header cells (a stray far-column value widened
+    # max_column and padded the header with ''). Trim to the last non-empty header cell.
+    raw_header = list(all_rows[header_row]) if header_row < len(all_rows) else []
+    while raw_header and str(raw_header[-1]).strip() == "":
+        raw_header.pop()
+    header = tuple(raw_header)
+    width = len(header)
+
+    data_rows = tuple(row[:width] for row in all_rows[header_row + 1 :])
     return _MaterializedReader(header, data_rows)
 
 
@@ -338,4 +396,12 @@ class _CsvStreamReader:
             for idx, row in enumerate(csv.reader(fh, delimiter=self._delimiter)):
                 if idx <= self._header_row:
                     continue  # skip banner rows + the header itself
+                # A wholly blank line (csv yields []) is a formatting artifact
+                # ubiquitous in real exports, NOT a data row. Skipping it here is
+                # correctness-critical: counting it would inflate row_count, fabricate
+                # missingness on every column, and flip a unique-PK proof to
+                # not-unique (adversarial review H1). A blank line is distinct from a
+                # genuine ragged short row (which has some fields) -- that still counts.
+                if not row or all(str(c).strip() == "" for c in row):
+                    continue
                 yield tuple(str(c) for c in row)

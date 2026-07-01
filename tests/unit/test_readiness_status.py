@@ -165,3 +165,59 @@ def test_no_status_files_is_silent_pass(tmp_path: Path) -> None:
         tracked_files=("mappings/demo/source-map.yaml",),
     )
     assert list(check_readiness_status_consistency(ctx)) == []
+
+
+# --- H3: file-source encoding-confirmation gate (adversarial review) ---------------
+
+
+def _file_source_yaml(*, kind: str = "csv", with_source_approval: bool) -> str:
+    """A readiness status whose source_ready block declares a file source_kind. The
+    stage is pass at every stage; source_ready has an approval only when requested."""
+    approvals = (
+        "  - {stage: mapping_ready, owner: data_owner, at: '2026-01-01'}\n"
+        "  - {stage: semantic_model_ready, owner: data_owner, at: '2026-01-01'}\n"
+        "  - {stage: dashboard_ready, owner: data_owner, at: '2026-01-01'}\n"
+        "  - {stage: publish_ready, owner: data_owner, at: '2026-01-01'}\n"
+    )
+    if with_source_approval:
+        approvals = (
+            "  - {stage: source_ready, owner: data_owner, at: '2026-01-01', "
+            "note: 'encoding utf-8 confirmed'}\n"
+        ) + approvals
+    base = _status_yaml(approvals=approvals)
+    # inject source_kind into the source_ready block
+    return base.replace(
+        '  source_ready:\n    status: "pass"\n    evidence: ["source-profile.md"]',
+        f'  source_ready:\n    status: "pass"\n    source_kind: "{kind}"\n'
+        f'    evidence: ["source-profile.md"]',
+    )
+
+
+def test_file_source_pass_without_encoding_approval_fails(tmp_path: Path) -> None:
+    """A csv/excel source_ready cannot read pass without a source_ready approval
+    confirming the [PROPOSED] encoding (adversarial review H3)."""
+    messages = _messages(
+        _ctx(tmp_path, _file_source_yaml(kind="csv", with_source_approval=False))
+    )
+    assert any(
+        "source_ready" in m and "file source" in m and "encoding" in m for m in messages
+    )
+
+
+def test_file_source_pass_with_encoding_approval_is_clean(tmp_path: Path) -> None:
+    """With a recorded source_ready approval, a file source passes cleanly."""
+    ctx = _ctx(tmp_path, _file_source_yaml(kind="excel", with_source_approval=True))
+    assert list(check_readiness_status_consistency(ctx)) == []
+
+
+def test_db_source_pass_needs_no_source_approval(tmp_path: Path) -> None:
+    """Regression guard: a DB source (no source_kind) still passes source_ready with
+    NO source_ready approval -- the H3 gate must not touch existing table sources."""
+    # the base fixture's source_ready has no source_kind and no source_ready approval
+    ctx = _ctx(tmp_path, _status_yaml())
+    messages = [m for m in _messages_or_empty(ctx) if "source_ready" in m]
+    assert messages == []
+
+
+def _messages_or_empty(ctx: RuleContext) -> list[str]:
+    return [f.message for f in check_readiness_status_consistency(ctx)]

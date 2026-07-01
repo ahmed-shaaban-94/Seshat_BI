@@ -16,10 +16,25 @@ import pytest
 from retail.file_profile import (
     _MaterializedReader,
     make_csv_reader,
+    make_excel_reader,
     profile_file,
 )
 
 pytestmark = pytest.mark.unit
+
+# openpyxl is the optional `files` extra -- not installed in CI. Excel-reader tests are
+# skipped when it is absent (the CSV path + the profiling math carry full coverage
+# without it); they run locally where the extra is present.
+try:
+    import openpyxl as _openpyxl  # noqa: F401
+
+    _HAS_OPENPYXL = True
+except ImportError:  # pragma: no cover
+    _HAS_OPENPYXL = False
+
+requires_openpyxl = pytest.mark.skipif(
+    not _HAS_OPENPYXL, reason="openpyxl (the `files` extra) not installed"
+)
 
 
 def _reader(header, rows):
@@ -68,6 +83,21 @@ def test_distinct_cardinality_folds_whitespace_variants() -> None:
     result = profile_file(reader, "f.csv", ("cat",))
     # 'web' and ' web ' fold to one; app dedups -> {web, app, store} = 3
     assert result.columns[0].distinct_cardinality == 3
+
+
+def test_distinct_cardinality_excludes_blank_cells() -> None:
+    """Blank cells must NOT count toward distinct_cardinality (they are missing, not a
+    value). Regression guard for the surviving-mutation the adversarial review found
+    (H4): moving the distinct-add out of the else-branch would count '' as a distinct
+    value and inflate this number on any column with a blank."""
+    reader = _reader(
+        ["note"],
+        [("hello",), ("",), ("   ",), ("world",)],  # two blanks, two real values
+    )
+    result = profile_file(reader, "f.csv", ("note",))
+    note = result.columns[0]
+    assert note.missing_count == 2
+    assert note.distinct_cardinality == 2  # {hello, world} -- blanks excluded
 
 
 def test_pk_proof_unique() -> None:
@@ -209,3 +239,159 @@ def test_csv_reader_header_row_beyond_file_raises(tmp_path) -> None:
     p.write_text("id,v\n", encoding="utf-8")
     with pytest.raises(ValueError, match="header_row=5 is beyond"):
         make_csv_reader(str(p), encoding="utf-8", header_row=5)
+
+
+def test_csv_blank_line_in_data_is_not_a_row(tmp_path) -> None:
+    """Adversarial review H1: a blank line between data rows (ubiquitous in exports)
+    must NOT be counted -- else row_count inflates, missingness is fabricated, and a
+    unique PK proof flips to not-unique."""
+    p = tmp_path / "orders.csv"
+    p.write_text("order_no,line_no\nA1,1\nA2,1\n\nA3,1\n", encoding="utf-8")
+    reader = make_csv_reader(str(p), encoding="utf-8")
+    result = profile_file(reader, str(p), ("order_no", "line_no"))
+    assert result.row_count == 3  # NOT 4 -- the blank line is skipped
+    assert result.ragged_row_count == 0  # a blank line is not a ragged row
+    assert result.pk.null_pk == 0
+    assert result.pk.is_unique is True  # the genuinely-unique key is NOT flipped
+    for c in result.columns:
+        assert c.missing_count == 0  # no fabricated missingness
+
+
+def test_csv_encoding_mismatch_raises(tmp_path) -> None:
+    """Adversarial review M3: a non-UTF-8 file opened as utf-8 must fail loud
+    (UnicodeDecodeError), so corrupt bytes never silently reach a profile/pass. The
+    file's headline risk (PY-CN-082) was previously untested."""
+    p = tmp_path / "latin.csv"
+    # a latin-1 accented byte (0xe9) in the HEADER row, so the eager header read trips
+    # the decode -- proving corrupt bytes fail loud before any profile is produced.
+    p.write_bytes("id,nom\xe9\n1,x\n".encode("latin-1"))
+    with pytest.raises(UnicodeDecodeError):
+        # make_csv_reader reads the header eagerly; a mis-encoding fails HERE, so no
+        # FileProfileResult (and thus no pass) can ever be built on corrupt bytes.
+        make_csv_reader(str(p), encoding="utf-8")
+
+
+def test_empty_header_tuple_raises() -> None:
+    """Adversarial review L2: a header with no columns (blank leading line) must raise
+    a clear message, not a misleading 'PK not in header []'."""
+    reader = _reader([], [])
+    with pytest.raises(ValueError, match="empty header"):
+        profile_file(reader, "f.csv", ("id",))
+
+
+def test_long_row_surplus_excluded_from_distinct_and_pk() -> None:
+    """Adversarial review L3: a long row's surplus cell must be excluded from every
+    column's distinct set and from the PK tuple (truncated to header width), not just
+    counted as ragged."""
+    reader = _reader(
+        ["a", "b"],
+        [("1", "x"), ("2", "y", "SURPLUS")],  # surplus 3rd cell on row 2
+    )
+    result = profile_file(reader, "f.csv", ("a", "b"))
+    assert result.ragged_row_count == 1
+    # 'SURPLUS' must not appear in b's distinct set (b sees only x, y)
+    b = next(c for c in result.columns if c.name == "b")
+    assert b.distinct_cardinality == 2  # {x, y}, not {x, y, SURPLUS}
+    assert result.pk.distinct_pk == 2  # (1,x) and (2,y) -- surplus not in the key
+
+
+# --- Excel reader (openpyxl `files` extra; skipped in CI, run locally) -------------
+
+
+def _write_xlsx(path, rows, sheet="Sheet1"):
+    """Write rows (list of tuples) to an xlsx sheet for reader tests."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet
+    for r in rows:
+        ws.append(list(r))
+    wb.save(str(path))
+    return path
+
+
+@requires_openpyxl
+def test_excel_reader_basic(tmp_path) -> None:
+    p = _write_xlsx(
+        tmp_path / "d.xlsx",
+        [("id", "amt"), ("A1", "10"), ("A2", "20")],
+    )
+    reader = make_excel_reader(str(p), sheet="Sheet1")
+    result = profile_file(reader, str(p), ("id",))
+    assert reader.columns == ("id", "amt")
+    assert result.row_count == 2
+    assert result.pk.is_unique is True
+
+
+@requires_openpyxl
+def test_excel_missing_sheet_raises(tmp_path) -> None:
+    p = _write_xlsx(tmp_path / "d.xlsx", [("id",), ("A1",)])
+    with pytest.raises(ValueError, match="not in workbook"):
+        make_excel_reader(str(p), sheet="Nonexistent")
+
+
+@requires_openpyxl
+def test_excel_trailing_empty_rows_trimmed(tmp_path) -> None:
+    """Adversarial review H2: trailing all-empty rows (dimension overshoot) must be
+    trimmed, not counted as data with fabricated missingness."""
+    from openpyxl import Workbook
+
+    p = tmp_path / "d.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["id", "v"])
+    ws.append(["A1", "1"])
+    ws.append(["A2", "2"])
+    # force a styled far/below cell to overshoot the stored dimension
+    ws["A10"].value = None
+    ws["A10"].number_format = "0.00"
+    wb.save(str(p))
+    reader = make_excel_reader(str(p), sheet="Sheet1")
+    result = profile_file(reader, str(p), ("id",))
+    assert result.row_count == 2  # NOT inflated by phantom trailing rows
+    assert result.pk.is_unique is True
+    for c in result.columns:
+        assert c.missing_count == 0
+
+
+@requires_openpyxl
+def test_excel_all_formula_none_raises(tmp_path) -> None:
+    """Adversarial review M1: a workbook whose ENTIRE data region is formulas with no
+    cached value (data_only -> all None) must raise, not profile as 100% missing on
+    every column. A single uncached-formula column (with other real columns) is
+    ambiguous with a legitimately-blank column, so it is a documented caveat, not a
+    hard error -- only the unambiguous all-empty data region raises."""
+    from openpyxl import Workbook
+
+    p = tmp_path / "formula.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["a", "b"])
+    ws.append(["=1*10", "=2*10"])  # every data cell is a formula -> all None
+    ws.append(["=3*10", "=4*10"])
+    wb.save(str(p))
+    with pytest.raises(ValueError, match="no cached values"):
+        make_excel_reader(str(p), sheet="Sheet1")
+
+
+@requires_openpyxl
+def test_excel_stray_far_cell_does_not_crash_header(tmp_path) -> None:
+    """Adversarial review M2: a stray value in a far column widens max_column and pads
+    the header with ''; right-stripping keeps a valid sheet from crashing on a phantom
+    blank header name."""
+    from openpyxl import Workbook
+
+    p = tmp_path / "d.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["id", "v"])
+    ws.append(["A1", "1"])
+    ws["F1"].value = "stray note"  # far cell widens the header row
+    wb.save(str(p))
+    # Should NOT raise "blank header name"; header trims back to (id, v).
+    reader = make_excel_reader(str(p), sheet="Sheet1")
+    assert reader.columns[:2] == ("id", "v")

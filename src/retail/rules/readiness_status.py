@@ -9,6 +9,11 @@ consistent. RS1 checks filled per-table readiness status files
 * ``blocked`` carries blocking reasons;
 * non-blocked stages do not carry ``blocking_reasons[]``;
 * approval-required stages cannot pass without a matching ``approvals[]`` entry;
+* a FILE source (``source_ready`` block declaring ``source_kind: csv|excel``) cannot
+  pass without a recorded ``source_ready`` approval -- the encoding/delimiter/header
+  the mechanical numbers rest on is a ``[PROPOSED]`` inference (a wrong encoding
+  silently corrupts every text column), so an owner must confirm it, exactly like the
+  semantic-proposal gates. A DB source (no ``source_kind``) is unaffected;
 * ``current_stage`` cannot point past an earlier blocked stage;
 * a blocked current stage mirrors blockers at the top level.
 
@@ -40,6 +45,10 @@ _STATUS_VALUES: frozenset[str] = frozenset(
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
+# A source_ready block carrying one of these source_kind values is a FILE source, whose
+# pass additionally requires an owner encoding-confirmation (a source_ready approval).
+# A DB source omits source_kind, so this leaves every existing table source unaffected.
+_FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "excel"})
 
 
 def _finding(message: str, locator: str) -> Finding:
@@ -66,6 +75,17 @@ def _stage_status(stage_block) -> str | None:
         status = stage_block.get("status")
         if isinstance(status, str):
             return status
+    return None
+
+
+def _source_kind(stage_block) -> str | None:
+    """The optional ``source_kind`` a source_ready block may declare (db-table / csv /
+    excel). Absent -> None (treated as a DB source: the existing, unaffected default).
+    """
+    if isinstance(stage_block, dict):
+        kind = stage_block.get("source_kind")
+        if isinstance(kind, str):
+            return kind
     return None
 
 
@@ -180,6 +200,29 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
                     _finding(
                         f"stage {stage_name!r} is pass but no matching "
                         "approvals[] entry is recorded",
+                        loc,
+                    )
+                )
+
+            # File-source encoding-confirmation gate (adversarial review H3). A
+            # source_ready block that declares source_kind: csv|excel is a FILE source:
+            # its mechanical numbers rest on a [PROPOSED] encoding/delimiter/header that
+            # a wrong guess silently corrupts, so pass REQUIRES an owner-recorded
+            # source_ready approval. A DB source omits source_kind and is unaffected --
+            # so this never demands approval of the existing table sources.
+            if (
+                stage_name == "source_ready"
+                and status == "pass"
+                and _source_kind(block) in _FILE_SOURCE_KINDS
+                and "source_ready" not in approved_stages
+            ):
+                findings.append(
+                    _finding(
+                        "stage 'source_ready' is a file source "
+                        f"(source_kind: {_source_kind(block)!r}) marked pass but no "
+                        "source_ready approvals[] entry confirms the encoding/"
+                        "delimiter/header -- a [PROPOSED] inference cannot self-grant "
+                        "to pass (a wrong encoding corrupts every text column)",
                         loc,
                     )
                 )

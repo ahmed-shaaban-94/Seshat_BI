@@ -54,14 +54,20 @@ not stated as fact.
   (encoding, delimiter, header row, sheet selection) lives in
   `skills/bi-python-knowledge/` (route: profile a standalone file source).
 
-  **A file source reaches `pass` like a DB source does -- with one extra gate.** The
-  mechanical numbers self-evidence (recorded from `file_profile.py`). BUT a file has
-  no declared schema, so the detected **encoding** (and, for CSV, the delimiter and
-  header-row) is a `[PROPOSED]` inference that every text column rests on: a wrong
-  encoding silently corrupts every label (PY-CN-082). Encoding-confirmation is
-  therefore a GATING semantic proposal -- treated exactly like the semantic rows: the
-  data owner must confirm the encoding (and delimiter/header) before this stage can
-  read `pass`. Until confirmed, record `warning`, not `pass`. If no reader is
+  **A file source reaches `pass` like a DB source does -- with one extra gate, and
+  that gate is ENFORCED, not just prose.** The mechanical numbers self-evidence
+  (recorded from `file_profile.py`). BUT a file has no declared schema, so the detected
+  **encoding** (and, for CSV, the delimiter and header-row) is a `[PROPOSED]` inference
+  that every text column rests on: a wrong encoding silently corrupts every label
+  (PY-CN-082). Encoding-confirmation is therefore a GATING semantic proposal -- treated
+  exactly like the semantic rows: the data owner must confirm the encoding (and
+  delimiter/header) before this stage can read `pass`.
+
+  This is machine-checked by **rule RS1**: mark the `source_ready` stage block with
+  `source_kind: csv` (or `excel`) in `readiness-status.yaml`, and RS1 will REFUSE a
+  `pass` on that stage until a matching `{stage: source_ready}` entry is recorded in
+  `approvals[]` (the owner's encoding-confirmation). A DB source omits `source_kind`
+  and is unaffected. Until confirmed, record `warning`, not `pass`. If no reader is
   available at all (Excel without the `files` extra), fall back to deferred-boundary
   mode: `[PENDING LIVE PROFILE]` + `warning`, never a fabricated `pass`.
 
