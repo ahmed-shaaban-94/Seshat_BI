@@ -1,6 +1,6 @@
 # Tasks: Assumption Ledger Rule (AL1)
 
-**Feature**: `053-assumption-ledger-rule-al1`
+**Feature**: `059-assumption-ledger-rule-al1`
 **Spec**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md) | **Contract**: [contracts/rule-contract.md](./contracts/rule-contract.md)
 
 TDD is the repo default (RED -> GREEN -> refactor). Test tasks precede the

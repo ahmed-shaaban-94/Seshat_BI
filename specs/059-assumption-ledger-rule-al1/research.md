@@ -1,7 +1,7 @@
 # Phase 0 Research: Assumption Ledger Rule (AL1)
 
 All items are grounded against the live tree on branch
-`053-assumption-ledger-rule-al1`. No open technical unknowns remain.
+`059-assumption-ledger-rule-al1`. No open technical unknowns remain.
 
 ## R1 -- Lazy-yaml contract-read seam (Principle II / B1 / B3)
 

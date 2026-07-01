@@ -1,6 +1,6 @@
 # Cross-Artifact Analysis: Assumption Ledger Rule (AL1)
 
-**Feature**: `053-assumption-ledger-rule-al1` | **Date**: 2026-07-01
+**Feature**: `059-assumption-ledger-rule-al1` | **Date**: 2026-07-01
 **Scope**: read-only consistency pass over spec.md, plan.md, tasks.md (+ research,
 data-model, contracts, quickstart). No artifact edited by this pass.
 

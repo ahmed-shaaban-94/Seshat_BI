@@ -1,6 +1,6 @@
 # Feature Specification: Assumption Ledger Rule (AL1)
 
-**Feature Branch**: `053-assumption-ledger-rule-al1` (spec dir renumbered to `059-assumption-ledger-rule-al1` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
+**Feature Branch**: `059-assumption-ledger-rule-al1` (spec dir renumbered to `059-assumption-ledger-rule-al1` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 

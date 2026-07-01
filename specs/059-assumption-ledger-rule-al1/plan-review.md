@@ -1,6 +1,6 @@
 # Adversarial Plan-Review: Assumption Ledger Rule (AL1)
 
-**Feature**: `053-assumption-ledger-rule-al1` | **Date**: 2026-07-01
+**Feature**: `059-assumption-ledger-rule-al1` | **Date**: 2026-07-01
 **Reviewer stance**: single default-adverse skeptic, READ-ONLY (reports fixes,
 edits nothing). Artifacts reviewed: spec.md, plan.md, tasks.md, analysis.md, plus
 research.md, data-model.md, contracts/rule-contract.md, quickstart.md.

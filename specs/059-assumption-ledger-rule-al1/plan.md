@@ -1,8 +1,8 @@
 # Implementation Plan: Assumption Ledger Rule (AL1)
 
-**Branch**: `053-assumption-ledger-rule-al1` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
+**Branch**: `059-assumption-ledger-rule-al1` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `/specs/053-assumption-ledger-rule-al1/spec.md`
+**Input**: Feature specification from `/specs/059-assumption-ledger-rule-al1/spec.md`
 
 ## Summary
 
@@ -122,7 +122,7 @@ No violations. Complexity Tracking is empty.
 ### Documentation (this feature)
 
 ```text
-specs/053-assumption-ledger-rule-al1/
+specs/059-assumption-ledger-rule-al1/
   plan.md              # This file
   research.md          # Phase 0 output
   data-model.md        # Phase 1 output
