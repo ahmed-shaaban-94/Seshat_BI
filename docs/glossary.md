@@ -97,9 +97,9 @@ This catalog is the **single source of truth for `retail check`'s rule count.**
 The **live registry in `src/retail/rules/` is authoritative**; the table below
 mirrors it and the `retail-govern` skill maps each id to its fix.
 
-> **Currently 33 rules in 8 families** (S, D, C, R, G, P, A, B). When a rule is
-> added or removed, update the table and this line **together** — and elsewhere
-> refer to "the static `retail check` gate" by name rather than restating a
+> **Currently 40 rules in 13 families** (S, D, C, R, G, P, A, B, PP, SC, DF, SL, AL).
+> When a rule is added or removed, update the table and this line **together** — and
+> elsewhere refer to "the static `retail check` gate" by name rather than restating a
 > number. Restated counts are exactly what drifted before (see
 > `docs/quality/drift-consistency-audit-2026-06-28.md`). (`S4` is split into
 > `S4a`/`S4b`.)
@@ -112,8 +112,13 @@ mirrors it and the `retail-govern` skill maps each id to its fix.
 | **R** | PBIR report | `R1` PBIR model reference must be relative |
 | **G** | git / project hygiene | `G1` `.gitignore` correctness · `G2` definition artifacts committed · `G3` UTF-8 without BOM · `G4` `.gitattributes` EOL policy · `G5` Windows MAX_PATH discipline · `G6` no real host/value in committed PBIP parameters |
 | **P** | project layout / process | `P1` Approach-A PBIP layout · `P2` commit-message convention |
-| **A** | route registry / architecture | `A1` route-registry targets resolve or are honestly marked planned |
-| **B** | never-execute boundary | `B1` no module-scope DB/network import in the static core (the static surface never executes on import) |
+| **A** | route registry / architecture | `A1` route-registry targets resolve or are honestly marked planned · `A3` knowledge-map route ids ↔ `routes.yaml` ids are in bijection |
+| **B** | never-execute boundary | `B1` no module-scope DB/network import in the static core (the static surface never executes on import) · `B3` live-surface modules keep DB/network imports lazy (no module-scope connection import) |
+| **PP** | publish-pack completeness | `PP1` every required handoff-pack section is filled (checks the publish-approval slot is present, never grants it) |
+| **SC** | status-claim integrity | `SC1` a prose status claim reconciles with tracked-file evidence (no stale planned/built marker) |
+| **DF** | dependency-edge integrity | `DF1` parked-on dependency edges reconcile with tracked-file evidence |
+| **SL** | KPI coverage scorecard | `SL1` a committed coverage scorecard is structurally well-formed (status-enum, named blocker, resolving contract, no percentage) |
+| **AL** | assumption ledger | `AL1` a metric contract with an unresolved assumption (blocked + reasons) must not also carry a settled gold binding |
 
 ## Project shorthand
 

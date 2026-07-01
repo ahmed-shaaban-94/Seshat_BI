@@ -72,3 +72,35 @@ DF1:
   status: shipped
   pr_sha: "PR #99 (spec 051 parked-on-map)"
   f_row: none
+
+# --- 2026-07-01 "release the kraken" batch (the 7 remaining ADOPT ideas; PRs #101-107) ---
+# The two rule ids (SL1, AL1) took the retail check gate from 38 to 40 rules; the other
+# five are docs/template/serializer surface (no new rule). None advances a readiness stage.
+SL1:
+  status: shipped
+  pr_sha: "PR #104 (spec 056 coverage-scorecard-linter) @register SL1"
+  f_row: none
+AL1:
+  status: shipped
+  pr_sha: "PR #107 (spec 059 assumption-ledger-rule) @register AL1"
+  f_row: none
+S7A:
+  status: shipped
+  pr_sha: "PR #101 (spec 053 stage-7-answerability-summary; templates/handoff/answerability-summary.md)"
+  f_row: none
+DQ1:
+  status: shipped
+  pr_sha: "PR #102 (spec 054 dq-signal-interpretation-note; templates/handoff/dq-signal-interpretation.md)"
+  f_row: none
+FHC:
+  status: shipped
+  pr_sha: "PR #103 (spec 055 first-hour-compass; templates/first-hour-compass.md + skill + tools doc)"
+  f_row: none
+LVR:
+  status: shipped
+  pr_sha: "PR #105 (spec 057 live-validation-evidence-recorder; src/retail/readiness_evidence.py)"
+  f_row: none
+ADL:
+  status: shipped
+  pr_sha: "PR #106 (spec 058 per-contract-ambiguity-decision-ledger; ambiguities[] block on metric-contract.yaml)"
+  f_row: none
