@@ -81,9 +81,7 @@ def _iter_scorecards(ctx: RuleContext) -> list[str]:
     return [
         p
         for p in ctx.tracked_files
-        if p.endswith(_INSTANCE_SUFFIX)
-        and p != _TEMPLATE_PATH
-        and not is_test_path(p)
+        if p.endswith(_INSTANCE_SUFFIX) and p != _TEMPLATE_PATH and not is_test_path(p)
     ]
 
 

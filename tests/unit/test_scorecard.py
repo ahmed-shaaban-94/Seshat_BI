@@ -74,8 +74,7 @@ def test_c3_covered_nonresolving_contract_fires(tmp_path):
 # --- C3b: Planned / Out of scope with `--` contract is fine ----------------
 def test_c3b_planned_outofscope_dash_contract_ok(tmp_path):
     body = _scorecard(
-        "| Future KPI | -- | Planned | -- |\n"
-        "| Inv KPI | -- | Out of scope | -- |\n"
+        "| Future KPI | -- | Planned | -- |\n| Inv KPI | -- | Out of scope | -- |\n"
     )
     assert _findings(_ctx(tmp_path, {INST: body})) == []
 
@@ -134,9 +133,7 @@ def test_c8_unreadable_instance_fails_loud(tmp_path):
 # --- C9: stray 4-col table outside the status table contributes no rows ----
 def test_c9_stray_table_not_parsed(tmp_path):
     body = _scorecard("| Net Sales | `contracts/net.md` | Covered | -- |\n") + (
-        "\n## Notes\n\n"
-        "| a | b | Sorta covered | d |\n"
-        "|---|---|---|---|\n"
+        "\n## Notes\n\n| a | b | Sorta covered | d |\n|---|---|---|---|\n"
     )
     # The stray 'Sorta covered' is in a Notes table, not the anchored status table.
     assert _findings(_ctx(tmp_path, {INST: body, "contracts/net.md": "x"})) == []
