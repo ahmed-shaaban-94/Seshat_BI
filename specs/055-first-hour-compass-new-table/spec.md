@@ -1,10 +1,23 @@
 # Feature Specification: First-Hour Compass / New-Table Author Onboarding Cockpit
 
-**Feature Branch**: `053-first-hour-compass-new-table`
+**Feature Branch**: `053-first-hour-compass-new-table` (spec dir renumbered to `055-first-hour-compass-new-table` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent under the explicit, recorded
+per-session delegated override granted by the repo owner (info@rahmaqanater.org) for the
+2026-07-01 "release the kraken" batch of seven idea-to-spec specs. Provenance: this Ratified
+line is AI-authored under recorded human authority; it is NOT a human-typed ratification and
+the git author identity does not by itself attest a human reviewer. The four Principle-V seam
+carve-outs (grain, PII publish-safety, business rollup/segment, product identity) are resolved
+to the conservative surface-only posture (the Compass re-presents the recorded STOP, never
+asserts/picks/embeds/clears) -- see the Clarifications section. MVP scope is docs-only: a
+generic template + a read-only SKILL.md + a tools doc; the `next_step.py` resolver is DEFERRED
+(not a task). No runtime code, no new retail check rule (count stays 38). analyze=clean
+(0 critical/0 high); plan-review=PASS-WITH-NOTES. Override is per-session/per-this-set only;
+it covers ratification, not merge (normal CI gate still applies).
 
 **Input**: User description: "First-Hour Compass / New-Table Author Onboarding Cockpit"
 
@@ -353,17 +366,17 @@ NOT touch the four Principle-V seams below, which stay open.
   (violating readiness-pipeline ordering + Principle V surface-never-resolve). Already
   encoded in FR-003 and FR-012; recorded here for traceability. Reversibility: easy.
 
-The four Principle-V human seams below are HARD CARVE-OUTS -- NOT answered here, reserved
-for a human. The Compass surfaces the recorded STOP only.
+The four Principle-V human seams below are HARD CARVE-OUTS. Ruled 2026-07-01 (human
+ratifier, recorded per-session override): each is confirmed to the conservative
+surface-only posture -- the Compass RE-PRESENTS the recorded STOP and never asserts,
+picks, embeds, or clears. This confirms the boundary; it does not answer the underlying
+business judgment (which stays the analyst's per-table call).
 
-- **Grain / uniqueness seam** [NEEDS CLARIFICATION]: Confirm the Compass only
-  re-presents the recorded grain `blocking_reason` and never proposes, picks, or
-  asserts a grain. RESERVED FOR HUMAN -- not answered here.
-- **PII publish-safety seam** [NEEDS CLARIFICATION]: Confirm the Compass only surfaces
-  the recorded publish-safety blocker / approval requirement and never asserts a column
-  is publish-safe. RESERVED FOR HUMAN -- not answered here.
-- **Business rollup / segment seam** [NEEDS CLARIFICATION]: Confirm the stage ->
-  authoring-skill cross-walk stays generic and embeds no rollup/segment assumption.
-  RESERVED FOR HUMAN -- not answered here.
-- **Product identity seam** [NEEDS CLARIFICATION]: Confirm the cross-walk embeds no
-  product-identity assumption. RESERVED FOR HUMAN -- not answered here.
+- **Grain / uniqueness seam** -- RULED: confirmed. The Compass only re-presents the
+  recorded grain `blocking_reason`; it never proposes, picks, or asserts a grain.
+- **PII publish-safety seam** -- RULED: confirmed. The Compass only surfaces the recorded
+  publish-safety blocker / approval requirement; it never asserts a column is publish-safe.
+- **Business rollup / segment seam** -- RULED: confirmed. The stage -> authoring-skill
+  cross-walk stays generic and embeds no rollup/segment assumption.
+- **Product identity seam** -- RULED: confirmed. The cross-walk embeds no product-identity
+  assumption.
