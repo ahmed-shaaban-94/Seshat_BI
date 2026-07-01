@@ -257,10 +257,58 @@ that would read as a clean pass.
 
 ## Clarifications
 
+### Session 2026-07-01
+
+Advisor-resolved ambiguities (reasoned against the constitution, the readiness
+spine, and repo YAGNI). Each is recorded with its recommended answer, reasoning,
+and reversibility; each is integrated into the requirements above.
+
+- **Q1 - Deferred-state recording (Story 3 / FR-011)**: Should the
+  blocked-deferred state (no DSN / no DB driver) be recorded as an explicit
+  `blocked` block, or left print-only as today?
+  - **Recommended**: Record it as `blocked` with a `blocking_reasons[]` entry
+    naming the deferred boundary; never emit evidence that reads as a clean pass.
+  - **Reasoning**: Principle VIII forbids inferring a pass in deferred mode;
+    `gold-ready.md` already enumerates "blocked-deferred" as a first-class
+    status. Making it durable (not just stderr) lets the readiness trace
+    distinguish "ran and found a defect" from "could not run" -- both are
+    non-pass, but they demand different next actions. This is additive and
+    strictly honest.
+  - **Reversibility**: easy (a recorder that only handled the two live cases
+    could add the deferred case later without rework).
+  - Integrated as FR-011.
+
+- **Q2 - Readiness placement / scope framing**: Which stage does this advance,
+  given there is no F-number?
+  - **Recommended**: Frame it as `gold_ready` evidence automation (the stage
+    whose template comment literally cites "retail validate exit 0" as
+    evidence), not a new cross-cutting subsystem.
+  - **Reasoning**: The named target block IS the `gold_ready` stage of
+    `readiness-status.yaml`; the four live checks feeding it are the gold-stage
+    gate (RC2/RC15/RC16). Scoping it to gold_ready keeps the seam narrow (YAGNI)
+    and avoids over-reach into an observability framework. The authoritative
+    roadmap placement remains a human decision (recorded as an open below).
+  - **Reversibility**: easy (framing only; no code shape depends on it).
+  - Integrated into Assumptions and the Overview.
+
+- **Q3 - WARNING-severity handling**: How are non-ERROR findings represented?
+  - **Recommended**: Record WARNING findings as `warnings[]` (advanced-with-a-
+    recorded-issue), distinct from blockers; never drop them, never treat them
+    as blocking.
+  - **Reasoning**: The readiness model defines `warning` as a real status
+    (a recorded non-fatal issue). Only ERROR findings gate the stage; silently
+    dropping WARNINGs would lose evidence, and promoting them to blockers would
+    over-gate. This matches `run_live_checks` semantics (ERROR = proven defect).
+  - **Reversibility**: easy.
+  - Integrated as FR-004.
+
+### Principle V open questions (NOT answered here -- routed to a named human)
+
 The following are Principle V / governance judgments the planning agent is
 structurally forbidden to self-answer. They are recorded here for a named human
 to rule on; the spec is written to remain valid under the recommended defaults
-noted in the clarify session, but the authoritative ruling is a human action.
+noted below, but the authoritative ruling is a human action. The corresponding
+[NEEDS CLARIFICATION] markers are deliberately left in FR-012 / FR-013 / FR-014.
 
 - **Write-vs-emit (FR-013)**: Does the first-step recorder WRITE
   `mappings/<table>/readiness-status.yaml` directly, or only EMIT a proposed
