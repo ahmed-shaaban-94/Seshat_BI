@@ -312,7 +312,49 @@ appropriate; the Principle-V seams remain open.
 
 ### Session 2026-07-01
 
-(Populated by the clarify stage.)
+Advisor-resolved (recommended answers, reasoning, reversibility recorded). These do
+NOT touch the four Principle-V seams below, which stay open.
+
+- **Q1 -- Roadmap position (Impact: high, Uncertainty: high)**: Does the Compass enter
+  the roadmap with an F-number in this slice? **Recommended answer: NO -- ship as an
+  idea-bank-sourced spec with no invented F-number; roadmap admission (and its
+  stage/layer) is deferred to a human roadmap-owner decision.** Reasoning: the idea has
+  no F-row and the idea-bank is explicitly not the roadmap; the shipped readiness-viewer
+  sibling itself carries a real F-number (F026) assigned by a human, not self-minted.
+  Inventing an F-number here would fabricate roadmap provenance. The spec proceeds as a
+  Product Module / read-only surface with roadmap position left OPEN. Reversibility:
+  easy (a human can assign an F-number later without changing any artifact).
+- **Q2 -- MVP scope: docs-card vs next_step.py (Impact: high, Uncertainty: low)**: Is
+  the MVP the thin docs-card slice, or does it include the `next_step.py`
+  resolver/scaffolder? **Recommended answer: docs-card only (template + skill + tools
+  doc + generic cross-walk); `next_step.py` deferred and enumerated-not-built.**
+  Reasoning: Principle VIII / hard rule #8 (static-first; automate only after artifacts
+  prove useful) and the idea itself flags the thin docs-card as the cheaper first
+  slice. A code executor is a later additive read-only slice, not the seam. Reversibility:
+  easy (the deferred resolver can be added later without reworking the docs artifacts).
+- **Q3 -- Generic cross-walk per-stage assignment (Impact: medium, Uncertainty: medium)**:
+  How concrete may the stage -> authoring-skill cross-walk be without violating
+  Principle VII? **Recommended answer: the cross-walk maps each `<stage_key>` to a named
+  authoring SKILL DIRECTORY (a generic capability, e.g. mapping_ready -> source-mapping),
+  which is generic kit structure, NOT a table-specific assignment; it MUST NOT inline any
+  one table's stage values, grain key, segment, or PII columns.** Reasoning: naming which
+  skill authors which stage is generic repo architecture (the same for every table);
+  Principle VII forbids only baking in a specific TABLE's data/choices. Reversibility:
+  easy (cross-walk rows are editable docs). This resolves the business rollup/segment and
+  product-identity concerns at the cross-walk level; the per-table SEAMS themselves stay
+  open below.
+- **Q4 -- Next-artifact resolution under a recorded conflict (Impact: medium,
+  Uncertainty: low)**: When `current_stage` disagrees with the per-stage statuses, which
+  drives the "next artifact"? **Recommended answer: the FIRST non-pass stage in fixed
+  pipeline order drives the next artifact; the `current_stage`/status disagreement is
+  ALSO surfaced as a conflict flag but is never silently reconciled.** Reasoning: pipeline
+  ordering (no stage entered before the prior is `pass`) is the authority; honoring a
+  `current_stage` that skips a non-pass upstream stage would present an unreachable stage
+  (violating readiness-pipeline ordering + Principle V surface-never-resolve). Already
+  encoded in FR-003 and FR-012; recorded here for traceability. Reversibility: easy.
+
+The four Principle-V human seams below are HARD CARVE-OUTS -- NOT answered here, reserved
+for a human. The Compass surfaces the recorded STOP only.
 
 - **Grain / uniqueness seam** [NEEDS CLARIFICATION]: Confirm the Compass only
   re-presents the recorded grain `blocking_reason` and never proposes, picks, or
