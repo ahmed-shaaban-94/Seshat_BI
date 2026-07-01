@@ -224,25 +224,44 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
   // complete eligibility ruling. Track the shortfall so the gate can refuse to pass.
   const expected = Number.isFinite(expectedReviewers) ? expectedReviewers : live.length
   const panel_failed = Math.max(0, expected - live.length)
+  // STABLE GROUPING KEY. The three reviewers all reference an idea by its leading number
+  // (e.g. "#41. Symptom Concierge (which-layer-owns-this-symptom router)" vs "41. Symptom
+  // Concierge -- cross-layer ... router") but PHRASE the trailing title differently. Grouping
+  // on the raw free-text title therefore SPLIT one idea into 2-3 rows with divergent scores
+  // (the 62-vs-42 over-count). groupKey() collapses each title to its canonical identity: the
+  // leading #N / N. number when present, else a lowercased, punctuation/whitespace-normalized
+  // form so near-identical prose still merges. Display keeps the first-seen human title.
+  // Defined BEFORE challengedTitles so the skeptic set is normalized on the same key -- else
+  // the coverage clamp would mis-fire on the skeptic's differently-phrased titles.
+  const groupKey = t => {
+    const s = String(t || '').trim()
+    const m = s.match(/^#?\s*(\d+)\s*[.:)]/)          // "#41.", "41.", "41)", "41:"
+    if (m) return 'n' + m[1]
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()   // fallback: normalized prose
+  }
   // The skeptic's "challenge EVERY candidate" contract is enforced HERE in JS, not by the
   // schema (which only requires an array) or the prompt (a request). An idea the skeptic
   // silently omitted from challenged[] is treated as if it FAILED the gate: marked killed
   // and demoted out of ADOPT, mirroring the demote-only eligibility clamp. Unchallenged !=
   // safe -- it means coverage was not proven, so it must not read as a survived ADOPT.
+  // Keyed via groupKey so the skeptic's title phrasing matches the reviewers' grouping.
   const challengedTitles = new Set(((verifyRec && Array.isArray(verifyRec.challenged) ? verifyRec.challenged : []))
-    .map(ch => ch && ch.title).filter(Boolean))
+    .map(ch => ch && ch.title).filter(Boolean).map(groupKey))
   let uncovered = 0
-  // union of titles, first-seen order preserved (reviewer 0 then 1 then 2). Carry each
-  // reviewer's standpoint/key DOWN onto its rows so attribution survives grouping.
-  const order = []
+  // union of ideas by stable key, first-seen order preserved (reviewer 0 then 1 then 2). Carry
+  // each reviewer's standpoint DOWN onto its rows so attribution survives grouping, and keep the
+  // first-seen title as the row group's DISPLAY title.
+  const order = []                 // stable keys, in first-seen order
   const seen = new Set()
-  const byTitle = {}
+  const byTitle = {}               // key -> reviewer rows
+  const displayTitle = {}          // key -> first-seen human-readable title
   for (const reviewer of live) {
     const standpoint = reviewer.reviewer_standpoint || reviewer._key || 'reviewer'
     for (const si of (reviewer.scored_ideas || [])) {
       if (!si || !si.title) continue
-      if (!seen.has(si.title)) { seen.add(si.title); order.push(si.title) }
-      ;(byTitle[si.title] = byTitle[si.title] || []).push({ ...si, reviewer_standpoint: si.reviewer_standpoint || standpoint })
+      const key = groupKey(si.title)
+      if (!seen.has(key)) { seen.add(key); order.push(key); displayTitle[key] = si.title }
+      ;(byTitle[key] = byTitle[key] || []).push({ ...si, reviewer_standpoint: si.reviewer_standpoint || standpoint })
     }
   }
   const median = nums => {
@@ -259,8 +278,9 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
   const cautionRank = { REJECT: 5, SHIPPED: 4, PARK: 3, CONSIDER: 2, ADOPT: 1 }
   const dispRank = { killed: 3, weakened: 2, survived: 1 }                       // worst-seen wins
 
-  const ideas = order.map(title => {
-    const rows = byTitle[title]
+  const ideas = order.map(key => {
+    const rows = byTitle[key]
+    const title = displayTitle[key]
     const n = rows.length
     const eligibleCount = rows.filter(r => r.eligible === true).length
     // A row count short of the expected panel means a reviewer (possibly the principle
@@ -303,7 +323,7 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
     // coverage -> treat it as killed and demote it out of ADOPT (mirrors the eligibility
     // clamp; demote-only, never promotes). This is what actually enforces the every-candidate
     // contract -- without it an omitted idea could ride through as a survived ADOPT.
-    if (!challengedTitles.has(title)) {
+    if (!challengedTitles.has(key)) {
       uncovered++
       survived_verification = 'killed'
       if (verdict === 'ADOPT') verdict = 'CONSIDER'
