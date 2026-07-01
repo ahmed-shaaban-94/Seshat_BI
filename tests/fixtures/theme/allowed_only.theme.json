@@ -1,0 +1,19 @@
+{
+  "name": "Fixture allowed only",
+  "dataColors": ["#1F3A5F", "#3E6D9C", "#5C8AB0"],
+  "background": "#FFFFFF",
+  "foreground": "#1F2937",
+  "tableAccent": "#1F3A5F",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "title": [
+          {
+            "fontFamily": "Segoe UI Semibold",
+            "fontSize": 12
+          }
+        ]
+      }
+    }
+  }
+}

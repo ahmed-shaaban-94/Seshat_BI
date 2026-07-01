@@ -1,0 +1,6 @@
+{
+  "name": "Fixture second subject area",
+  "dataColors": ["#4C6A2F", "#7FA34A"],
+  "background": "#FAFAF5",
+  "calculatedColumn": "Sales[Margin] = Sales[Revenue] - Sales[Cost]"
+}

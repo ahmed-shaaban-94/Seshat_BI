@@ -1,0 +1,13 @@
+{
+  "name": "Fixture nested forbidden",
+  "dataColors": ["#1F3A5F"],
+  "visualStyles": {
+    "card": {
+      "*": {
+        "kpi": {
+          "threshold": 100
+        }
+      }
+    }
+  }
+}

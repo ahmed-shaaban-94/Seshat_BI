@@ -1,0 +1,6 @@
+{
+  "name": "Fixture value equals forbidden word",
+  "dataColors": ["#1F3A5F"],
+  "background": "measure",
+  "foreground": "threshold"
+}

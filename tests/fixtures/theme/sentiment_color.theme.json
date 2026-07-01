@@ -1,0 +1,7 @@
+{
+  "name": "Fixture sentiment color",
+  "dataColors": ["#1F3A5F"],
+  "good": "#2E7D32",
+  "neutral": "#B8860B",
+  "bad": "#B23A2E"
+}
