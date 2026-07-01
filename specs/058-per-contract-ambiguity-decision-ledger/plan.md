@@ -1,8 +1,8 @@
 # Implementation Plan: Per-Contract Ambiguity Decision Ledger
 
-**Branch**: `053-per-contract-ambiguity-decision-ledger` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
+**Branch**: `058-per-contract-ambiguity-decision-ledger` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/053-per-contract-ambiguity-decision-ledger/spec.md`
+**Input**: Feature specification from `specs/058-per-contract-ambiguity-decision-ledger/spec.md`
 
 ## Summary
 
@@ -92,7 +92,7 @@ drifting the verbatim readiness-block shape.
 ### Documentation (this feature)
 
 ```
-specs/053-per-contract-ambiguity-decision-ledger/
+specs/058-per-contract-ambiguity-decision-ledger/
   spec.md                         # the feature specification (done)
   plan.md                         # this file
   data-model.md                   # the ambiguity-ledger entry schema (conceptual)

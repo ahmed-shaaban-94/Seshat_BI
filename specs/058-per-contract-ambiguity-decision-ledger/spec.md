@@ -1,6 +1,6 @@
 # Feature Specification: Per-Contract Ambiguity Decision Ledger (force A1-A10 to a recorded ruling)
 
-**Feature Branch**: `053-per-contract-ambiguity-decision-ledger`
+**Feature Branch**: `058-per-contract-ambiguity-decision-ledger`
 
 **Created**: 2026-07-01
 

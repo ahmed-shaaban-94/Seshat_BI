@@ -1,6 +1,6 @@
 # Adversarial Plan Review: Per-Contract Ambiguity Decision Ledger
 
-**Date**: 2026-07-01 | **Branch**: `053-per-contract-ambiguity-decision-ledger`
+**Date**: 2026-07-01 | **Branch**: `058-per-contract-ambiguity-decision-ledger`
 **Reviewer stance**: single default-adverse skeptic, read-only. Reports fixes; edits nothing.
 **Inputs reviewed**: spec.md, plan.md, tasks.md, data-model.md,
 contracts/ambiguity-ledger.schema.md, quickstart.md, analysis.md.

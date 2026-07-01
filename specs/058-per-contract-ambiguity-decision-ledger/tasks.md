@@ -1,10 +1,10 @@
 ---
-description: "Task list for 053-per-contract-ambiguity-decision-ledger"
+description: "Task list for 058-per-contract-ambiguity-decision-ledger"
 ---
 
 # Tasks: Per-Contract Ambiguity Decision Ledger
 
-**Input**: Design documents from `specs/053-per-contract-ambiguity-decision-ledger/`
+**Input**: Design documents from `specs/058-per-contract-ambiguity-decision-ledger/`
 
 **Prerequisites**: plan.md, spec.md, data-model.md, contracts/ambiguity-ledger.schema.md, quickstart.md
 
@@ -23,7 +23,7 @@ mechanical check.
 
 - [ ] T001 Confirm the spec dir + design artifacts are present (spec.md, plan.md,
   data-model.md, contracts/ambiguity-ledger.schema.md, quickstart.md, checklists/requirements.md)
-  and the branch is `053-per-contract-ambiguity-decision-ledger`. No tooling/dependency setup
+  and the branch is `058-per-contract-ambiguity-decision-ledger`. No tooling/dependency setup
   is required (no code, no new library).
 
 - [ ] T002 Re-read the read-only seams to author against exact text (do NOT edit them):

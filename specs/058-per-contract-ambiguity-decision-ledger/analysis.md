@@ -1,6 +1,6 @@
 # Cross-Artifact Analysis: Per-Contract Ambiguity Decision Ledger
 
-**Date**: 2026-07-01 | **Branch**: `053-per-contract-ambiguity-decision-ledger`
+**Date**: 2026-07-01 | **Branch**: `058-per-contract-ambiguity-decision-ledger`
 **Scope**: read-only consistency pass over spec.md, plan.md, tasks.md (+ data-model.md,
 contracts/ambiguity-ledger.schema.md, quickstart.md).
 
