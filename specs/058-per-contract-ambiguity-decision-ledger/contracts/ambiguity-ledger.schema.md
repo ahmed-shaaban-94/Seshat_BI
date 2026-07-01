@@ -10,13 +10,15 @@ reviewer applies), NOT a runtime schema validated by code -- there is no check r
 # top-level block on a metric contract, SIBLING of `readiness` (not nested in it).
 ambiguities:                          # zero or more entries; only APPLICABLE ambiguities
   - id: "A7"                          # A1..A11 ONLY (A10 inventory snapshot, A11 same-store)
-    decision_status: "blocked"        # existing vocabulary only; no invented 5th word
+    decision_status: "undecided"      # decided | undecided ONLY -- no third word (rule #9)
     ruling: ""                        # plain-language INTENT once decided; never DAX/SQL/model path
     evidence: []                      # owner+date once decided: ["ruled by <owner> on <YYYY-MM-DD>"]
+    number_moving: true               # true if the candidate rulings change a reported number
   - id: "A4"
-    decision_status: "pass"
+    decision_status: "decided"
     ruling: "Discount rate denominator counts known-status transactions only (excludes cancelled/void/blank)."
     evidence: ["ruled by <metric owner> on <YYYY-MM-DD>"]
+    number_moving: true
 ```
 
 ## Field rules
@@ -24,23 +26,25 @@ ambiguities:                          # zero or more entries; only APPLICABLE am
 - `id` -- REQUIRED. String matching one of A1, A2, ..., A11. Any other value is a defect.
   The full A1..A11 range is in play; narrowing to A1..A10 (dropping A11 same-store) is a
   defect (SC-005).
-- `decision_status` -- REQUIRED. Reuses an existing recorded vocabulary; the RECOMMENDED
-  pick is the four readiness statuses (`not_started` / `blocked` / `warning` / `pass`), with
-  the catalogue's needs-business-definition flag as the alternative. The final choice is a
-  human carve-out (spec ## Clarifications, FR-006). No fifth status word may be invented.
-- `ruling` -- REQUIRED when the status is decided. Plain-language business INTENT only.
+- `decision_status` -- REQUIRED. Exactly one of `decided` | `undecided` (the ruled vocabulary,
+  spec ## Clarifications). No third word and no numeric certainty may be invented (rule #9).
+- `ruling` -- REQUIRED when `decision_status: decided`. Plain-language business INTENT only.
   A DAX expression, SQL, a visual/page spec, or a `powerbi/` path is REJECTED (define/check
   boundary, FR-003).
-- `evidence` -- REQUIRED (non-empty) when the status is decided. Records the owner-and-date
-  and any committed support. A decided status with empty evidence is a defect (mirrors the
+- `evidence` -- REQUIRED (non-empty) when `decision_status: decided`. Records the owner-and-date
+  and any committed support. A decided entry with empty evidence is a defect (mirrors the
   readiness `pass` rule).
+- `number_moving` -- REQUIRED boolean. `true` if the candidate rulings would change a reported
+  number for this contract. Per FR-013 (fail-safe), a `number_moving: true` + `undecided`
+  entry forces the contract's `readiness.status: blocked`; a named owner may record
+  `number_moving: false` to make it non-blocking, but the agent never downgrades it.
 
 ## Cross-field / cross-artifact invariants
 
-1. **Blocker propagation (FR-004)**: an undecided MATERIAL ambiguity records a
-   `blocking_reason` on the contract's `readiness` (naming the ambiguity) and forces
-   `readiness.status: blocked`. The agent may recommend but never self-grants a decided
-   status; only a recorded owner ruling clears it.
+1. **Blocker propagation (FR-004/FR-013)**: an entry with `decision_status: undecided` AND
+   `number_moving: true` records a `blocking_reason` on the contract's `readiness` (naming the
+   ambiguity) and forces `readiness.status: blocked`. The agent may recommend but never
+   self-grants a `decided` status; only a recorded owner ruling clears it.
 2. **No fake confidence (FR-005)**: no `confidence` / `score` / numeric-certainty field on any
    entry.
 3. **Applicability (FR-015/FR-016)**: only applicable ambiguities are recorded; non-applicable
