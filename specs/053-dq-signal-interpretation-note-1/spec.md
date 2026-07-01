@@ -231,4 +231,42 @@ person/customer dims.
 
 ### Session 2026-07-01
 
-<!-- Principle-V judgment calls are recorded here for a human; the workflow does not answer them. -->
+Advisor-resolved (non-Principle-V) ambiguities:
+
+- **Q1 (scope of "signal")**: Does the template interpret ALL data-quality signals
+  in `data-issues.md`, or only the `-1` unknown-member count?
+  - **Recommended answer**: Only the `-1` unknown-member count (the RC14-default
+    consequence). Reasoning: YAGNI / scope discipline (CLAUDE.md) -- this idea is
+    scoped to the one signal the bank adopted; a general "any DQ signal" interpreter
+    is a broader artifact not chartered here. Reversible: easy (a later spec can widen
+    scope). Integrated: FR-001/FR-002/FR-003 already bound the artifact to the `-1`
+    signal.
+- **Q2 (single-source-of-truth boundary)**: Is the count duplicated here, or does
+  the note reference `data-issues.md`?
+  - **Recommended answer**: Reference only -- `data-issues.md` stays the single
+    source of truth for the number; this note carries the interpretation and cites
+    the count by reference, and feeds (does not duplicate) the Stage-7 pack.
+    Reasoning: grounding confirms `bi-handoff-pack.md` L70-71 already surfaces the
+    count; a second home would create a reconciliation hazard. Reversible: costly
+    (a duplicated number is a divergence risk). Integrated: FR-002, FR-005, and the
+    Edge Cases reconciliation rule.
+
+Principle-V judgment calls -- REFUSED here, recorded for a human (workflow does not answer):
+
+- **Stage of record / roadmap ownership (FR-010)**: which readiness stage this
+  artifact is formally filed under, and whether an F-number is assigned. Recommended
+  framing (authored generically now, filled after the Stage-4 live run, consumed at
+  Stage 7) is stated in FR-010 but the stage-of-record + F-row assignment is a
+  roadmap/governance call left OPEN for a human. Not build-blocking (the template is
+  authorable generically regardless).
+- **Direction-of-distortion correctness claim (FR-011)**: the precise business-meaning
+  ruling on whether the caveat's claim is about a measure TOTAL (unaffected) vs a
+  SLICED/grouped view (distorted). This is the load-bearing correctness question and a
+  Principle-V business-rollup judgment reserved for a human/analyst; the template
+  presents it as a fill-in, so it is not build-blocking, but the ruling itself stays
+  OPEN.
+- **PII publish-safety (FR-007)**: whether surfacing "N rows unattributed" as a
+  published caveat is itself a PII-adjacent disclosure when the dim is a
+  person/customer entity. Deferred to governance (Principle V default). OPEN.
+- **KPI-mapping ownership**: WHO owns the `signal -> affected KPI` ruling (analyst vs
+  governance) must be named per table. OPEN.
