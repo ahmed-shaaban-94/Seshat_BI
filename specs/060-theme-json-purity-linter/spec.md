@@ -202,10 +202,11 @@ vocabulary.
 - **FR-013**: The exact forbidden-key vocabulary boundary -- which literal key
   names count as business-logic contamination and which sentiment-adjacent keys
   stay allowed, plus whether the rule asserts any REQUIRED-key presence in
-  addition to forbidden-key absence -- MUST be settled before wiring, because the
-  golden records freeze it. [NEEDS CLARIFICATION: this is a Principle-V boundary
-  judgment about where styling ends and business meaning begins; it is deferred to
-  the Clarifications block for a human ruling and is not auto-resolved here.]
+  addition to forbidden-key absence -- is SETTLED in the Clarifications block
+  (Principle-V rulings, resolved 2026-07-01): a frozen case-insensitive forbidden
+  literal set derived from the theme-json.md MUST-NOT categories, with sentiment
+  COLOR keys explicitly allowed, and MUST-NOT-only scope (no required-key
+  assertion). The golden records freeze exactly that resolved vocabulary.
 
 ### Key Entities *(include if feature involves data)*
 
