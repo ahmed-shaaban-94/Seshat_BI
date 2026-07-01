@@ -155,7 +155,8 @@ vocabulary.
   tenant-specific list.
 - **FR-003**: When a forbidden business-logic key is present in a theme file, the
   system MUST emit an ERROR finding that identifies the file and the location of
-  the offending key within that file.
+  the offending key within that file, using the existing file-plus-pointer locator
+  convention already used by the project's JSON-scanning rules.
 - **FR-004**: The system MUST emit one distinct finding per forbidden key
   occurrence so that no violation is masked by another.
 - **FR-005**: The rule MUST decide violations by a categorical present/absent
@@ -180,8 +181,11 @@ vocabulary.
   not fail the live contract check, following the existing file-scanning-rule
   exemption pattern.
 - **FR-011**: The rule MUST declare a single freshly-allocated rule identifier
-  that does not collide with any already-registered rule identifier. Its severity
-  is OBSERVED per branch from its emitted findings, not declared as a governed
+  that does not collide with any already-registered rule identifier (the backlog
+  letters A1/A2 collide with shipped ids, so a bare backlog letter MUST NOT be
+  reused; a design/theme-namespaced identifier is preferred). The exact literal id
+  is finalized against the TRUE live registry at wiring time. Its severity is
+  OBSERVED per branch from its emitted findings, not declared as a governed
   per-rule severity table (ratified 044).
 - **FR-012**: The rule MUST be wired into the five governance records so its
   presence is verifiable and drift fails closed: the rule module, the
@@ -253,4 +257,62 @@ vocabulary.
 
 ### Session 2026-07-01
 
-<!-- Principle-V carve-out and advisor-resolved ambiguities recorded here in Stage 3. -->
+Advisor-resolved ambiguities (recommended answers integrated into the spec):
+
+- **Q1 -- Rule-id allocation.** The backlog letters A1/A2 collide with the
+  already-registered routes-family identifiers (A1 = Route Registry Manifest,
+  A3 = Route Coverage). The theme PURITY rule needs a fresh, non-colliding
+  identifier. **Recommended answer**: allocate a fresh identifier that is not any
+  currently-registered id, and prefer a design/theme-namespaced identifier over a
+  bare backlog letter so future design-lint rules (for example the unbuilt
+  token-to-theme fidelity rule) share a legible namespace rather than reusing an
+  ambiguous single letter. The exact literal string is finalized against the TRUE
+  live registry at wiring time (reconcile against the real set, not a count
+  claim). **Reasoning**: reusing "A2" as a rule id when A1/A3 already mean
+  something unrelated would freeze a confusing id into the golden records; a
+  namespaced id is self-documenting and collision-safe. **Reversible**: costly
+  (the id is frozen into golden records once wired; changing it later is a
+  breaking rename across five places).
+
+- **Q2 -- Violation location format.** How should a finding point at the offending
+  key? **Recommended answer**: use the existing file-plus-pointer locator
+  convention already used by the co-shipped JSON-scanning rule (a `file#/pointer`
+  form that walks the key path to the offending key). **Reasoning**: this is the
+  established precedent in the codebase for JSON findings; reusing it keeps
+  findings consistent and requires no new convention. **Reversible**: easy (a
+  message/locator format detail, not a golden-record contract).
+
+- **Q3 -- Theme-file discovery mechanism.** How are the files to scan selected?
+  **Recommended answer**: discover them generically from the committed file set by
+  a theme-file naming pattern, excluding the test-fixture exemption path -- never
+  an enumerated or tenant-specific list. **Reasoning**: Principle VII requires the
+  rule be generic; an enumerated list would silently miss new theme files and
+  couple the rule to today's corpus. **Reversible**: easy (the discovery predicate
+  can be widened/narrowed without touching the golden records).
+
+Principle-V carve-out (RECORDED, NOT ANSWERED -- reserved for a human ruling; the
+workflow is forbidden to auto-resolve these):
+
+- **OPEN -- Exact forbidden-key vocabulary boundary.** Which literal JSON key
+  names count as business-logic contamination (for example keys matching
+  dax / measure / calculated* / threshold / rule / relationship / expression /
+  source-mapping / validation), and which sentiment-adjacent keys stay allowed
+  (a sentiment COLOR such as good / neutral / bad is allowed; a sentiment
+  THRESHOLD or RULE is forbidden)? Drawing this literal line is a Principle-V
+  judgment about where styling ends and business meaning begins. The purity
+  contract states the CATEGORIES in prose; converting them into a frozen,
+  machine-readable literal key list is the human ruling. Not answered here.
+
+- **OPEN -- Required-key assertion scope.** Is the rule purely a MUST-NOT
+  (forbidden-key-absent) scan, or does it also assert that some REQUIRED theme
+  keys are PRESENT? The purity contract lists what a theme MAY set but mandates
+  none as REQUIRED, so the required set (if any) is undefined and needs a human
+  ruling before it can be asserted. Not answered here. (Working assumption for
+  spec/plan scope: A2 is a MUST-NOT-only scan; any required-key assertion is
+  additive and out of the current seam until a human defines the required set.)
+
+These two OPEN items are NOT build-blocking for the spec and plan: the plan
+defines the seam (a forbidden-key vocabulary derived from the generic contract,
+plus a MUST-NOT scan) without freezing the exact literal list. They block the
+final golden-record wiring freeze, which is an implement-time step gated on the
+human ruling -- not a step this planning workflow performs.
