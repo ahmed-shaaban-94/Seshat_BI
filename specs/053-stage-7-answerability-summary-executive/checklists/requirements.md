@@ -13,8 +13,8 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain (2 remain BY DESIGN -- Principle-V judgment
-      calls left for /speckit-clarify; the planning agent is forbidden to answer them)
+- [x] No [NEEDS CLARIFICATION] markers remain (the two Principle-V items FR-014/FR-015 were
+      human-ruled at ratification, 2026-07-01; zero markers remain in spec.md)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)

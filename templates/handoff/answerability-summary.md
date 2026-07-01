@@ -55,11 +55,14 @@ meaning -- which blocker matters most is a human priority judgment.
 
 ## Out of scope
 
-KPI domains this table cannot serve (e.g. an inventory KPI against a sales-only fact).
+Decision questions this table cannot serve (e.g. an inventory-turns question against a
+sales-only fact) -- keyed on the **decision question** like the other lists, not rolled up to
+the domain, so a table that serves some questions in a domain but not others still names the
+specific unanswerable question.
 
-| KPI domain | Why out of scope for this table |
-|------------|---------------------------------|
-| `<domain>` | `<the table does not carry this domain's grain/facts>` |
+| Decision question | Domain | Why out of scope for this table |
+|-------------------|--------|---------------------------------|
+| `<business question from an F7 domain file>` | `<domain>` | `<the table does not carry this question's grain/facts>` |
 
 ## Planned / not yet contracted
 
