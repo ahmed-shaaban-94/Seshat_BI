@@ -1,0 +1,6 @@
+{
+  "name": "Fixture two forbidden",
+  "dataColors": ["#1F3A5F"],
+  "measure": "SUM(Sales[Amount])",
+  "relationship": "Sales[DateKey] -> Date[DateKey]"
+}

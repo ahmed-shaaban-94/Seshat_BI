@@ -1,0 +1,6 @@
+{
+  "name": "Fixture one forbidden",
+  "dataColors": ["#1F3A5F", "#3E6D9C"],
+  "background": "#FFFFFF",
+  "measure": "SUM(Sales[Amount])"
+}
