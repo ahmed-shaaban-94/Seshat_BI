@@ -55,8 +55,10 @@ def _findings(ctx):
 # C1: blocked + reasons + filled binding -> ERROR
 def test_c1_blocked_with_settled_binding_fires(tmp_path):
     body = _contract(
-        "blocked", '["A4 gross/net denominator not ruled"]',
-        '"gold.fct_demo"', '    - "net_amount"\n',
+        "blocked",
+        '["A4 gross/net denominator not ruled"]',
+        '"gold.fct_demo"',
+        '    - "net_amount"\n',
     )
     findings = _findings(_ctx(tmp_path, {INST: body}))
     assert len(findings) == 1
@@ -67,8 +69,10 @@ def test_c1_blocked_with_settled_binding_fires(tmp_path):
 # C2: blocked but binding still a placeholder -> honest draft, no Finding
 def test_c2_blocked_placeholder_binding_ok(tmp_path):
     body = _contract(
-        "blocked", '["still deciding"]',
-        '"gold.<fact_or_dim>"', '    - "<gold_column_a>"\n',
+        "blocked",
+        '["still deciding"]',
+        '"gold.<fact_or_dim>"',
+        '    - "<gold_column_a>"\n',
     )
     assert _findings(_ctx(tmp_path, {INST: body})) == []
 
@@ -89,7 +93,10 @@ def test_c2_blocked_empty_columns_ok(tmp_path):
 # C3: pass + bound -> no Finding
 def test_c3_pass_bound_ok(tmp_path):
     body = _contract(
-        "pass", "[]", '"gold.fct_demo"', '    - "net_amount"\n',
+        "pass",
+        "[]",
+        '"gold.fct_demo"',
+        '    - "net_amount"\n',
     )
     assert _findings(_ctx(tmp_path, {INST: body})) == []
 
@@ -110,6 +117,9 @@ def test_c6_unparseable_fails_loud(tmp_path):
 # Template is never scanned
 def test_template_not_scanned(tmp_path):
     body = _contract(
-        "blocked", '["open"]', '"gold.fct_demo"', '    - "net_amount"\n',
+        "blocked",
+        '["open"]',
+        '"gold.fct_demo"',
+        '    - "net_amount"\n',
     )
     assert _findings(_ctx(tmp_path, {_TEMPLATE_PATH: body})) == []

@@ -75,9 +75,7 @@ def _has_settled_binding(contract: dict) -> bool:
     if not isinstance(columns, list) or not columns:
         return False
     # At least one real, non-placeholder column.
-    return any(
-        isinstance(c, str) and c and not _is_placeholder(c) for c in columns
-    )
+    return any(isinstance(c, str) and c and not _is_placeholder(c) for c in columns)
 
 
 @register(
