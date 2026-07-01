@@ -16,8 +16,11 @@
 
 **Table**: `<schema>.<table>`  **Assembled on**: `<YYYY-MM-DD>`  **by**: `<analyst>`
 **Stage of record**: Stage 7 (Publish Ready) -- the caveat/stakeholder surface that CONSUMES
-the signal. The count is PRODUCED at Stage 4 (Gold Ready, live validate); this note is
-authored generically now, filled after the Stage-4 live run, and read as a Stage-7 caveat.
+the signal. The `-1` count is NOT produced by the Stage-4 `retail validate` run -- that run
+only flags HARD orphan FKs (a FK with no matching dim row); rows coalesced to the `-1`
+unknown member DO have a matching dim row and pass validate silently. The count comes from a
+separate analyst query and is recorded in `../data-issues.md`. This note is authored
+generically now, filled once that count is recorded, and read as a Stage-7 caveat.
 
 ## Per-signal interpretation
 
@@ -51,8 +54,8 @@ If `../data-issues.md` records **no** `-1` unknown-member signal for this table,
 > **No recorded `-1` signal for this table -- nothing to interpret; zero caveats.**
 
 An empty note is the honest state. Never fabricate a caveat for a table with no recorded
-signal (and none for a table with no live validate run yet -- the count does not exist until
-Stage 4 runs).
+signal (and none until the analyst has recorded a `-1` count in `../data-issues.md` -- a
+clean `retail validate` run does NOT record it, since `-1` rows pass validate silently).
 
 ## Feeds the handoff pack -- does not duplicate it
 
@@ -79,6 +82,6 @@ sign-off is required before the caveat is published. Default: **defer to governa
 - The count's single source of truth: `../data-issues.md`
 - Stage-7 consumer (Known-gaps section): `bi-handoff-pack.md`
 - Stage-7 stage doc: `../../docs/readiness/publish-ready.md`
-- Stage-4 producer (where the count comes from -- live validate): `../../docs/readiness/gold-ready.md`
+- Where the count is recorded (an analyst query, NOT the validate run): `../data-issues.md`; Stage-4 gate context: `../../docs/readiness/gold-ready.md`
 - The ratified `-1` default: `../../.specify/memory/constitution.md` (Principle V, Principle VI / RC14)
 - Filled concrete instance (worked example): `../../docs/worked-examples/c086-pharmacy.md`, `../../docs/c086-adr0002-compliance.md`
