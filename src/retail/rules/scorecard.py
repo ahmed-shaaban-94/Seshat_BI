@@ -215,7 +215,7 @@ def check_coverage_scorecard(ctx: RuleContext) -> Iterable[Finding]:
                 )
 
             # C3: a Covered row's contract path must resolve to a tracked file. The
-            # scorecard cites the contract as `contracts/<file>.md` relative to its skill
+            # scorecard cites the contract as `contracts/<file>.md` under its skill
             # root (the F8 template's own convention), while the tracked file is e.g.
             # skills/retail-kpi-knowledge/contracts/<file>.md. So resolve by SUFFIX: the
             # citation is satisfied if any tracked file path ends with the cited
