@@ -1,8 +1,8 @@
 # Implementation Plan: DQ-Signal Interpretation Note (-1 unknown-member counts as business caveat)
 
-**Branch**: `053-dq-signal-interpretation-note-1` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
+**Branch**: `054-dq-signal-interpretation-note` | **Date**: 2026-07-01 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `/specs/053-dq-signal-interpretation-note-1/spec.md`
+**Input**: Feature specification from `/specs/054-dq-signal-interpretation-note/spec.md`
 
 ## Summary
 

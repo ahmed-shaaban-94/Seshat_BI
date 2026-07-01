@@ -1,6 +1,6 @@
 # Feature Specification: DQ-Signal Interpretation Note (-1 unknown-member counts as business caveat)
 
-**Feature Branch**: `053-dq-signal-interpretation-note-1` (spec dir renumbered to `054-dq-signal-interpretation-note` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
+**Feature Branch**: `054-dq-signal-interpretation-note` (spec dir renumbered to `054-dq-signal-interpretation-note` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
@@ -180,10 +180,12 @@ person/customer dims.
   glyphs), and emit no numeric confidence/health/readiness score.
 - **FR-010** (human-ruled 2026-07-01): The template's **stage of record is Stage 7
   (Publish Ready)** -- it is the caveat/stakeholder-communication surface that CONSUMES
-  the signal. The count is PRODUCED at Stage 4 (Gold Ready, live validate) and the
-  template is authored generically now / filled after the Stage-4 live run / consumed at
-  Stage 7. **No roadmap F-number is assigned** (the idea bank is not the roadmap;
-  Principle V / roadmap prose). The template states this producer->consumer framing.
+  the signal. The `-1` count is **NOT produced by the Stage-4 `retail validate` run** (that
+  run only flags hard orphan FKs; rows coalesced to the `-1` member pass validate silently);
+  it comes from a separate analyst query and is recorded in `data-issues.md`. The template is
+  authored generically now, filled once that count is recorded in `data-issues.md`, and read
+  as a Stage-7 caveat. **No roadmap F-number is assigned** (the idea bank is not the roadmap;
+  Principle V / roadmap prose). The template states this recorded-source -> consumer framing.
 - **FR-011** (human-ruled 2026-07-01): The `direction-of-distortion` semantics are fixed
   to this precise, observed correctness claim: the `-1` unknown member **preserves measure
   TOTALS** (the row is absorbed into the `-1` bucket, so grand totals still reconcile) but

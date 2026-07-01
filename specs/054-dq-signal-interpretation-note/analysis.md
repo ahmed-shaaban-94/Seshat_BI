@@ -1,6 +1,6 @@
 # Cross-Artifact Analysis: DQ-Signal Interpretation Note
 
-**Feature**: `053-dq-signal-interpretation-note-1` | **Date**: 2026-07-01
+**Feature**: `054-dq-signal-interpretation-note` | **Date**: 2026-07-01
 **Scope**: read-only consistency pass over spec.md, plan.md, tasks.md (+ research.md,
 contracts/template-contract.md). No artifact was edited.
 

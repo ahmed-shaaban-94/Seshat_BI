@@ -1,6 +1,6 @@
 # Tasks: DQ-Signal Interpretation Note (-1 unknown-member counts as business caveat)
 
-**Feature**: `053-dq-signal-interpretation-note-1`
+**Feature**: `054-dq-signal-interpretation-note`
 **Spec**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md) | **Contract**: [contracts/template-contract.md](./contracts/template-contract.md)
 
 This is a DOCS/TEMPLATE-ONLY feature -- there is NO code, so there is NO TDD

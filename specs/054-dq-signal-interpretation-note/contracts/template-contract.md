@@ -1,6 +1,6 @@
 # Artifact Contract: dq-signal-interpretation.md template
 
-**Feature**: `053-dq-signal-interpretation-note-1` | **Date**: 2026-07-01
+**Feature**: `054-dq-signal-interpretation-note` | **Date**: 2026-07-01
 
 There is NO code contract (no code is added). This is the structural contract for
 the single new documentation artifact,

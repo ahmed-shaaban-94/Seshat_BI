@@ -1,6 +1,6 @@
 # Research: DQ-Signal Interpretation Note
 
-**Feature**: `053-dq-signal-interpretation-note-1` | **Date**: 2026-07-01
+**Feature**: `054-dq-signal-interpretation-note` | **Date**: 2026-07-01
 
 Phase-0 decisions. Two load-bearing premise errors the idea's synthesis carried are
 CORRECTED here so the plan does not inherit them.

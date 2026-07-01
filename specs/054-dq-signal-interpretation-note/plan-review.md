@@ -1,6 +1,6 @@
 # Adversarial Plan-Review: DQ-Signal Interpretation Note
 
-**Feature**: `053-dq-signal-interpretation-note-1` | **Date**: 2026-07-01
+**Feature**: `054-dq-signal-interpretation-note` | **Date**: 2026-07-01
 **Reviewer posture**: single default-adverse skeptic, READ-ONLY (reports fixes, edits
 nothing). Artifacts reviewed: spec.md, plan.md, tasks.md, research.md,
 contracts/template-contract.md, analysis.md.
