@@ -39,9 +39,10 @@ from typing import Iterable
 from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
 
-# Per-table scorecard instances end with this suffix; the generic template is excluded
-# by its explicit path (it is placeholders + an illustrative example by design).
-_INSTANCE_SUFFIX = "coverage-scorecard.md"
+# Per-table scorecard instances live under mappings/<table>/ and end with this suffix.
+# Restricting to mappings/ (not any tracked *coverage-scorecard.md) keeps a reference or
+# doc file that happens to use the name from being parsed as a filled scorecard.
+_INSTANCE_RE = re.compile(r"^mappings/[^/]+/.*coverage-scorecard\.md$")
 _TEMPLATE_PATH = (
     "skills/retail-kpi-knowledge/references/kpi-coverage-scorecard-template.md"
 )
@@ -59,9 +60,11 @@ _ENUM: frozenset[str] = frozenset(
 )
 
 # The status table is anchored by its per-table caption so only THIS table's rows are
-# parsed; a stray four-column table in another section cannot contribute rows.
+# parsed; a stray four-column table in another section cannot contribute rows. The
+# anchored region ends at the NEXT heading of ANY level (##, ###, ...) so a notes table
+# under a deeper subheading is not swept in (C9 / FR-009).
 _TABLE_ANCHOR_RE = re.compile(r"^>\s*Table:", re.IGNORECASE)
-_NEXT_HEADING_RE = re.compile(r"^##\s+")
+_NEXT_HEADING_RE = re.compile(r"^#{1,6}\s+")
 
 # A status-table data row, matched POSITIONALLY:
 # | KPI | Contract | Coverage status | Blocker |
@@ -81,7 +84,7 @@ def _iter_scorecards(ctx: RuleContext) -> list[str]:
     return [
         p
         for p in ctx.tracked_files
-        if p.endswith(_INSTANCE_SUFFIX) and p != _TEMPLATE_PATH and not is_test_path(p)
+        if _INSTANCE_RE.match(p) and p != _TEMPLATE_PATH and not is_test_path(p)
     ]
 
 
@@ -99,7 +102,14 @@ def _is_dash(cell: str) -> bool:
 
 
 def _status_table_rows(text: str) -> list[re.Match]:
-    """The data rows of ONLY the anchored '> Table:' status table."""
+    """The data rows of ONLY the anchored '> Table:' status table.
+
+    The region starts at the '> Table:' caption and ends at the FIRST of: a heading of
+    any level, or -- once the table's rows have started -- any line that is neither a
+    table row nor blank (prose or a deeper subheading table follows). This keeps a stray
+    4-column table under a '###' subheading or after intervening prose from being parsed
+    as status rows (C9 / FR-009).
+    """
     lines = text.splitlines()
     out: list[re.Match] = []
     in_section = False
@@ -112,12 +122,15 @@ def _status_table_rows(text: str) -> list[re.Match]:
         if not in_section:
             continue
         if _NEXT_HEADING_RE.match(line):
-            break  # a new ## section ends the anchored table region
+            break  # a new heading of any level ends the anchored table region
         if _SEP_RE.match(line):
             header_seen = True
             continue
         m = _ROW_RE.match(line)
         if not m:
+            # Once the table has started, a non-table, non-blank line (prose) ends it.
+            if header_seen and line.strip():
+                break
             continue
         # Skip the header row (the one before the separator) -- its status cell is the
         # literal column label, not a data value.
@@ -134,7 +147,9 @@ def check_coverage_scorecard(ctx: RuleContext) -> Iterable[Finding]:
     for rel in sorted(_iter_scorecards(ctx)):
         try:
             text = (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
+            # A tracked-but-unreadable/undecodable scorecard fails loud (an ERROR),
+            # rather than crashing the gate (UnicodeDecodeError is not an OSError).
             findings.append(
                 Finding(
                     rule_id="SL1",
@@ -199,10 +214,19 @@ def check_coverage_scorecard(ctx: RuleContext) -> Iterable[Finding]:
                     )
                 )
 
-            # C3: a Covered row's contract path must resolve to a tracked file.
+            # C3: a Covered row's contract path must resolve to a tracked file. The
+            # scorecard cites the contract as `contracts/<file>.md` relative to its skill
+            # root (the F8 template's own convention), while the tracked file is e.g.
+            # skills/retail-kpi-knowledge/contracts/<file>.md. So resolve by SUFFIX: the
+            # citation is satisfied if any tracked file path ends with the cited
+            # `contracts/<file>.md` (exact-match remains a subset of this).
             if status == "covered":
                 cm = _CONTRACT_RE.search(contract)
-                if not cm or cm.group(0) not in tracked:
+                cited = cm.group(0) if cm else None
+                resolves = cited is not None and any(
+                    t == cited or t.endswith("/" + cited) for t in tracked
+                )
+                if not resolves:
                     findings.append(
                         Finding(
                             rule_id="SL1",

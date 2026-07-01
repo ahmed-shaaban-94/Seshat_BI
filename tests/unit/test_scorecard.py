@@ -71,6 +71,20 @@ def test_c3_covered_nonresolving_contract_fires(tmp_path):
     assert len(_findings(_ctx(tmp_path, {INST: body}))) == 1
 
 
+# --- C3 (P1 regression): a Covered row's `contracts/<f>.md` citation resolves
+# by SUFFIX to the real skills/retail-kpi-knowledge/contracts/<f>.md path -------
+def test_c3_covered_contract_resolves_by_suffix(tmp_path):
+    body = _scorecard("| Net Sales | `contracts/net-sales.md` | Covered | -- |\n")
+    ctx = _ctx(
+        tmp_path,
+        {
+            INST: body,
+            "skills/retail-kpi-knowledge/contracts/net-sales.md": "x",
+        },
+    )
+    assert _findings(ctx) == []
+
+
 # --- C3b: Planned / Out of scope with `--` contract is fine ----------------
 def test_c3b_planned_outofscope_dash_contract_ok(tmp_path):
     body = _scorecard(
@@ -137,3 +151,37 @@ def test_c9_stray_table_not_parsed(tmp_path):
     )
     # The stray 'Sorta covered' is in a Notes table, not the anchored status table.
     assert _findings(_ctx(tmp_path, {INST: body, "contracts/net.md": "x"})) == []
+
+
+# --- C9b: a stray 4-col table under a ### subheading is not parsed ----------
+def test_c9b_subheading_table_not_parsed(tmp_path):
+    body = _scorecard("| Net Sales | `contracts/net.md` | Covered | -- |\n") + (
+        "\n### Notes\n\n| a | b | Sorta covered | d |\n|---|---|---|---|\n"
+    )
+    assert _findings(_ctx(tmp_path, {INST: body, "contracts/net.md": "x"})) == []
+
+
+# --- C9c: a stray table after intervening prose is not parsed --------------
+def test_c9c_table_after_prose_not_parsed(tmp_path):
+    body = _scorecard("| Net Sales | `contracts/net.md` | Covered | -- |\n") + (
+        "\nSome prose here.\n\n| a | b | Sorta covered | d |\n|---|---|---|---|\n"
+    )
+    assert _findings(_ctx(tmp_path, {INST: body, "contracts/net.md": "x"})) == []
+
+
+# --- glob: a *coverage-scorecard.md OUTSIDE mappings/ is not scanned --------
+def test_non_mappings_scorecard_not_scanned(tmp_path):
+    bad = _scorecard("| X | `contracts/missing.md` | Covered | -- |\n")
+    ctx = _ctx(tmp_path, {"docs/reference/x-coverage-scorecard.md": bad})
+    assert _findings(ctx) == []
+
+
+# --- C8b: an invalid-UTF-8 instance -> fail-loud ERROR, not a crash --------
+def test_c8b_invalid_utf8_fails_loud(tmp_path):
+    p = tmp_path / INST
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(b"\xff\xfe invalid utf8 \x80\x81")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(INST,))
+    findings = _findings(ctx)
+    assert len(findings) == 1
+    assert findings[0].severity is Severity.ERROR
