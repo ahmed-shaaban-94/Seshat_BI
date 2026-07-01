@@ -90,7 +90,7 @@ def check_unresolved_assumptions(ctx: RuleContext) -> Iterable[Finding]:
         try:
             raw = (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
             contract = yaml.safe_load(raw)
-        except (OSError, yaml.YAMLError) as exc:
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
             findings.append(
                 Finding(
                     rule_id="AL1",

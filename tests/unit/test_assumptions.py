@@ -114,6 +114,17 @@ def test_c6_unparseable_fails_loud(tmp_path):
     assert findings[0].severity is Severity.ERROR
 
 
+# C6b: invalid-UTF-8 contract -> fail-loud ERROR, not a crash (UnicodeDecodeError)
+def test_c6b_invalid_utf8_fails_loud(tmp_path):
+    p = tmp_path / INST
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(b"\xff\xfe binds_to: \x80\x81 not decodable")
+    ctx = RuleContext(repo_root=tmp_path, tracked_files=(INST,))
+    findings = _findings(ctx)
+    assert len(findings) == 1
+    assert findings[0].severity is Severity.ERROR
+
+
 # Template is never scanned
 def test_template_not_scanned(tmp_path):
     body = _contract(

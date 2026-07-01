@@ -321,6 +321,22 @@ def _observe_rule(rule_id: str, fn) -> set[str]:
             # the routes manifest is absent/untracked -> A1 fails loud (ERROR).
             _write(repo, "warehouse/a.sql", "SELECT 1;\n")
             tracked = ["warehouse/a.sql"]
+        elif rule_id == "AL1":
+            # a metric contract with an unresolved assumption (blocked + reasons) AND a
+            # settled gold binding -> AL1 fails loud (ERROR).
+            _write(
+                repo,
+                "mappings/demo/metrics/DemoMetric.yaml",
+                "name: DemoMetric\n"
+                "binds_to:\n"
+                '  gold_table: "gold.fct_demo"\n'
+                "  columns:\n"
+                '    - "net_amount"\n'
+                "readiness:\n"
+                '  status: "blocked"\n'
+                '  blocking_reasons: ["A4 gross/net denominator not ruled"]\n',
+            )
+            tracked = ["mappings/demo/metrics/DemoMetric.yaml"]
         else:
             # An unknown rule id: leave tracked empty -> no-finding marker.
             tracked = []
