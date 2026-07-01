@@ -82,6 +82,8 @@ Verdict: clean.
 
 ## Verdict
 
+**Verdict**: PASS-WITH-NOTES
+
 **PASS-WITH-NOTES.** The artifact set is complete, internally consistent (analyze
 clean), constitution-aligned, generic-only, never-execute-safe, and within scope.
 Three non-blocking notes (dormant-until-populated, dash-normalization trap,

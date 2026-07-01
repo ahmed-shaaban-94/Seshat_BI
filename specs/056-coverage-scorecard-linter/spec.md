@@ -1,10 +1,25 @@
 # Feature Specification: Coverage Scorecard Linter (SL1)
 
-**Feature Branch**: `053-coverage-scorecard-linter`
+**Feature Branch**: `053-coverage-scorecard-linter` (spec dir renumbered to `056-coverage-scorecard-linter` to avoid the 053 collision across the parallel kraken runs; roadmap F-number wins on any disagreement)
 
 **Created**: 2026-07-01
 
-**Status**: Draft
+**Status**: Ratified (advisor-for-Ahmed-Shaaban, 2026-07-01)
+
+**Ratification note**: Ratified by the advisor agent under the explicit, recorded per-session
+delegated override granted by the repo owner (info@rahmaqanater.org) for the 2026-07-01
+"release the kraken" batch of seven idea-to-spec specs. Provenance: this Ratified line is
+AI-authored under recorded human authority; NOT a human-typed ratification -- the git author
+identity does not by itself attest a human reviewer. Design decisions confirmed at ratify:
+new rule id **SL1**; filled scorecard instances live under `mappings/<table>/` (PP1 per-table
+precedent); the generic template file is EXCLUDED from scanning by explicit path; the
+contract-path-resolves invariant applies ONLY to `Covered` rows (Planned / Out-of-scope carry
+`--`). The linter validates STRUCTURE only (status-enum membership, four-column shape,
+blocker-present, contract-path-resolves-when-Covered, no-percentage) and NEVER adjudicates
+whether a stated coverage is true (Principle V). Adds ONE `@register` rule + its id to
+EXPECTED_RULE_IDS + a rules-manifest regen (38 -> 39). TDD: RED tests (T003/T004) precede the
+GREEN rule (T005). analyze=clean (0 critical/0 high); plan-review=PASS-WITH-NOTES. Override is
+per-session/per-this-set only; it covers ratification, not merge (normal CI gate still applies).
 
 **Input**: User description: "Coverage Scorecard Linter"
 
