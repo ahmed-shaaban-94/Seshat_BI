@@ -37,3 +37,15 @@ claims:
     anchor: "| `docs/worked-examples/retail-store-sales.md` | The first table to traverse the FULL seven-stage spine |"
     claimed-artifact: "docs/worked-examples/retail-store-sales.md"
     claimed-status: "built"
+  # The usage/boundary doc also names both examples in its first-arrival section;
+  # lock those references too so the doc and skill cannot drift apart or dangle.
+  - id: "first-hour-compass-doc-worked-example-c086"
+    doc: "docs/tools/first-hour-compass.md"
+    anchor: "analog: `docs/worked-examples/c086-pharmacy.md` (a full validated medallion run --"
+    claimed-artifact: "docs/worked-examples/c086-pharmacy.md"
+    claimed-status: "built"
+  - id: "first-hour-compass-doc-worked-example-store-sales"
+    doc: "docs/tools/first-hour-compass.md"
+    anchor: "point-of-sale / transactional retail) or `docs/worked-examples/retail-store-sales.md` (the"
+    claimed-artifact: "docs/worked-examples/retail-store-sales.md"
+    claimed-status: "built"
