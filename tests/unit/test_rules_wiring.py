@@ -87,6 +87,7 @@ EXPECTED_RULE_IDS = frozenset(
         "DL1",  # design-lint: theme JSON purity (styling defaults only, no logic)
         "DL2",  # design-lint: background-spec purity (no baked-in dynamic content)
         "AD1",  # additivity-consistency: no illegal additivity composition in lineage
+        "AQ1",  # answerability: domain decision-question routes resolve or are planned
     }
 )
 
