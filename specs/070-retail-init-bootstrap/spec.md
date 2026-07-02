@@ -35,31 +35,44 @@ first, then route"), and the verbs exist (`retail-orchestrate` ->
 excluded ALL install runtime from its docs-and-templates-only slice; `init` is new
 scope for this later slice, not something 001 "was really about".
 
-This feature adds an **agent-invokable `init`** workflow that leads with visible
-analyst value and pulls the backstage substrate in silently behind it:
+This feature is primarily an **agent Workflow Skill** (`.claude/skills/retail-init/`)
+that the AGENT performs -- NOT a terminal wizard. It leads with visible analyst
+value and pulls the backstage substrate in silently behind it. Its thin mechanical
+surface (a small `retail init` CLI + stdlib-ish modules) does ONLY substrate-writing;
+all delegate / route / profile behavior is the agent executing the skill, consistent
+with Principle I ("agent-first, not terminal-first"). Concretely:
 
-- **Bootstrap + DELEGATE the worked-example offer** -- on first run, hand the
-  worked-example choice to the EXISTING `first-hour-compass` skill, which already
-  presents the two committed worked examples (`c086-pharmacy`,
+- **The SKILL bootstraps + DELEGATES the worked-example offer** -- the agent, on
+  first run, hands the worked-example choice to the EXISTING `first-hour-compass`
+  skill, which already presents the two committed worked examples (`c086-pharmacy`,
   `retail-store-sales`) and lets the user pick the closer domain analog to steer by
   (shape reference, not a file copy). `init` MUST NOT reimplement that offer -- it
   routes into it, so there is one source for the first-arrival pattern.
-- **Route into the existing verbs to profile MY table** -- hand off to the existing
-  `retail-orchestrate` -> `source-mapping` front door so the next command profiles
-  the user's actual source and shows a first RESULT (grain candidates, column
-  types) -- not a gate, not "the machine describing the machine".
-- **Set expectations honestly** -- state up front that the agent handles sequence
-  and plumbing, but the user still owns grain, PII placement, and metric policy;
-  those are the hard retail-BI judgment, surfaced and STOPPED on, never
-  auto-resolved (Principle V).
-- **Write the backstage substrate silently** -- the compass router
-  (`.seshat/compass.yaml`), the fenced generated regions of `AGENTS.md` /
-  `CLAUDE.md`, and the kit manifests are WRITTEN during `init` but are NOT shown as
-  user-facing steps; they orient the agent underneath the profile step.
+- **The SKILL routes into the existing verbs to profile MY table** -- the agent
+  hands off to the EXISTING `first-hour-compass` -> `retail-onboard-table` front
+  door (the onboarding verb that owns the Stage-1 read-only profile), so profiling
+  the user's actual source shows a first RESULT (grain candidates, column types).
+  This result is produced by the agent executing the existing verbs OVER A LIVE DB
+  (`db` extra + DSN). With no DB configured, the honest outcome is the source-map /
+  orientation structure plus `[PENDING LIVE PROFILE]` -- still more than "the
+  machine describing the machine", never a fabricated profile. The Python `init`
+  module MUST NOT reimplement profiling and MUST NOT open a DB connection.
+- **The SKILL sets expectations honestly** -- the agent states up front that it
+  handles sequence and plumbing, but the user still owns the human judgment seams;
+  the exact seam wording is DELEGATED to `first-hour-compass` (single source), not
+  restated here. Those seams are surfaced and STOPPED on, never auto-resolved
+  (Principle V).
+- **The mechanical surface writes the backstage substrate silently** -- the compass
+  router (`.seshat/compass.yaml`), the fenced `AGENTS.md` / `CLAUDE.md` generated
+  regions, and the kit manifests are WRITTEN during `init` but are NOT shown as
+  user-facing steps; they orient the agent underneath the profile step. A `retail
+  init` CLI, if present, writes ONLY the substrate and PRINTS the next agent step --
+  it never prompts, shows a menu, or emits a profile (the `scaffold.py` write/print
+  precedent).
 
 `init` is an **Official Workflow Skill** (F024): an agent procedure invoked to
 drive a step (scaffold-and-orient), writing files but self-granting nothing -- the
-same category as `retail-orchestrate` and the onboarding wizard. It defines and
+same category as `retail-orchestrate` and `retail-onboard-table`. It defines and
 orients; it never approves a readiness gate, never advances a stage, never fetches
 from a remote, and never fabricates a confidence score.
 
@@ -86,12 +99,28 @@ from a remote, and never fabricates a confidence score.
   hand-authored region, and never re-asks the worked-example pick if state already
   records one. (The full self-update / three-way-merge path is Phase-3 `sync`, out
   of scope here.)
-- Q: Does `init` PROFILE the table itself, or route to the profiling verb? -> A: It
-  ROUTES. `init` owns bootstrap + orientation + the worked-example offer + the
-  honest expectation-setting; the actual profiling is the EXISTING
-  `retail-orchestrate` -> `source-mapping` verb chain. `init` connects the user to
-  those verbs; it does not reimplement profiling and does not open a DB connection
-  itself.
+- Q: Does `init` PROFILE the table itself, or route to the profiling verb? -> A: The
+  AGENT (executing the skill) ROUTES; the Python `init` module never profiles. `init`
+  owns bootstrap + the substrate write + the orientation framing; the actual profile
+  is the EXISTING `first-hour-compass` -> `retail-onboard-table` verb chain, which
+  the agent performs (those are prose skills, not importable functions). The Stage-1
+  read-only profile that yields grain candidates + column types is DB-backed
+  (`profile.py` runs over a `QueryRunner`); the `init` module MUST NOT reimplement it
+  and MUST NOT open a DB connection.
+- Q: Is the "grain candidates + column types" result GUARANTEED on first run? -> A:
+  No -- it is guaranteed only when a live DB is reachable (`db` extra + DSN). The
+  kit's only profiler (`profile.py`) is DB/SQL-backed; there is no CSV/Excel
+  profiler and building one is out of scope (YAGNI, `CLAUDE.md`). With no DB, the
+  honest first-run outcome is the source-map / orientation structure + `[PENDING
+  LIVE PROFILE]`. "Lead with visible value" holds in the DB case and degrades
+  honestly without one; it NEVER fabricates a profile.
+- Q: Which verb is the profiling front door -- `retail-orchestrate`,
+  `source-mapping`, or `retail-onboard-table`? -> A: `retail-onboard-table` (reached
+  via `first-hour-compass`). It is the Source -> Mapping front door that OWNS the
+  Stage-1 read-only profile; `source-mapping` is the downstream Stage-2 gate (too
+  late for grain candidates) and `retail-orchestrate` is the whole-pipeline
+  conductor (broader than a first profile). `retail-onboard-table` is therefore the
+  one route and MUST appear in the compass `verbs[]`.
 - Q: What if there is no table yet / the user names nothing? -> A: `init` still
   delivers value: it bootstraps and DELEGATES to `first-hour-compass` (which
   presents the two worked examples as reference patterns), then routes to
@@ -112,34 +141,40 @@ from a remote, and never fabricates a confidence score.
 
 ### User Story 1 - First run ends on a visible result from MY table (Priority: P1)
 
-A new analyst who has just installed the kit runs the bootstrap and, within the
-same short flow, sees a concrete result computed against THEIR own source -- grain
-candidates and column types -- rather than a green gate over an empty repo.
+A new analyst who has just installed the kit invokes the `init` skill and, within
+the same short agent-driven flow, sees a concrete result computed against THEIR own
+source -- grain candidates and column types (when a live DB is reachable) -- rather
+than a green gate over an empty repo. With no DB, the same flow ends honestly on the
+source-map / orientation structure + `[PENDING LIVE PROFILE]`.
 
 **Why this priority**: This is the entire "aha". The analyst-lens review was blunt:
 a first run that ends on "the machine tells the agent about the machine" over an
-empty repo is backwards. Leading with a visible result on the user's own table is
-the one thing that makes the kit feel agent-driven and worth adopting. Everything
-else (the substrate) is plumbing that earns its place only by serving this.
+empty repo is backwards. Leading with a visible result on the user's own table (or,
+without a DB, the honest orientation structure) is what makes the kit feel
+agent-driven and worth adopting. Everything else (the substrate) is plumbing that
+earns its place only by serving this.
 
-**Independent Test**: Invoke `init`, pick a worked example, name a real source
-table, and confirm the flow ends on a profile result (grain candidates + column
-types) for THAT table -- delivered by routing into the existing
-`retail-orchestrate` -> `source-mapping` verbs, with the substrate written but not
-shown as a step.
+**Independent Test**: Have the agent invoke the `init` skill; it delegates the
+worked-example offer to `first-hour-compass`, routes into `retail-onboard-table`,
+and -- with a live DB -- ends on a profile result (grain candidates + column types)
+for the named table; without a DB it ends on the orientation structure + `[PENDING
+LIVE PROFILE]`. The substrate is written but not shown as a step. (No terminal
+wizard: the flow is the agent performing prose skills, not a `retail init` menu.)
 
 **Acceptance Scenarios**:
 
-1. **Given** a freshly installed kit in a repo with no `.seshat/` and a real source
-   table, **When** the user invokes `init` and names their table, **Then** the flow
-   DELEGATES the worked-example offer to `first-hour-compass`, the user picks one,
-   and the flow ends on a first profile result (grain candidates + column types) for
-   the user's table via the existing `retail-orchestrate` -> `source-mapping` verbs.
-2. **Given** the same flow, **When** the profile result is shown, **Then** the
-   compass router, fenced `AGENTS.md` / `CLAUDE.md` regions, and manifests have been
-   written to disk but were NOT presented as user-facing steps.
+1. **Given** a freshly installed kit in a repo with no `.seshat/`, a real source
+   table, AND a reachable DB, **When** the agent invokes the `init` skill and the
+   user names their table, **Then** the flow DELEGATES the worked-example offer to
+   `first-hour-compass`, the user picks one, and it ends on a first profile result
+   (grain candidates + column types) produced by the agent executing
+   `retail-onboard-table`'s Stage-1 read-only profile.
+2. **Given** the same flow, **When** the profile result (or the `[PENDING LIVE
+   PROFILE]` structure) is shown, **Then** the compass router, fenced `AGENTS.md` /
+   `CLAUDE.md` regions, and manifests have been written to disk but were NOT
+   presented as user-facing steps.
 3. **Given** the live boundary is unavailable (no `db` extra / no DSN), **When**
-   `init` routes into profiling, **Then** the flow reports the boundary and the
+   the agent routes into profiling, **Then** the flow reports the boundary and the
    enable steps, marks profile numbers `[PENDING LIVE PROFILE]`, and STAYS USEFUL
    (authors the artifact structure) -- it never tracebacks and never fakes a pass.
 
@@ -184,8 +219,9 @@ untouched.
 ### User Story 3 - Honest expectation-setting on the human seams (Priority: P3)
 
 Before the analyst invests in the flow, `init` states plainly which relief the
-agent provides (sequence, plumbing, ordering, ceremony) and which judgment stays
-theirs (grain, PII placement, business rollups, metric policy).
+agent provides (sequence, plumbing, ordering, ceremony) and that the human still
+owns the judgment seams -- surfacing the seam list from its single source
+(`first-hour-compass`), not a re-typed copy.
 
 **Why this priority**: Trust. The kit's value proposition must not over-promise
 autonomy the constitution forbids. Setting the seam expectation up front is cheap
@@ -194,16 +230,16 @@ judgment call it never touched. P3 because it is a message, not a mechanism, but
 is a required part of the honest first-run.
 
 **Independent Test**: Confirm the `init` flow surfaces, up front, the statement that
-the agent handles sequence + plumbing while the user owns grain / PII / metric
-policy, and that these four seams are described as judgment the agent will STOP on,
-never auto-resolve.
+the agent handles sequence + plumbing while the user owns the human judgment seams,
+and that the seam wording is the one `first-hour-compass` states (not a divergent
+list re-typed inside `init`).
 
 **Acceptance Scenarios**:
 
-1. **Given** the `init` flow, **When** it sets expectations, **Then** it names the
-   four human-owned judgment seams (grain/uniqueness, PII publish-safety, business
-   rollup/segment, metric policy) as things the agent surfaces and STOPS on, never
-   self-grants (Principle V).
+1. **Given** the `init` flow, **When** it sets expectations, **Then** it surfaces the
+   human-owned judgment seams AS STATED BY `first-hour-compass` (its single-source
+   list) as things the agent surfaces and STOPS on, never self-grants (Principle V) --
+   `init` does not maintain its own divergent seam list.
 2. **Given** the worked-example offer, **When** a user picks one, **Then** the flow
    is explicit that the example is a narrative pattern to steer by (copy the shape),
    NOT a file template copied into the user's table dir.
@@ -231,16 +267,22 @@ never auto-resolve.
 
 ### Functional Requirements
 
-- **FR-001**: The kit MUST expose an agent-invokable `init` workflow that bootstraps
-  a repo for the Compass-Driven kit and ends the first-run flow on a visible result
-  from the user's own table.
+- **FR-001**: The kit MUST expose an agent-invokable `init` workflow SKILL that
+  bootstraps a repo for the Compass-Driven kit and ends the first-run flow on a
+  visible result from the user's own table when a live DB is reachable, or on the
+  orientation structure + `[PENDING LIVE PROFILE]` otherwise. The Python/CLI surface
+  of `init` MUST be substrate-writing only (it never prompts, shows a menu, or emits
+  a profile); the delegate/route/profile behavior is the agent performing the skill.
 - **FR-002**: `init` MUST DELEGATE the first-arrival worked-example offer to the
   existing `first-hour-compass` skill (which presents `c086-pharmacy` /
   `retail-store-sales` and takes the user's pick); `init` MUST NOT reimplement the
   offer, so there is exactly one source for the first-arrival pattern.
-- **FR-003**: `init` MUST route into the EXISTING `retail-orchestrate` ->
-  `source-mapping` verb chain to profile the user's table; it MUST NOT reimplement
-  profiling and MUST NOT open a DB connection itself.
+- **FR-003**: The `init` SKILL MUST route (agent-performed) into the EXISTING
+  `first-hour-compass` -> `retail-onboard-table` verb chain to profile the user's
+  table (the onboarding verb owns the Stage-1 read-only, DB-backed profile). The
+  Python `init` module MUST NOT reimplement profiling and MUST NOT open a DB
+  connection itself. `retail-onboard-table` MUST be listed in the compass `verbs[]`
+  so an agent reading only `compass.yaml` can discover the profiling front door.
 - **FR-004**: `init` MUST write the backstage substrate (`.seshat/compass.yaml`,
   the fenced `AGENTS.md` / `CLAUDE.md` generated regions, the kit manifests) but
   MUST NOT present that substrate as user-facing steps.
@@ -257,9 +299,10 @@ never auto-resolve.
   re-projects only the fenced regions, reports "already bootstrapped", never
   duplicates a fence, and never re-asks a recorded worked-example pick.
 - **FR-009**: `init` MUST set expectations up front that the agent handles sequence
-  + plumbing while the user owns the four judgment seams (grain/uniqueness, PII
-  publish-safety, business rollup/segment, metric policy), which the agent surfaces
-  and STOPS on, never self-grants (Principle V).
+  + plumbing while the user owns the human judgment seams, which the agent surfaces
+  and STOPS on, never self-grants (Principle V). `init` MUST surface the seam list
+  from its single source (`first-hour-compass`) rather than maintaining its own
+  divergent copy.
 - **FR-010**: `init` MUST NOT approve or advance any readiness stage, MUST NOT write
   an `approvals[]` entry, and MUST NOT emit any numeric health / confidence /
   percent-ready score (hard rule #9).
@@ -292,8 +335,13 @@ never auto-resolve.
   presented at first arrival BY `first-hour-compass` (which `init` delegates to),
   never copied as files.
 - **`first-hour-compass` (delegated first-arrival)**: the EXISTING skill that owns
-  the worked-example offer + single-table orientation card; `init` routes into it
-  rather than restating it (anti-fork).
+  the worked-example offer + the single-source human-seam list + single-table
+  orientation card; `init` routes into it rather than restating it (anti-fork).
+- **`retail-onboard-table` (delegated profiling front door)**: the EXISTING Source
+  -> Mapping onboarding verb that owns the Stage-1 read-only DB-backed profile
+  (grain candidates + column types via `profile.py`); the agent routes into it for
+  the first result. Listed in the compass `verbs[]` so it is discoverable. `init`
+  never reimplements it and never opens a DB.
 - **Per-table readiness state**: `readiness-status.yaml` -- the EXISTING per-table
   work-state the compass points at; `init` reads/points, never stores a duplicate.
 - **Canonical kit source**: the single committed source the compass + manifests are
@@ -303,9 +351,13 @@ never auto-resolve.
 
 ### Measurable Outcomes
 
-- **SC-001**: A user who invokes `init` on a repo with a real source table reaches a
-  first profile result (grain candidates + column types) for THEIR table within a
-  single guided flow, with zero user-facing "substrate" steps.
+- **SC-001**: A user who invokes the `init` skill on a repo with a real source table
+  AND a reachable DB reaches a first profile result (grain candidates + column types)
+  for THEIR table, produced by the agent executing `retail-onboard-table`, with zero
+  user-facing "substrate" steps. Without a reachable DB, the flow instead reaches the
+  source-map / orientation structure + `[PENDING LIVE PROFILE]` (SC-005) -- never a
+  fabricated profile. (No CSV/Excel profiler is in scope; the only profiler is
+  DB-backed.)
 - **SC-002**: After `init`, 100% of lines outside the `SESHAT-KIT` fence in
   `AGENTS.md` / `CLAUDE.md` are byte-identical to before the run (a diff limited to
   the fenced region).
@@ -318,7 +370,8 @@ never auto-resolve.
 - **SC-005**: When the live boundary is absent, `init` completes with profile numbers
   marked `[PENDING LIVE PROFILE]` and a non-error exit -- never a traceback, never a
   fabricated pass.
-- **SC-006**: The `init` flow surfaces the four human-owned judgment seams and the
+- **SC-006**: The `init` flow surfaces the human-owned judgment seams (as stated by
+  `first-hour-compass`, its single source -- not a divergent list) and the
   agent-handles-plumbing / user-owns-judgment statement before the profile step, on
   every first run.
 - **SC-007**: An agent reading only `.seshat/compass.yaml` (no other file) can
@@ -333,8 +386,10 @@ never auto-resolve.
 - The two worked examples (`docs/worked-examples/c086-pharmacy.md`,
   `retail-store-sales.md`) remain committed and are the reference patterns `init`
   offers.
-- The `retail-orchestrate` -> `source-mapping` verb chain remains the profiling
-  front door `init` routes into; `init` does not own profiling logic.
+- The `first-hour-compass` -> `retail-onboard-table` verb chain remains the
+  first-arrival + profiling front door the agent routes into; `init` does not own
+  profiling logic. `profile.py` (DB-backed) remains the only profiler; no CSV/Excel
+  profiler is built (YAGNI).
 - The speckit fence pattern already shipped in `CLAUDE.md`
   (`<!-- SPECKIT START -->...END -->`) is the proven precedent for the
   `SESHAT-KIT` fence; no new fence design is needed.
