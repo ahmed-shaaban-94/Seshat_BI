@@ -94,11 +94,13 @@ blocking_reasons: []                 # the top blockers across stages (mirrors c
 
 # --- approvals (named human sign-offs; the agent cannot self-grant) ---------
 approvals: []
+  # owner records the DECIDER by NAME + authority class in parens, so the approval
+  # traces to a named human (not a role alone). A bare role token is a defect (C4).
   # - stage: "mapping_ready"
-  #   owner: "<analyst | governance | data_owner>"
+  #   owner: "<Person Name> (<analyst | governance | data_owner | metric_owner>)"
   #   at: "<YYYY-MM-DD>"             # quoted so it is not auto-typed as a date
   # - stage: "source_ready"          # REQUIRED for a file source (source_kind csv/excel):
-  #   owner: "data_owner"            #   the owner confirming the [PROPOSED] encoding
+  #   owner: "<Person Name> (data_owner)"  # named owner confirming the [PROPOSED] encoding
   #   at: "<YYYY-MM-DD>"             #   (and delimiter/header) the profile's numbers rest on
   #   note: "encoding <utf-8|cp1256|...> confirmed"
 

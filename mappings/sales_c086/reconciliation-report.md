@@ -46,8 +46,8 @@ filters remove 2,190 rows (see below). Only the 2 KEPT measures are tracked
 | Metric | bronze.sales_c086_raw |
 |--------|------------------------|
 | Row count | 249,106 |
-| sum(gross_sales) | 38,834,389.31 |
-| sum(quantity) | 314,608.67 |
+| sum(gross_sales) | `[masked]` (exact figure held outside git; masked 2026-07-02) |
+| sum(quantity) | `[masked]` (exact figure held outside git; masked 2026-07-02) |
 | **Row filters (Q4):** junk-division | 513 rows |
 | zero-value (qty=0 AND gross=0) | 1,680 rows |
 | overlap (both) | 3 rows |
@@ -120,9 +120,13 @@ Source = bronze total; silver/gold = after the 2,190-row filter.
 
 | Measure | Source (bronze) | Silver | Gold | BI | Match? |
 |---------|-----------------|--------|------|----|--------|
-| Gross_Sales | 38,834,389.31 | PENDING | PENDING | n/a | PENDING |
-| Quantity | 314,608.67 | PENDING | PENDING | n/a | PENDING |
+| Gross_Sales | `[masked]` | PENDING | PENDING | n/a | PENDING |
+| Quantity | `[masked]` | PENDING | PENDING | n/a | PENDING |
 | Row count | 249,106 | PENDING (246,916 expected) | PENDING | n/a | PENDING |
+
+> Exact bronze money/quantity totals are masked (held outside git; 2026-07-02
+> redaction decision, audit C16). Row counts are structural pipeline figures, not
+> client financials, so they are retained.
 
 **Result:** PENDING. source != silver by design (the 2,190-row filter); the delta must be
 explained by the filtered rows' contribution, not rounded away.

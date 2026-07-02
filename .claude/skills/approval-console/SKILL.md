@@ -160,8 +160,9 @@ write-throughs idempotently:
 
 - `unresolved-questions.md`: fill the matching row's `Resolution` (decision + date + owner)
   and flip `Status` `open` -> `answered`.
-- `readiness-status.yaml`: append an `approvals[]` entry -- `stage` + `owner` (serialized
-  `data_owner`) + `at` (populated from the decision's `date`).
+- `readiness-status.yaml`: append an `approvals[]` entry -- `stage` + `owner` (the
+  DECIDER by name + authority class, e.g. `Ahmed Shaaban (data_owner)`; never a bare
+  role token) + `at` (populated from the decision's `date`).
 
 If a target artifact is MISSING or unwritable, record the decision with a
 `remaining_blockers` entry naming the missing target and do NOT fabricate it or perform a
