@@ -217,22 +217,11 @@ def _check_qa(block: Any, rel: str) -> Iterable[Finding]:
             continue  # a missing item cannot be asserted (parse-contract detail)
         value = block[item]
         pointer = f"{rel}#/qa_checklist/{item}"
-        # An inline mapping carrying a false verdict + reason is accepted.
-        if isinstance(value, dict):
-            if _is_real_bool(value.get("value"), True):
-                continue
-            if _reason_present(block, item, value):
-                continue
-            yield Finding(
-                rule_id=RULE_ID,
-                severity=Severity.ERROR,
-                message=(
-                    f"qa item {item!r} is not true and carries no recorded reason "
-                    f"-- each qa item must be true, or false with a reason"
-                ),
-                locator=pointer,
-            )
-            continue
+        # A qa item is a real boolean; a false value is accepted only when a
+        # reason is recorded in the sibling reasons/warnings mapping (the shape the
+        # template documents). Any other shape (dict, placeholder, other scalar)
+        # falls through to a non-boolean finding below -- mirroring _check_forbidden,
+        # which also treats a non-boolean value as a defect.
         if _is_real_bool(value, True):
             continue  # compliant
         if _is_real_bool(value, False):
