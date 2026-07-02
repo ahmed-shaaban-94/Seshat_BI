@@ -35,8 +35,12 @@ carry the transform logic; an engine would emit only boilerplate). See
 
 ## Preconditions (STOP unless all hold)
 
-1. `mappings/<table>/unresolved-questions.md` shows `Gate status: CLEARED` with ZERO
-   open rows. If OPEN or any row is open -> STOP (Principle IV). Never self-grant.
+1. **Canonical gate signal:** `mappings/<table>/readiness-status.yaml` ->
+   `stages.mapping_ready.status == pass` WITH a matching `approvals[]` entry (RS1).
+   Its human-readable mirror `mappings/<table>/unresolved-questions.md`
+   `Gate status: CLEARED` (ZERO open rows) MUST agree. A missing readiness-status
+   file, `mapping_ready != pass`, or a mismatch between the two -> STOP (Principle
+   IV). Never self-grant.
 2. `mappings/<table>/source-map.yaml` parses and carries grain, primary_key, per
    column type/rename/drop/pii/gold_placement, the gold_star, derived_columns.
 3. Read `assumptions.md` (the business literals the YAML cannot hold: junk-filter
@@ -90,7 +94,8 @@ Author `warehouse/migrations/NNNN+1_create_gold_<table>_star.sql`, adapting `000
 ## Judgment stops (fail LOUD -- never satisfy with a silent default)
 
 STOP and raise an `unresolved-questions.md` row (do not guess) if:
-- `Gate status` != CLEARED, or any open row remains.
+- `stages.mapping_ready.status` != `pass` (or its `approvals[]` entry is absent), or
+  the `Gate status: CLEARED` mirror does not agree, or any open row remains.
 - A column's `silver_type` / `missing_policy` / `gold_placement` is missing or
   ambiguous -> never guess a type or invent a placement.
 - The junk-filter `NOT IN (...)` values are not pinned in `assumptions.md`.

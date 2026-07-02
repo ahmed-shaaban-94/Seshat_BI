@@ -50,22 +50,25 @@ state file to create:
 | What you observe | Current phase / action |
 |------------------|------------------------|
 | No `mappings/<table>/` dir | Start at **Phase 1** (source-mapping). |
-| Artifacts present, `Gate status: OPEN` (or any open row) in `mappings/<table>/unresolved-questions.md` | **STOPPED at the mapping gate.** Report the open questions; do not advance. |
-| `Gate status: CLEARED` and zero open rows | Map approved -> resume at the **silver [SEAM]**. |
+| `mappings/<table>/readiness-status.yaml` missing or `stages.mapping_ready.status` != `pass`; or artifacts present with `Gate status: OPEN` (any open row) in `mappings/<table>/unresolved-questions.md` | **STOPPED at the mapping gate.** Report the open questions; do not advance. |
+| `stages.mapping_ready.status == pass` WITH a matching `approvals[]` entry, and the `Gate status: CLEARED` (zero open rows) mirror agrees | Map approved -> resume at the **silver [SEAM]**. |
 | `warehouse/migrations/` has the table's silver+gold | Resume at the **validate** phase. |
 
-The GO signal is the EXISTING `Gate status` field in
-`templates/unresolved-questions.md` (and the filled copy under `mappings/<table>/`).
-Do NOT invent a parallel "APPROVED-FOR-SILVER" marker -- that forks an existing
-field into two sources of truth. You may READ `Gate status`; you may not write
-`CLEARED` yourself (approval is the reviewer's action).
+The canonical GO signal is `mappings/<table>/readiness-status.yaml` ->
+`stages.mapping_ready.status == pass` WITH a matching `approvals[]` entry (RS1).
+Its human-readable mirror is the `Gate status: CLEARED` (zero open rows) field in
+`mappings/<table>/unresolved-questions.md`; the two EXISTING artifacts MUST agree.
+Do NOT add a THIRD marker (e.g. an "APPROVED-FOR-SILVER" flag) -- that forks the
+signal into another source of truth; if the two disagree, STOP rather than advance.
+You may READ both; you may not write `mapping_ready: pass`, an `approvals[]` entry,
+or `Gate status: CLEARED` yourself (approval is the reviewer's action).
 
 ## Fixed sequence (delegate to the existing verbs)
 
 | Phase | Verb skill | Gate command | Exit gate (from medallion-playbook.md) | Next |
 |-------|-----------|--------------|----------------------------------------|------|
-| 1-4 Profile -> map -> stop-and-ask | **retail-onboard-table** (the Source -> Mapping front door; seeds the readiness-status and DELEGATES the five artifacts to **source-mapping**) | (artifact review) | `Gate status: CLEARED`, zero open rows | gate |
-| GATE Mapping approval | (read state; **grain-confidence-reviewer** surfaces the grain-confidence card + the source-map diff for the human) | -- | reviewer set `Gate status: CLEARED` | silver |
+| 1-4 Profile -> map -> stop-and-ask | **retail-onboard-table** (the Source -> Mapping front door; seeds the readiness-status and DELEGATES the five artifacts to **source-mapping**) | (artifact review) | `mapping_ready == pass` (+ `approvals[]`), `Gate status: CLEARED` mirror agrees, zero open rows | gate |
+| GATE Mapping approval | (read state; **grain-confidence-reviewer** surfaces the grain-confidence card + the source-map diff for the human) | -- | reviewer recorded `stages.mapping_ready.status == pass` (+ `approvals[]`), `Gate status: CLEARED` mirror agrees | silver |
 | 5 Build silver | **retail-build-warehouse** (authors the silver `.sql`) -> then **[SEAM: a human APPLIES the SQL; execution is the deferred DB-write seam]** | `retail check` | exit 0 | gold |
 | 6 Build gold (star) | **retail-build-warehouse** (authors the gold star `.sql`) -> then **[SEAM: human applies]** | `retail check` | exit 0 | validate |
 | ACCEPT Live validate | **retail-validate** | `retail validate --source-map mappings/<table>/source-map.yaml` | exit 0 (or deferred-boundary report) | semantic |
