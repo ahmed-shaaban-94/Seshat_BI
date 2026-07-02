@@ -1,6 +1,30 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.6.0 -> 1.6.1 (amendment 2026-07-02, brand-name reconciliation, #111)
+Amendment rationale (1.6.1, PATCH -- wording/identity clarification, NO principle
+                added/removed/redefined, no gate changed): the active governing
+                heading and opening sentence still named the product "Tower BI
+                Agent Kit" while the shipped operating docs (AGENTS.md, COMPASS.md)
+                and README present the current brand "Seshat BI". Per AGENTS.md
+                ("Same product, one brand") and the 1.6.0 note below ("The product
+                identity is unchanged"), this is a BRAND-NAME correction of the same
+                product, NOT a redefinition of the kit's identity -- so it is a
+                PATCH, not the MAJOR that a true identity redefinition would be.
+                Changed: heading "Tower BI Agent Kit Constitution" -> "Seshat BI
+                Constitution"; opening sentence now reads "Seshat BI (formerly, and
+                internally, Tower BI Agent Kit) ...". Dated historical amendment
+                records in this report (including every prior "Tower BI Agent Kit"
+                mention below and the ratification-history line) are LEFT UNCHANGED
+                -- rewriting the amendment log would falsify it. Dependent artifact:
+                repo CLAUDE.md medallion-schema wording corrected in the same change
+                (raw/marts -> bronze/silver/gold). FOLLOW-UP (not done here, flagged
+                to avoid a divergent source of truth per the amendment procedure):
+                docs/architecture/tower-bi-agent-kit.md and specs/001-retail-bi-agent-kit/
+                may still carry the old product name and want the same brand sweep.
+                Ratification of this amendment is a human action (see below); the
+                agent does not self-ratify.
+
 Version change: 1.5.0 -> 1.6.0 (amendment 2026-06-24, readiness roadmap)
 Amendment rationale (1.6.0, MINOR -- new supporting section, NO principle
                 added/removed/redefined, no gate weakened): the Tower BI
@@ -170,9 +194,10 @@ Follow-up TODOs (recorded at v1.0.0):
     remaining deferred step (Principle VIII).
 -->
 
-# Tower BI Agent Kit Constitution
+# Seshat BI Constitution
 
-The Tower BI Agent Kit is a standalone, agent-first way to turn a raw retail
+Seshat BI (formerly, and internally, *Tower BI Agent Kit*) is a standalone,
+agent-first way to turn a raw retail
 source table into a governed Power BI semantic model along the path
 source -> mapping -> silver -> gold -> Power BI. An AI agent drives the
 workflow; enforced static checks gate every step; the Power BI execution adapter
@@ -547,4 +572,8 @@ Phase 0/1 feature spec); `docs/superpowers/specs/2026-06-23-pbi-governance-layer
 
 ---
 
-**Version**: 1.6.0 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-06-24
+**Version**: 1.6.1 | **Ratified**: 2026-06-24 | **Last Amended**: 2026-07-02
+
+> The 1.6.1 brand-name amendment (#111) is drafted and awaits human ratification;
+> the agent does not self-ratify. Confirm the PATCH classification and the wording,
+> then this line stands as the ratified record.

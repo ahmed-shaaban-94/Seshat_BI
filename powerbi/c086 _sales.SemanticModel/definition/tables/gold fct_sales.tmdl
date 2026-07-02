@@ -5,7 +5,7 @@ table 'gold fct_sales'
 		dataType: int64
 		formatString: 0
 		lineageTag: aeb26174-7bec-45db-b101-d7aae6facb21
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: sale_sk
 
 		annotation SummarizationSetBy = Automatic
@@ -84,7 +84,7 @@ table 'gold fct_sales'
 	column gross_sales
 		dataType: double
 		lineageTag: 71f6dc47-4d74-4b11-a3a6-60502784a67f
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: gross_sales
 
 		annotation SummarizationSetBy = Automatic
@@ -94,7 +94,7 @@ table 'gold fct_sales'
 	column quantity
 		dataType: double
 		lineageTag: 6d1d4dca-492c-49c9-a0da-113b5bc12c30
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: quantity
 
 		annotation SummarizationSetBy = Automatic

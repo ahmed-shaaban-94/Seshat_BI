@@ -278,6 +278,41 @@ def test_p2_flags_bad_subject(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_p2_local_fallback_scopes_to_current_commit_only(tmp_path: Path) -> None:
+    """Bare `retail check` (no --commit-range, no commit-msg) scans only the
+    current/incoming commit via DEFAULT_RANGE, so an aged-out non-conforming
+    subject one commit back does NOT trip the local gate (#112). Locks Option A:
+    a future widening of DEFAULT_RANGE back to a multi-commit window fails here."""
+    import dataclasses
+
+    repo = make_git_repo(tmp_path)
+    # HEAD~1 is non-conforming; HEAD is compliant. This mirrors the real repo,
+    # where a historical scoped subject sat behind a clean current commit.
+    subprocess.run(
+        [
+            "git",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "feat(046): scoped historical subject",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "feat: current compliant change"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    # Bare-fallback mode: neither commit_range nor commit_message is supplied, so
+    # rule_p2 falls back to DEFAULT_RANGE (HEAD~1..HEAD) -> only the compliant tip.
+    ctx = dataclasses.replace(context_for(repo), commit_range=None, commit_message=None)
+    assert list(rule_p2_commit_subjects(ctx)) == []
+
+
+@pytest.mark.unit
 def test_p2_validates_single_commit_message(tmp_path: Path) -> None:
     import dataclasses
 
