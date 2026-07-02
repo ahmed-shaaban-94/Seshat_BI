@@ -49,11 +49,15 @@ security plan for a FUTURE implementation PR. It writes no code and moves no fil
   data, not customer records. The exposure is **client identity + schema + column names
   + business logic** (e.g. `ezaby`, `insurance_no`, `personel_number`, segment
   rollups), NOT PII rows.
-- **No real DB host/credential is committed.** The only `ondigitalocean` strings in
-  tracked files are inside the **C2 gate's own regex** (`src/retail/rules/git_meta.py`)
-  — the guard that BLOCKS real hosts. The live DSN lives only in the gitignored `.env`.
-  So the security task is redacting *client-identifying content*, not rotating a leaked
-  secret.
+- **No credential/DSN is committed, BUT a real host IDENTIFIER is** (corrected after the
+  adversarial review). No password, no full DSN (PBIP uses `<your-db-host>`
+  placeholders). However the real DigitalOcean cluster id **`db-pgsql-fra1-29712`** + the
+  DB name **`ezaby_demo`** are committed in **7 tracked files**. This is host-identifying,
+  not a secret — and it evades BOTH guards: the C2 gate's regex is FQDN-only
+  (`*.db.ondigitalocean.com`) and never sees the bare cluster id; the first-draft
+  acceptance grep omitted it. So the redaction target + acceptance markers now include
+  the cluster id + `ezaby_demo` + bare `c086`. The security task is redacting
+  *client-identifying content (name + host id + schema)*, not rotating a leaked secret.
 - **History is 302 commits deep.** A history purge rewrites all 302 (breaks every
   commit hash, PR link, and any clone) — a heavyweight, irreversible-feeling operation.
   A current-tip redaction (remove/replace at HEAD) is cheap and reversible. This is the
@@ -96,10 +100,12 @@ data**. `retail init` bootstraps their repo; `profile`/`validate` work against T
 a training repo with someone's pharmacy data baked in. It is also the security outcome
 (no client data shipped).
 
-**Independent Test**: On the post-extraction repo, grep the tracked tree for the
-client/data markers (`ezaby`, `c086`, `insurance_no`, `personel_number`, segment
-rollups) → zero hits outside the C2 gate's own regex and generic placeholders. `retail
-check` + `retail kit-lint` still exit 0.
+**Independent Test**: On the post-extraction repo, grep the WHOLE tracked tree (incl.
+`powerbi/`, `reports/`, `assets/`) for the client/data markers (`c086`, `ezaby`,
+`ezaby_demo`, `db-pgsql-fra1-29712`, `insurance_no`, `personel_number`, `sales_c086`,
+segment rollups) → zero hits outside the C2 gate's own regex, `*.example`, and
+legitimately-historical `specs/`. `retail check` + `retail kit-lint` still exit 0, and
+`unzip -l` on the built wheel shows no `powerbi/`/`mappings/`/`warehouse/` paths.
 
 **Acceptance Scenarios**:
 
@@ -183,10 +189,18 @@ re-deciding.
   into exactly one of: **KEEP (tool/product)**, **SYNTHETIC (replace with non-client
   example)**, **ARCHIVE (move out of the product, recoverable)**, or **DELETE (drop; no
   value)**.
-- **FR-002**: The classification MUST cover at minimum: `src/retail/`, `.claude/skills/`,
-  `.seshat/`, `tests/`, `mappings/{c086,sales_c086,retail_store_sales}`,
-  `warehouse/{migrations,schema,gold}`, `pipelines/`,
-  `docs/worked-examples/*`, and any `docs/`/`specs/` C086 references.
+- **FR-002**: The classification MUST cover **every top-level tracked dir** (driven by
+  `git ls-files | awk -F/ 'NF>1{print $1}' | sort -u`), not a hand-picked subset — at
+  minimum: `src/retail/`, `.claude/skills/`, `.seshat/`, `tests/`,
+  `mappings/{c086,sales_c086,retail_store_sales}`, `warehouse/{migrations,schema,gold}`,
+  `pipelines/`, `docs/worked-examples/*`, any `docs/`/`specs/` C086 references, **`powerbi/`
+  (a FULL client BI model lives here — `c086 _sales.*` AND the generically-named
+  `Retailgold.*` which is the same c086 star), `reports/`, `assets/`, `themes/`,
+  `design/`, `checklists/`, `tools/`, top-level `skills/`.** A catch-all rule
+  (default KEEP unless a file matches the client-marker grep) MUST cover any dir not
+  named explicitly, so NO tracked artifact is unclassified (SC-001). (The `powerbi/`
+  omission was caught by the adversarial review — a generic dir name must never be
+  shipped on its name alone; content decides.)
 - **FR-003**: The spec MUST preserve the current proven behaviors — `retail
   init/profile/validate/check/kit-lint/scaffold` — as an explicit non-regression
   requirement, with the acceptance test (US2) that proves it.
