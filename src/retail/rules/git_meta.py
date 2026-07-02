@@ -227,11 +227,17 @@ _P2_TYPES = (
 )
 _BOT_PREFIX_RE = re.compile(r"^\[[A-Za-z0-9_-]+\] ")
 SUBJECT_RE = re.compile(r"^(?:" + "|".join(_P2_TYPES) + r"): .+")
-# Local-fallback range when no --commit-range is supplied. On a repo with fewer
-# than 20 commits git rejects HEAD~20; the guard below turns that into a clean
-# P2 ERROR finding (not a no-op). CI uses fetch-depth: 0 (full history) and
-# normally supplies an explicit --commit-range, so this fallback is local-only.
-DEFAULT_RANGE = "HEAD~20..HEAD"
+# Local-fallback range when neither --commit-range nor a commit-msg hook message
+# is supplied (a bare `retail check`). Scoped to the CURRENT/incoming commit only
+# (HEAD~1..HEAD) so a normal local check is green whenever the current change is
+# compliant, and is never tripped by aged-out non-conforming history (#112). On a
+# single-commit repo git rejects HEAD~1 (rc 128); the except (RuntimeError,
+# ValueError) branch below turns that into a clean P2 ERROR Finding (not a
+# traceback), exactly as the old HEAD~20 default did. CI supplies an explicit
+# --commit-range (merge-base(origin/main, HEAD)..HEAD) and the commit-msg hook
+# uses ctx.commit_message, so BOTH bypass this fallback -- new-commit P2
+# enforcement is unaffected.
+DEFAULT_RANGE = "HEAD~1..HEAD"
 
 
 @register("P2", "commit-message convention")
@@ -240,7 +246,7 @@ def rule_p2_commit_subjects(ctx: RuleContext) -> Iterable[Finding]:
     #   commit-msg-hook mode -> the single incoming message;
     #   CI mode             -> every subject in the supplied commit range,
     #                          used VERBATIM (e.g. "origin/main..HEAD");
-    #   local fallback       -> the last DEFAULT_RANGE commits.
+    #   local fallback       -> just the current/incoming commit (DEFAULT_RANGE).
     if ctx.commit_message is not None:
         subjects = [ctx.commit_message.splitlines()[0] if ctx.commit_message else ""]
     else:

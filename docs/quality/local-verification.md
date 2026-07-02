@@ -50,19 +50,18 @@ retail semantic-check --repo .
   clean).
 
 > [!NOTE]
-> **Known P2 finding on the current tree.** `retail check`'s P2 rule scans the
-> recent commit range (`HEAD~20..HEAD`) and currently flags two pre-existing
-> nonconforming commit subjects -- `Add agent compass and knowledge router (#48)`
-> and `Add BI DAX knowledge skill v0.2 (#42)` -- so on a clean checkout of `main`
-> the gate exits `1` for that reason. This is a recorded, known condition that
-> predates this release, not a fresh failure. Do not record `retail check` as
-> exiting cleanly while those two historical subjects are in range; the remaining
-> surfaces in the sequence above exit cleanly.
+> **Local P2 scope.** A bare `retail check` (no `--commit-range`) scopes its P2
+> commit-subject rule to the **current/incoming commit only** (`HEAD~1..HEAD`), so
+> on a compliant HEAD it exits cleanly and is **not** tripped by aged-out
+> nonconforming subjects further back in history. Run bare `retail check` for
+> day-to-day verification of the current change -- its exit code is authoritative
+> for what you are about to commit.
 >
-> `HEAD~20..HEAD` is the **local fallback** range only. CI passes an explicit
-> `--commit-range` (such as `origin/main..HEAD`), so the gate scopes to the PR's
-> own commits and is not tripped by these older subjects -- which is why the CI
-> `check` job can be green while a bare local `retail check` exits `1`.
+> CI and the commit-msg hook still enforce P2 on new commits: CI passes an
+> explicit `--commit-range` (`merge-base(origin/main, HEAD)..HEAD`), so it scopes
+> to the branch's own commits and will honestly flag any nonconforming subject in
+> that range; the commit-msg hook validates each incoming subject as it is
+> written. Neither path uses the local fallback range.
 
 ## 5. Optional DB / live validation path
 

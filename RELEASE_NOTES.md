@@ -82,6 +82,11 @@ retail semantic-check --repo .
 > cleanly. (`HEAD~20..HEAD` is the local fallback range; CI passes an explicit
 > `--commit-range`, so it scopes to the PR's own commits.) See
 > [`docs/quality/local-verification.md`](docs/quality/local-verification.md).
+>
+> **Update (#112):** the local fallback was later narrowed to `HEAD~1..HEAD`
+> (current commit only); a bare `retail check` on a compliant HEAD now exits
+> cleanly and no longer surfaces those aged-out subjects. CI/commit-msg P2
+> enforcement is unchanged. Note retained as the release-time record.
 
 A full local-verification checklist (including the optional DB/live path) is in
 [`docs/quality/local-verification.md`](docs/quality/local-verification.md).
