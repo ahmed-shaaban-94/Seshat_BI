@@ -104,7 +104,6 @@ acceptable in BI.
 
 ### Ends on
 
-The cleaning review checklist (`checklists/cleaning-review-checklist.md`) — **planned /
-not yet implemented in this seed**. Until it ships, end on the artifact defined above:
-produce the row-count ledger (PY-CN-036) and a cleaning verdict, and treat that as the
-endpoint.
+The cleaning review checklist (`checklists/cleaning-review-checklist.md`) -- walk it to a
+categorical cleaning verdict (CLEANING SOUND / OPEN FINDINGS / GRAIN VIOLATED / BLOCKED)
+and attach the row-count ledger (PY-CN-036). That checklist is the endpoint of this route.

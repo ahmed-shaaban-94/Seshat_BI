@@ -40,8 +40,9 @@ This PR ships:
 - **References** — `references/copyright-safety.md`, `references/id-conventions.md`,
   `references/source-map.md`, `references/retail-dataframe-schema.md`.
 - **Cleaning and standardization** — `knowledge/cleaning-and-standardization.md`
-  (string/category/currency/sentinel/dedup reasoning; ends on a row-count ledger and
-  verdict).
+  (string/category/currency/sentinel/dedup reasoning), ending on its terminal artifact
+  `checklists/cleaning-review-checklist.md` (a categorical cleaning verdict + row-count
+  ledger).
 - **Aggregation / grain checklist** — `checklists/aggregation-grain-checklist.md`
   (a standalone review artifact for groupby work).
 - **Analyzer rule candidates** — `patterns/analyzer-rule-candidates.json` (proposed
