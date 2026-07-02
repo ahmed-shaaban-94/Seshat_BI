@@ -1,5 +1,13 @@
 # Reconciliation Report -- `C086`
 
+> **SUPERSEDED (2026-07-02).** This live run validated the FIRST build only (the
+> 0001/0002 star: `fct_sales` with sales_amount/net_amount/tax/discount). That star
+> was replaced by migrations 0005/0006 (2 measures: gross_sales + quantity;
+> surrogate `sale_sk` PK); this report's PASS does NOT certify the current star,
+> whose live validation is PENDING (see
+> [`../sales_c086/reconciliation-report.md`](../sales_c086/reconciliation-report.md)).
+> Audit notes: [`./README.md`](./README.md).
+
 > **Filled instance.** The live acceptance run for C086, back-authored from the
 > read-only validation of 2026-06-24 (recorded in
 > `../../docs/c086-adr0002-compliance.md` SecLIVE). It is the last of the five

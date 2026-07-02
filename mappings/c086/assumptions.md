@@ -1,5 +1,9 @@
 # Assumptions -- `C086`
 
+> **SUPERSEDED (2026-07-02).** Historical artifact of the FIRST build (0001/0002).
+> The current approved assumptions are in [`mappings/sales_c086/`](../sales_c086/)
+> (RC9/RC2/RC6 deviations recorded there). See [`./README.md`](./README.md).
+
 > **Filled instance.** Per-table record of which ADR 0002 cleaning/modeling defaults
 > (`RC1`-`RC16`) C086 adopted as-is versus deviated from. C086 adopted **16/16 with 0
 > deviations** after live DB validation. This is the engineering expression of the

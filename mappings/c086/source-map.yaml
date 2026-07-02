@@ -1,3 +1,11 @@
+# *** SUPERSEDED (2026-07-02) *************************************************
+# Historical artifact of the FIRST c086 build (migrations 0001/0002). The
+# current APPROVED map for table_id sales_c086 is mappings/sales_c086/
+# source-map.yaml (built by migrations 0005/0006). Where the two disagree (PK,
+# invoice-column identity, kept measures, rollup), the sales_c086 map WINS.
+# Known inaccuracies in this file: see ./README.md (adversarial audit notes).
+# Do not build from this map. The metrics/ subfolder is NOT superseded.
+# *****************************************************************************
 # =============================================================================
 # source-map.yaml  --  C086 (El Ezaby pharmacy sales) FILLED INSTANCE
 # =============================================================================
@@ -32,6 +40,10 @@ meta:
   primary_key:
     - "invoice_no"
     - "line_no"
+  # AUDIT NOTE (2026-07-02): the value below is NOT a human approval -- the map
+  # was back-authored FROM the SQL it was meant to gate (gate order inverted),
+  # and no approvals[] record exists for it. The successor map carries the real
+  # recorded review (mappings/sales_c086/, approved 2026-07-02).
   reviewed_by: "back-authored from committed 0001/0002 (live-validated)"
   reviewed_on: "2026-06-24"
 
@@ -60,8 +72,12 @@ defaults:
   deviations: []                      # none -- C086 adopted 16/16
 
 # -----------------------------------------------------------------------------
-# columns -- one entry per SOURCE column (30 total: 28 mapped + 2 PII dropped).
-# Every source column appears, including dropped ones.
+# columns -- one entry per SOURCE column the FIRST build considered (30 total:
+# 28 mapped + 2 PII dropped).
+# AUDIT CORRECTION (2026-07-02): the original claim "every source column
+# appears" was FALSE -- the live profile records 48 landed columns; 16 business
+# columns never received a keep/drop decision in this map (list in ./README.md).
+# The successor map (mappings/sales_c086/) decides all 48.
 # -----------------------------------------------------------------------------
 columns:
 
@@ -337,7 +353,7 @@ columns:
     pii: true                            # pii:true REQUIRES decision: drop
     gold_placement: "dropped"
 
-  - source_name: "insurance_phone"
+  - source_name: "insurance_phone"   # AUDIT NOTE (2026-07-02): no such landed column -- the actual source column is insurance_tel (mappings/sales_c086/source-profile.md)
     decision: "drop"
     reason: "patient health PII; dropped before BI layer (RC4, irreversible once cached)"
     rename_to: null

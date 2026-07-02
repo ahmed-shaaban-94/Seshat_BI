@@ -1,5 +1,11 @@
 # Source Profile -- `C086`
 
+> **SUPERSEDED (2026-07-02).** Historical artifact of the FIRST build (0001/0002);
+> it profiles only the columns that build considered. The full live profile of the
+> same bronze table (48 landed columns) is
+> [`../sales_c086/source-profile.md`](../sales_c086/source-profile.md).
+> See [`./README.md`](./README.md).
+
 > **Filled instance** (back-authored from the committed, live-validated warehouse:
 > `warehouse/migrations/0001_create_silver_sales_c086.sql`,
 > `0002_create_gold_star.sql`, and `docs/c086-adr0002-compliance.md`). This is the

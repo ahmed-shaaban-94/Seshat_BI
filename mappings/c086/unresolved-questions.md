@@ -1,5 +1,10 @@
 # Unresolved questions -- `C086`
 
+> **SUPERSEDED (2026-07-02).** Historical artifact of the FIRST build (0001/0002).
+> The current approved map is [`mappings/sales_c086/`](../sales_c086/) (built by
+> 0005/0006). See [`./README.md`](./README.md) for the audit notes on this
+> folder's known inaccuracies.
+
 > **Filled instance** (back-authored from the committed, live-validated warehouse).
 > ASCII only. Links are `../../docs/...` (this file sits two levels deep under
 > `mappings/c086/`).
@@ -26,6 +31,11 @@
 - **Maps to playbook phases:** Phase 2 (decision points) + Phase 4 (review gate)
 - **Gate status:** `CLEARED` -- 16/16 ADR 0002 defaults pass, validated live
   (2026-06-24). Zero open rows; all judgment calls resolved (closed log below).
+- **AUDIT NOTE (2026-07-02):** this CLEARED rests on mechanical live validation,
+  NOT on a named-human approval -- no resolution below records WHO decided, and no
+  approvals[] entry exists for this map (the gate order was inverted: the map was
+  back-authored from the SQL). Kept as history; the successor map
+  (`mappings/sales_c086/`) carries a real recorded approval.
 
 ---
 
@@ -46,6 +56,11 @@ review trail), each flipped to `answered` with its resolution.
 | Q6 | Is the product hierarchy a clean single-parent tree? | A non-tree forced into one parent destroys real overlap (RC12). | analyst | RC12: flat denormalized levels, not a snowflake | `answered` | Not a clean tree -- multi-parent overlaps exist -> kept flat in one `dim_product`; overlaps preserved. |
 
 > Answered rows are kept (not deleted) so review sees the audit trail.
+>
+> **AUDIT NOTE (2026-07-02) on Q4:** the successor map contradicts this resolution --
+> `mappings/sales_c086/` records NO analyst-supplied business_segment rollup (RC11:
+> "none requested; none invented") and migration 0005 builds none. The rollup
+> described here existed only in the superseded 0001/0002 build.
 
 ### Categories to prompt for (do not leave a category unconsidered)
 
