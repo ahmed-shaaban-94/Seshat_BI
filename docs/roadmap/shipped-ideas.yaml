@@ -154,3 +154,27 @@ J1:
   status: shipped
   pr_sha: "PR #123 (spec 063 approval-evidence-pack, roadmap F035) .claude/skills/approval-evidence-pack/SKILL.md + templates/approval-evidence-pack.md; docs/skill/template only, no rule/no code"
   f_row: none
+
+# --- 2026-07-02 deferred-ADOPT resolution wave (H1, H3 built; E4 dropped; H4 held) ---
+# The 4 ideas the owner personally triaged OUT of the ADOPT batch (E4/H1/H3/H4) were
+# re-examined after the owner ratified "all in my own name". Evidence (per-idea
+# investigation) settled each: H1 + H3 cleared eligibility and shipped as new rules;
+# E4 was a confirmed duplicate; H4 stays owner-owned. H1 == snapshot short-code H1,
+# H3 == snapshot short-code H3.
+H1:
+  status: shipped
+  pr_sha: "PR #133 (spec 068 additivity-consistency-rule) @register AD1 src/retail/rules/additivity_consistency.py; registry 45->46"
+  f_row: none
+H3:
+  status: shipped
+  pr_sha: "PR #134 (spec 069 answerability-reconciler) @register AQ1 src/retail/rules/answerability_reconciler.py; registry 46->47; also normalized customer.md placeholder --> em-dash"
+  f_row: none
+E4:
+  status: settled
+  pr_sha: "DROPPED 2026-07-02 -- duplicate/superseded: DL1 (#119) + DL2 (#124) already ship the adversarial good/bad fixture corpora + fail-closed exact-locator/severity/count tests; E4's headline red/green spine is already delivered. Only sliver (substring->full-message golden pinning) is a test-style refinement, not a new gate. Meta-completeness role belongs to E1 (#121)."
+  f_row: none
+# H4 (contract-sufficiency card, spec branch 067-contract-sufficiency-card) is NOT
+# ledgered: it is functionally distinct from shipped F8 but its own FR-016 leaves
+# "separate template vs fold into F8" as an OPEN human packaging ruling (Principle V).
+# It is deferred pending that owner ruling -- neither shipped nor settled-rejected, so
+# it gets no key. Add an `H4:` row only when the owner rules and it ships (or is settled).
