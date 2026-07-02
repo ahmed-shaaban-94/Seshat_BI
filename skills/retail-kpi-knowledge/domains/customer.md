@@ -8,10 +8,10 @@ KPI below stays Planned until a human owner confirms the identity key and grain.
 
 | KPI | Contract | Status |
 |-----|----------|--------|
-| Customer Retention Rate | -- | Planned (needs confirmed customer identity / grain) |
-| Purchase Frequency | -- | Planned (needs confirmed customer identity / grain) |
-| Customer Lifetime Value (CLV) | -- | Planned (needs identity + CLV horizon ruling) |
-| New-vs-Returning Customer split | -- | Planned (needs identity + first-purchase anchor) |
+| Customer Retention Rate | — | Planned (needs confirmed customer identity / grain) |
+| Purchase Frequency | — | Planned (needs confirmed customer identity / grain) |
+| Customer Lifetime Value (CLV) | — | Planned (needs identity + CLV horizon ruling) |
+| New-vs-Returning Customer split | — | Planned (needs identity + first-purchase anchor) |
 
 No row is Seeded: a customer contract cannot be seeded before the identity/grain
 ruling is made (see Owner ruling triggers below).
@@ -23,10 +23,10 @@ planned marker. A question never implies a formula and never invents a contract.
 
 | Decision question | Routes to | Status |
 |-------------------|-----------|--------|
-| What share of customers return to buy again? | -- | Planned (Customer Retention Rate) |
-| How often does a customer purchase in a period? | -- | Planned (Purchase Frequency) |
-| What is a customer worth over their lifetime? | -- | Planned (Customer Lifetime Value) |
-| How much of our revenue is new vs returning customers? | -- | Planned (New-vs-Returning split) |
+| What share of customers return to buy again? | — | Planned (Customer Retention Rate) |
+| How often does a customer purchase in a period? | — | Planned (Purchase Frequency) |
+| What is a customer worth over their lifetime? | — | Planned (Customer Lifetime Value) |
+| How much of our revenue is new vs returning customers? | — | Planned (New-vs-Returning split) |
 
 ## Key ambiguities (see knowledge/kpi-ambiguities.md)
 
