@@ -273,9 +273,42 @@ and confirm any large-data / distributed concern is a one-line handoff to
 
 ### Session 2026-07-02
 
-The following are RESERVED for a human ratifier and are intentionally NOT
-answered by the planning agent (Principle V analog -- definitional / off-spine
-calls the ledger and layer never self-resolve):
+#### Resolved (advisor-driven, conservative defaults)
+
+These are scope / risk-acceptance calls with a reasonable default; the advisor
+resolved them against the constitution (Static-First, YAGNI, hard rules) and
+integrated them into the requirements. They are reversible edits.
+
+- **C1 -- Optional pattern files: in or out of scope?**
+  **Answer: OUT. Land ONLY the cleaning-review checklist plus the route flip.**
+  Reasoning: the idea's first step says "checklist + 1-2 pattern files", but the
+  concrete dead-end I2 exists to close is a single one -- the cleaning route
+  ending on a planned checklist. Pattern JSON files (`patterns/*.json`) address a
+  DIFFERENT surface (proposed static-analysis rules, already staged in
+  `analyzer-rule-candidates.json`) and would broaden scope past the one advertised
+  route, violating YAGNI ("add the seam, not the implementation"). The minimal fix
+  fully closes the dead-end. Reversible: easy -- a human can request pattern files
+  as a separate follow-up. (Recorded in Assumptions; FR-011 already forbids
+  flipping other routes.)
+
+- **C2 -- Landing the route flip WITHOUT the I1 guard: acceptable?**
+  **Answer: YES, proceed. The flip is a hand-edit, unenforced until (if) I1 ships,
+  and that is coherent.** Reasoning: I2 is the CONTENT fix and I1 would be the
+  GUARD; the grounding confirms I1 is not shipped and I2 does not depend on it. A
+  landed-and-correct checklist with a hand-flipped route is strictly better than
+  the current honest dead-end. The residual risk is only that a FUTURE stale edit
+  could re-introduce drift with no automated catch -- exactly the gap a future I1
+  would cover. This is a pre-existing condition of the whole seed (every route
+  status is hand-maintained today), not a new risk I2 introduces. Reversible:
+  easy. Mitigation baked into the spec: SC-002 + FR-008..FR-011 make the flip
+  complete and bounded so there is nothing stale to catch at landing time.
+
+#### Deferred to human ratifier (Principle V -- NOT answered here)
+
+The following are definitional / off-spine calls the ledger and layer never
+self-resolve. They are recorded, left open, and MUST be ruled by a human before
+or at ratification. They do NOT block planning of the docs-only scope (the
+checklist's SHAPE and structure are fully plannable without them).
 
 - **Cleaning-verdict vocabulary** (FR-006): the exact canonical categorical
   status set for the cleaning-review checklist (e.g. a "sound" state, an
@@ -286,10 +319,3 @@ calls the ledger and layer never self-resolve):
 - **Roadmap-stage mapping** (FR-016): whether I2 advances any roadmap F-row or
   stays off-spine as an idea-bank content-completion item (`f_row: none`). The
   ledger never self-assigns an F-row (Principle V / IL1 contract).
-- **Optional pattern files**: whether the human wants ONLY the checklist (minimal,
-  closes the exact dead-end) or ALSO 1-2 `patterns/*.json` files. Recommended
-  default recorded in Assumptions is checklist-only; confirming the pattern-file
-  scope is a human call to avoid scope creep beyond the single advertised route.
-- **Unenforced-flip risk**: whether landing I2's route flip WITHOUT the I1 guard
-  (the flip is a hand-edit, unenforced until I1 ships) is a stale-marker risk the
-  human is comfortable accepting.
