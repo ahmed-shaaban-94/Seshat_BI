@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import retail.rules  # noqa: F401  (import for side effects: fires every @register)
 
 from .registry import all_rules
 from .runner import build_context, run, run_json
+
+if TYPE_CHECKING:
+    # Type-only imports: kept behind TYPE_CHECKING so the driver-free / lazy-import
+    # discipline of the runtime handlers is preserved (these modules are imported
+    # lazily inside the handlers, never at module scope).
+    from .validate import QueryRunner
+    from .validate_targets import ValidationTargets
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -304,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _run_manifest(args) -> int:
+def _run_manifest(args: argparse.Namespace) -> int:
     """Regenerate the rule-registry snapshot manifest from the live registry."""
     from .manifest import MANIFEST_REL_PATH, write_manifest
 
@@ -313,7 +322,7 @@ def _run_manifest(args) -> int:
     return 0
 
 
-def _run_severity_posture(args) -> int:
+def _run_severity_posture(args: argparse.Namespace) -> int:
     """Regenerate the severity-posture golden record from live observation."""
     from .severity_posture import RECORD_REL_PATH, write
 
@@ -322,7 +331,7 @@ def _run_severity_posture(args) -> int:
     return 0
 
 
-def _run_scaffold(args) -> int:
+def _run_scaffold(args: argparse.Namespace) -> int:
     """Author a new rule's boilerplate, or --doctor the five wiring places.
 
     Author mode (default when --id + --title are given): writes exactly three
@@ -373,7 +382,7 @@ def _run_scaffold(args) -> int:
     return 0
 
 
-def _run_init(args) -> int:
+def _run_init(args: argparse.Namespace) -> int:
     """Bootstrap the kit substrate (feature 070). SUBSTRATE-WRITING ONLY.
 
     Writes the compass projection + manifests + the fenced SESHAT-KIT regions, then
@@ -409,7 +418,7 @@ def _run_init(args) -> int:
     return 0
 
 
-def _run_kit_lint(args) -> int:
+def _run_kit_lint(args: argparse.Namespace) -> int:
     """Fail loud on compass projection drift (feature 072). Read-only.
 
     Standalone step, NOT a `retail check` rule -- imported LAZILY (it pulls in the
@@ -444,7 +453,7 @@ def _ensure_driver() -> bool:
     return True
 
 
-def _make_runner(dsn: str):
+def _make_runner(dsn: str) -> QueryRunner:
     """Build a real (lazy psycopg2) QueryRunner. Indirected through cli so tests
     can monkeypatch it with a fake -- no real DB is touched in the suite."""
     from .validate import make_psycopg2_runner
@@ -452,7 +461,7 @@ def _make_runner(dsn: str):
     return make_psycopg2_runner(dsn)
 
 
-def _load_targets(source_map: str):
+def _load_targets(source_map: str) -> ValidationTargets:
     """Load per-table validate targets from a source-map.yaml. Indirected (and
     lazy-importing the YAML loader) so the driver-free import path is preserved
     and tests can monkeypatch it."""
@@ -495,7 +504,7 @@ def _redact_dsn(message: object, dsn: str) -> str:
     return text
 
 
-def _run_validate(args) -> int:
+def _run_validate(args: argparse.Namespace) -> int:
     """Run the LIVE validators against a real DB.
 
     The psycopg2 import is LAZY (via ``_ensure_driver`` / ``_make_runner``, never
@@ -590,7 +599,7 @@ def _run_validate(args) -> int:
     return 0
 
 
-def _run_semantic_check(args) -> int:
+def _run_semantic_check(args: argparse.Namespace) -> int:
     """Run the L3 contract<->DAX drift gate.
 
     Lazy imports (yaml via load_definition, plus semantic + metric_drift, plus the
@@ -675,7 +684,7 @@ def _run_semantic_check(args) -> int:
     return exit_code
 
 
-def _filter_to_sql(filters, quote) -> str | None:
+def _filter_to_sql(filters: object, quote: Callable[..., str]) -> str | None:
     """Translate an L3 ``filter`` list into a SQL WHERE predicate (AND-joined).
 
     Reuses the L3 recognized-op vocabulary (``is_not_null`` / ``is_true``); each
@@ -704,7 +713,7 @@ def _filter_to_sql(filters, quote) -> str | None:
     return " AND ".join(parts)
 
 
-def _run_value_check(args) -> int:
+def _run_value_check(args: argparse.Namespace) -> int:
     """Run the L4 value proxy: recompute each contract's approved value live.
 
     Lazy psycopg2 (via ``_ensure_driver`` / ``_make_runner``, reused from the
@@ -868,7 +877,7 @@ def _run_value_check(args) -> int:
     return 0
 
 
-def _run_generate(args) -> int:
+def _run_generate(args: argparse.Namespace) -> int:
     """Generate a verified DAX measure from a metric contract YAML.
 
     Lazy imports (dax_gen, yaml via load_contract) live INSIDE this handler so
