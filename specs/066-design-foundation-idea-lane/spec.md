@@ -268,3 +268,38 @@ names the design-foundation lane and points to the backlog location.
   readiness stage. Whether it is correctly off-spine (like IL1/SC2, earning
   `f_row: none`) or should be given an F-row at all is a human decision. This spec
   self-assigns none.
+
+### Session 2026-07-02
+
+Ordinary (non-Principle-V) ambiguities resolved by the planning agent acting as
+the advisor against the constitution, the IL1 contract, and the roadmap hard
+rules. The three HUMAN-OWNED items above are Principle-V carve-outs and remain
+open -- they are NOT answered here.
+
+- **Q1 (scope: ADOPT vs HORIZON split)**: Does this spec scope the basic lane only
+  (docs + small JS), explicitly excluding any static-check rule module and any
+  automated ledger reconciler?
+  - **Recommended answer**: YES -- scope ONLY the basic lane. The ADOPTed idea is
+    the docs+JS seam; the structured design lint-backlog and the ledger-reconcile
+    rule are the explicitly-deferred HORIZON extension.
+  - **Reasoning**: The idea's own reviewers ADOPT the basic lane now and defer the
+    structured variant. Adding a rule module would also collide with the
+    "add the seam, not the implementation" YAGNI discipline and would touch the
+    5-place rule-wiring surface, expanding scope well past the idea. FR-009 already
+    fixes this boundary; this clarification confirms it.
+  - **Reversible**: easy (a HORIZON follow-on spec can add the rule later).
+
+- **Q2 (ledger action now vs shape-only)**: For User Story 2, does this feature add
+  a concrete design-layer entry to `shipped-ideas.yaml` now, or only ensure the
+  existing entry shape can carry a design-layer ship when one occurs?
+  - **Recommended answer**: SHAPE-ONLY -- do not add a design-layer entry now. No
+    design-foundation idea has shipped yet, and the ledger is human-curated and
+    engine-read-only, so the agent must not fabricate a shipped row. The feature
+    ensures the existing `{ status, pr_sha, f_row }` shape accommodates a
+    design-layer key when a human records a real ship.
+  - **Reasoning**: FR-004 keeps the ledger human-curated and engine-read-only;
+    inventing a shipped entry with no real PR/SHA would violate that contract and
+    fabricate evidence. This keeps the change additive-and-inert until a genuine
+    design ship exists.
+  - **Reversible**: easy (a human appends a real entry the moment a design idea
+    ships).
