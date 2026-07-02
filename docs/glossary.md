@@ -98,7 +98,7 @@ This catalog is the **single source of truth for `retail check`'s rule count.**
 The **live registry in `src/retail/rules/` is authoritative**; the table below
 mirrors it and the `retail-govern` skill maps each id to its fix.
 
-> **Currently 47 rules in 16 families** (S, D, C, R, RS, G, P, A, B, PP, SC, DF, SL, AL, AD, AQ).
+> **Currently 47 rules in 17 families** (S, D, C, R, RS, G, P, A, B, PP, SC, DF, SL, AL, AD, AQ, DL).
 > When a rule is added or removed, update the table and this line **together** — and
 > elsewhere refer to "the static `retail check` gate" by name rather than restating a
 > number. Restated counts are exactly what drifted before (see
@@ -123,6 +123,7 @@ mirrors it and the `retail-govern` skill maps each id to its fix.
 | **AL** | assumption ledger | `AL1` a metric contract with an unresolved assumption (blocked + reasons) must not also carry a settled gold binding · `AL2` contracts on one gold table record no contradictory decided ambiguity rulings |
 | **AD** | additivity consistency | `AD1` a metric's additivity classification is not composed illegally with its lineage parents (no direct sum of a non-additive/semi-additive metric); absent/ambiguous class is ERRORed, never inferred |
 | **AQ** | answerability | `AQ1` every domain decision-question route resolves to an existing contract (Seeded) or is honestly marked Planned with the placeholder glyph; dangling Seeded routes and stale Planned markers ERROR, ambiguous rows WARN |
+| **DL** | design-lint (Power BI visual surfaces) | `DL1` theme JSON purity -- a theme file carries styling DEFAULTS only (surface 3, `docs/powerbi/theme-json.md`) · `DL2` background-spec purity -- a page background carries STATIC STRUCTURE ONLY, no dynamic/data-bound content (surface 2) |
 
 ## Project shorthand
 
