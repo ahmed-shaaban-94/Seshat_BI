@@ -19,7 +19,7 @@ meta:
   grain: "one row = one invoice line item"        # 249,106 bronze -> 246,916 silver (post-filter)
   # PRIMARY KEY: a GENERATED surrogate over the post-filter silver rows. The natural
   # key (billing_document, item_no) is retained in SILVER ONLY for the RC2 uniqueness
-  # /dedup proof, and is NOT exposed to gold (decision: surrogate-PK pattern, D4).
+  # /dedup proof, and is NOT exposed to gold (decision: surrogate-PK pattern, DEC-4).
   primary_key:
     - "sale_sk"                                    # generated IDENTITY 1..246,916 (post-filter)
   natural_key_silver_only:                         # the dedup proof; hidden from gold
@@ -110,10 +110,10 @@ columns:
     gold_placement: "dim:dim_product.segment"
   - source_name: "division"
     decision: "keep"
-    reason: "product division; ALSO drives the junk-row filter (see row_filters -- the blank-division filter must run PRE-sentinel, D12)"
+    reason: "product division; ALSO drives the junk-row filter (see row_filters -- the blank-division filter must run PRE-sentinel, DEC-12)"
     rename_to: "division"
     silver_type: "text"
-    missing_policy: "sentinel:'UNCLASSIFIED'"      # 3 blanks; filter on blanks runs BEFORE this substitution (D12)
+    missing_policy: "sentinel:'UNCLASSIFIED'"      # 3 blanks; filter on blanks runs BEFORE this substitution (DEC-12)
     pii: false
     gold_placement: "dim:dim_product.division"
   - source_name: "item_cluster"
@@ -256,7 +256,7 @@ columns:
   # --- natural key: SILVER-ONLY (the RC2 uniqueness proof; NOT exposed to gold) ---
   - source_name: "billing_document"
     decision: "keep"
-    reason: "invoice id; retained in SILVER ONLY as half the natural-key uniqueness proof (D4). Not in gold."
+    reason: "invoice id; retained in SILVER ONLY as half the natural-key uniqueness proof (DEC-4). Not in gold."
     rename_to: "invoice_no"
     silver_type: "text"
     missing_policy: "null"
@@ -468,7 +468,7 @@ columns:
     gold_placement: "dropped"
 
 # -----------------------------------------------------------------------------
-# row_filters (Phase C) -- applied bronze->silver. ORDERING (D12): the blank-
+# row_filters (Phase C) -- applied bronze->silver. ORDERING (DEC-12): the blank-
 # division filter targets a BLANK and MUST evaluate PRE-sentinel (before the
 # division 'UNCLASSIFIED' substitution above), else trim(division)='' matches 0
 # rows and the 3 blank rows survive. Implement: filter on raw blanks first.
@@ -478,7 +478,7 @@ row_filters:
     - name: "junk_division"
       rule: "drop where upper(trim(division)) IN ('AUX','ARCHIVE','EL EZABY SERVICES') OR trim(division)=''"
       rows_dropped: 513
-      pre_sentinel: true                            # D12: must run before division sentinel substitution
+      pre_sentinel: true                            # DEC-12: must run before division sentinel substitution
     - name: "zero_value_line"
       rule: "drop where quantity::numeric = 0 AND gross_sales::numeric = 0"
       rows_dropped: 1680

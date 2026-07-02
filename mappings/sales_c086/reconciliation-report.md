@@ -54,7 +54,7 @@ filters remove 2,190 rows (see below). Only the 2 KEPT measures are tracked
 | **net dropped** | 513 + 1,680 - 3 = **2,190** |
 | **Expected silver row count** | **246,916** (= 249,106 - 2,190) |
 
-> ORDERING NOTE (D12): the junk-division filter targets blanks (`trim(division)=''`) and
+> ORDERING NOTE (DEC-12): the junk-division filter targets blanks (`trim(division)=''`) and
 > MUST run before the `Division` sentinel substitution, or the 3 blank-division rows
 > (none of which are zero-value) survive and silver would be 246,919, not 246,916.
 

@@ -48,8 +48,9 @@ _APPROVAL_REQUIRED: frozenset[str] = frozenset(
 # A source_ready block carrying one of these (normalized) source_kind values is a FILE
 # source, whose pass additionally requires an owner encoding-confirmation (a
 # source_ready approval). A DB source omits source_kind (or says db-table), so this
-# leaves every existing table source unaffected. Extension aliases map to the canonical
-# kind so the most natural labels (xlsx/xls) do not slip the gate.
+# leaves every existing table source unaffected. Extension aliases map the OOXML Excel
+# labels (xlsx/xlsm) to the canonical kind so those natural labels do not slip the
+# gate; legacy .xls is deliberately NOT aliased (see the note below).
 _FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
 _DB_SOURCE_KINDS: frozenset[str] = frozenset({"db-table", "db_table", "table", "db"})
 # Only OOXML Excel extensions alias to 'excel' -- openpyxl reads .xlsx/.xlsm, NOT the
@@ -77,11 +78,11 @@ def _iter_status_files(ctx: RuleContext) -> list[str]:
     ]
 
 
-def _as_list(value) -> list:
+def _as_list(value: object) -> list:
     return value if isinstance(value, list) else []
 
 
-def _stage_status(stage_block) -> str | None:
+def _stage_status(stage_block: object) -> str | None:
     if isinstance(stage_block, dict):
         status = stage_block.get("status")
         if isinstance(status, str):
@@ -89,12 +90,15 @@ def _stage_status(stage_block) -> str | None:
     return None
 
 
-def _source_kind(stage_block) -> str | None:
+def _source_kind(stage_block: object) -> str | None:
     """The NORMALIZED ``source_kind`` a source_ready block may declare. Case- and
-    whitespace-insensitive, with extension aliases (xlsx/xls/xlsm -> excel), so the
+    whitespace-insensitive, with OOXML extension aliases (xlsx/xlsm -> excel), so the
     gate cannot be slipped by a natural label like 'CSV', 'Excel ', or 'xlsx'
-    (adversarial re-review: a case-sensitive frozenset let those bypass H3). Absent ->
-    None (a DB source: the existing, unaffected default)."""
+    (adversarial re-review: a case-sensitive frozenset let those bypass H3). Legacy
+    '.xls' is deliberately NOT aliased -- openpyxl cannot read BIFF .xls, so it hits
+    the 'unrecognized source_kind' finding (the correct 'convert to .xlsx or defer'
+    signal), which the test suite pins. Absent -> None (a DB source: the existing,
+    unaffected default)."""
     if isinstance(stage_block, dict):
         kind = stage_block.get("source_kind")
         if isinstance(kind, str):
@@ -239,9 +243,10 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
                         _finding(
                             f"stage 'source_ready' has unrecognized source_kind "
                             f"{kind!r} -- use a file kind "
-                            f"({sorted(_FILE_SOURCE_KINDS)} / xlsx / xls) or a DB kind "
-                            f"({sorted(_DB_SOURCE_KINDS)}); an unknown kind must not "
-                            "silently skip the file-source encoding gate",
+                            f"({sorted(_FILE_SOURCE_KINDS)}; xlsx/xlsm alias to excel; "
+                            f"legacy .xls is unsupported -- convert to .xlsx) or a DB "
+                            f"kind ({sorted(_DB_SOURCE_KINDS)}); an unknown kind must "
+                            "not silently skip the file-source encoding gate",
                             loc,
                         )
                     )
