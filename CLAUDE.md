@@ -36,5 +36,5 @@ unless explicitly requested. Add the seam, not the implementation.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/048-live-surface-import-boundary-guard/plan.md`
+`specs/070-retail-init-bootstrap/plan.md`
 <!-- SPECKIT END -->
