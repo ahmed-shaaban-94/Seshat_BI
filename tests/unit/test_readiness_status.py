@@ -221,3 +221,37 @@ def test_db_source_pass_needs_no_source_approval(tmp_path: Path) -> None:
 
 def _messages_or_empty(ctx: RuleContext) -> list[str]:
     return [f.message for f in check_readiness_status_consistency(ctx)]
+
+
+def test_file_source_kind_case_and_extension_variants_still_gated(
+    tmp_path: Path,
+) -> None:
+    """Adversarial re-review H3 bypass: a natural label like 'CSV', 'Excel', 'xlsx',
+    'xls', or a trailing space must NOT slip the gate. Each is a file source and, with
+    no source_ready approval, must still fail."""
+    for variant in ("CSV", "Csv", "csv ", "Excel", "EXCEL", "xlsx", "xls", "xlsm"):
+        yaml_text = _file_source_yaml(kind=variant, with_source_approval=False)
+        messages = _messages(_ctx(tmp_path, yaml_text))
+        assert any(
+            "source_ready" in m and "file source" in m for m in messages
+        ), f"variant {variant!r} bypassed the file-source gate"
+
+
+def test_unknown_source_kind_fails_loud(tmp_path: Path) -> None:
+    """An unrecognized source_kind (typo / unknown) must fail loud, not silently fall
+    through to the DB (unaffected) path and skip the encoding gate."""
+    for bogus in ("cvs", "spreadsheet", "parquet"):
+        messages = _messages(
+            _ctx(tmp_path, _file_source_yaml(kind=bogus, with_source_approval=False))
+        )
+        assert any(
+            "unrecognized source_kind" in m for m in messages
+        ), f"bogus source_kind {bogus!r} did not fail loud"
+
+
+def test_db_source_kind_explicit_needs_no_source_approval(tmp_path: Path) -> None:
+    """An explicit DB source_kind ('db-table') is NOT a file source -> no source_ready
+    approval required, and not flagged unrecognized."""
+    ctx = _ctx(tmp_path, _file_source_yaml(kind="db-table", with_source_approval=False))
+    messages = [m for m in _messages_or_empty(ctx) if "source_ready" in m]
+    assert messages == []

@@ -168,12 +168,22 @@ def profile_file(
     ragged_row_count = 0
 
     for row in reader.rows():
+        # SHARED blank-row skip (reader-agnostic -- adversarial re-review H1). A wholly
+        # empty row is a formatting artifact (a CSV blank line, an Excel interior blank
+        # export row), NOT a data row: counting it would inflate row_count, fabricate
+        # missingness on every column, and flip a unique-PK proof to not-unique. This
+        # lives HERE in the shared math, not in one reader, so EVERY reader (CSV, Excel,
+        # the canned test reader) gets it identically. It is distinct from a ragged
+        # short row, which has at least one non-empty cell and still counts.
+        if not row or all(str(c).strip() == "" for c in row):
+            continue
         row_count += 1
         # A short/long row (ragged file) is a real defect and the signature of a
         # delimiter/quote mismatch (PY-CN-083). Normalize to the header width so
         # profiling completes rather than crashing mid-file -- a short row is padded
         # (its gap reads as missing), a long row is truncated -- but COUNT it either
-        # way so the drop/pad is surfaced as a finding, never silent.
+        # way (ragged_row_count) so the drop/pad is surfaced as a finding, never silent.
+        # Readers MUST hand over raw rows (no pre-truncation) or this signal is lost.
         if len(row) != n_cols:
             ragged_row_count += 1
         cells = (
@@ -279,9 +289,11 @@ def make_excel_reader(path: str, *, sheet: str, header_row: int = 0) -> FrameRea
     - Trailing all-empty rows from an overshot stored dimension (styled/cleared cells
       below the data) are TRIMMED -- otherwise they inflate row_count and fabricate
       missingness with no ragged signal (H2).
-    - Trailing all-empty header cells from a stray far-column value are right-stripped
-      before validation, so a leftover note in a far cell does not crash a valid sheet
-      (M2).
+    - A stray far-column value on a DATA row pads the header with trailing '' (openpyxl
+      pads every row to max_column); those trailing header blanks are right-stripped so
+      the note does not invent phantom header columns (M2). A stray ON the header row
+      leaves an interior blank that is a genuinely misread header -- _validate_columns
+      raises, pointing at header-row detection (the correct fix, not silence).
     - A formula cell with NO cached value (a workbook not last-saved by Excel) reads as
       None under data_only=True; rather than silently profiling a populated computed
       column as 100% missing (M1), we RAISE so the caller records a caveat and reads
@@ -343,15 +355,29 @@ def make_excel_reader(path: str, *, sheet: str, header_row: int = 0) -> FrameRea
     while all_rows and _all_empty(all_rows[-1]):
         all_rows.pop()
 
-    # M2: right-strip trailing empty header cells (a stray far-column value widened
-    # max_column and padded the header with ''). Trim to the last non-empty header cell.
+    # M2: right-strip trailing empty header cells. openpyxl read_only pads EVERY row to
+    # the sheet's max_column, so a stray value in a far cell on a DATA row widens the
+    # header with trailing ''. Strip those so a leftover note on a data row does not
+    # invent phantom header columns. (A non-empty stray ON the header row leaves an
+    # interior blank that this cannot reach -- that is a genuinely misread header and
+    # _validate_columns correctly raises; the fix is header-row detection, not silence.)
     raw_header = list(all_rows[header_row]) if header_row < len(all_rows) else []
     while raw_header and str(raw_header[-1]).strip() == "":
         raw_header.pop()
     header = tuple(raw_header)
-    width = len(header)
 
-    data_rows = tuple(row[:width] for row in all_rows[header_row + 1 :])
+    # Hand data rows over RAW -- do NOT pre-truncate to header width. Only strip each
+    # row's own trailing openpyxl PADDING blanks (cells beyond the last non-empty one);
+    # a genuine surplus NON-blank far cell stays, so profile_file's ragged_row_count
+    # surfaces it (adversarial re-review: row[:width] silently dropped real far-column
+    # values and defeated the never-silent ragged contract for the Excel path).
+    def _rstrip_padding(r: tuple[str, ...]) -> tuple[str, ...]:
+        cells = list(r)
+        while cells and str(cells[-1]).strip() == "":
+            cells.pop()
+        return tuple(cells)
+
+    data_rows = tuple(_rstrip_padding(row) for row in all_rows[header_row + 1 :])
     return _MaterializedReader(header, data_rows)
 
 

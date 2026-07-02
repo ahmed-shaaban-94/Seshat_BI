@@ -45,10 +45,18 @@ _STATUS_VALUES: frozenset[str] = frozenset(
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
-# A source_ready block carrying one of these source_kind values is a FILE source, whose
-# pass additionally requires an owner encoding-confirmation (a source_ready approval).
-# A DB source omits source_kind, so this leaves every existing table source unaffected.
-_FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "excel"})
+# A source_ready block carrying one of these (normalized) source_kind values is a FILE
+# source, whose pass additionally requires an owner encoding-confirmation (a
+# source_ready approval). A DB source omits source_kind (or says db-table), so this
+# leaves every existing table source unaffected. Extension aliases map to the canonical
+# kind so the most natural labels (xlsx/xls) do not slip the gate.
+_FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
+_DB_SOURCE_KINDS: frozenset[str] = frozenset({"db-table", "db_table", "table", "db"})
+_SOURCE_KIND_ALIASES: dict[str, str] = {
+    "xlsx": "excel",
+    "xls": "excel",
+    "xlsm": "excel",
+}
 
 
 def _finding(message: str, locator: str) -> Finding:
@@ -79,13 +87,18 @@ def _stage_status(stage_block) -> str | None:
 
 
 def _source_kind(stage_block) -> str | None:
-    """The optional ``source_kind`` a source_ready block may declare (db-table / csv /
-    excel). Absent -> None (treated as a DB source: the existing, unaffected default).
-    """
+    """The NORMALIZED ``source_kind`` a source_ready block may declare. Case- and
+    whitespace-insensitive, with extension aliases (xlsx/xls/xlsm -> excel), so the
+    gate cannot be slipped by a natural label like 'CSV', 'Excel ', or 'xlsx'
+    (adversarial re-review: a case-sensitive frozenset let those bypass H3). Absent ->
+    None (a DB source: the existing, unaffected default)."""
     if isinstance(stage_block, dict):
         kind = stage_block.get("source_kind")
         if isinstance(kind, str):
-            return kind
+            norm = kind.strip().lower()
+            if not norm:
+                return None
+            return _SOURCE_KIND_ALIASES.get(norm, norm)
     return None
 
 
@@ -208,24 +221,42 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
             # source_ready block that declares source_kind: csv|excel is a FILE source:
             # its mechanical numbers rest on a [PROPOSED] encoding/delimiter/header that
             # a wrong guess silently corrupts, so pass REQUIRES an owner-recorded
-            # source_ready approval. A DB source omits source_kind and is unaffected --
-            # so this never demands approval of the existing table sources.
-            if (
-                stage_name == "source_ready"
-                and status == "pass"
-                and _source_kind(block) in _FILE_SOURCE_KINDS
-                and "source_ready" not in approved_stages
-            ):
-                findings.append(
-                    _finding(
-                        "stage 'source_ready' is a file source "
-                        f"(source_kind: {_source_kind(block)!r}) marked pass but no "
-                        "source_ready approvals[] entry confirms the encoding/"
-                        "delimiter/header -- a [PROPOSED] inference cannot self-grant "
-                        "to pass (a wrong encoding corrupts every text column)",
-                        loc,
+            # source_ready approval. A DB source omits source_kind and is unaffected.
+            if stage_name == "source_ready":
+                kind = _source_kind(block)
+                # An UNRECOGNIZED source_kind must not silently fall through to the DB
+                # (unaffected) path -- a typo like 'cvs' or 'spreadsheet' would bypass
+                # the gate. Fail loud so the author fixes the label (re-review H3).
+                if (
+                    kind is not None
+                    and kind not in _FILE_SOURCE_KINDS
+                    and kind not in _DB_SOURCE_KINDS
+                ):
+                    findings.append(
+                        _finding(
+                            f"stage 'source_ready' has unrecognized source_kind "
+                            f"{kind!r} -- use a file kind "
+                            f"({sorted(_FILE_SOURCE_KINDS)} / xlsx / xls) or a DB kind "
+                            f"({sorted(_DB_SOURCE_KINDS)}); an unknown kind must not "
+                            "silently skip the file-source encoding gate",
+                            loc,
+                        )
                     )
-                )
+                if (
+                    status == "pass"
+                    and kind in _FILE_SOURCE_KINDS
+                    and "source_ready" not in approved_stages
+                ):
+                    findings.append(
+                        _finding(
+                            "stage 'source_ready' is a file source "
+                            f"(source_kind: {kind!r}) marked pass but no source_ready "
+                            "approvals[] entry confirms the encoding/delimiter/header "
+                            "-- a [PROPOSED] inference cannot self-grant to pass (a "
+                            "wrong encoding corrupts every text column)",
+                            loc,
+                        )
+                    )
 
         if current_stage in _STAGE_ORDER and earliest_blocked_index is not None:
             current_index = _STAGE_ORDER.index(current_stage)

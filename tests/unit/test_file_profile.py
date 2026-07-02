@@ -89,13 +89,17 @@ def test_distinct_cardinality_excludes_blank_cells() -> None:
     """Blank cells must NOT count toward distinct_cardinality (they are missing, not a
     value). Regression guard for the surviving-mutation the adversarial review found
     (H4): moving the distinct-add out of the else-branch would count '' as a distinct
-    value and inflate this number on any column with a blank."""
+    value and inflate this number on any column with a blank.
+
+    NOTE: the blank cells live in a two-column shape with a real value in the OTHER
+    column, so the row is NOT wholly-empty (which would be skipped as a blank row) --
+    the 'note' column's blanks are genuine per-column missings within real data rows."""
     reader = _reader(
-        ["note"],
-        [("hello",), ("",), ("   ",), ("world",)],  # two blanks, two real values
+        ["id", "note"],
+        [("1", "hello"), ("2", ""), ("3", "   "), ("4", "world")],  # 2 blanks in note
     )
-    result = profile_file(reader, "f.csv", ("note",))
-    note = result.columns[0]
+    result = profile_file(reader, "f.csv", ("id",))
+    note = next(c for c in result.columns if c.name == "note")
     assert note.missing_count == 2
     assert note.distinct_cardinality == 2  # {hello, world} -- blanks excluded
 
@@ -378,10 +382,13 @@ def test_excel_all_formula_none_raises(tmp_path) -> None:
 
 
 @requires_openpyxl
-def test_excel_stray_far_cell_does_not_crash_header(tmp_path) -> None:
-    """Adversarial review M2: a stray value in a far column widens max_column and pads
-    the header with ''; right-stripping keeps a valid sheet from crashing on a phantom
-    blank header name."""
+def test_excel_stray_far_cell_on_data_row_does_not_crash_and_is_ragged(
+    tmp_path,
+) -> None:
+    """Adversarial review M2 + silent-drop: a stray far-column value on a DATA row must
+    NOT crash the header (trailing header padding is stripped) AND its surplus must
+    surface as ragged, never silently dropped. This calls profile_file (the deceptive
+    original test never did) and asserts the full columns tuple + ragged count."""
     from openpyxl import Workbook
 
     p = tmp_path / "d.xlsx"
@@ -390,8 +397,57 @@ def test_excel_stray_far_cell_does_not_crash_header(tmp_path) -> None:
     ws.title = "Sheet1"
     ws.append(["id", "v"])
     ws.append(["A1", "1"])
-    ws["F1"].value = "stray note"  # far cell widens the header row
+    ws["F2"].value = "REALVALUE"  # stray on the DATA row (row 2), far column
     wb.save(str(p))
-    # Should NOT raise "blank header name"; header trims back to (id, v).
     reader = make_excel_reader(str(p), sheet="Sheet1")
-    assert reader.columns[:2] == ("id", "v")
+    assert reader.columns == ("id", "v")  # full tuple: no phantom header columns
+    result = profile_file(reader, str(p), ("id",))
+    assert result.row_count == 1
+    # the surplus far-column value makes the data row wider than the header -> ragged,
+    # surfaced not silently dropped (parity with the CSV path)
+    assert result.ragged_row_count == 1
+
+
+@requires_openpyxl
+def test_excel_stray_on_header_row_raises_misread(tmp_path) -> None:
+    """A non-empty stray ON the header row leaves an interior blank -- a genuinely
+    misread header. profile_file must fail loud (fix header-row detection), not
+    silently invent columns."""
+    from openpyxl import Workbook
+
+    p = tmp_path / "d.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["id", "v"])
+    ws.append(["A1", "1"])
+    ws["F1"].value = "stray note"  # stray ON the header row -> interior blanks
+    wb.save(str(p))
+    reader = make_excel_reader(str(p), sheet="Sheet1")
+    with pytest.raises(ValueError, match="blank header name"):
+        profile_file(reader, str(p), ("id",))
+
+
+@requires_openpyxl
+def test_excel_interior_blank_row_is_not_counted(tmp_path) -> None:
+    """Adversarial re-review H1: the blank-row skip is reader-agnostic (it lives in
+    profile_file), so an Excel interior all-empty export row is not counted -- no
+    inflated row_count, no fabricated missingness, no flipped PK (CSV parity)."""
+    from openpyxl import Workbook
+
+    p = tmp_path / "d.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["id", "v"])
+    ws.append(["A1", "1"])
+    ws.append(["A2", "2"])
+    ws.append([None, None])  # interior blank row
+    ws.append(["A3", "3"])
+    wb.save(str(p))
+    reader = make_excel_reader(str(p), sheet="Sheet1")
+    result = profile_file(reader, str(p), ("id",))
+    assert result.row_count == 3  # blank row not counted
+    assert result.pk.is_unique is True  # unique key not flipped
+    for c in result.columns:
+        assert c.missing_count == 0
