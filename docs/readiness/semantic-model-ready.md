@@ -83,13 +83,5 @@ approved contracts (`dashboard-ready.md`).
 
 - The state model: `readiness-model.md`
 - The stage sequence + hard gates: `readiness-pipeline.md`
-- The committed model: `../../powerbi/c086_sales.SemanticModel/definition/model.tmdl`
-  (the worked-example c086 model, bound to the live 0006 gold star). The
-  RetailStoreSales model
-  (`../../powerbi/RetailStoreSales.SemanticModel/definition/model.tmdl`) is a
-  second committed example whose measures each bind to an approved metric
-  contract. NOTE: the older `Retailgold.SemanticModel` is SUPERSEDED and DEAD
-  against the current gold schema (migration 0006 dropped the columns and dim
-  attributes it binds; a refresh would fail) -- do not cite it as current; see
-  `../../powerbi/Retailgold.SemanticModel/SUPERSEDED.md`.
+- The committed model: `../../powerbi/Retailgold.SemanticModel/definition/model.tmdl`
 - Playbook Phase 7 + conventions: `../conventions.md`
