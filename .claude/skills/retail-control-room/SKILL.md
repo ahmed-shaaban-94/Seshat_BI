@@ -116,7 +116,7 @@ state-mutating `retail check` / `retail validate` run of its own.
 - The conductor it plugs into: `.claude/skills/retail-orchestrate/SKILL.md`.
 - The roadmap row + hard rules: `docs/roadmap/roadmap.md` (F012, Layer 4; #7/#8/#9);
   Principles V, VII, VIII. C086 is a cited filled instance:
-  `docs/worked-examples/c086-pharmacy.md`.
+  `docs/worked-examples/retail-store-sales.md`.
 
 ## Orchestration
 

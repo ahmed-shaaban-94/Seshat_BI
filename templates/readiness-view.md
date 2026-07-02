@@ -126,4 +126,4 @@ Surface, never reconcile. The viewer is a lens, not an arbiter (Principle V).
 - The model + no-fake-confidence rule: `../docs/readiness/readiness-model.md`; the
   "Required owner / approval" field per stage: `../docs/readiness/<stage>-ready.md`.
 - The roadmap row: `../docs/roadmap/roadmap.md` (F026). C086 / retail_store_sales are
-  cited filled instances: `../docs/worked-examples/c086-pharmacy.md`.
+  cited filled instances: `../docs/worked-examples/retail-store-sales.md`.

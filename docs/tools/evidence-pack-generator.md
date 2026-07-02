@@ -217,4 +217,4 @@ of its own and opened no DB connection.
 - The four-status / no-fake-confidence model: `../readiness/readiness-model.md`; the
   publish stage authority: `../readiness/publish-ready.md`.
 - The spec: `../../specs/022-evidence-pack-generator/spec.md`. C086 is a cited filled
-  instance: `../worked-examples/c086-pharmacy.md`.
+  instance: `../worked-examples/retail-store-sales.md`.

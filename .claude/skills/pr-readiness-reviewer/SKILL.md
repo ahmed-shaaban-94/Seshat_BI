@@ -265,7 +265,7 @@ self-approve.
   static surface, the `retail-validate` / `retail validate` live surface.
 - The roadmap row + hard rules: `../../../docs/roadmap/roadmap.md` (F025, cross-cutting;
   #7 / #8 / #9); Principles V, VII, VIII, IX. C086 is a cited filled instance:
-  `../../../docs/worked-examples/c086-pharmacy.md`.
+  `../../../docs/worked-examples/retail-store-sales.md`.
 
 ## Orchestration
 

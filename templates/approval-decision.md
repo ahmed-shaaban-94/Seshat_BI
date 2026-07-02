@@ -115,4 +115,4 @@ alongside the stage's required evidence (FR-007, FR-008).
 - The model + no-fake-confidence rule: `docs/readiness/readiness-model.md`.
 - The category it realizes: `docs/architecture/product-modules.md` (F024; Product Module
   / `artifact-writing`). C086 is a cited filled instance:
-  `docs/worked-examples/c086-pharmacy.md`.
+  `docs/worked-examples/retail-store-sales.md`.

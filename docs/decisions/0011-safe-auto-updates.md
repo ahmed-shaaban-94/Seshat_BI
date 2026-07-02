@@ -155,5 +155,5 @@ stands with no double-booking.
   surface and the `retail validate` live surface.
 - The principles: `.specify/memory/constitution.md` (Principles II, V, VIII, IX); hard
   rule #9 (no fake confidence), `docs/roadmap/roadmap.md`.
-- The worked-example reference (cited, never inlined): `docs/worked-examples/c086-pharmacy.md`.
+- The worked-example reference (cited, never inlined): `docs/worked-examples/retail-store-sales.md`.
 - The spec: `specs/025-adapter-maintenance-policy/spec.md`.

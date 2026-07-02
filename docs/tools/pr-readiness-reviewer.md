@@ -14,7 +14,7 @@
   runtime).
 
 > ASCII only, UTF-8 no BOM; `--` and `->` only. Generic -- C086 / `retail_store_sales`
-> are filled instances CITED as references (`docs/worked-examples/c086-pharmacy.md`),
+> are filled instances CITED as references (`docs/worked-examples/retail-store-sales.md`),
 > never inlined (Principle VII).
 
 ## Purpose
@@ -155,4 +155,4 @@ state, it does not move through it.
   `../readiness/readiness-model.md`; the stage sequence: `../readiness/readiness-pipeline.md`.
 - The roadmap row + hard rules: `../roadmap/roadmap.md` (F025); Principles V, VII, VIII,
   IX (`../../.specify/memory/constitution.md`). C086 is a cited filled instance:
-  `../worked-examples/c086-pharmacy.md`.
+  `../worked-examples/retail-store-sales.md`.

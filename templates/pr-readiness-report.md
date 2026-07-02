@@ -37,7 +37,7 @@
 > with no traceable source is a defect.
 >
 > **Generic, not C086.** Placeholders only; C086 / `retail_store_sales` are filled
-> instances CITED as references (`docs/worked-examples/c086-pharmacy.md`), never inlined
+> instances CITED as references (`docs/worked-examples/retail-store-sales.md`), never inlined
 > (Principle VII). ASCII only, UTF-8 no BOM; use `--` and `->` (no Unicode symbols, no
 > smart quotes).
 
@@ -160,4 +160,4 @@ merge / approve / resolve / move a stage on its own.
   (F012) -- F012 answers "which table is broken across the portfolio"; this answers "is
   THIS pull request safe to merge".
 - The model + no-fake-confidence rule: `../docs/readiness/readiness-model.md`. C086 is a
-  cited filled instance: `../docs/worked-examples/c086-pharmacy.md`.
+  cited filled instance: `../docs/worked-examples/retail-store-sales.md`.

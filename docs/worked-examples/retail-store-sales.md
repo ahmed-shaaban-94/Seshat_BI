@@ -2,7 +2,7 @@
 
 > **The second validated Seshat BI worked example — and the first that traverses the
 > FULL seven-stage readiness spine** (Source Ready → … → Dashboard Ready, with Publish
-> Ready held at `warning` by design). Where `c086-pharmacy.md` proves the medallion
+> Ready held at `warning` by design). Where `retail-store-sales.md` proves the medallion
 > *build* (bronze → silver → gold + live validation), this example proves the rest of
 > the spine: metric contracts, a governed PBIP model, a dashboard design bound to those
 > contracts, a handoff pack, and an honest **approval-retraction** when an approved
@@ -44,7 +44,7 @@ absorbed all four without a C086-specific rule firing.
 **How to reuse this for a new table:** copy this section structure, swap
 `retail_store_sales` for the new table, walk the seven stages, and fill each section's
 **Evidence** from that table's own artifacts. The *questions and checks* generalize; the
-*answers* are per-table. For the build-only first half, `c086-pharmacy.md` remains the
+*answers* are per-table. For the build-only first half, `retail-store-sales.md` remains the
 canonical reference; for the contracts → model → dashboard → handoff second half, this
 doc is the reference.
 
@@ -287,7 +287,7 @@ here by design.
 
 ## See also
 
-- The first example (build half, canonical): `docs/worked-examples/c086-pharmacy.md`.
+- The first example (build half, canonical): `docs/worked-examples/retail-store-sales.md`.
 - The spine: `docs/readiness/readiness-model.md` and the seven
   `docs/readiness/<stage>-ready.md` stage docs.
 - Method: `docs/medallion-playbook.md` (the 7 phases).

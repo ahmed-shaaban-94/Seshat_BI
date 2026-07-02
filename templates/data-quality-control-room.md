@@ -77,4 +77,4 @@ nothing invented. A blocker with no named owner is "UNASSIGNED" and flagged.
   `data-issues.md`, `blocking-reasons.md`, `readiness-status.yaml`.
 - The model + no-fake-confidence rule: `../docs/readiness/readiness-model.md`.
 - The roadmap row: `../docs/roadmap/roadmap.md` (F012). C086 is a cited filled instance:
-  `../docs/worked-examples/c086-pharmacy.md`.
+  `../docs/worked-examples/retail-store-sales.md`.

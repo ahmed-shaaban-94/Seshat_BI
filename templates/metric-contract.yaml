@@ -28,7 +28,7 @@
 #                                         PII publish-safety are stop-and-ask
 #                                         blocking_reasons -- never auto-filled (FR-009).
 #     VII  C086 Is An Example ........... every value below is an obvious placeholder;
-#                                         C086 (El Ezaby pharmacy) is CITED as the
+#                                         C086 (a retail pharmacy example) is CITED as the
 #                                         filled instance, never inlined (FR-006).
 #     IX   Secrets & Reproducibility .... ASCII + UTF-8 no BOM; short repo-relative
 #                                         paths (Windows 260-char PBIP limit); no host.
@@ -41,9 +41,9 @@
 #   (owner name + date), never a number.
 #
 # C086 IS A FILLED INSTANCE, NEVER THE UNIVERSAL SCHEMA
-#   The first table through this kit is C086 (El Ezaby pharmacy sales). Its filled
+#   The first table through this kit is C086 (a retail pharmacy sales example). Its filled
 #   contracts live alongside its mapping artifacts under mappings/<table>/metrics/.
-#   See docs/worked-examples/c086-pharmacy.md for that filled instance. Do NOT copy
+#   See docs/worked-examples/retail-store-sales.md for that filled instance. Do NOT copy
 #   pharmacy specifics (billing codes, segment rollups, insurance PII, pharmacy
 #   grain keys, real metric names) into this template -- the values below are
 #   deliberately obvious placeholders.

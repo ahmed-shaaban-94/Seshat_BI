@@ -26,7 +26,7 @@
 >
 > For a **filled instance**, a later live run would record one under
 > `orchestration/dagster/run-evidence/`; the C086 / retail_store_sales worked example is CITED
-> at `docs/worked-examples/c086-pharmacy.md`, never inlined here. Keep its specifics (grain
+> at `docs/worked-examples/retail-store-sales.md`, never inlined here. Keep its specifics (grain
 > keys, segments, PII columns, real metric names) out of this template (Principle VII).
 
 ---
@@ -143,5 +143,5 @@ run and a blocked run BOTH leave these untouched:
 - **The conductor sibling whose gate-read posture this mirrors:**
   `.claude/skills/retail-orchestrate/SKILL.md`.
 - **The filled worked-example instance (cited, never inlined):**
-  `docs/worked-examples/c086-pharmacy.md`.
+  `docs/worked-examples/retail-store-sales.md`.
 - **The spec:** `specs/024-dagster-orchestration-adapter/spec.md` (FR-007, FR-013, US3).

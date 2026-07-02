@@ -119,6 +119,6 @@ side (Principle V).
   the F032 compatibility matrix (`../../specs/026-adapter-compatibility-matrix/spec.md`).
 - The authority contract (this skill is Maintenance Automation -- no sub-axis):
   `../../docs/architecture/product-modules.md`.
-- The worked examples that ground the L1/L2/L3 tests: `../../docs/worked-examples/c086-pharmacy.md`
+- The worked examples that ground the L1/L2/L3 tests: `../../docs/worked-examples/retail-store-sales.md`
   (the worked tables live under `mappings/<table>/`; a FILLED snapshot cites them as evidence).
 - The spec: `../../specs/027-release-maturity-management/spec.md`.

@@ -63,7 +63,7 @@ blanks; a table's folder holds the filled copies.
 - The architecture doc's open decision #2 is marked RESOLVED; the README folder table adds
   `mappings/`.
 - C086's artifacts are **not** retroactively created here -- C086 is the narrated worked
-  example (`docs/worked-examples/c086-pharmacy.md`); the first table to *use* `mappings/`
+  example (`docs/worked-examples/retail-store-sales.md`); the first table to *use* `mappings/`
   will be the next worked example. This ADR sets the convention, not a back-fill.
 - Pairs with `docs/architecture/tower-bi-agent-kit.md` (Sec 5, the gate) and the
   constitution Principle IV. `retail validate`'s per-table target sourcing (feature 004,

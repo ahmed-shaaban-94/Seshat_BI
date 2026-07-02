@@ -88,4 +88,4 @@ auto-resolved here.
 - The taxonomy + status mapping: `../docs/readiness/source-drift.md`.
 - The baseline it compares: `source-profile.md`; the Principle-V handoff:
   `unresolved-questions.md`; the spine: `../docs/readiness/readiness-model.md`.
-- C086 is a cited filled baseline, not the schema: `../docs/worked-examples/c086-pharmacy.md`.
+- C086 is a cited filled baseline, not the schema: `../docs/worked-examples/retail-store-sales.md`.

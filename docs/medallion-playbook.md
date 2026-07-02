@@ -6,7 +6,7 @@ version of the process used to build the C086 pharmacy warehouse — the detours
 hit (grain decided too late, PII caught only at review, returns flag added only
 after) are fixed here so they don't recur.
 
-**Scope.** Generic to any retail sales table. C086 (El Ezaby pharmacy) is the worked
+**Scope.** Generic to any retail sales table. C086 (a retail pharmacy example) is the worked
 example throughout. The playbook generalizes the *questions and checks* — never the
 *answers*. "Unify categorical encodings to one standard," not "Arabic → English."
 
@@ -18,7 +18,7 @@ points as a live Q&A with the analyst; a human can run them as a checklist.
 medallion mechanics live in the `data-warehouse-pipeline` skill. This playbook adds
 the *interactive decision protocol* and the *retail trap-checklist* on top.
 
-**Worked example:** see `docs/worked-examples/c086-pharmacy.md` — the 7 phases fully instantiated on a real table. For a second example that carries on past the build through the full readiness spine (metric contracts → governed model → dashboard design → handoff), see `docs/worked-examples/retail-store-sales.md`.
+**Worked example:** see `docs/worked-examples/retail-store-sales.md` — the 7 phases fully instantiated on a real table. For a second example that carries on past the build through the full readiness spine (metric contracts → governed model → dashboard design → handoff), see `docs/worked-examples/retail-store-sales.md`.
 
 ---
 

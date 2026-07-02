@@ -157,7 +157,7 @@ and `dbt_project.yml` are NOT created now. The enumerated shape lives in
 - The integration doc + the enumerated `dbt/` shape: `docs/integrations/dbt-adapter.md`.
 - The skill: `.claude/skills/dbt-transformation-adapter/SKILL.md`.
 - The example connection profile: `profiles.example.yml` (placeholders only, Principle IX).
-- The parity target + the worked example: `warehouse/migrations/` + `docs/worked-examples/c086-pharmacy.md`.
+- The parity target + the worked example: `warehouse/migrations/` + `docs/worked-examples/retail-store-sales.md`.
 - `.specify/memory/constitution.md` (Principles III, IV, V, VI, VII, VIII, IX).
 - The append-only ADR allotment for this tier: 0008 (F024), **0009 (F029, this)**,
   0010 (F030), 0011 (F031). Shipped ADRs are never reused.

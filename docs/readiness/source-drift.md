@@ -103,4 +103,4 @@ The detector FLAGS this; it MUST NOT silently demote or auto-`pass` any downstre
   deferred-live profiler the runtime will reuse: `../../src/retail/profile.py`.
 - The roadmap row: `../roadmap/roadmap.md` (F014, Layer 2, "Later"; filed under spec dir
   015). C086 is the first filled baseline, an example not the schema:
-  `../worked-examples/c086-pharmacy.md`.
+  `../worked-examples/retail-store-sales.md`.

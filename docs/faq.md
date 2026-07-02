@@ -73,7 +73,7 @@ Entity dims use a `-1` member so unmatched/missing keys join cleanly via
 `COALESCE(..., -1)` (RC14, rule S6). The **date** dim is the exception: it is a *marked
 date table* (contiguous, no nulls) that Power BI validates for time-intelligence — a `-1`
 member would break refresh. Rule **S8** enforces "no `-1` on the date dim"; an unmatched
-fact date fails loud via `date_sk NOT NULL`. See `docs/worked-examples/c086-pharmacy.md` §6
+fact date fails loud via `date_sk NOT NULL`. See `docs/worked-examples/retail-store-sales.md` §6
 and the trap-checklist in `docs/medallion-playbook.md` (Appendix A, #18–19).
 
 **Why keep IDs (transaction/customer) as TEXT, not integers?**
@@ -124,7 +124,7 @@ that execute approved steps but never create truth. They are not prerequisites f
 (`docs/roadmap/roadmap.md`, Tier 5).
 
 **Why is C086 everywhere — is it the schema to follow?**
-No. C086 (El Ezaby pharmacy) is the *first* worked example, not the universal schema (hard
+No. C086 (a retail pharmacy example) is the *first* worked example, not the universal schema (hard
 rule #7). A second example (`retail-store-sales.md`) exists precisely to prove the kit is
 generic. Copy the *structure*, not C086's *answers*.
 

@@ -73,4 +73,4 @@
 - The stage authority + blocking reasons: `../../docs/readiness/publish-ready.md`.
 - The model + no-fake-confidence rule: `../../docs/readiness/readiness-model.md`.
 - The deferred publish adapter (out of scope): roadmap F016. C086 is a cited filled
-  instance: `../../docs/worked-examples/c086-pharmacy.md`.
+  instance: `../../docs/worked-examples/retail-store-sales.md`.

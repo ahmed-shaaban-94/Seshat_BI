@@ -26,7 +26,7 @@
   posture; publish-safety remains a human judgment.
 - **Generic.** This template is schema-agnostic -- generic `<placeholder>` tokens and generic
   KPI/domain names only. Any concrete (e.g. pharmacy) instance is reached ONLY by reference to
-  `../../docs/worked-examples/c086-pharmacy.md`, never copied inline.
+  `../../docs/worked-examples/retail-store-sales.md`, never copied inline.
 
 ## Answerable today
 
@@ -91,4 +91,4 @@ the Power BI execution adapter (F016) remains parked.
 - The engineer-facing sibling this summary sits beside (referenced, not restated):
   `bi-handoff-pack.md`
 - A filled concrete instance (first worked example):
-  `../../docs/worked-examples/c086-pharmacy.md`
+  `../../docs/worked-examples/retail-store-sales.md`

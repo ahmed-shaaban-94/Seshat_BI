@@ -125,7 +125,7 @@ evidence. It NEVER:
 | F028 evidence pack (`docs/tools/evidence-pack-generator.md`; `.claude/skills/evidence-pack-generator/SKILL.md`; the table's filled `mappings/<table>/evidence-pack-*.md`) | the committed evidence behind each "what became possible" claim and each rung verdict | built; consume freely |
 | F032 compatibility matrix (planned `docs/operations/adapter-compatibility-matrix.md`; `templates/adapter-version-record.md`) | cited for "what changed" + "migration notes"; never recomputed | referenced by id + role -- if not yet on disk, record "consumed input not yet available", do not fabricate its rows |
 | the delivered roadmap ledger (`docs/roadmap/roadmap.md`) + commit refs | the release history of record (one note maps 1:1 to the delivered-ledger row it summarizes) | committed |
-| worked-example docs + on-disk presence (`docs/worked-examples/c086-pharmacy.md`; `mappings/c086/`, `mappings/retail_store_sales/`) | the evidence the L1/L2/L3 binary tests check, and the absence the L4/L5/L6 tests check | committed |
+| worked-example docs + on-disk presence (`docs/worked-examples/retail-store-sales.md`; `mappings/c086/`, `mappings/retail_store_sales/`) | the evidence the L1/L2/L3 binary tests check, and the absence the L4/L5/L6 tests check | committed |
 
 It IMPORTS none of these; it READS them. If an input is missing, the rule is "evidence
 not available -- cannot assert capability", never a fabricated claim or row.
@@ -286,7 +286,7 @@ no validator run, no DB opened.
   `../../../docs/readiness/readiness-model.md`; hard rule #9.
 - The read-and-present sibling it mirrors: `../retail-control-room/SKILL.md`. The
   conductor it plugs into: `../retail-orchestrate/SKILL.md`.
-- The worked examples that ground the ladder: `../../../docs/worked-examples/c086-pharmacy.md`;
+- The worked examples that ground the ladder: `../../../docs/worked-examples/retail-store-sales.md`;
   `mappings/c086/`, `mappings/retail_store_sales/`.
 - The spec: `../../../specs/027-release-maturity-management/spec.md`.
 

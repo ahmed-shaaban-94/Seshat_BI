@@ -13,10 +13,10 @@
 > rollup, a PII ruling, or a grain meaning is routed to
 > `mappings/<table>/unresolved-questions.md`, never decided here (Principle V).
 >
-> **Generic, not C086.** This is a SCHEMA. Do NOT inline the C086 / El Ezaby pharmacy
+> **Generic, not C086.** This is a SCHEMA. Do NOT inline the the worked-example table
 > values (the billing_type Arabic->English table, the business_segment rollup, any real
 > code / product / store / staff name). Those are a FILLED INSTANCE -- cite
-> `docs/data-dictionary.md` and `docs/worked-examples/c086-pharmacy.md`, never copy them.
+> `docs/data-dictionary.md` and `docs/worked-examples/retail-store-sales.md`, never copy them.
 >
 > **ASCII only.** Use `->` for arrows, `<->` for pairs, `>=`/`<=` for inequalities,
 > `[OK]`/`[x]` for status. No unicode.
@@ -80,4 +80,4 @@ replace them -- do NOT leave a `<placeholder>` in a committed, confirmed entry.
 - Principles: `../.specify/memory/constitution.md` V (Agent Stops at Judgment Calls),
   VII (C086 Is An Example).
 - The FILLED instance this template CITES, never inlines: `../docs/data-dictionary.md`
-  (the C086 reference mappings), `../docs/worked-examples/c086-pharmacy.md`.
+  (the C086 reference mappings), `../docs/worked-examples/retail-store-sales.md`.

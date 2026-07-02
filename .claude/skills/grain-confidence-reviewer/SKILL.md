@@ -165,7 +165,7 @@ C086 is CITED as the first filled instance, never copied inline.
   `.claude/skills/retail-validate/SKILL.md`.
 - Principles: `.specify/memory/constitution.md` IV (mapping gate), V (human seam), VII
   (generic), VIII (live deferred); roadmap: `docs/roadmap/roadmap.md` (F008). C086 as
-  the filled instance: `docs/worked-examples/c086-pharmacy.md`.
+  the filled instance: `docs/worked-examples/retail-store-sales.md`.
 
 ## Orchestration
 

@@ -134,4 +134,4 @@ NO numeric confidence/health score is emitted (roadmap rule #9).
   `../data-issues.md`, `../assumptions.md`, `../source-map.yaml`, `../metric-contract.yaml`.
 - The deferred publish adapter (out of scope here): roadmap F016
   (`../../docs/roadmap/roadmap.md`); Principles V, VII, VIII. C086 is a cited filled
-  instance: `../../docs/worked-examples/c086-pharmacy.md`.
+  instance: `../../docs/worked-examples/retail-store-sales.md`.

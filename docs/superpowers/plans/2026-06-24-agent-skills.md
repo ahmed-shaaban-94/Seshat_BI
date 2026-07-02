@@ -500,7 +500,7 @@ Principle VIII. In this mode:
 - Method / defaults: `docs/medallion-playbook.md`;
   `docs/decisions/0002-retail-cleaning-defaults.md` (RC1-RC16).
 - Live half (after silver/gold exist): the `retail-validate` skill.
-- A filled instance: `docs/worked-examples/c086-pharmacy.md` (an example, never
+- A filled instance: `docs/worked-examples/retail-store-sales.md` (an example, never
   the universal schema).
 ````
 
@@ -511,7 +511,7 @@ Expected: `ascii+no-BOM OK`.
 
 - [ ] **Step 3: Verify cross-linked paths resolve**
 
-Run: `ls docs/architecture/tower-bi-agent-kit.md docs/medallion-playbook.md docs/decisions/0002-retail-cleaning-defaults.md docs/decisions/0003-mapping-artifact-location.md .specify/memory/constitution.md docs/worked-examples/c086-pharmacy.md`
+Run: `ls docs/architecture/tower-bi-agent-kit.md docs/medallion-playbook.md docs/decisions/0002-retail-cleaning-defaults.md docs/decisions/0003-mapping-artifact-location.md .specify/memory/constitution.md docs/worked-examples/retail-store-sales.md`
 Expected: all six paths listed (no "No such file"). If `0003` differs, correct the link.
 
 - [ ] **Step 4: Run the checker (skill files are under .claude/, not model artifacts)**

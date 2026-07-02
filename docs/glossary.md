@@ -133,7 +133,7 @@ mirrors it and the `retail-govern` skill maps each id to its fix.
 | **Hard rules** | the nine non-negotiable ordering constraints in the roadmap (e.g. #2 no source straight to silver; #6 no Power BI execution before semantic-model readiness; #9 no fake confidence). |
 | **Principle V** | the constitution rule that the agent **stops at judgment calls** (grain, PII, business rollups, approvals) for a named human. |
 | **F016** | the deferred, gated, execution-only Power BI adapter — materializes/publishes an approved model; deliberately last. |
-| **C086** | the first worked example (El Ezaby pharmacy); the *first* example, not the universal schema (hard rule #7). |
+| **C086** | the first worked example (a retail pharmacy example); the *first* example, not the universal schema (hard rule #7). |
 
 ## See also
 

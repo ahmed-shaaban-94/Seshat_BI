@@ -275,4 +275,4 @@ this branch. One-line doc fix; no behavior change; `retail check` stays green.
   `src/retail/validate_targets.py`.
 - **Method / defaults / worked example:** `docs/medallion-playbook.md`,
   `docs/decisions/0002-retail-cleaning-defaults.md` (RC1-RC16),
-  `docs/worked-examples/c086-pharmacy.md`.
+  `docs/worked-examples/retail-store-sales.md`.

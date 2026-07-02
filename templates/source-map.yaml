@@ -49,9 +49,9 @@
 #   RC* in feature 002 because the checker ids live in code and could not move.)
 #
 # C086 IS A FILLED INSTANCE, NEVER THE UNIVERSAL SCHEMA
-#   The first table through this kit is C086 (El Ezaby pharmacy sales). Its
+#   The first table through this kit is C086 (a retail pharmacy sales example). Its
 #   filled map has grain (invoice_no + line_no) and a star of 1 fact + 6 dims.
-#   See docs/worked-examples/c086-pharmacy.md for that filled instance. Do NOT
+#   See docs/worked-examples/retail-store-sales.md for that filled instance. Do NOT
 #   copy pharmacy specifics (billing codes, segment rollups, insurance PII) into
 #   this template -- the values below are deliberately obvious placeholders.
 #

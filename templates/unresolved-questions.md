@@ -26,7 +26,7 @@
 > analyst decides**. Never resolve a blocking question silently. If an answer
 > contradicts an earlier decision or a profiled data fact, stop and reconcile.
 > **Generic placeholders only** -- do not bake one table's answers (codes, segment
-> names, PII columns) into this template. See `docs/worked-examples/c086-pharmacy.md`
+> names, PII columns) into this template. See `docs/worked-examples/retail-store-sales.md`
 > for a filled instance.
 
 ---
@@ -160,5 +160,5 @@ file.
 - **Sibling templates:** [`source-profile.md`](./source-profile.md),
   [`source-map.yaml`](./source-map.yaml), [`assumptions.md`](./assumptions.md),
   [`reconciliation-report.md`](./reconciliation-report.md).
-- **Filled instance:** `docs/worked-examples/c086-pharmacy.md` (an example, never the
+- **Filled instance:** `docs/worked-examples/retail-store-sales.md` (an example, never the
   universal schema).

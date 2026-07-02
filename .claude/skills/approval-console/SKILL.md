@@ -222,7 +222,7 @@ is OPTIONAL and DEFERRED; the console MUST NOT emit one.
   `artifact-writing`) and the Core-vs-Module authority boundary
   (`docs/architecture/core-vs-modules-and-adapters.md`); the copy-me declaration:
   `templates/module-contract.md`. C086 is a cited filled instance:
-  `docs/worked-examples/c086-pharmacy.md`.
+  `docs/worked-examples/retail-store-sales.md`.
 - The constitution: Principle V (stop-and-ask), VII (generic), VIII (static-first), IX
   (ASCII / no BOM).
 

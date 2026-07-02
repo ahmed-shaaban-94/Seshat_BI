@@ -58,7 +58,7 @@ analyst-value lens says the *sequencing* is backwards.
    from the user's (or a sample) table — a profile, a mapped grain, a metric contract.
 
 7. **[analyst, high] The one thing an analyst would clone on day one — a worked example — is
-   ignored by the bootstrap.** `c086-pharmacy.md` and `retail-store-sales.md` (full spine to
+   ignored by the bootstrap.** `retail-store-sales.md` and `retail-store-sales.md` (full spine to
    Dashboard Ready) exist, but `init` lays down compass/projections/manifests and never surfaces
    them. **Fix:** `init` should offer "clone this worked example as your starting point."
 

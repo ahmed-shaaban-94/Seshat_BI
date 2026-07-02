@@ -3,7 +3,7 @@
 > **Generic template -- clone this per table.** Fill one note per table that has a recorded
 > data-quality signal worth interpreting for a business reader. This template carries NO
 > table specifics; a concrete filled instance lives only in the worked example
-> (`../../docs/worked-examples/c086-pharmacy.md`, `../../docs/c086-adr0002-compliance.md`),
+> (`../../docs/worked-examples/retail-store-sales.md`),
 > never inlined here.
 >
 > **Composes, never invents.** Every count is **sourced by reference from
@@ -84,4 +84,4 @@ sign-off is required before the caveat is published. Default: **defer to governa
 - Stage-7 stage doc: `../../docs/readiness/publish-ready.md`
 - Where the count is recorded (an analyst query, NOT the validate run): `../data-issues.md`; Stage-4 gate context: `../../docs/readiness/gold-ready.md`
 - The ratified `-1` default: `../../.specify/memory/constitution.md` (Principle V, Principle VI / RC14)
-- Filled concrete instance (worked example): `../../docs/worked-examples/c086-pharmacy.md`, `../../docs/c086-adr0002-compliance.md`
+- Filled concrete instance (worked example): `../../docs/worked-examples/retail-store-sales.md`

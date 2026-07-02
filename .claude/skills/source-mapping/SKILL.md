@@ -166,7 +166,7 @@ Principle VIII. In this mode:
 - Method / defaults: `docs/medallion-playbook.md`;
   `docs/decisions/0002-retail-cleaning-defaults.md` (RC1-RC16).
 - Live half (after silver/gold exist): the `retail-validate` skill.
-- A filled instance: `docs/worked-examples/c086-pharmacy.md` (an example, never
+- A filled instance: `docs/worked-examples/retail-store-sales.md` (an example, never
   the universal schema).
 
 ## Orchestration

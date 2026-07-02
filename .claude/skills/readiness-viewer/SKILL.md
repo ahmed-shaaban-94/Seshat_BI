@@ -261,7 +261,7 @@ The skill modifies nothing: after a run, `git status` shows zero modified
   approval" field per stage: `docs/readiness/<stage>-ready.md`.
 - The roadmap row + hard rules: `docs/roadmap/roadmap.md` (F026; rules #7/#8/#9);
   Principles V, VII, VIII, IX. C086 / retail_store_sales are cited filled
-  instances: `docs/worked-examples/c086-pharmacy.md`.
+  instances: `docs/worked-examples/retail-store-sales.md`.
 
 ## Orchestration
 

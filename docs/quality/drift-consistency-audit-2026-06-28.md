@@ -39,7 +39,7 @@ re-verification of every headline claim against the source code** before any edi
 
 | File | Was | Now | Why |
 |------|-----|-----|-----|
-| `docs/worked-examples/c086-pharmacy.md` | "the 23-rule static gate" (line 17) | "the 33-rule static gate" | Self-contradicted line 182 of the same file, which already says 33 |
+| `docs/worked-examples/retail-store-sales.md` | "the 23-rule static gate" (line 17) | "the 33-rule static gate" | Self-contradicted line 182 of the same file, which already says 33 |
 | `docs/architecture/tower-bi-agent-kit.md` | "(`src/retail/`, 31 static rules)" (line 51) | "33 static rules" | Inconsistent with the same doc's own "33 rules" at lines 85/167 |
 | `docs/architecture/tower-bi-agent-kit.md` | `[ADR 0003](decisions/0003-…)` (line 125) | `[ADR 0003](../decisions/0003-…)` | Broken relative link — missing parent prefix |
 | `CONTRIBUTING.md` | "the 6 rule families" (line 51) | "the 8 rule families" | A and B families (idea-bank rules) were added; 6 is stale |

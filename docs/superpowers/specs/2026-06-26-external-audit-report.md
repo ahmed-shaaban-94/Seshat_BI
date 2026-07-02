@@ -61,7 +61,7 @@ Highest-severity true bugs: `S4b START` false-negative, `S4b CREATE OR REPLACE F
 | 41 | LOW | doc rot | `rules/sql.py` docstring says "S1-S4b plus D8"; misses S5-S8 | rules/sql.py:1 | update to S1-S8 |
 | 42 | LOW | doc rot | Specs 028-037 gap unexplained | specs/; roadmap.md:150-158 | one-line note |
 | 43 | LOW | doc rot | Architecture doc says repo `Retail_Tower_analytics` (renamed) | architecture/tower-bi-agent-kit.md:5 | note rename |
-| 44 | LOW | doc rot | C086 examples claim "26 rules" | worked-examples/c086-pharmacy.md:182; c086-adr0002-compliance.md:96 | note current 31 |
+| 44 | LOW | doc rot | C086 examples claim "26 rules" | worked-examples/retail-store-sales.md:182; c086-adr0002-compliance.md:96 | note current 31 |
 | 45 | LOW | consistency | Roadmap ADR slug `0011-adapter-safe-auto-updates` ≠ file | roadmap.md:145 | fix slug |
 | 46 | LOW | tests | `test_s1_flags_quoted_caps` bare truthiness | tests/unit/test_sql.py:43 | add count+message |
 | 47 | LOW | tests | `test_semantic_check_clean_exits_zero` takes `capsys`, never reads | tests/unit/test_cli_semantic.py:63-66 | assert 'no drift' |

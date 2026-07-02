@@ -6,7 +6,7 @@ correctly) and a **reusable pattern** a new table copies. They are not the unive
 schema — the *questions and checks* generalize; the *answers* are per-table (hard rule
 #7).
 
-> **New here?** Read `c086-pharmacy.md` first for the build mechanics (bronze → silver →
+> **New here?** Read `retail-store-sales.md` first for the build mechanics (bronze → silver →
 > gold + live validation), then `retail-store-sales.md` for the rest of the spine
 > (contracts → governed model → dashboard design → handoff + the governance lessons).
 
@@ -14,8 +14,7 @@ schema — the *questions and checks* generalize; the *answers* are per-table (h
 
 | Example | Domain | Spine depth | Best read for |
 |---------|--------|-------------|---------------|
-| [`c086-pharmacy.md`](c086-pharmacy.md) | El Ezaby pharmacy sales (Arabic↔English) | build + live validation (to **Gold Ready**) | the medallion build mechanics, the ADR-0002 cleaning defaults applied, the static-vs-live compliance split |
-| [`retail-store-sales.md`](retail-store-sales.md) | Kaggle retail store sales (English-only) | **full spine** (to **Dashboard Ready**; Publish Ready `warning`) | metric contracts, the governed PBIP/TMDL model, dashboard design bound to contracts, the handoff pack, and the approval-retraction governance lesson |
+| [`retail-store-sales.md`](retail-store-sales.md) | Kaggle retail store sales (public, English-only) | build + live validation through the **full spine** (to **Dashboard Ready**; Publish Ready `warning`) | the medallion build mechanics, the ADR-0002 cleaning defaults applied, the static-vs-live compliance split, metric contracts, the governed PBIP/TMDL model, dashboard design bound to contracts, the handoff pack, and the approval-retraction governance lesson |
 
 ## How they differ (and why two examples exist)
 

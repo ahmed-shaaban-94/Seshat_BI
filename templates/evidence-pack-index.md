@@ -152,4 +152,4 @@ winner or reconcile silently.
 - The four-status / no-fake-confidence model: `../docs/readiness/readiness-model.md`.
 - The authority contract: `../docs/architecture/product-modules.md`;
   `../templates/module-contract.md`. C086 is a cited filled instance:
-  `../docs/worked-examples/c086-pharmacy.md`.
+  `../docs/worked-examples/retail-store-sales.md`.

@@ -87,4 +87,4 @@ surface-form variant, not a distinct term. This keeps the vocabulary from forkin
   VI (Defaults Then Deviations / RC8), VII (C086 Is An Example).
 - The FILLED instance this template CITES, never inlines: `../docs/data-dictionary.md`
   (the C086 billing_type Arabic->English table + business_segment rollup),
-  `../docs/worked-examples/c086-pharmacy.md`.
+  `../docs/worked-examples/retail-store-sales.md`.

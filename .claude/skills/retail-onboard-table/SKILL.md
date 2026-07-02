@@ -150,7 +150,7 @@ stop still run (they need no DB).
 This skill and the onboarding checklist are GENERIC (roadmap rule 7). No
 C086/pharmacy specifics (billing codes, segment rollups, PII column names, pharmacy
 grain keys) appear here -- placeholders only. C086 is CITED as the first filled
-instance (`docs/worked-examples/c086-pharmacy.md`), never copied.
+instance (`docs/worked-examples/retail-store-sales.md`), never copied.
 
 ## See also
 

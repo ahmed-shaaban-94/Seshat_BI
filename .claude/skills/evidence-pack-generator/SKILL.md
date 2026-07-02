@@ -288,7 +288,7 @@ run of its own and opened no DB connection.
   `../../../docs/architecture/core-vs-modules-and-adapters.md` (the prose + the seam),
   `../../../templates/module-contract.md` (the copy-me declaration filled above).
 - The spec: `../../../specs/022-evidence-pack-generator/spec.md`. C086 is a cited filled
-  instance: `../../../docs/worked-examples/c086-pharmacy.md`.
+  instance: `../../../docs/worked-examples/retail-store-sales.md`.
 
 ## Orchestration
 

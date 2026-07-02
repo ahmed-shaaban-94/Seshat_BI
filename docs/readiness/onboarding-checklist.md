@@ -93,4 +93,4 @@ Each row is a STOP: PROPOSE with the supporting data fact, raise an
 - The spine: `readiness-model.md`, `readiness-pipeline.md`;
   `../../templates/readiness-status.yaml`.
 - The roadmap row: `../roadmap/roadmap.md` (F006). C086 is the first filled instance,
-  not the schema: `../worked-examples/c086-pharmacy.md`.
+  not the schema: `../worked-examples/retail-store-sales.md`.
