@@ -43,6 +43,37 @@ pack ends with an EMPTY approval slot only the named human fills.
 
 Until a human rules on these, a generated pack surfaces them as OPEN, not as answered.
 
+## Worked walk-through (generic placeholders -- SC-001)
+
+A named `<metric owner>` is asked to approve the `semantic_model_ready` gate for
+`<schema.table>`. They ask for the approval evidence pack for that (table, stage).
+The agent, following `.claude/skills/approval-evidence-pack/SKILL.md`, produces
+`mappings/<table>/approval-evidence-pack-semantic_model_ready.md` with the template
+sections in order:
+
+1. **(H) Header** -- table, stage `semantic_model_ready`, generated-at, and the four
+   sources it read.
+2. **(1) What this gate requires** -- linked from
+   `docs/readiness/semantic-model-ready.md` (not re-authored).
+3. **(2) Readiness state** -- `source_ready` .. `semantic_model_ready` only (the
+   selected stage plus every prior stage), each status verbatim; never a later
+   stage (FR-020). Say `semantic_model_ready` is `blocked` with two recorded
+   `blocking_reasons[]` -> the pack shows `blocked` and lists both reasons verbatim.
+4. **(3) Open blockers** -- every `blocking_reasons[]` entry, each traceable to
+   `mappings/<table>/readiness-status.yaml`.
+5. **(4) Unresolved assumptions** -- one line per offending
+   `mappings/<table>/metrics/<Metric>.yaml`, the recorded contradiction (never
+   resolved).
+6. **(5) Blocking parked-on edges** -- any `docs/quality/parked-on.yaml` edge that
+   blocks this table's stage.
+7. **(6) Pending contracts** -- the metric contracts whose `readiness.status` is
+   not `pass` (link-and-cite only; FR-008/FR-013).
+8. **(7) Approval slot** -- Form A: an EMPTY slot the metric owner fills. The
+   module cannot fill it; no score, no count anywhere.
+
+The reader confirms this order matches `templates/approval-evidence-pack.md` and
+that every evidence line resolves to a committed path (SC-001, SC-002).
+
 ## Verify
 
 - `retail check` stays green and the rule count is unchanged (this feature adds no rule).
