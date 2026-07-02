@@ -232,6 +232,23 @@ label, grain key, or column name.
   slot or overwrite the recorded approval.
 - **FR-017**: All authored artifacts MUST be ASCII, UTF-8 without BOM (use `--` and `->`, no
   glyphs), and MUST use short repo-relative paths (Windows 260-char budget) (rule IX).
+- **FR-018**: The generated pack MUST be written to a table-co-located, stage-named path
+  under the table's mappings folder -- `mappings/<table>/approval-evidence-pack-<stage>.md`
+  -- so a generated pack never collides with F028's `evidence-pack-index.md` /
+  `evidence-pack-summary.md` and each stage's pack is independently addressable
+  (Session 2026-07-02, C1).
+- **FR-019**: This feature ships as a Product Module in the F028 shape -- a skill under
+  `.claude/skills/` plus a generic copy-me template under `templates/` -- and NO runtime
+  executor code and NO `src/retail/rules/` entry (the agent is the runtime; it adds no gate)
+  (Session 2026-07-02, C2).
+- **FR-020**: The pack MUST surface the recorded status of the selected stage AND all stages
+  BEFORE it in the seven-stage order (so a reader sees the whole path is or is not `pass`),
+  but MUST NOT surface stages AFTER the selected one (they are not decidable at this gate)
+  (Session 2026-07-02, C3).
+- **FR-021**: The assumption-ledger signal (FR-006) MUST be surfaced per offending metric
+  contract -- each surfaced item names the specific `mappings/<table>/metrics/<Metric>.yaml`
+  file and the recorded contradiction -- not as a single table-wide flag, so the reader can
+  trace each unresolved assumption to its contract (Session 2026-07-02, C4).
 
 ### Key Entities
 
@@ -292,6 +309,34 @@ label, grain key, or column name.
 <!-- Principle-V carve-out questions recorded here for a human ruling; the workflow is
      forbidden to answer these. Session answers to non-Principle-V ambiguities are added
      under a dated session heading by /speckit-clarify. -->
+
+### Session 2026-07-02
+
+Advisor-resolved (non-Principle-V) ambiguities, highest Impact*Uncertainty first. Each was
+decided against the constitution, the readiness spine, the F028/F027 precedents, and the RC
+defaults; all are reversible docs choices.
+
+- **C1 (output path -- FR-018)**: Q: Where does the generated pack live on disk? A: at
+  `mappings/<table>/approval-evidence-pack-<stage>.md`. Reasoning: F028 co-locates its
+  derived packs under `mappings/<table>/` (ADR 0003/0004 co-location); a stage suffix keeps
+  the seven possible packs independently addressable and avoids collision with F028's fixed
+  `evidence-pack-index.md` / `evidence-pack-summary.md` names. Reversible: easy (a path
+  convention, no data).
+- **C2 (deliverable shape -- FR-019)**: Q: Is this a skill + template like F028, or does it
+  add runtime code / a retail rule? A: skill under `.claude/skills/` + a copy-me template
+  under `templates/`; no executor, no `src/retail/rules/` entry. Reasoning: the grounding and
+  F028 precedent both say the agent is the runtime and the module adds no gate (F024 Product
+  Module boundary); a new rule would contradict "adds no gate". Reversible: easy.
+- **C3 (stage window -- FR-020)**: Q: Does the pack show all seven stages' status, only the
+  selected stage, or the selected plus prior? A: selected stage plus all stages before it;
+  never stages after. Reasoning: the reader signing gate N needs to see that the path up to N
+  is `pass` (a stage is entered only when the prior is `pass`, readiness-pipeline.md), but
+  later stages are not decidable at this gate and surfacing them invites premature judgment.
+  Reversible: easy.
+- **C4 (assumption granularity -- FR-021)**: Q: Is the AL1 assumption signal a single
+  table-wide flag or per-contract? A: per offending metric contract, each naming its
+  `metrics/<Metric>.yaml` file. Reasoning: AL1 fires per contract; a table-wide flag would
+  lose the traceability the surface-never-assert discipline requires. Reversible: easy.
 
 ### Open for human ruling (Principle V -- NOT answered by this workflow)
 
