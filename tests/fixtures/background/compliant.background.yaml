@@ -1,0 +1,20 @@
+page:
+  name: "generic_page"
+forbidden_dynamic_content:
+  contains_kpi_value: false
+  contains_dynamic_title: false
+  contains_measure_or_metric: false
+  contains_data_label_or_axis_value: false
+  contains_date_or_refresh_stamp: false
+  contains_filter_or_slicer_state: false
+  baked_in_screenshot_of_a_visual: false
+qa_checklist:
+  is_static_structure_only: true
+  no_forbidden_dynamic_content: true
+  exported_at_canvas_size_1to1: true
+  safe_zones_align_to_grid: true
+  whitespace_preserved: true
+  not_dark_behind_dense_charts: true
+  contrast_sufficient_for_visuals: true
+  consistent_aspect_ratio: true
+  branding_is_chrome_not_data: true
