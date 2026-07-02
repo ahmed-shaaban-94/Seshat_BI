@@ -1,10 +1,8 @@
 # Reconciliation Report -- `retail_store_sales`
 
-> The blank a later LIVE acceptance run fills (RC16), after silver + gold are built.
-> NOT filled yet -- silver/gold do not exist. The `training` DB is reachable, so this
-> runs via `retail validate --source-map mappings/retail_store_sales/source-map.yaml`
-> once the warehouse build exists. Fill from a read-only live run; never fabricate or
-> round figures to reach a verdict. ASCII only.
+> LIVE acceptance run (RC16), recorded after silver + gold were built. Filled from a
+> read-only live run via `retail validate --source-map mappings/retail_store_sales/source-map.yaml`.
+> Figures are as-observed -- never fabricated or rounded to reach a verdict. ASCII only.
 
 ---
 
@@ -16,7 +14,7 @@
 | Silver object | `silver.retail_store_sales` (12,575 rows) |
 | Gold objects | `gold.fct_sales_rss` + `dim_customer_rss` / `dim_product_rss` / `dim_payment_method_rss` / `dim_location_rss` / `dim_date_rss` |
 | Run date | 2026-06-25 |
-| DB cluster / database | `db-pgsql-fra1-29712` / `training` |
+| DB cluster / database | <managed Postgres cluster> / `training` |
 | Run by | agent (`retail validate`, read-only, console-script CLI) |
 | Connection | READ-ONLY; credentials from the gitignored `.env`; no writes |
 
