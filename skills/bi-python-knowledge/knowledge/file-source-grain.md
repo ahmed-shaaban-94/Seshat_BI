@@ -14,9 +14,12 @@ Schema: `references/retail-dataframe-schema.md`. Meaning of a KPI lives upstream
 > read and what to record; it is single-node source-prep knowledge, not an ingestion
 > runner. The governed core never opens a file at import time (never-execute). A file's
 > mechanical numbers are recorded through a read-only profiling pass, exactly as a DB
-> source's numbers come from `profile.py`; until a file profiler ships, a file source is
-> profiled in deferred-boundary mode (`[PENDING LIVE PROFILE]`, `source_ready: warning`).
-> See `docs/readiness/source-ready.md`.
+> source's numbers come from `profile.py` -- the file profiler is `file_profile.py`
+> (`make_csv_reader` on the stdlib; `make_excel_reader` via the optional `files` extra).
+> A CSV/Excel source reaches `source_ready: pass` after profiling PLUS an owner
+> encoding-confirmation (RS1 enforces it -- see `docs/readiness/source-ready.md`). Only
+> when no reader is available (Excel without the `files` extra) does the deferred-boundary
+> fallback (`[PENDING LIVE PROFILE]`, `source_ready: warning`) apply.
 
 ---
 
@@ -120,8 +123,10 @@ governed core.
 
 ## See also
 
-- `docs/readiness/source-ready.md` -- Stage 1; where a file source is profiled (deferred
-  mode until a file profiler ships).
+- `docs/readiness/source-ready.md` -- Stage 1; where a file source is profiled (via
+  `file_profile.py`) and reaches pass after owner encoding-confirmation.
+- `src/retail/file_profile.py` -- the read-only file profiler (CSV on the stdlib; Excel
+  via the `files` extra) that produces the mechanical numbers this reasoning guides.
 - `templates/source-profile.md` -- the File-source addendum this reasoning fills.
 - `knowledge/cleaning-and-standardization.md` -- what to do once the file has landed as a
   frame (PY-CN-031..036).

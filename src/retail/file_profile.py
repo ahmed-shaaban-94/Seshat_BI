@@ -195,10 +195,15 @@ def profile_file(
             cell = cells[i]
             if _is_missing(cell):
                 missing_counts[i] += 1
-            else:
-                # trim to fold whitespace-variant phantom distincts, mirroring the DB
-                # profiler's count(DISTINCT trim(col)).
-                distinct_sets[i].add(cell.strip())
+            # Distinct cardinality mirrors the DB profiler's count(DISTINCT trim(col))
+            # EXACTLY: SQL COUNT(DISTINCT) excludes NULL but COUNTS '' as one distinct
+            # value, and a faithful all-TEXT landing has no NULLs (blanks are ''). So a
+            # blank cell contributes the '' bucket -- unconditional add, and all
+            # whitespace variants collapse to the single '' via strip(). missing_count
+            # is a SEPARATE aggregate (independent, like the DB's two counts). Counting
+            # '' here keeps file and DB distinct numbers comparable at the readiness
+            # gate; excluding it silently under-reported file-source cardinality.
+            distinct_sets[i].add(cell.strip())
         # PK proof: NULL if any key cell is missing; else the trimmed key tuple.
         key_cells = tuple(cells[j] for j in pk_indexes)
         if any(_is_missing(c) for c in key_cells):

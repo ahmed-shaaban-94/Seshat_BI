@@ -226,10 +226,11 @@ def _messages_or_empty(ctx: RuleContext) -> list[str]:
 def test_file_source_kind_case_and_extension_variants_still_gated(
     tmp_path: Path,
 ) -> None:
-    """Adversarial re-review H3 bypass: a natural label like 'CSV', 'Excel', 'xlsx',
-    'xls', or a trailing space must NOT slip the gate. Each is a file source and, with
-    no source_ready approval, must still fail."""
-    for variant in ("CSV", "Csv", "csv ", "Excel", "EXCEL", "xlsx", "xls", "xlsm"):
+    """Adversarial re-review H3 bypass: a natural label like 'CSV', 'Excel', 'xlsx', or
+    a trailing space must NOT slip the gate. Each normalizes to a supported file kind
+    and, with no source_ready approval, must still fail. (Legacy 'xls' is NOT a
+    supported reader format -- it is covered by test_unknown_source_kind_fails_loud.)"""
+    for variant in ("CSV", "Csv", "csv ", "Excel", "EXCEL", "xlsx", "xlsm", " TSV "):
         yaml_text = _file_source_yaml(kind=variant, with_source_approval=False)
         messages = _messages(_ctx(tmp_path, yaml_text))
         assert any(
@@ -238,9 +239,10 @@ def test_file_source_kind_case_and_extension_variants_still_gated(
 
 
 def test_unknown_source_kind_fails_loud(tmp_path: Path) -> None:
-    """An unrecognized source_kind (typo / unknown) must fail loud, not silently fall
-    through to the DB (unaffected) path and skip the encoding gate."""
-    for bogus in ("cvs", "spreadsheet", "parquet"):
+    """An unrecognized source_kind (typo / unknown / unsupported format) must fail loud,
+    not silently fall through to the DB (unaffected) path and skip the encoding gate.
+    Legacy 'xls' (BIFF -- openpyxl cannot read it) is unsupported and belongs here."""
+    for bogus in ("cvs", "spreadsheet", "parquet", "xls"):
         messages = _messages(
             _ctx(tmp_path, _file_source_yaml(kind=bogus, with_source_approval=False))
         )

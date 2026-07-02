@@ -85,23 +85,27 @@ def test_distinct_cardinality_folds_whitespace_variants() -> None:
     assert result.columns[0].distinct_cardinality == 3
 
 
-def test_distinct_cardinality_excludes_blank_cells() -> None:
-    """Blank cells must NOT count toward distinct_cardinality (they are missing, not a
-    value). Regression guard for the surviving-mutation the adversarial review found
-    (H4): moving the distinct-add out of the else-branch would count '' as a distinct
-    value and inflate this number on any column with a blank.
+def test_distinct_cardinality_matches_db_count_distinct_trim() -> None:
+    """distinct_cardinality mirrors the DB profiler's count(DISTINCT trim(col)) EXACTLY:
+    SQL COUNT(DISTINCT) counts '' as one distinct value (only NULL is excluded, and a
+    faithful all-TEXT landing has no NULLs). So a column with blanks has '' as ONE of
+    its distinct values, and all whitespace variants collapse to that single '' bucket.
+    missing_count is a separate, independent aggregate. (This corrects an earlier
+    finding that wrongly excluded blanks -- the template defines the measure as
+    count(DISTINCT trim(col)), which includes ''; excluding it broke DB/file parity.)
 
-    NOTE: the blank cells live in a two-column shape with a real value in the OTHER
-    column, so the row is NOT wholly-empty (which would be skipped as a blank row) --
-    the 'note' column's blanks are genuine per-column missings within real data rows."""
+    Two-column shape so the blank rows are not wholly-empty (which would be skipped) --
+    the 'note' blanks are genuine per-column blanks within real data rows."""
     reader = _reader(
         ["id", "note"],
         [("1", "hello"), ("2", ""), ("3", "   "), ("4", "world")],  # 2 blanks in note
     )
     result = profile_file(reader, "f.csv", ("id",))
     note = next(c for c in result.columns if c.name == "note")
-    assert note.missing_count == 2
-    assert note.distinct_cardinality == 2  # {hello, world} -- blanks excluded
+    assert note.missing_count == 2  # independent aggregate: '' and '   ' are missing
+    # distinct = {hello, world, ''} = 3 -- '' is one distinct value (DB parity),
+    # '   ' folds into '' via strip()
+    assert note.distinct_cardinality == 3
 
 
 def test_pk_proof_unique() -> None:

@@ -52,9 +52,12 @@ _APPROVAL_REQUIRED: frozenset[str] = frozenset(
 # kind so the most natural labels (xlsx/xls) do not slip the gate.
 _FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
 _DB_SOURCE_KINDS: frozenset[str] = frozenset({"db-table", "db_table", "table", "db"})
+# Only OOXML Excel extensions alias to 'excel' -- openpyxl reads .xlsx/.xlsm, NOT the
+# legacy BIFF .xls. A source labelled 'xls' is therefore NOT profileable by make_excel_
+# reader; leaving it unaliased means it hits the "unrecognized source_kind" finding,
+# which is the correct "unsupported -- convert to .xlsx or defer" signal (Codex review).
 _SOURCE_KIND_ALIASES: dict[str, str] = {
     "xlsx": "excel",
-    "xls": "excel",
     "xlsm": "excel",
 }
 

@@ -19,7 +19,7 @@ judgment calls yet.
 
 | Artifact | What it must contain |
 |----------|----------------------|
-| `mappings/<table>/source-profile.md` | `Source kind` (db-table / csv / excel); row count, column count; per-column missingness measured as `'' OR NULL` (not `IS NULL` alone); candidate-key uniqueness proof; returns-column population; PROPOSED semantics. **For a file source (csv/excel):** the File-source addendum too -- format, encoding (`[PROPOSED]`), delimiter/quote (csv), header row, and the enumerated in-scope sheet list (Excel) |
+| `mappings/<table>/source-profile.md` | row count, column count; per-column missingness measured as `'' OR NULL` (not `IS NULL` alone); candidate-key uniqueness proof; returns-column population; PROPOSED semantics. **`Source kind` defaults to `db-table` when absent** (existing DB profiles need no change); set it to `csv`/`excel` ONLY for a standalone file source, and then also fill the File-source addendum -- format, encoding (`[PROPOSED]`), delimiter/quote (csv), header row, and the enumerated in-scope sheet list (Excel) |
 
 The profile is the ONLY required artifact at this stage. The other four mapping
 artifacts (`source-map.yaml`, `assumptions.md`, `unresolved-questions.md`,

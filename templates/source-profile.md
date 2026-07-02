@@ -65,7 +65,7 @@ record them from the read-only open, do not assume from the file name or extensi
 
 | Field | Value |
 |-------|-------|
-| Format | `<csv / tsv / xlsx / xls>` |
+| Format | `<csv / tsv / xlsx / xlsm>` (the profiler reads OOXML Excel via openpyxl; legacy `.xls` (BIFF) is NOT supported -- convert to `.xlsx` first, or mark it unsupported/deferred) |
 | Encoding | `<utf-8 / utf-8-sig / cp1256 / latin-1>` `[PROPOSED]` -- how bytes decode to text; a wrong guess mojibakes Arabic/accented labels (see Encoding corruption in Semantics) |
 | Byte-order mark (BOM) | `<present / absent>` -- a UTF-8 BOM leaks into the first header name if not stripped |
 | Delimiter | `<, / ; / tab / pipe>` `[PROPOSED]` (csv/tsv only) -- `;` is common in cp1256 locales; a wrong delimiter reads the whole row as one column |
@@ -214,6 +214,12 @@ gate stays shut and no `silver.*` SQL may be written.
 - [ ] Returns rule stated, from the authoritative column (not a measure sign).
 - [ ] Top data-quality issues listed, each with a measured count.
 - [ ] Missingness measured as `'' OR NULL` for every column (not `IS NULL` alone).
+- [ ] **File source (`Source kind` csv/excel) only:** the File-source addendum is filled
+      -- format, encoding (`[PROPOSED]`), delimiter/quote (csv), header row, and the
+      enumerated in-scope sheet list (Excel). A file profile is NOT complete without it:
+      the mechanical numbers above are unreadable-to-trust until the encoding/delimiter/
+      header that produced them is recorded (and the encoding is owner-confirmed at the
+      Source Ready gate). Do not proceed to `source-map.yaml` on a misread file.
 
 ---
 
