@@ -137,6 +137,7 @@ def test_bare_role_owner_fails(tmp_path: Path) -> None:
         "data owner",  # spaced bare role (not the exact token spelling)
         "owner (data_owner)",  # a role masquerading as the person name
         "Ada Lovelace (wizard)",  # unknown authority class
+        "Ada Lovelace (owner)",  # generic 'owner' proves no specific authority
     ],
 )
 def test_owner_missing_class_or_name_fails(tmp_path: Path, owner: str) -> None:

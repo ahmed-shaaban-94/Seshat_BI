@@ -45,22 +45,26 @@ _STATUS_VALUES: frozenset[str] = frozenset(
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
-# The authority-class tokens an approval owner may carry (normalized: lower-case,
-# spaces/hyphens collapsed to underscore). The named-human guarantee (Principle V /
-# audit C4) requires the FULL shape "Person Name (authority_class)", e.g.
-# "Ahmed Shaaban (data_owner)": a bare role token, a name with no class, or an
-# unknown class all fail _owner_is_valid() -- and ONLY a shape-valid approval
-# counts toward a stage's approval requirement (Codex PR#143 review: rejecting
-# exact bare tokens alone still let 'Ahmed Shaaban' or 'data owner' grant a gate).
-_ROLE_TOKENS: frozenset[str] = frozenset(
+# The authority classes an approval owner may carry (normalized: lower-case,
+# spaces/hyphens collapsed to underscore) -- exactly the four the docs/templates
+# define. The named-human guarantee (Principle V / audit C4) requires the FULL
+# shape "Person Name (authority_class)", e.g. "Ahmed Shaaban (data_owner)": a
+# bare role token, a name with no class, or an unknown class all fail
+# _owner_is_valid() -- and ONLY a shape-valid approval counts toward a stage's
+# approval requirement (Codex PR#143 review: rejecting exact bare tokens alone
+# still let 'Ahmed Shaaban' or 'data owner' grant a gate).
+_AUTHORITY_CLASSES: frozenset[str] = frozenset(
     {
         "analyst",
         "governance",
         "data_owner",
         "metric_owner",
-        "owner",
     }
 )
+# Tokens that cannot stand as the person NAME: the classes themselves plus the
+# generic "owner" (also NOT a valid class -- it proves no specific authority;
+# Codex PR#143 third round).
+_ROLE_TOKENS: frozenset[str] = _AUTHORITY_CLASSES | {"owner"}
 
 # "Person Name (authority_class)" -- a non-empty name part, then one parenthesized
 # class. Anchored so trailing junk after the class cannot slip through.
@@ -78,8 +82,9 @@ def _owner_is_valid(owner: object) -> bool:
     Case-, whitespace- and hyphen-insensitive on the class token. Rejects a bare
     role token ("data_owner", "data owner"), a name with no class ("Ahmed
     Shaaban"), a role masquerading as the name ("owner (data_owner)"), an unknown
-    class ("Ada (wizard)"), and a missing/empty/non-string owner -- an approval
-    must name its decider AND the authority they acted under (audit C4)."""
+    or generic class ("Ada (wizard)", "Ada (owner)"), and a missing/empty/
+    non-string owner -- an approval must name its decider AND the specific
+    authority they acted under (audit C4)."""
     if not isinstance(owner, str):
         return False
     match = _OWNER_SHAPE_RE.match(owner.strip())
@@ -88,7 +93,7 @@ def _owner_is_valid(owner: object) -> bool:
     name = match.group("name").strip()
     if not name or _norm_token(name) in _ROLE_TOKENS:
         return False
-    return _norm_token(match.group("role")) in _ROLE_TOKENS
+    return _norm_token(match.group("role")) in _AUTHORITY_CLASSES
 
 
 # A source_ready block carrying one of these (normalized) source_kind values is a FILE

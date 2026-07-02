@@ -137,7 +137,7 @@ stages:
   semantic_ready: { status: not_started }
   dashboard_ready:{ status: not_started }
   publish_ready:  { status: not_started }
-approvals: []                    # e.g. {stage: mapping_ready, owner: analyst, at: <date>}
+approvals: []                    # e.g. {stage: mapping_ready, owner: "Ada Lovelace (analyst)", at: <date>}
 next_action: "resolve the open grain question in mappings/<table>/unresolved-questions.md"
 last_checked_at: "<YYYY-MM-DD>"
 checked_by: "<agent | person>"
