@@ -18,6 +18,13 @@
 # Generic governance identifiers only -- never sample data, metric values, or
 # worked-example domain specifics. This ledger RECORDS an f_row only when a human already placed
 # one; it NEVER assigns a roadmap F-row (the idea bank is not a roadmap; Principle V).
+#
+# Design-layer ships (G1, spec-dir 066): a design-foundation idea
+# (strengthens_layer = design-system) that ships reuses this EXACT
+# { status, pr_sha, f_row } shape unchanged -- no design/layer field is added, so the
+# IL1 ledger-contract guard is untouched. No design entry is recorded now: no
+# design-foundation idea has shipped yet, and this file stays human-curated /
+# engine-read-only, so a row is added only when a human records a real ship.
 
 # --- idea-bank execution sequence (PRs #62-#66) ---
 A1:
