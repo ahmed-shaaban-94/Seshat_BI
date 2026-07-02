@@ -49,10 +49,13 @@ build/
 
 # ── Vendored Power BI Modeling MCP (36MB binary tool, not source) ──
 # The Microsoft Power BI Modeling MCP server, kept locally to build/edit the
-# semantic model. It is a vendored binary, never committed (see .mcp.json for
-# how Claude Code launches it).
+# semantic model. It is a vendored binary, never committed. The launcher config
+# is machine-local too: a tracked .mcp.json would point every fresh checkout at
+# this untracked tree and fail to spawn (Codex PR#143 review). Copy
+# .mcp.json.example -> .mcp.json after vendoring the extension.
 *.vsix
 tools/powerbi-modeling-mcp/
+.mcp.json
 
 # --- Agent-harness runtime scratch (machine-local, never committed) ---
 # Per-run scratch created by coding-agent harnesses: Codex (.codex/), other

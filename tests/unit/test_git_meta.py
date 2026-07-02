@@ -803,11 +803,13 @@ def test_c2_pathological_label_then_literal_returns_fast(tmp_path: Path) -> None
 
 @pytest.mark.unit
 def test_c2_flags_do_cluster_slug(tmp_path: Path) -> None:
-    # A real cluster slug (db-<engine>-<region><n>-<id>) committed in a scanned
-    # file must be flagged even without a full FQDN or postgres:// URI.
+    # A cluster slug (db-<engine>-<region><n>-<id>) committed in a scanned
+    # file must be flagged even without a full FQDN or postgres:// URI. The
+    # fixture slug is SYNTHETIC (same shape as a real one) -- the guard test
+    # must not itself carry the real client cluster id it exists to keep out.
     target = tmp_path / "docs" / "runbook.md"
     target.parent.mkdir(parents=True)
-    target.write_text("cluster db-pgsql-fra1-29712 holds the data\n", encoding="utf-8")
+    target.write_text("cluster db-pgsql-ams3-10101 holds the data\n", encoding="utf-8")
     ctx = RuleContext(repo_root=tmp_path, tracked_files=("docs/runbook.md",))
     findings = _scan_contents(ctx)
     assert len(findings) == 1

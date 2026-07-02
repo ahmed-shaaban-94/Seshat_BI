@@ -45,34 +45,50 @@ _STATUS_VALUES: frozenset[str] = frozenset(
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
-# The authority-class tokens an approval owner may carry (any spelling). An owner
-# that is ONLY one of these -- a bare role with no person -- is a defect: the
-# named-human guarantee (Principle V / audit C4) requires the DECIDER's name, e.g.
-# "Ahmed Shaaban (data_owner)". This turns the C4 convention into an enforced rule.
+# The authority-class tokens an approval owner may carry (normalized: lower-case,
+# spaces/hyphens collapsed to underscore). The named-human guarantee (Principle V /
+# audit C4) requires the FULL shape "Person Name (authority_class)", e.g.
+# "Ahmed Shaaban (data_owner)": a bare role token, a name with no class, or an
+# unknown class all fail _owner_is_valid() -- and ONLY a shape-valid approval
+# counts toward a stage's approval requirement (Codex PR#143 review: rejecting
+# exact bare tokens alone still let 'Ahmed Shaaban' or 'data owner' grant a gate).
 _ROLE_TOKENS: frozenset[str] = frozenset(
     {
         "analyst",
         "governance",
         "data_owner",
-        "data-owner",
         "metric_owner",
-        "metric-owner",
         "owner",
     }
 )
 
+# "Person Name (authority_class)" -- a non-empty name part, then one parenthesized
+# class. Anchored so trailing junk after the class cannot slip through.
+_OWNER_SHAPE_RE = re.compile(r"^(?P<name>[^()]+?)\s*\(\s*(?P<role>[^()]+?)\s*\)$")
 
-def _owner_is_bare_role(owner: object) -> bool:
-    """True if ``owner`` is a bare authority-class token with no person name.
-    Case- and whitespace-insensitive. A name + role ("Ahmed Shaaban (data_owner)")
-    has content beyond the token, so it is NOT bare. A missing/empty owner is
-    handled as bare too (an approval must name its decider)."""
+
+def _norm_token(value: str) -> str:
+    """Normalize a role/name token: lower-case, runs of spaces/hyphens -> '_'."""
+    return re.sub(r"[\s\-]+", "_", value.strip().lower())
+
+
+def _owner_is_valid(owner: object) -> bool:
+    """True only for the full named-decider shape "Person Name (authority_class)".
+
+    Case-, whitespace- and hyphen-insensitive on the class token. Rejects a bare
+    role token ("data_owner", "data owner"), a name with no class ("Ahmed
+    Shaaban"), a role masquerading as the name ("owner (data_owner)"), an unknown
+    class ("Ada (wizard)"), and a missing/empty/non-string owner -- an approval
+    must name its decider AND the authority they acted under (audit C4)."""
     if not isinstance(owner, str):
-        return True
-    norm = owner.strip().lower()
-    if not norm:
-        return True
-    return norm in _ROLE_TOKENS
+        return False
+    match = _OWNER_SHAPE_RE.match(owner.strip())
+    if match is None:
+        return False
+    name = match.group("name").strip()
+    if not name or _norm_token(name) in _ROLE_TOKENS:
+        return False
+    return _norm_token(match.group("role")) in _ROLE_TOKENS
 
 
 # A source_ready block carrying one of these (normalized) source_kind values is a FILE
@@ -180,23 +196,31 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
             )
 
         approvals = _as_list(data.get("approvals"))
+        # Only a shape-valid approval (named decider + authority class) satisfies a
+        # stage's approval requirement -- an invalid owner is BOTH flagged below AND
+        # excluded here, so a legacy bare-role or name-only entry cannot keep an
+        # approval-required stage green (C4; Codex PR#143 review).
         approved_stages = {
             a.get("stage")
             for a in approvals
-            if isinstance(a, dict) and isinstance(a.get("stage"), str)
+            if isinstance(a, dict)
+            and isinstance(a.get("stage"), str)
+            and _owner_is_valid(a.get("owner"))
         }
 
-        # C4 enforcement: every approval must name its DECIDER, not just a role.
+        # C4 enforcement: every approval must name its DECIDER + authority class.
         for a in approvals:
             if not isinstance(a, dict):
                 continue
-            if _owner_is_bare_role(a.get("owner")):
+            if not _owner_is_valid(a.get("owner")):
                 stage = a.get("stage")
                 findings.append(
                     _finding(
-                        f"approval for stage {stage!r} has a bare/missing owner "
+                        f"approval for stage {stage!r} has invalid owner "
                         f"{a.get('owner')!r}; record the decider by name + authority "
-                        'class (e.g. "Ada Lovelace (data_owner)"), never a role alone',
+                        'class (e.g. "Ada Lovelace (data_owner)") -- a bare role, a '
+                        "name without a class, or an unknown class does not count "
+                        "toward the stage-approval requirement",
                         rel,
                     )
                 )

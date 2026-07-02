@@ -104,7 +104,10 @@ is not optional cleanup; it blocks the gate.
 3. Re-run `retail check` — C1/C2 must clear (0 host literals on disk).
 
 The Power BI Modeling MCP can do steps 1-2 (`named_expression CreateParameter` +
-`partition Update`), but **Desktop's Save may re-emit the literal** if its UI state
+`partition Update`). To enable it, vendor the extension under
+`tools/powerbi-modeling-mcp/` (gitignored) and copy `.mcp.json.example` ->
+`.mcp.json` (also gitignored -- the config points at the untracked vendored
+tree, so it stays machine-local). But **Desktop's Save may re-emit the literal** if its UI state
 still holds the original Get-Data step — verify the on-disk TMDL after saving:
 `grep -r "ondigitalocean\|PostgreSQL.Database(\"" powerbi/` must return nothing.
 

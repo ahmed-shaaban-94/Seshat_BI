@@ -200,12 +200,17 @@ A future-PR reviewer runs, on the post-extraction tip:
 ```bash
 # 1. No client/business-data markers ANYWHERE in the tracked tree (TREE-WIDE; incl.
 #    powerbi/, reports/, assets/). Markers cover bare `c086`, the client name, the DO
-#    cluster id + db name, and the schema/PII tokens. Excludes only the C2 gate's own
-#    regex, *.example, and legitimately-historical specs/ (documented exclusions):
-git grep -nI \
-  -e "c086" -e "ezaby" -e "ezaby_demo" -e "db-<cluster-id>" \
+#    cluster id + db name, and the schema/PII tokens. The cluster id is matched by
+#    SHAPE (the C2 slug regex), not by a redacted literal -- a placeholder literal
+#    like `db-<cluster-id>` can never match a reintroduced real slug (Codex PR#143).
+#    Excludes only the C2 gate's own regex + its guard tests / leak fixtures (whose
+#    slugs are synthetic), *.example, and legitimately-historical specs/ (documented
+#    exclusions):
+git grep -nIE \
+  -e "c086" -e "ezaby" -e "ezaby_demo" -e "db-[a-z]{2,}-[a-z]{2,}[0-9]-[0-9]{3,}" \
   -e "insurance_no" -e "personel_number" -e "sales_c086" \
-  -- ':!src/retail/rules/git_meta.py' ':!*.example' ':!specs/*'   # -> expect: no output
+  -- ':!src/retail/rules/git_meta.py' ':!tests/unit/test_git_meta.py' \
+     ':!tests/fixtures/pbip_params/*' ':!*.example' ':!specs/*'   # -> expect: no output
 # 2. No committed DSN/host (the C2 gate + the marker grep above; note the C2 regex is
 #    FQDN-only, so the marker grep is what catches the bare cluster id):
 retail check --repo .            # -> exit 0

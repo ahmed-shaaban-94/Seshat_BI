@@ -23,7 +23,10 @@ stage is `pass`. Four stages require a named-human approval recorded in `approva
 (highlighted); `Silver Ready` and `Gold Ready` are mechanical gates with no stage
 approval. Each `approvals[].owner` records the DECIDER by NAME plus the authority
 class in parentheses (e.g. `"Ahmed Shaaban (data_owner)"`), so the approval traces
-to a named human -- a bare role token alone is a defect (audit C4).
+to a named human -- a bare role token alone is a defect (audit C4). RS1 enforces the
+FULL shape: an owner that is a bare role, a name with no class, or an unknown class
+is flagged AND does not satisfy the stage's approval requirement -- a legacy
+`owner: data_owner` entry cannot keep an approval-required stage green.
 
 ```mermaid
 flowchart TD
