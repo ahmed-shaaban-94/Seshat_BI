@@ -1,6 +1,6 @@
 {
   "$schema_note": "Machine-readable training/eval set for BI Python reasoning. Fictional retail scenarios only. Score an agent on reasoning match + correct ending artifact. Mirrors references/agent-training-set.md.",
-  "seed_note": "Initial seed. Several items' ends_on targets name artifacts that are planned / not yet implemented in this seed (dataframe-review-checklist, merge-fanout-checklist, cleaning-review-checklist, validation-reconciliation-checklist, date readiness verdict, performance diagnostic verdict). The only shipped checklist is checklists/aggregation-grain-checklist.md. Until the others ship, score on reasoning quality and accept the verdict produced inside the live knowledge file as the artifact. This is a seed/eval set, not proof the skill is complete.",
+  "seed_note": "Initial seed. Several items' ends_on targets name artifacts that are planned / not yet implemented in this seed (dataframe-review-checklist, merge-fanout-checklist, validation-reconciliation-checklist, date readiness verdict, performance diagnostic verdict). The shipped checklists are checklists/aggregation-grain-checklist.md and checklists/cleaning-review-checklist.md. Until the others ship, score on reasoning quality and accept the verdict produced inside the live knowledge file as the artifact. This is a seed/eval set, not proof the skill is complete.",
   "version": "0.1.0",
   "slice_origin": "Slice 11",
   "items": [

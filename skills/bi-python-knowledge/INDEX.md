@@ -33,7 +33,7 @@ the named artifact. Do not pre-load the whole `knowledge/` directory.
 | If the agent needs to… | Open | End on |
 |---|---|---|
 | Profile a **standalone file source** (CSV / Excel) — grain, encoding, delimiter, header row, multi-sheet, inferred-type traps | `knowledge/file-source-grain.md` (PY-CN-081..085, PY-BP-007, PY-PB-011) | the File-source addendum in `templates/source-profile.md` (marked `[PROPOSED]` / `[PENDING LIVE PROFILE]`) |
-| Clean / standardize strings, categories, currency, units, sentinels, or duplicates | `knowledge/cleaning-and-standardization.md` | row-count ledger + cleaning verdict (defined in the file; the cleaning-review checklist is planned — see note) |
+| Clean / standardize strings, categories, currency, units, sentinels, or duplicates | `knowledge/cleaning-and-standardization.md` | `checklists/cleaning-review-checklist.md` (cleaning verdict + row-count ledger) |
 | Aggregate / groupby at a correct grain (use the checklist as a standalone review artifact) | *(groupby knowledge file is planned)* | `checklists/aggregation-grain-checklist.md` |
 | Review proposed (not-yet-active) static-analysis rules for Python pipelines | `patterns/analyzer-rule-candidates.json` | the candidate list itself (staging artifact) |
 | Confirm the business meaning of a retail column | `references/source-map.md` | n/a (reference) |
@@ -41,10 +41,10 @@ the named artifact. Do not pre-load the whole `knowledge/` directory.
 | Look up an ID family (`PY-CN-*`, `PY-AP-*`, `PY-AR-*`, …) | `references/id-conventions.md` | n/a (reference) |
 | Evaluate an agent's Python reasoning against a seed Q&A set | `references/agent-training-set.json`, `references/agent-training-set.md` | n/a (eval seed) |
 
-> **Cleaning route endpoint:** the cleaning knowledge file (PY-CN-036) ends on a
-> **cleaning review checklist**, which is **planned / not yet implemented** in this
-> seed. Until it lands, produce the row-count ledger and verdict described inside
-> `knowledge/cleaning-and-standardization.md` itself, and treat that as the artifact.
+> **Cleaning route endpoint:** the cleaning knowledge file (PY-CN-036) ends on the
+> **cleaning review checklist** (`checklists/cleaning-review-checklist.md`) -- walk it to
+> a categorical cleaning verdict (CLEANING SOUND / OPEN FINDINGS / GRAIN VIOLATED /
+> BLOCKED) and attach the row-count ledger.
 
 ### Symptom routes — live
 
@@ -79,7 +79,6 @@ These routes are part of the intended layer but their knowledge/checklist files 
 | Review a Python pipeline against active rules | `knowledge/python-anti-patterns.md`, `patterns/analyzer-rules.json` | planned / not yet implemented |
 | Recommended positive patterns | `patterns/python-patterns.json` | planned / not yet implemented |
 | Find an original worked retail example | `knowledge/python-retail-examples.md` | planned / not yet implemented |
-| Cleaning review checklist (cleaning route endpoint) | `checklists/cleaning-review-checklist.md` | planned / not yet implemented |
 | Dataframe review checklist | `checklists/dataframe-review-checklist.md` | planned / not yet implemented |
 | Merge / fan-out checklist | `checklists/merge-fanout-checklist.md` | planned / not yet implemented |
 | Validation / reconciliation checklist | `checklists/validation-reconciliation-checklist.md` | planned / not yet implemented |
@@ -95,7 +94,7 @@ knowledge/   reasoning content, one domain per file
 patterns/    machine-readable rule + pattern sets (JSON)
              — shipped: analyzer-rule-candidates.json (candidates only, not active)
 checklists/  the artifacts routes end on
-             — shipped: aggregation-grain-checklist.md
+             — shipped: aggregation-grain-checklist.md, cleaning-review-checklist.md
 references/  shared schema, source map, copyright, ID conventions, training/eval seed
              — shipped: all four references + agent-training-set.{json,md}
 ```
