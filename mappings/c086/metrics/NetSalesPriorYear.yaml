@@ -8,7 +8,7 @@ grain: "a time-shifted lookup on the marked date table; NOT additive across wind
 formula_intent: >-
   Net sales for the same period one year earlier than the dates in view -- the YoY
   comparison baseline. Anchors on the marked date table dim_date full_date.
-  On the full model = 25,702,853.93 (2023+2024; 2022 has no data).
+  On the full model = ~25.70M (2023+2024; 2022 has no data; exact figure held outside git).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

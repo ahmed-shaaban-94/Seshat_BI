@@ -53,8 +53,9 @@ The 3 LIVE items are now **confirmed against real data** (not just correct-by-co
 - **RC15 — PASS.** `gold.dim_date` 2023-01-01..2025-12-31 = 1,096 rows = exact span (contiguous);
   spans all `sale_date`s; **0** sale_dates missing from the calendar.
 - **RC16 — PASS.** **0 hard orphan FKs** on all 6 dims; silver=fct=246,916 rows; all 5 measure totals
-  reconcile silver↔gold to the penny (sales_amount 38,804,001.54; net 35,699,605.26; tax 1,108,355.29;
-  discount -1,996,042.59; quantity 286,098.39).
+  reconcile silver↔gold to the penny (sales_amount ~38.80M; net ~35.70M; tax ~1.11M;
+  discount ~-2.00M; quantity ~286.1K — exact figures masked 2026-07-02 per the data-owner's
+  redaction decision, held outside git; penny-exact equality was verified in the live run).
 - **Data-quality note (not a defect):** `salesperson_sk` has 71 fact rows mapped to the `-1` unknown
   member — i.e. ~71 line items lack salesperson attribution; the RC14 unknown-member pattern absorbs
   them correctly (no orphan). Worth surfacing to the analyst as a known gap.

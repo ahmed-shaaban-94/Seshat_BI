@@ -2,7 +2,7 @@
 
 Catalog of the analytics warehouse: medallion layers, tables, columns, and
 business rules. Source system is the El Ezaby pharmacy POS/ERP (SAP-style),
-store **C086** ("الترعة البولاقية"), sales 2023-01-01 → 2025-12-31.
+store **C086** ("[store name redacted]"), sales 2023-01-01 → 2025-12-31.
 Data is bilingual (Arabic staff/billing terms, English drug names).
 
 Medallion flow: `bronze` (raw landing) → `silver` (typed/cleaned) → `gold`
@@ -78,7 +78,7 @@ Indexes: `sale_date`, `customer_id`, `product_id`.
 | `product_cluster` | text | A/B/C/D performance class. Missing → `'UNCLASSIFIED'`. |
 | `original_invoice_ref` | text | For returns: the originating invoice. NULL on non-returns. |
 | `branch_code` | text | Store code (`C086`). |
-| `branch_name` | text | Store name (الترعة البولاقية). |
+| `branch_name` | text | Store name ([redacted]). |
 | `business_segment` | text | Rollup of `product_division` (see mapping below). |
 
 ### Row filters applied (bronze → silver: 249,106 → 246,916)

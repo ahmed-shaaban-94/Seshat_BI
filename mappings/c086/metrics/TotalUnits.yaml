@@ -7,7 +7,7 @@ name: "TotalUnits"
 grain: "additive at invoice-line grain."
 formula_intent: >-
   Units sold net of returned units. Quantity is signed (returns negative), so a
-  plain sum nets returned units. Fractional values valid (part-packs). Full model = 286,098.392.
+  plain sum nets returned units. Fractional values valid (part-packs). Full model = ~286.1K units (exact figure held outside git; masked 2026-07-02).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

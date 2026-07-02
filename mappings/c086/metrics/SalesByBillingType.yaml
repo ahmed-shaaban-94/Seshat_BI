@@ -8,7 +8,7 @@ grain: "additive at invoice-line grain; a NetSales split, not a new measure."
 formula_intent: >-
   Net sales split by billing type (Cash/Credit/Delivery/Pick-Up and their return
   variants). Reuses NetSales on a dim_billing_type billing_type_label axis; return
-  types render negative. The split sums to the 38,804,001.54 grand total.
+  types render negative. The split sums to the NetSales grand total (~38.80M; exact figure held outside git).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

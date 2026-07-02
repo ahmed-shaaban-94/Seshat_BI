@@ -43,3 +43,13 @@ Recorded here rather than silently rewritten, so the history stays reviewable:
   (see `../sales_c086/reconciliation-report.md`).
 - The narrative worked example (`docs/worked-examples/c086-pharmacy.md`) still
   describes the journey; read it with this supersession note in mind.
+
+## Redaction note (2026-07-02)
+
+Per the data-owner's redaction decision (adversarial audit, finding C16): exact
+client financial totals were masked to rounded figures or `[masked]` across the
+mapping artifacts and metric contracts; manager/store names were replaced with
+placeholders; and the rendered KPI deliverable
+(`metrics/c086-kpi-deliverable.html`) was REMOVED from the tracked tree --
+client deliverables full of exact figures live outside git. Git HISTORY retains
+earlier revisions; a history purge is a separate, coordinated step.

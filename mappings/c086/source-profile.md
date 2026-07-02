@@ -133,9 +133,9 @@ Derived from the data, not field names.
 - **Money-relationship checks (derive, never assume).** Four money columns
   (`gross_sales` / `net_sales` / `tax` / `subtotal5_discount`) are kept as INDEPENDENT
   measures (RC9); they are not collapsed on a name-based identity assumption. Live
-  silver<->gold totals (penny-exact): sales_amount `38,804,001.54`; net_amount
-  `35,699,605.26`; tax_amount `1,108,355.29`; discount_amount `-1,996,042.59`;
-  quantity `286,098.39`.
+  silver<->gold totals (penny-exact; exact figures masked 2026-07-02, held outside
+  git): sales_amount `[masked]`; net_amount `[masked]`; tax_amount `[masked]`;
+  discount_amount `[masked]`; quantity `[masked]`.
 
 ---
 

@@ -12,8 +12,9 @@ formula_intent: >-
   (customer not WALK_IN and customer_sk <> -1). Walk-in sales are deliberately NOT in
   the numerator here, and the single WALK_IN key is NOT in the denominator, so the
   ratio is a true per-identified-customer average. Numerator is already net of returns
-  (return rows carry negative gross_sales). On the full model = 29,635,036.34 / 637 =
-  46,522.82. A ratio: compute at the display grain, never average-of-averages.
+  (return rows carry negative gross_sales). On the full model = ~29.64M / 637 =
+  ~46.5K (exact figures held outside git). A ratio: compute at the display grain,
+  never average-of-averages.
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

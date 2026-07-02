@@ -7,7 +7,7 @@ name: "Returns"
 grain: "additive at invoice-line grain; a negative number by design."
 formula_intent: >-
   The money value of returned lines -- the sum of sale amount restricted to return
-  lines. Negative by design; it is the gross-to-net drag. On the full model = -3,129,103.16 EGP.
+  lines. Negative by design; it is the gross-to-net drag. On the full model = ~-3.13M EGP (exact figure held outside git).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

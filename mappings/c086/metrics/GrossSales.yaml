@@ -8,7 +8,7 @@ grain: "additive at invoice-line grain; valid at any rollup."
 formula_intent: >-
   Sales from kept (non-return) lines only, before returns net out -- the sum of
   sale amount restricted to non-return lines. GrossSales + Returns = NetSales.
-  On the full unfiltered model = 41,933,104.70 EGP.
+  On the full unfiltered model = ~41.93M EGP (exact figure held outside git; masked 2026-07-02).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

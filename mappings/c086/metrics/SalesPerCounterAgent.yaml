@@ -8,7 +8,7 @@ grain: "a ratio valid at any rollup; NOT additive."
 formula_intent: >-
   Average net sales per counter agent (product purchaser) -- NetSales divided by
   the count of real purchasers (16 agents; -1 excluded). VERIFY LIVE -- derived
-  value 2,425,250.10, not independently anchored.
+  value ~2.43M, not independently anchored (exact figure held outside git).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

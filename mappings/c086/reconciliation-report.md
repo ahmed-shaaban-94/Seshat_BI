@@ -119,11 +119,11 @@ reconciled silver<->gold; the BI column is `n/a` until an Import-mode model exis
 
 | Measure | Source | Silver | Gold | BI | Match? |
 |---------|--------|--------|------|----|--------|
-| `sales_amount` | (faithful landing) | `38,804,001.54` | `38,804,001.54` | `n/a` | yes |
-| `net_amount` | (faithful landing) | `35,699,605.26` | `35,699,605.26` | `n/a` | yes |
-| `tax_amount` | (faithful landing) | `1,108,355.29` | `1,108,355.29` | `n/a` | yes |
-| `discount_amount` | (faithful landing) | `-1,996,042.59` | `-1,996,042.59` | `n/a` | yes |
-| `quantity` | (faithful landing) | `286,098.39` | `286,098.39` | `n/a` | yes |
+| `sales_amount` | (faithful landing) | `[masked]` | `[masked]` | `n/a` | yes |
+| `net_amount` | (faithful landing) | `[masked]` | `[masked]` | `n/a` | yes |
+| `tax_amount` | (faithful landing) | `[masked]` | `[masked]` | `n/a` | yes |
+| `discount_amount` | (faithful landing) | `[masked]` | `[masked]` | `n/a` | yes |
+| `quantity` | (faithful landing) | `[masked]` | `[masked]` | `n/a` | yes |
 | Row count | `249,106` (raw) | `246,916` | `246,916` | `n/a` | yes (silver = gold) |
 
 > Source totals are the faithful all-TEXT landing (`249,106` raw rows); the `2,190`-row

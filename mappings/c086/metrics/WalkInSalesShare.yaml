@@ -12,9 +12,9 @@ formula_intent: >-
   gross_sales). The denominator is the FULL net-sales total, not a named-only subset,
   so this reads as "of every pound taken, this fraction was anonymous walk-in." On
   the full model this is derived (walk-in has no standalone ground-truth figure):
-  WalkInSales = NetSales - NamedCustomerSales = 38,804,001.54 - 29,635,036.34 =
-  9,168,965.20, giving 9,168,965.20 / 38,804,001.54 = 23.63%. A ratio: compute at the
-  display grain, never average-of-averages.
+  WalkInSales = NetSales - NamedCustomerSales = ~38.80M - ~29.64M = ~9.17M,
+  giving ~9.17M / ~38.80M = 23.63% (exact figures held outside git). A ratio:
+  compute at the display grain, never average-of-averages.
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

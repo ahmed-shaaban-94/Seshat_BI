@@ -8,7 +8,7 @@ grain: "fully additive at fct_sales invoice-line grain; rolls up to any dimensio
 formula_intent: >-
   The headline money figure: total sales taken net of returns. Return lines carry
   negative amounts, so a plain sum of the sale amount is already net of returns.
-  On the full unfiltered model = 38,804,001.54 EGP.
+  On the full unfiltered model = ~38.80M EGP (exact figure held outside git; masked 2026-07-02).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

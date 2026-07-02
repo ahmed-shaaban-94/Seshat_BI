@@ -7,7 +7,7 @@ name: "NetSalesYTD"
 grain: "a running total on the marked date table; resets each year."
 formula_intent: >-
   Net sales accumulated from Jan 1 to the latest date in view; resets each year.
-  Anchors on dim_date full_date. Unfiltered = current year 2025 = 13,101,147.61.
+  Anchors on dim_date full_date. Unfiltered = current year 2025 = ~13.10M (exact figure held outside git).
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
   gold_table: "gold.fct_sales"

@@ -45,10 +45,10 @@
 |---|---|
 | `knumv` | 100% empty |
 | `ref_return_date` | 100% empty |
-| `cosm_mg` | 1 value (`وائل حامد`) — single manager constant |
-| `area_mg` | 1 value (`Ahmed Hashem`) — single manager constant |
+| `cosm_mg` | 1 value (`[redacted -- manager name]`) — single manager constant |
+| `area_mg` | 1 value (`[redacted -- manager name]`) — single manager constant |
 | `site` | 1 value (`C086`) — single store |
-| `site_name` | 1 value (`الترعة البولاقية`) — single store |
+| `site_name` | 1 value (`[redacted -- store name]`) — single store |
 
 `site`/`site_name` are a **single-branch constant** for this extract — they pin the
 branch rather than vary, so a `dim_branch` here has exactly one member (decide:
