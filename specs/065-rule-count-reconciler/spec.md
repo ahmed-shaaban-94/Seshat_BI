@@ -179,4 +179,75 @@ absent/untracked or unparseable -> one ERROR.
 
 ## Clarifications
 
-<!-- Clarifications session is authored in Stage 3. -->
+### Session 2026-07-02
+
+Five build-relevant ambiguities were resolved by the advisor against the
+constitution, the readiness spine, the retail-check stdlib-only invariant, and
+how the shipped SC1 sibling was decided. None is a Principle-V carve-out (SC2
+touches no data grain, PII, business rollup, or product identity -- it
+reconciles a prose integer against a committed count source), so none is
+deferred to a human ruling.
+
+- **Q1 (authoritative count source)**: Should SC2 obtain the live count by
+  importing the rules registry (`len(all_rules())`), or by reading the committed
+  golden rule-count manifest (`docs/rules/rules-manifest.json`) with the standard
+  library? **Recommended answer**: Read the golden manifest with the standard
+  library; do NOT import the rules package at module scope. **Reasoning**: The
+  retail check core is stdlib-only (SC1 keeps it dependency-free, using only a
+  lazy `import yaml` inside its handler). The golden rule-count manifest is
+  already golden-tested to equal the live registry count, so reading it is
+  equivalent to reading the registry -- but without pulling governed application
+  code into the gate core, preserving the invariant. **Reversible**: costly (the
+  count-source choice shapes the module's import surface and the never-execute
+  guarantee; switching later would be a design change, not a text edit).
+  Integrated into FR-006, FR-014, and Assumptions.
+
+- **Q2 (delivery sequencing of the seed fix and its target value)**: Should
+  introducing SC2 also correct the seeded stale glossary count in the same
+  change, and to what value? **Recommended answer**: Correct it in the same
+  change, to the POST-SC2 count. **Reasoning**: An enforced ERROR rule that ships
+  RED on main would block every later change until someone fixes the prose, so
+  the seed defect and its correction must land together. Because adding SC2
+  itself increments the registry by one, the corrected glossary count -- and the
+  seed manifest's `claimed-count` -- must equal the count AFTER SC2 is
+  registered, not the pre-SC2 count; otherwise the gate would be red the moment
+  SC2 registers. **Reversible**: easy (the prose fix is a small text edit).
+  Integrated into FR-018 and SC-006.
+
+- **Q3 (family-count scope)**: Should SC2 also reconcile family-count claims
+  (for example "N families"), or only the integer rule count? **Recommended
+  answer**: Only the integer rule count for v1. **Reasoning**: The idea's
+  first-step names only the integer count; a family count is a distinct claim
+  class with its own source of truth and is optional. Adding it now is scope
+  creep (YAGNI). **Reversible**: easy (a family-count facet can be added later as
+  a sibling extension without changing SC2's core). Integrated into Out of Scope.
+
+- **Q4 (manifest-completeness drift gap)**: Accept that nothing checks the
+  manifest is complete, or pair SC2 with a coverage rule now? **Recommended
+  answer**: Accept the gap for SC2's first step. **Reasoning**: SC1 shipped its
+  claim-reconciler without a completeness sibling; the same staged path applies
+  here. Building a coverage rule now is scope creep and a separate idea.
+  **Reversible**: easy (a coverage rule can be added later as a sibling without
+  changing SC2). Integrated into Out of Scope.
+
+- **Q5 (readiness-spine placement)**: Is SC2 correctly outside the seven-stage
+  readiness spine, recorded as an idea-bank integrity rule? **Recommended
+  answer**: Yes -- outside the spine, sibling to SC1/DF1. **Reasoning**: SC2 is
+  governance/observability-integrity machinery with no roadmap F-number and
+  advances no Source->...->Publish stage, structurally identical to the SC1/DF1
+  integrity rules that are all recorded off-spine. **Reversible**: easy (a future
+  roadmap edit could map it if ever wanted). Integrated into Assumptions.
+
+### Deferred to human ruling (Principle V)
+
+None. SC2 surfaces no grain/uniqueness, PII publish-safety, business
+rollup/segment, or product-identity question. The rule reconciles a declared
+integer count claim against a committed count source and committed document text
+only.
+
+Two decisions remain a human's to make at ratify time (they are the roadmap
+owner's call, not a spec ambiguity, and the workflow must not assign them): the
+roadmap readiness stage SC2 advances (recorded here as off-spine) and the
+roadmap F-number / spec-number a human assigns for SC2 (SC1=050, DF1=051; SC2
+would be a new number). These are recorded for the human, not answered by this
+workflow.
