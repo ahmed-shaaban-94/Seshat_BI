@@ -132,7 +132,8 @@ from a remote, and never fabricates a confidence score.
   `init` owns ONLY what has no existing home: writing the backstage substrate
   (`compass.yaml` + fenced projections + manifests), the honest install-time
   expectation-setting, and wiring bootstrap -> the EXISTING
-  `first-hour-compass` / `retail-orchestrate` / `source-mapping` verbs. The
+  `first-hour-compass` -> `retail-onboard-table` front door (with
+  `retail-orchestrate` / `source-mapping` as the later medallion stages). The
   distinction is INSTALL-TIME bootstrap vs. per-table orientation; `init` delegates
   the overlap rather than restating it (no second source of truth for the
   first-arrival pattern).

@@ -100,9 +100,12 @@ incomplete dependency).
 ## Implementation strategy
 
 **MVP = Phase 1 + Phase 2 + Phase 3 (US1).** That alone delivers the analyst-visible
-"aha": `retail init` → pick example → profile my table → first result. US2 hardens
-the substrate (mostly test coverage of guarantees US1 already relies on); US3 adds
-the honest seam framing. Ship US1 first; US2/US3 are incremental.
+"aha": the agent performs `retail-init` → delegate example offer → route into
+`retail-onboard-table` → profile (live DB) or `[PENDING LIVE PROFILE]` (no DB) →
+first result. (The `retail init` CLI writes substrate + prints the next step; the
+pick/profile are agent-performed, not a CLI wizard.) US2 hardens the substrate
+(mostly test coverage of guarantees US1 already relies on); US3 adds the honest seam
+framing. Ship US1 first; US2/US3 are incremental.
 
 **Anti-fork guard is a first-class acceptance gate**, not polish: T009 forbids
 restating the `first-hour-compass` offer, and SC-008 (T-none needed beyond review)
