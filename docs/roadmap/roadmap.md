@@ -5,12 +5,13 @@
   `main`; **F016 (the Power BI execution adapter -- official Power BI MCP /
   connection; `pbi-cli` no longer preferred) remains the only parked feature of
   that original sequence** -- deliberately LAST, execution-only, and gated (hard
-  rule #6). Separately, the **Companion Modules & Adapters tier (F024-F034)** is
+  rule #6). Separately, the **Companion Modules & Adapters tier (F024-F035)** is
   **PARTLY SHIPPED** (status corrected 2026-06-26): six of its features (F025-F030)
   shipped as docs-first skills under `.claude/skills/`; F024 + F031-F033 remain
-  spec-only; and **F034's authoring slice shipped 2026-06-26** (its built-page
-  worked example remains a human Power BI Desktop action -- see Tier 5) -- see Tier 5
-  below for the verified per-feature status. Beyond that, the DAX-fortification
+  spec-only; **F034's authoring slice shipped 2026-06-26** (its built-page
+  worked example remains a human Power BI Desktop action -- see Tier 5); and
+  **F035 (Approval Evidence Pack) was authored 2026-07-02** as a docs/skill/template
+  Product Module -- see Tier 5 below for the verified per-feature status. Beyond that, the DAX-fortification
   follow-on (L4 value proxy) shipped 2026-06-26 (`retail value-check`); the
   `$$`-tokenizer fix and the F038 BPA spike shipped; the pbi-tools extract spike and
   the L3 new predicate ops were assessed and DEFERRED for want of a consumer/target
@@ -160,7 +161,7 @@ as the historical authoring order.
 | **015** | Reconciliation Ledger | 4 | Gold Ready | a durable ledger of cross-layer reconciliation results over time | `0eefe57` |
 | **016** | Power BI Execution Adapter (official Power BI MCP / connection) | 6 | Dashboard/Publish | the deferred, EXECUTION-ONLY Power BI adapter -- materializes/publishes an already-approved model; cannot define metrics, mappings, semantic logic, or dashboard design. LAST, gated on semantic-model readiness. (`pbi-cli` is no longer the preferred path; the official Power BI MCP / connection is the preferred future adapter.) | **NOT BUILT -- the only remaining feature (gated, by design)** |
 
-### Tier 5 -- Companion Modules & Adapters (F024-F034) -- PARTLY SHIPPED
+### Tier 5 -- Companion Modules & Adapters (F024-F035) -- PARTLY SHIPPED
 
 Authored by the 2026-06-25 companion-modules audit
 (`docs/superpowers/specs/2026-06-25-companion-modules-adapters-audit.md`). **Status
@@ -191,6 +192,7 @@ sequences before it or assumes it exists.
 | **F032** | Adapter Compatibility Matrix | Maintenance Automation | `026` | spec-only -- same no-consumer reason as F031 |
 | **F033** | Release & Maturity Management | Maintenance Automation / Skill | `027` | spec-only -- same no-consumer reason as F031 |
 | **F034** | Visual Implementation MVP | Dashboard & Delivery (manual build, F016-independent) | `039` | **Authoring slice SHIPPED 2026-06-26** (spec `Finalized`) -- the three generic artifacts exist: the trace template (`templates/visual-implementation-trace.md`), the Dashboard Ready evidence-item edit (`docs/readiness/dashboard-ready.md`), and the review workflow (`.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`). The **built page itself remains a human Power BI Desktop action** (US-1/SC-001/SC-007/FR-013 UNMET by design -- FR-008/FR-009 forbid agent-generated PBIR): `mappings/retail_store_sales/design/dashboard-layout.md` (approved design) + the committed PBIR report (`powerbi/RetailStoreSales.Report/`, page still empty) await a human's Desktop build, which the gate (`semantic_model_ready: pass` + design-review sign-off) already permits. |
+| **F035** | Approval Evidence Pack | Product Module (artifact-writing) | `063` | **Authored 2026-07-02** -- `.claude/skills/approval-evidence-pack/` + `templates/approval-evidence-pack.md`. Composes ONE pre-approval evidence pack for ONE (table, stage) so a named human reads one traceable document before signing; generic across all seven stages via a stage parameter. Reads committed artifacts only (per-stage readiness doc, `readiness-status.yaml`, per-contract AL1 signal, `parked-on.yaml`, pending contracts); writes only `mappings/<table>/approval-evidence-pack-<stage>.md` with an EMPTY approval slot; adds no `retail check` rule and no runtime code (the agent is the runtime). Composes AFTER F028 (late-stage 10-section pack) and BEFORE F027 (records the signature); structurally incapable of writing `approvals[]` / moving a stage / emitting a score/count (Principle V; hard rule #9). On-disk spec dir `063-approval-evidence-pack` (dir != F-number; this row wins, per the tier note). |
 
 > **Numbering (spec-dir vs F-number) for this tier.** Spec dirs were allocated
 > from the next free on-disk slot, giving **spec-dir = F-number - 6** for F024-F033
