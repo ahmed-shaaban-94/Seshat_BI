@@ -23,3 +23,17 @@ claims:
     anchor: "(`docs/demo/net-sales-end-to-end-readiness-trace.md`, shipped)"
     claimed-artifact: "docs/demo/net-sales-end-to-end-readiness-trace.md"
     claimed-status: "built"
+
+  # first-hour-compass surfaces two worked examples as first-arrival reference
+  # patterns; SC1 locks those file references so the skill can never point at a
+  # deleted/renamed example (nor can the anchoring table row silently move).
+  - id: "first-hour-compass-worked-example-c086"
+    doc: ".claude/skills/first-hour-compass/SKILL.md"
+    anchor: "| `docs/worked-examples/c086-pharmacy.md` | A full validated medallion run (pharmacy sales) end to end, Source -> Dashboard Ready |"
+    claimed-artifact: "docs/worked-examples/c086-pharmacy.md"
+    claimed-status: "built"
+  - id: "first-hour-compass-worked-example-store-sales"
+    doc: ".claude/skills/first-hour-compass/SKILL.md"
+    anchor: "| `docs/worked-examples/retail-store-sales.md` | The first table to traverse the FULL seven-stage spine |"
+    claimed-artifact: "docs/worked-examples/retail-store-sales.md"
+    claimed-status: "built"
