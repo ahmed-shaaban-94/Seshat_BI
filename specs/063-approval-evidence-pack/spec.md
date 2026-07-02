@@ -4,7 +4,16 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-02)
+
+> Ratified under the recorded ADOPT-batch autonomous authority dated 2026-07-02 (owner
+> directive: build+ratify+merge the entire ADOPT bucket; the advisor exercises the delegated
+> per-spec ratify authority). A recorded per-spec override within that batch, not a standing
+> waiver. Both Principle-V items resolved conservatively in Clarifications: FR-008 pending =
+> metrics/*.yaml contracts with readiness.status != pass (existing on-disk set); FR-013 =
+> link-and-cite only, never restate a grain/rollup/segment/PII ruling. The module is a
+> skill+template (no executor, no retail rule), structurally incapable of writing approvals[]
+> or moving a stage (Principle V). analyze: clean (0/0); plan-review: PASS-WITH-NOTES.
 
 **Input**: User description: "J1. Approval Evidence Pack for the Named-Human Stage Gate"
 
@@ -194,12 +203,13 @@ label, grain key, or column name.
 - **FR-007**: The pack MUST surface any blocking parked-on edge for the table's work by
   reading `docs/quality/parked-on.yaml`, citing each edge's recorded blocker, doc, and
   evidence.
-- **FR-008**: The pack MUST surface the table's PENDING contracts as an input.
-  [NEEDS CLARIFICATION: "pending contracts" has no single confirmed on-disk artifact --
-  does it resolve to the set of `mappings/<table>/metrics/*.yaml` contracts whose
-  `readiness.status` is not `pass`, to the Seeded/Planned markers in the KPI knowledge
-  layer, or to a new per-stage pending list? A human must fix this input definition
-  (Principle IV/V mapping-gate territory).]
+- **FR-008**: The pack MUST surface the table's PENDING contracts as an input. RESOLVED
+  (Clarifications, 2026-07-02): "pending contracts" resolves to the set of
+  `mappings/<table>/metrics/*.yaml` contracts whose `readiness.status` is not `pass` --
+  the existing on-disk contract set, read-only. It does NOT introduce a new per-stage
+  pending list and does NOT reinterpret the KPI-layer Seeded/Planned markers (those are a
+  separate upstream signal). A contract file that is missing or unreadable is recorded as a
+  BLOCKER per FR-011, never fabricated.
 - **FR-009**: The pack MUST end with an EMPTY `approvals[]` slot for the selected stage that
   the named human fills. The module MUST be structurally incapable of populating that slot,
   appending to `approvals[]`, or writing back to any source artifact.
@@ -216,10 +226,13 @@ label, grain key, or column name.
 - **FR-013**: For any evidence whose underlying artifact records a business-rule ruling (a
   metric contract's grain / rollup / segment) or a PII publish-safety ruling, the pack MUST
   only LINK and SUMMARISE the committed ruling; it MUST NOT re-decide or re-state the ruling
-  in its own words in a way that could read as a fresh judgment.
-  [NEEDS CLARIFICATION: confirm that summarising a committed grain / rollup / segment / PII
-  ruling for the packet does not risk republishing a business-rule or PII judgment the named
-  human owns -- a human must rule on the safe summarisation boundary (Principle V).]
+  in its own words in a way that could read as a fresh judgment. RESOLVED (Clarifications,
+  2026-07-02): the safe boundary is LINK-AND-CITE ONLY -- the pack quotes/points at the
+  committed ruling's own recorded text and its source path, and never paraphrases a grain,
+  rollup, segment, or PII publish-safety decision into new wording. For any such evidence the
+  pack emits the citation + a neutral pointer ("see <path>"), not a restatement; when in doubt
+  it links rather than summarises. This keeps the named human's business-rule/PII judgment the
+  single source of truth (Principle V/VII).
 - **FR-014**: The module and its template MUST stay generic (Principle VII): the worked
   example (C086 / retail_store_sales) may appear only as a cited filled instance, never
   inlined into the template or a fixed section label; the module MUST resolve a generic
@@ -338,13 +351,19 @@ defaults; all are reversible docs choices.
   `metrics/<Metric>.yaml` file. Reasoning: AL1 fires per contract; a table-wide flag would
   lose the traceability the surface-never-assert discipline requires. Reversible: easy.
 
-### Open for human ruling (Principle V -- NOT answered by this workflow)
+### Principle-V rulings (RESOLVED under the ADOPT-batch autonomous authority, 2026-07-02)
 
-- **Q-PENDING-CONTRACTS (FR-008)**: What exactly does "pending contracts" resolve to on
-  disk -- the `mappings/<table>/metrics/*.yaml` contracts whose `readiness.status` is not
-  `pass`, the Seeded/Planned markers in the KPI knowledge layer, or a new per-stage pending
-  list? This defines a mapping-gate input and is a named-human ruling.
-- **Q-BUSINESS-RULE-SUMMARY (FR-013)**: For a packet that summarises a committed grain /
-  rollup / segment ruling or a PII publish-safety ruling, confirm the safe summarisation
-  boundary so the pack never republishes a business-rule or PII judgment the named human
-  owns.
+Resolved by the owner-delegated advisor with conservative, scope-narrowing defaults (each
+resolution reads only committed state and never lets the module re-decide a human's ruling):
+
+- **Q-PENDING-CONTRACTS (FR-008) -- RESOLVED.** "pending contracts" = the
+  `mappings/<table>/metrics/*.yaml` contracts whose `readiness.status` is not `pass`. This is
+  the existing on-disk contract set (read-only); no new artifact is introduced and the KPI-layer
+  Seeded/Planned markers are NOT reinterpreted here. Missing/unreadable contract -> BLOCKER
+  (FR-011), never fabricated. Narrowest reading; uses only committed state.
+- **Q-BUSINESS-RULE-SUMMARY (FR-013) -- RESOLVED.** The safe boundary is LINK-AND-CITE ONLY: the
+  pack cites the committed ruling's own recorded text + source path and never paraphrases a
+  grain/rollup/segment/PII decision into fresh wording; when in doubt it links rather than
+  summarises. The named human's business-rule/PII judgment stays the single source of truth
+  (Principle V/VII). The module remains structurally incapable of writing `approvals[]` or moving
+  any stage (FR-009/FR-010) -- these rulings do not widen its write surface.
