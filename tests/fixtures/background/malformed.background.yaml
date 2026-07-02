@@ -1,0 +1,5 @@
+forbidden_dynamic_content:
+  contains_kpi_value: false
+   bad_indent: true
+  : : :
+- unbalanced
