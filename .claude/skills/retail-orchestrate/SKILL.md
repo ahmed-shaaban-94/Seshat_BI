@@ -129,8 +129,12 @@ escalate rather than guess.
 
 ## Seams (deferred by design -- report and park, never fake)
 
-- **Silver/gold SQL builder** -- writing `warehouse/` SQL is DB-write territory the
-  foundation defers; it needs its own spec. The conductor stops here and says so.
+- **Applying the silver/gold SQL to the DB** -- authoring the `warehouse/` `.sql` is
+  NO LONGER deferred: it shipped as F006 (`specs/006-warehouse-builder/spec.md`), and
+  this conductor invokes **retail-build-warehouse** at phases 5/6 to author the files
+  (in-scope, no side effects). What remains a human seam is EXECUTING that SQL against
+  the database -- the DB-write step -- not authoring it. The conductor stops at the
+  apply step and says so.
 - **Power BI execution adapter** -- the deferred, execution-only Power BI adapter
   (official Power BI MCP / connection; `pbi-cli` no longer preferred), Principle II;
   not wired. It executes an approved model; it never defines metrics/mappings/semantics.
