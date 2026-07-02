@@ -12,6 +12,7 @@ from __future__ import annotations
 
 # Side-effecting imports: each module registers its rules on import.
 from . import (  # noqa: F401  (imported for side effects)
+    additivity_consistency,
     assumption_coherence,
     assumptions,
     dax,
@@ -34,6 +35,7 @@ from . import (  # noqa: F401  (imported for side effects)
 )
 
 __all__ = [
+    "additivity_consistency",
     "assumption_coherence",
     "assumptions",
     "dax",
