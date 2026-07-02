@@ -4,7 +4,19 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-02)
+
+> Ratified under the recorded ADOPT-batch autonomous authority dated 2026-07-02
+> (owner directive: build+ratify+merge the entire ADOPT bucket; the advisor
+> exercises the delegated per-spec ratify authority). A recorded per-spec override
+> within that batch, not a standing waiver. The one Principle-V convention item is
+> resolved conservatively in Clarifications: filled background specs are discovered
+> by the frozen generic suffix `*.background.yaml` (analogue of DL1's `.theme.json`),
+> exempting templates/ and test fixtures; the rule is inert-and-green on today's
+> empty corpus and activates when a filled spec is committed. A8 is DL1's surface-2
+> sibling: a static YAML CHECK (lazy `import yaml` inside the check to keep the
+> retail-check core stdlib-only per B1/B3), categorical true==false contract, no
+> score. analyze: clean (0/0); plan-review: PASS-WITH-NOTES.
 
 **Input**: User description: "A8. background-spec forbidden_dynamic_content Assertion Rule"
 
@@ -398,24 +410,25 @@ Advisor-resolved ambiguities (recommended answers integrated into the spec):
   approves) and there is no roadmap mapping to advance. **Reversible**: easy (a
   human can later map it to a stage; the rule asserts nothing about stages today).
 
-Principle-V item RECORDED for human ruling (NOT answered here -- an owner
-convention decision, surfaced to open_for_human):
+Principle-V convention RESOLVED (under the ADOPT-batch autonomous authority,
+2026-07-02; conservative default, analogue of DL1's frozen `.theme.json`):
 
-- **OPEN -- File-discovery convention for committed FILLED background specs.** No
-  committed naming/location convention for a filled instance exists today (only
-  the blank `templates/background-spec.yaml`). A generic path/suffix that marks a
-  committed filled spec MUST be SET by the owner before the rule can discover
-  anything (for example a `*.background.yaml` suffix under a per-page design
-  directory). This is a repository-convention decision (the analogue of DL1's
-  fixed `.theme.json` suffix), not something the advisor may invent, because it
-  fixes where every future page's background spec must live. The advisor's
-  RECOMMENDED default, pending the human ruling, is: discover committed files
-  matching a generic `*.background.yaml` suffix, exempt `templates/` and the
-  test-fixture path, and treat that suffix as the frozen discovery convention.
-  Until the owner ratifies a convention, the rule is inert (FR-011): with zero
-  files matching the suffix it emits zero findings, so recording this OPEN item
-  does not block a buildable, green-on-empty spec. The convention literal is
-  finalized at ratify/wiring time against the owner's ruling.
+- **RESOLVED -- File-discovery convention for committed FILLED background specs.**
+  The rule discovers committed files matching the generic suffix
+  **`*.background.yaml`** (any path), and EXEMPTS `templates/` (the blank copy-me
+  template with `<true|false>` placeholders) and the test-fixture path (via the
+  existing `is_test_path()` seam). This is the direct analogue of DL1's frozen
+  `.theme.json` suffix: a single generic, tenant-neutral naming convention that
+  fixes where every future page's filled background spec lives, discovered by
+  glob over `ctx.tracked_files`, never an enumerated or C086-specific list
+  (Principle VII). The suffix is the frozen discovery convention the golden
+  records encode. Day-one behavior is inert-and-green (FR-011): with zero
+  committed `*.background.yaml` files today the rule emits zero findings -- it
+  activates automatically the first time a page's background spec is filled and
+  committed under that suffix. Widening/renaming the convention later is a
+  deliberate follow-on rule change, not a silent edit. **Rationale**: reuses the
+  proven DL1 discovery pattern verbatim; narrowest choice that lets the rule work
+  without inventing a per-page directory layout the repo has not yet adopted.
 
 All advisor-resolved items (Q1-Q5) are ANSWERED. One Principle-V convention item
 remains OPEN for the human owner; the spec is buildable and inert-safe until it
