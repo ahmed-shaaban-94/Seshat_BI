@@ -54,11 +54,13 @@ Present the two committed worked examples and let the user pick the closer domai
 
 | Worked example | What it demonstrates | Pick it when your table is... |
 |----------------|----------------------|-------------------------------|
-| `docs/worked-examples/c086-pharmacy.md` | A full validated medallion run (pharmacy sales) end to end, Source -> Dashboard Ready | ...a point-of-sale / transactional retail table (line items, returns, walk-ins) |
-| `docs/worked-examples/retail-store-sales.md` | The first table to traverse the FULL seven-stage spine | ...a store-level or general retail-sales table |
+| `docs/worked-examples/c086-pharmacy.md` | The medallion **build** pattern (pharmacy sales): bronze -> silver -> gold + live validation, to **Gold Ready** | ...a point-of-sale / transactional retail table (line items, returns, walk-ins) and you are focused on the build mechanics |
+| `docs/worked-examples/retail-store-sales.md` | The **full seven-stage spine** to Dashboard Ready -- metric contracts, governed model, dashboard design, handoff | ...a store-level / general retail-sales table, or you need the later stages (semantic model, dashboard, handoff) |
 
 Then hand off to `retail-onboard-table` for the user's own table, **holding the chosen example
-up as the reference** for that walk. Be explicit about what "use this example" means:
+up as the reference** for that walk. Note the depth difference: c086 is the build-to-Gold
+pattern; for semantic-model / dashboard / handoff guidance, `retail-store-sales` is the example
+that carries those stages (see `docs/worked-examples/README.md`). Be explicit about what "use this example" means:
 
 - The examples are **narrative patterns, not file templates** -- c086 itself says "copy this
   section structure, swap C086 for the new table, run the playbook's 7 phases". So the skill

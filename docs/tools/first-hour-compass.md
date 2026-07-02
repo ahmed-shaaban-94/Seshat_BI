@@ -28,11 +28,14 @@ named nothing -- the Compass does more than point at `retail-onboard-table`: it 
 filled example up and copy its *shape*, not to begin at an empty gate.
 
 The card presents the two committed worked examples and lets the author pick the closer domain
-analog: `docs/worked-examples/c086-pharmacy.md` (a full validated medallion run --
+analog: `docs/worked-examples/c086-pharmacy.md` (the medallion BUILD pattern to Gold Ready --
 point-of-sale / transactional retail) or `docs/worked-examples/retail-store-sales.md` (the
-first table across the full seven-stage spine -- store-level / general retail sales). It then
+full seven-stage spine to Dashboard Ready -- store-level / general retail sales, and the example
+to use when the later stages are needed). It then
 routes into `retail-onboard-table` for the author's own table, holding the chosen example up as
-the reference.
+the reference. The two differ in depth: c086 stops at Gold Ready (build mechanics), while
+retail-store-sales carries the semantic-model / dashboard / handoff stages
+(see `docs/worked-examples/README.md`).
 
 Two honesty rules the card states in the same breath:
 
