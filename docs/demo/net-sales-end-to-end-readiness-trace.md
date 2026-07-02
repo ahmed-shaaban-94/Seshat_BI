@@ -87,11 +87,19 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
 ## Step 6 — SQL / gold expectation
 
 - **Tier:** Mixed — gold **table present**; reconciliation **needs real data**.
-- **Evidence (present):** a gold fact table exists in the committed semantic model,
-  `powerbi/Retailgold.SemanticModel/definition/tables/gold fct_sales.tmdl`, with a
-  `net_amount` column the Net Sales measure sums (see Step 7). The expectation is
-  that gold supplies `net_amount` (or `sales_amount` + `discount_amount` to derive
-  it) at transaction-line grain.
+- **Evidence (present):** a gold fact table exists in the committed, live c086
+  semantic model,
+  `powerbi/c086 _sales.SemanticModel/definition/tables/gold fct_sales.tmdl`
+  (note the space before `_sales`), built by migration 0006
+  (`warehouse/migrations/0006_create_gold_sales_c086_star.sql`). It supplies
+  `gross_sales`, `quantity`, and `is_return` at transaction-line grain.
+- **Superseded anchor (do not cite as current):** an earlier trace pointed at
+  `powerbi/Retailgold.SemanticModel/.../gold fct_sales.tmdl` and its `net_amount`
+  column. That model is SUPERSEDED and DEAD — migration 0006 DROPPED
+  `net_amount`, `sales_amount`, `tax_amount`, and `discount_amount`, so it can no
+  longer refresh (see `powerbi/Retailgold.SemanticModel/SUPERSEDED.md`). The
+  current gold star exposes **no** discount/tax columns; there is therefore no
+  live discount-net or tax figure to derive here.
 - **Needs real data:** the SQL-knowledge reconciliation/validation expectations
   (PK uniqueness, no fan-out, gold-to-source reconciliation) are reasoning the
   `bi-sql-knowledge` layer provides; *running* them is a `retail validate` live
@@ -102,24 +110,39 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
 
 - **Tier:** Proven (artifact present) for the measure; **Documented** for the
   semantic-model readiness gate.
-- **Evidence (present):** a real measure exists —
-  `measure NetSales = SUM('gold fct_sales'[net_amount])` in
-  `powerbi/Retailgold.SemanticModel/definition/tables/gold fct_sales.tmdl`,
-  alongside `TotalSales` (gross), `TotalDiscount`, and `EffectiveTaxRate`
-  (`DIVIDE([TotalTax], [NetSales])`). This matches the contract's handoff note
-  ("base SUM measure, with separate Gross Sales and Discount measures for
-  transparency").
+- **Evidence (present):** a real, refreshable measure exists —
+  `measure NetSales = SUM('gold fct_sales'[gross_sales])` in
+  `powerbi/c086 _sales.SemanticModel/definition/tables/_Measures.tmdl` (note the
+  space before `_sales`), alongside `GrossSales`
+  (`CALCULATE([NetSales], is_return = FALSE())`) and `Returns`
+  (`CALCULATE([NetSales], is_return = TRUE())`), so `GrossSales + Returns =
+  NetSales`.
+- **Meaning shift — the live measure is net of RETURNS, not net of DISCOUNTS
+  (finding C15):** this c086 `NetSales` is net of **returns** (return lines carry
+  negative `gross_sales`, so a plain SUM is already return-net). It is NOT the
+  discount-net figure this trace's business question (Step 1), contract (Step 2),
+  and A5 discount ruling (Step 5) describe. The old anchor,
+  `NetSales = SUM('gold fct_sales'[net_amount])` in the SUPERSEDED
+  `Retailgold.SemanticModel`, WAS discount-net, but that model is dead (0006
+  dropped `net_amount` and all discount columns). The contract's handoff note
+  wanted "separate Gross Sales **and Discount** measures"; the live model has
+  `GrossSales` and `Returns` but **no discount measure**, because the gold star
+  has no discount column. **A live, refreshable discount-net `NetSales` does not
+  currently exist anywhere** — closing that gap needs a discount column in gold
+  and an owner-approved contract, not a citation of the dead model.
 - **Documented (not runtime-enforced):** Semantic Model Ready
   (`docs/readiness/semantic-model-ready.md`) is "Planning (docs/templates; no
   runtime code)". The L1–L2 DAX rules (`retail check` D1–D11) and the L3
   `retail semantic-check` (contract↔DAX denominator drift) and L4
   `retail value-check` (live value proxy) are the relevant gates; L4 needs real
   data.
-- **Discount-field gap (needs human ruling):** the gold model exposes a single
-  `discount_amount` column (one `TotalDiscount` measure), but the contract requires
-  the **line vs header discount** split to audit double-subtraction (A5). Confirm
-  whether `discount_amount` already nets line + header, or only one of them, as part
-  of the A5 ruling before relying on the derived path.
+- **Discount-field gap (needs human ruling + a schema change):** the current
+  gold star (migration 0006) exposes **no** discount column at all — neither a
+  single `discount_amount` nor the **line vs header discount** split the contract
+  requires to audit double-subtraction (A5). (The superseded `Retailgold` model's
+  single `discount_amount` / `TotalDiscount` is gone with that dead model.) So the
+  discount-net path is not just an A5 wording ruling; it needs a discount column
+  added to gold before any discount-net measure can be authored or relied on.
 - **No new DAX authored** in this trace — the `NetSales` measure already exists and
   is cited as-is.
 
@@ -148,9 +171,11 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
 
 - The Net Sales **business meaning** is contracted and Seeded (Steps 1–2).
 - The **required-field list** is specified (Step 3).
-- A real **`NetSales` DAX measure** exists in the committed gold semantic model and
-  matches the contract's handoff shape (Step 7).
-- The **gold fact table** that measure sums exists (Step 6).
+- A real, refreshable **`NetSales` DAX measure** exists in the committed, live
+  c086 semantic model (Step 7) — though it means net of **returns**
+  (`SUM(gross_sales)`), NOT the net of **discounts** this trace's contract
+  describes; the discount-net definition has no live backing (Step 7, finding C15).
+- The **gold fact table** that measure sums exists (Step 6, migration 0006).
 - The **open policy rulings** that gate a strict instance are named (Step 5).
 - The **layer hand-off is coherent**: meaning (retail-kpi) → fields (sql/source) →
   measure (dax) → dashboard (gated) → readiness (human), with no layer redefining
@@ -171,8 +196,9 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
   handling (A5) — and every readiness stage `pass`.
 - The **F7 domain vs contract wording** for returns ("after returns" vs "before
   returns, reported separately") — a domain-owner reconciliation (Step 1).
-- Whether the gold `discount_amount` already nets **line + header** discount, or
-  only one (Step 7, part of the A5 ruling).
+- Whether/how to add a discount column to gold to back a discount-net measure at
+  all — the current gold star (0006) has no discount field, so the line-vs-header
+  A5 question cannot even be evaluated until one is added (Step 7).
 
 ## What needs real data
 
@@ -184,10 +210,18 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
 
 ## Verdict
 
-This trace **proves on paper** that Net Sales has a coherent end-to-end path —
+This trace **proves on paper** that Net Sales has an end-to-end path —
 contract → fields → gold table → a real `NetSales` measure → gated dashboard use →
-human-gated readiness — with every layer's responsibility intact and no boundary
-crossed. It does **not** claim live validation, does **not** grant readiness, and
-honestly separates what is artifact-present from what still needs real data and a
-human ruling. The next real-data step (live reconciliation) is out of scope for a
-trace and would be a separate, explicitly authorized run.
+human-gated readiness — with each layer's boundary intact and no boundary crossed.
+**One layer link is NOT clean, and this trace does not pretend it is (finding
+C15):** the live `NetSales` measure means net of **returns**
+(`SUM(gross_sales)`), while the contract layer defines Net Sales as net of
+**discounts** — and no live, refreshable discount-net measure exists (the old
+discount-net anchor lived in the now-SUPERSEDED `Retailgold` model, whose columns
+0006 dropped). So the meaning layer and the measure layer currently implement
+*different definitions* of "Net Sales"; reconciling them (or adding a discount
+column + a discount-net contract) is an open item, not a proven coherence. It does
+**not** claim live validation, does **not** grant readiness, and honestly separates
+what is artifact-present from what still needs real data and a human ruling. The
+next real-data step (live reconciliation) is out of scope for a trace and would be
+a separate, explicitly authorized run.
