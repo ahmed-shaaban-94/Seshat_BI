@@ -316,22 +316,35 @@ def test_doctor_sweep_covers_every_registered_id() -> None:
     assert len(swept) > 1
 
 
-def test_known_drift_instance_missing_from_glossary() -> None:
-    # SC-003: a real rule id that is wired everywhere except the glossary must be
-    # reported missing-from-glossary. Cited generically -- discovered, not
-    # hardcoded: find any registered id whose only gap is the glossary.
+def test_no_registered_id_is_missing_from_the_glossary() -> None:
+    # Post-fix invariant (adversarial audit C12): every registered, wired rule id
+    # must ALSO appear in the glossary catalog. The DL1/DL2 family was the known
+    # drift instance -- wired everywhere but absent from docs/glossary.md -- and it
+    # is now added, so ZERO registered ids may be glossary-gaps. (This asserts the
+    # honest end state; the doctor's *ability* to detect a glossary gap is covered
+    # by test_doctor_flags_synthetic_glossary_gap below.)
     report = doctor(REPO_ROOT)
     glossary_gaps = [
-        e
+        e.id
         for e in report.entries
         if e.places["glossary"] == MISSING
         and e.places["register"] == PRESENT
         and e.places["expected_ids"] == PRESENT
         and e.places["golden"] == PRESENT
     ]
-    assert glossary_gaps, "expected at least one known glossary drift instance"
-    for e in glossary_gaps:
-        assert e.has_drift
+    assert glossary_gaps == [], (
+        f"registered rule ids missing from docs/glossary.md: {glossary_gaps}"
+    )
+
+
+def test_doctor_flags_synthetic_glossary_gap(tmp_path: Path) -> None:
+    # The detector's ABILITY to flag a glossary gap, proven on a synthetic id that
+    # is deliberately absent from the fixture glossary -- so the invariant test
+    # above (which asserts ZERO real gaps) is not vacuous.
+    from retail.scaffold import check_glossary
+
+    repo = _fixture_repo(tmp_path)
+    assert check_glossary(repo, "ZZ99") == MISSING
 
 
 # ---------------------------------------------------------------------------

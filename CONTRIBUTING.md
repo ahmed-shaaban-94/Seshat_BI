@@ -1,7 +1,8 @@
 # Contributing to Seshat BI
 
 Thanks for contributing. This repo is a **standalone, agent-first analytics service**
-(Power BI primary; DigitalOcean Postgres source; data flows `raw` -> `marts` -> Power BI).
+(Power BI primary; DigitalOcean Postgres source; data flows `bronze` -> `silver` -> `gold`,
+and Power BI reads the `gold` schema only).
 Most work is docs/skills/templates first; code follows only once the artifacts prove
 useful (hard rule #8). Read this before opening a PR.
 
@@ -48,7 +49,7 @@ Run what CI runs (`.github/workflows/ci.yml`) locally:
 ruff format --check src tests   # formatting
 ruff check src tests            # lint (E, F, I)
 pytest -m unit                  # unit tests
-retail check                    # static governance gate (the 8 rule families)
+retail check                    # static governance gate (see docs/glossary.md for the rule families)
 retail semantic-check --repo .  # contract <-> DAX drift (L3)
 ```
 

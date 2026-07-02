@@ -47,9 +47,10 @@ import json
 import pkgutil
 import subprocess
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 
-from .core import Finding, RuleContext, Severity
+from .core import Finding, RegisteredRule, Rule, RuleContext, Severity
 
 # repo-relative location of the committed golden record (sibling of the manifest).
 RECORD_REL_PATH = "docs/rules/severity-posture.json"
@@ -61,7 +62,7 @@ NO_FINDING_MARKER = "<no-finding>"
 L3_KEY = "L3:verdict_to_finding"
 
 
-def _live_rules():
+def _live_rules() -> tuple[RegisteredRule, ...]:
     """Return the live registered rules from a clean clear+reload of the registry.
 
     Mirrors the proven idiom in ``test_rules_manifest_snapshot.py``: a plain
@@ -192,7 +193,7 @@ def _write(repo: Path, rel: str, text: str) -> None:
     path.write_text(text, encoding="utf-8", newline="")
 
 
-def _classes(findings) -> set[str]:
+def _classes(findings: Iterable[Finding]) -> set[str]:
     out: set[str] = set()
     for f in findings:
         assert isinstance(f, Finding)
@@ -201,7 +202,7 @@ def _classes(findings) -> set[str]:
     return out
 
 
-def _observe_rule(rule_id: str, fn) -> set[str]:
+def _observe_rule(rule_id: str, fn: Rule) -> set[str]:
     """Force one registered rule to fire over a minimal synthetic repo.
 
     Returns the SET of severity class string values the rule emits. An empty set

@@ -133,11 +133,14 @@ the wrong class is refused by the console:
   metric-contract question; see docs/tools/approval-console.md)
 
 > **Serialization note.** When the decision is written back, the console uses each
-> TARGET artifact's existing spelling verbatim: `data_owner` (underscore) in
-> `readiness-status.yaml` `approvals[].owner`; `data-owner` (hyphen) in the
-> `unresolved-questions.md` "Who must answer" cell. It never renames or collapses the
-> three classes the base unresolved-questions.md template carries (analyst / governance
-> / data-owner).
+> TARGET artifact's existing spelling verbatim. In `readiness-status.yaml`
+> `approvals[].owner` it writes the FULL named-decider shape
+> `"Person Name (authority_class)"` with the class in underscore spelling
+> (e.g. `"Ahmed Shaaban (data_owner)"`) -- RS1 rejects a role-only owner and it
+> does not satisfy the stage approval (audit C4). In the `unresolved-questions.md`
+> "Who must answer" cell the bare class keeps its hyphen spelling (`data-owner`).
+> It never renames or collapses the three classes the base unresolved-questions.md
+> template carries (analyst / governance / data-owner).
 
 ## Duplicate guard
 

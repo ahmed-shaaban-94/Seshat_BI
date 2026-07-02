@@ -35,10 +35,14 @@ Invoke-and-record only. This skill runs dbt behind the gate and records its find
 evidence; it does NOT define source mapping, metric contracts, or semantic logic, does NOT
 publish Power BI, and does NOT move a readiness stage to `pass`. Three non-negotiables:
 
-- **The entry gate is the FIRST refusal point** (Principle IV). dbt may run NO
-  staging/silver/gold model for a table whose `mappings/<table>/readiness-status.yaml`
-  does not record Mapping Ready = `pass`. Refuse + record a `blocking_reason`. The presence
-  of dbt model files is NOT permission to build.
+- **The entry gate is the FIRST refusal point** (Principle IV). The canonical gate
+  signal is `mappings/<table>/readiness-status.yaml` -> `stages.mapping_ready.status ==
+  pass` WITH a matching `approvals[]` entry (RS1); its human-readable mirror
+  `unresolved-questions.md` `Gate status: CLEARED` (zero open rows) MUST agree. dbt may
+  run NO staging/silver/gold model unless that canonical signal holds -- a missing
+  readiness-status file, `mapping_ready != pass`, or a mismatch between the two ->
+  Refuse + record a `blocking_reason`. The presence of dbt model files is NOT
+  permission to build.
 - **A green `dbt test` is EVIDENCE, never an approval** (the governance hinge). Record the
   pass/fail counts as `evidence[]` / `blocking_reasons[]`; Tower readiness + a named human
   move Silver/Gold Ready to `pass`, citing that evidence + the approval. There is NO path
@@ -56,8 +60,8 @@ file to create:
 
 | What you observe | Action |
 |------------------|--------|
-| `mappings/<table>/readiness-status.yaml` missing, or Mapping Ready not `pass` | **REFUSE.** Record a `blocking_reason` ("Mapping Ready not pass"); run no model. |
-| Mapping Ready = `pass`, approved `source-map.yaml` present | **Permitted** to run staging/silver/gold models that CITE the approved map. |
+| `mappings/<table>/readiness-status.yaml` missing, or `stages.mapping_ready.status` != `pass`, or its `approvals[]` entry is absent, or the `unresolved-questions.md` `Gate status: CLEARED` mirror does not agree | **REFUSE.** Record a `blocking_reason` ("Mapping Ready not pass"); run no model. |
+| `stages.mapping_ready.status == pass` WITH a matching `approvals[]` entry, the `Gate status: CLEARED` mirror agrees, approved `source-map.yaml` present | **Permitted** to run staging/silver/gold models that CITE the approved map. |
 | A dbt model builds a meaning (grain/PK/PII/placement) the map does NOT state | **DEFECT.** The model cites the map, it does not extend it; the map is re-approved first. |
 | The table is already built by migrations | The dbt mart must pass the **reconciliation parity test** before it can become the build path. |
 
@@ -68,7 +72,7 @@ action). Read the approved map by path + git ref; every model must cite it.
 
 | Step | What you do | Authority note |
 |------|-------------|----------------|
-| 1 Check the gate | Read `mappings/<table>/readiness-status.yaml`. If Mapping Ready is not `pass` -> REFUSE + record `blocking_reason`. | Entry gate (Principle IV). |
+| 1 Check the gate | Read `mappings/<table>/readiness-status.yaml`. If `stages.mapping_ready.status` != `pass`, its `approvals[]` entry is absent, or the `Gate status: CLEARED` mirror does not agree -> REFUSE + record `blocking_reason`. | Entry gate (Principle IV). |
 | 2 Verify citations | Confirm each planned model carries a model contract (`templates/dbt-model-contract.md`) citing the approved map (path + git ref + rows for grain/PK/each column). A column with no citation is a DEFECT -> block. | dbt reads truth; never authors it. |
 | 3 Build | Run `dbt build` (staging -> silver -> gold) for the table. | Execute an approved step. |
 | 4 Test | Run `dbt test` (`unique` / `not_null` / `relationships` + the reconciliation parity test). | Evidence, never approval. |

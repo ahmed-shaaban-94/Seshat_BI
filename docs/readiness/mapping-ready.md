@@ -58,7 +58,7 @@ evidence is the committed artifacts plus the recorded approval.
 
 Analyst / governance approves (Principle V judgment calls: grain, PII handling,
 business rollups). Recorded as an `approvals[]` entry
-(`{stage: mapping_ready, owner: analyst, at: <YYYY-MM-DD>}`). Not mechanical --
+(`{stage: mapping_ready, owner: "<Person Name> (analyst)", at: <YYYY-MM-DD>}` -- the NAMED decider + authority class; RS1 rejects a role-only owner). Not mechanical --
 human sign-off is mandatory.
 
 ## Next allowed action

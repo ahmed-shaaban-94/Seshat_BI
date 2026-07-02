@@ -11,6 +11,14 @@ pytestmark = pytest.mark.unit
 
 STATUS_PATH = "mappings/demo/readiness-status.yaml"
 
+# A valid owner: a person name + authority class (NOT a bare role token -- C4).
+OWNER = "A. Lovelace (data_owner)"
+
+
+def _appr(stage: str, owner: str = OWNER, extra: str = "") -> str:
+    """One approvals[] YAML line, kept short so no fixture line exceeds line-length."""
+    return f"  - {{stage: {stage}, owner: '{owner}', at: '2026-01-01'{extra}}}\n"
+
 
 def _status_yaml(
     *,
@@ -22,10 +30,10 @@ def _status_yaml(
 ) -> str:
     if approvals is None:
         approvals = (
-            "  - {stage: mapping_ready, owner: data_owner, at: '2026-01-01'}\n"
-            "  - {stage: semantic_model_ready, owner: data_owner, at: '2026-01-01'}\n"
-            "  - {stage: dashboard_ready, owner: data_owner, at: '2026-01-01'}\n"
-            "  - {stage: publish_ready, owner: data_owner, at: '2026-01-01'}\n"
+            _appr("mapping_ready")
+            + _appr("semantic_model_ready")
+            + _appr("dashboard_ready")
+            + _appr("publish_ready")
         )
     return f"""table: "bronze.demo"
 source_id: "demo"
@@ -87,10 +95,100 @@ def test_valid_readiness_status_passes(tmp_path: Path) -> None:
     assert list(check_readiness_status_consistency(ctx)) == []
 
 
+def test_malformed_yaml_fails_loud(tmp_path: Path) -> None:
+    # The fail-closed branch (audit R7): unparseable YAML must raise a loud RS1
+    # ERROR, never be silently skipped -- a commit-blocking gate cannot treat a
+    # broken status file as "no findings".
+    text = "table: [unterminated\n  bad: : :\n"
+    messages = _messages(_ctx(tmp_path, text))
+    assert any("not valid YAML" in m for m in messages)
+
+
+def test_non_mapping_yaml_fails_loud(tmp_path: Path) -> None:
+    # A well-formed YAML that is not a mapping (e.g. a bare list) must also fail
+    # loud rather than slip through the dict-shape guard.
+    messages = _messages(_ctx(tmp_path, "- just\n- a\n- list\n"))
+    assert any("must be a mapping" in m for m in messages)
+
+
 def test_pass_stage_without_evidence_fails(tmp_path: Path) -> None:
     text = _status_yaml().replace('evidence: ["source-profile.md"]', "evidence: []")
     messages = _messages(_ctx(tmp_path, text))
     assert any("source_ready" in m and "no evidence" in m for m in messages)
+
+
+def test_bare_role_owner_fails(tmp_path: Path) -> None:
+    # C4 enforcement (Codex PR#143 review): a bare authority-class owner token with
+    # no person name is a defect -- the approval must name its decider.
+    approvals = (
+        _appr("mapping_ready", owner="data_owner")  # bare role token -> defect
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
+        + _appr("publish_ready")
+    )
+    messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
+    assert any("invalid owner" in m and "mapping_ready" in m for m in messages)
+
+
+@pytest.mark.parametrize(
+    "owner",
+    [
+        "Ahmed Shaaban",  # name with no authority class
+        "data owner",  # spaced bare role (not the exact token spelling)
+        "owner (data_owner)",  # a role masquerading as the person name
+        "Ada Lovelace (wizard)",  # unknown authority class
+        "Ada Lovelace (owner)",  # generic 'owner' proves no specific authority
+    ],
+)
+def test_owner_missing_class_or_name_fails(tmp_path: Path, owner: str) -> None:
+    # Codex PR#143 review (second round): rejecting only exact bare tokens still
+    # accepted 'Ahmed Shaaban' or 'data owner'. The full shape is required:
+    # "Person Name (authority_class)" with a known class.
+    approvals = (
+        _appr("mapping_ready", owner=owner)
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
+        + _appr("publish_ready")
+    )
+    messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
+    assert any("invalid owner" in m and "mapping_ready" in m for m in messages)
+
+
+def test_invalid_owner_does_not_satisfy_stage_approval(tmp_path: Path) -> None:
+    # The bypass Codex flagged: approved_stages was built from stage names alone,
+    # so an invalid-owner entry still granted the gate. It must not: the stage
+    # also fires "pass but no matching approvals[] entry".
+    approvals = (
+        _appr("mapping_ready", owner="data_owner")
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
+        + _appr("publish_ready")
+    )
+    messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
+    assert any(
+        "mapping_ready" in m and "no matching" in m and "approvals" in m
+        for m in messages
+    )
+
+
+def test_named_owner_with_role_passes(tmp_path: Path) -> None:
+    # The person + role form ("Name (role)") is NOT bare -- it must not fire.
+    assert (
+        list(check_readiness_status_consistency(_ctx(tmp_path, _status_yaml()))) == []
+    )
+
+
+def test_owner_class_spelling_variants_pass(tmp_path: Path) -> None:
+    # The class token is case-/space-/hyphen-insensitive: "Data Owner",
+    # "data-owner" and "DATA_OWNER" all normalize to data_owner.
+    approvals = (
+        _appr("mapping_ready", owner="Ada Lovelace (Data Owner)")
+        + _appr("semantic_model_ready", owner="Ada Lovelace (data-owner)")
+        + _appr("dashboard_ready", owner="Ada Lovelace (DATA_OWNER)")
+        + _appr("publish_ready")
+    )
+    ctx = _ctx(tmp_path, _status_yaml(approvals=approvals))
+    assert list(check_readiness_status_consistency(ctx)) == []
 
 
 def test_blocked_stage_without_blockers_fails(tmp_path: Path) -> None:
@@ -117,9 +215,9 @@ def test_non_blocked_stage_with_blockers_fails(tmp_path: Path) -> None:
 
 def test_approval_required_stage_pass_without_approval_fails(tmp_path: Path) -> None:
     approvals = (
-        "  - {stage: mapping_ready, owner: data_owner, at: '2026-01-01'}\n"
-        "  - {stage: semantic_model_ready, owner: data_owner, at: '2026-01-01'}\n"
-        "  - {stage: dashboard_ready, owner: data_owner, at: '2026-01-01'}\n"
+        _appr("mapping_ready")
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
     )
     messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
     assert any("publish_ready" in m and "approvals" in m for m in messages)
@@ -174,15 +272,14 @@ def _file_source_yaml(*, kind: str = "csv", with_source_approval: bool) -> str:
     """A readiness status whose source_ready block declares a file source_kind. The
     stage is pass at every stage; source_ready has an approval only when requested."""
     approvals = (
-        "  - {stage: mapping_ready, owner: data_owner, at: '2026-01-01'}\n"
-        "  - {stage: semantic_model_ready, owner: data_owner, at: '2026-01-01'}\n"
-        "  - {stage: dashboard_ready, owner: data_owner, at: '2026-01-01'}\n"
-        "  - {stage: publish_ready, owner: data_owner, at: '2026-01-01'}\n"
+        _appr("mapping_ready")
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
+        + _appr("publish_ready")
     )
     if with_source_approval:
         approvals = (
-            "  - {stage: source_ready, owner: data_owner, at: '2026-01-01', "
-            "note: 'encoding utf-8 confirmed'}\n"
+            _appr("source_ready", extra=", note: 'encoding utf-8 confirmed'")
         ) + approvals
     base = _status_yaml(approvals=approvals)
     # inject source_kind into the source_ready block

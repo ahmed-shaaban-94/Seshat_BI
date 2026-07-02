@@ -123,11 +123,15 @@ stage's required evidence already exist (the `pass`-flip rule).
   contracts; NOT present in the base `unresolved-questions.md` template -- used ONLY for a
   metric-contract question; documented as not-yet-present in `docs/tools/approval-console.md`)
 
-**Serialization (verbatim per target -- never rename or collapse the base three).** When the
-decision is written back, the console uses each TARGET artifact's existing spelling:
-`data_owner` (underscore) in `readiness-status.yaml` `approvals[].owner`; `data-owner`
-(hyphen) in the `unresolved-questions.md` "Who must answer" cell. The base
-`unresolved-questions.md` template carries only analyst / governance / data-owner.
+**Serialization (verbatim per target).** When the decision is written back, the console
+records the DECIDER, not just the authority class, so the named-human guarantee is
+auditable from committed evidence (audit C4): `readiness-status.yaml` `approvals[].owner`
+holds the person's NAME followed by the authority class in parentheses --
+`"<Person Name> (<analyst | governance | data_owner | metric_owner>)"` (e.g.
+`"Ahmed Shaaban (data_owner)"`). The `unresolved-questions.md` "Who must answer" cell keeps
+the role token in that artifact's existing spelling (`analyst` / `governance` / `data-owner`),
+and the matching `Resolution` records the person + date. A bare role token with no person in
+`approvals[].owner` is a defect -- an approval must trace to a named human, never a role alone.
 
 ## The procedure
 
@@ -156,8 +160,9 @@ write-throughs idempotently:
 
 - `unresolved-questions.md`: fill the matching row's `Resolution` (decision + date + owner)
   and flip `Status` `open` -> `answered`.
-- `readiness-status.yaml`: append an `approvals[]` entry -- `stage` + `owner` (serialized
-  `data_owner`) + `at` (populated from the decision's `date`).
+- `readiness-status.yaml`: append an `approvals[]` entry -- `stage` + `owner` (the
+  DECIDER by name + authority class, e.g. `Ahmed Shaaban (data_owner)`; never a bare
+  role token) + `at` (populated from the decision's `date`).
 
 If a target artifact is MISSING or unwritable, record the decision with a
 `remaining_blockers` entry naming the missing target and do NOT fabricate it or perform a

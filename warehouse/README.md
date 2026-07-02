@@ -26,7 +26,9 @@ Power BI-specific.
 
 - `snake_case` everywhere.
 - Views prefixed `vw_`, fact tables `fct_`, dimension tables `dim_`.
-- Migrations numbered and idempotent (`CREATE ... IF NOT EXISTS`, guarded `ALTER`).
+- Migrations numbered and idempotent by **drop-and-rebuild in one transaction**
+  (`DROP TABLE IF EXISTS` + `CREATE TABLE`), so a re-run replaces rather than
+  duplicates — the latest build wins.
 
 ## Applying against DigitalOcean Postgres
 
@@ -35,8 +37,11 @@ Postgres requires TLS (`sslmode=require`). Apply migrations in numeric order, e.
 
 \`\`\`bash
 psql "host=$ANALYTICS_DB_HOST port=$ANALYTICS_DB_PORT dbname=$ANALYTICS_DB_NAME \
-  user=$ANALYTICS_DB_USER sslmode=$ANALYTICS_DB_SSLMODE" -f warehouse/migrations/0001_init.sql
+  user=$ANALYTICS_DB_USER sslmode=$ANALYTICS_DB_SSLMODE" \
+  -f warehouse/migrations/0003_create_silver_retail_store_sales.sql
 \`\`\`
 
-> `bronze` is populated (C086 sales, see `pipelines/`). `silver` and `gold` schemas
-> exist but are not yet built out — that's the next step.
+> The committed migration set builds the `retail_store_sales` worked example:
+> `0003_create_silver_retail_store_sales.sql` (silver) and
+> `0004_create_gold_retail_store_sales_star.sql` (gold Kimball star). Apply them
+> in numeric order against a database that already holds the bronze source.

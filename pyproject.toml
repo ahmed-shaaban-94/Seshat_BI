@@ -9,7 +9,15 @@ license = "Apache-2.0"
 description = "Seshat BI: agent-first Retail BI readiness checker (static retail check + live retail validate over the medallion warehouse and Power BI conventions)."
 authors = [{ name = "Ahmed Shaaban" }]
 requires-python = ">=3.13"
-dependencies = []
+# pyyaml is a RUNTIME dependency: ~10 governance rules (RS1, A1/routes, the
+# assumption-coherence pair, parked_on, design_background, ...) do a lazy
+# `import yaml` while `retail check` runs, so a bare `pip install .` install must
+# ship it or the gate crashes with ModuleNotFoundError the moment one fires. The
+# lazy imports keep it off the MODULE-scope import chain (B1/B3), not out of the
+# runtime -- so it belongs here, not in the dev extra (audit R6).
+dependencies = [
+    "pyyaml>=6",
+]
 
 [project.scripts]
 retail = "retail.cli:main"
@@ -19,8 +27,6 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
-    "black>=24.0",
-    "pyyaml>=6",
 ]
 # `db` extra: the optional DB driver for `retail validate`'s LIVE run. NOT in
 # `dev` -- so CI installs no driver, which keeps the static core stdlib-only AND
@@ -45,9 +51,6 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-
-[tool.black]
-line-length = 88
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]

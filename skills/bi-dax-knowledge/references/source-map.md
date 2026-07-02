@@ -52,7 +52,7 @@ source, then re-expresses them as original teaching material. Specifically:
 - **Source:** *The Definitive Guide to DAX, 2nd edition* — Marco Russo & Alberto Ferrari,
   Microsoft Press, 2019. ISBN 978-1-5093-0697-8.
 - **Role:** theory / internals / context-reasoning layer that complements the DAX Patterns
-  catalog. See `references/definitive-guide-enrichment-plan.md` for the full approved architecture.
+  catalog.
 - **What Slice 1 delivered (this pass):**
   - `knowledge/dax-evaluation-context-deep-dive.md` — concept cards CC-001, CC-002, CC-003,
     CC-008, CC-009, CC-018.

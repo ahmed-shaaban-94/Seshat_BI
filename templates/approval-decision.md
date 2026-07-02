@@ -65,13 +65,17 @@ write-through idempotently. List only artifacts actually updated; targets that w
 missing/unwritable go under `remaining_blockers` (FR-008).
 
 - `mappings/<table>/unresolved-questions.md` -- row `<question_id>`: `Status` flipped `open` -> `answered`; `Resolution` filled with the decision + date + owner
-- `mappings/<table>/readiness-status.yaml` -- `approvals[]` entry appended: `stage: <stage>`, `owner: <analyst | governance | data_owner | metric-owner>`, `at: <date>`
+- `mappings/<table>/readiness-status.yaml` -- `approvals[]` entry appended: `stage: <stage>`, `owner: "<Person Name> (<analyst | governance | data_owner | metric_owner>)"` (the NAMED decider + authority class -- RS1 rejects a role-only owner and it does NOT satisfy the stage approval), `at: <date>`
 - `<... any further artifact the request named, e.g. mappings/<table>/source-map.yaml a recorded mapping>`
 
-> **Serialization (verbatim per target).** `data_owner` (underscore) in
-> `readiness-status.yaml` `approvals[].owner`; `data-owner` (hyphen) in the
-> `unresolved-questions.md` "Who must answer" cell. The console never renames or
-> collapses the three base classes (analyst / governance / data-owner). `metric-owner`
+> **Serialization (verbatim per target).** In `readiness-status.yaml`
+> `approvals[].owner` the console writes the FULL named-decider shape
+> `"Person Name (authority_class)"` with the class in underscore spelling
+> (e.g. `"Ahmed Shaaban (data_owner)"`) -- RS1 flags a role-only owner as invalid
+> and it does not count toward the stage approval (audit C4). In the
+> `unresolved-questions.md` "Who must answer" cell the bare class keeps its
+> hyphen spelling (`data-owner`). The console never renames or collapses the
+> three base classes (analyst / governance / data-owner). `metric-owner`
 > (additive, F009) appears only for a metric-contract question (see the docs page).
 
 ## remaining_blockers

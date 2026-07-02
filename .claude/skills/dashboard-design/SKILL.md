@@ -101,7 +101,8 @@ Author the page/section structure as reviewable text: which business questions t
 page answers, in what reading order, one question per region. (For the section
 vocabulary -- header / KPI strip / main insight / diagnostic / exception-detail /
 filter rail / footer-status -- and design principles, use the F011A foundation:
-`docs/powerbi/visual-design-system.md` and `workflows/page-blueprint.md`.)
+`docs/powerbi/visual-design-system.md` and
+`../powerbi-dashboard-design/workflows/page-blueprint.md`.)
 
 ### 3. Author the visual list
 For each proposed visual record: its type, the business question it answers, and

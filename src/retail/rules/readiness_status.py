@@ -45,11 +45,63 @@ _STATUS_VALUES: frozenset[str] = frozenset(
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
+# The authority classes an approval owner may carry (normalized: lower-case,
+# spaces/hyphens collapsed to underscore) -- exactly the four the docs/templates
+# define. The named-human guarantee (Principle V / audit C4) requires the FULL
+# shape "Person Name (authority_class)", e.g. "Ahmed Shaaban (data_owner)": a
+# bare role token, a name with no class, or an unknown class all fail
+# _owner_is_valid() -- and ONLY a shape-valid approval counts toward a stage's
+# approval requirement (Codex PR#143 review: rejecting exact bare tokens alone
+# still let 'Ahmed Shaaban' or 'data owner' grant a gate).
+_AUTHORITY_CLASSES: frozenset[str] = frozenset(
+    {
+        "analyst",
+        "governance",
+        "data_owner",
+        "metric_owner",
+    }
+)
+# Tokens that cannot stand as the person NAME: the classes themselves plus the
+# generic "owner" (also NOT a valid class -- it proves no specific authority;
+# Codex PR#143 third round).
+_ROLE_TOKENS: frozenset[str] = _AUTHORITY_CLASSES | {"owner"}
+
+# "Person Name (authority_class)" -- a non-empty name part, then one parenthesized
+# class. Anchored so trailing junk after the class cannot slip through.
+_OWNER_SHAPE_RE = re.compile(r"^(?P<name>[^()]+?)\s*\(\s*(?P<role>[^()]+?)\s*\)$")
+
+
+def _norm_token(value: str) -> str:
+    """Normalize a role/name token: lower-case, runs of spaces/hyphens -> '_'."""
+    return re.sub(r"[\s\-]+", "_", value.strip().lower())
+
+
+def _owner_is_valid(owner: object) -> bool:
+    """True only for the full named-decider shape "Person Name (authority_class)".
+
+    Case-, whitespace- and hyphen-insensitive on the class token. Rejects a bare
+    role token ("data_owner", "data owner"), a name with no class ("Ahmed
+    Shaaban"), a role masquerading as the name ("owner (data_owner)"), an unknown
+    or generic class ("Ada (wizard)", "Ada (owner)"), and a missing/empty/
+    non-string owner -- an approval must name its decider AND the specific
+    authority they acted under (audit C4)."""
+    if not isinstance(owner, str):
+        return False
+    match = _OWNER_SHAPE_RE.match(owner.strip())
+    if match is None:
+        return False
+    name = match.group("name").strip()
+    if not name or _norm_token(name) in _ROLE_TOKENS:
+        return False
+    return _norm_token(match.group("role")) in _AUTHORITY_CLASSES
+
+
 # A source_ready block carrying one of these (normalized) source_kind values is a FILE
 # source, whose pass additionally requires an owner encoding-confirmation (a
 # source_ready approval). A DB source omits source_kind (or says db-table), so this
-# leaves every existing table source unaffected. Extension aliases map to the canonical
-# kind so the most natural labels (xlsx/xls) do not slip the gate.
+# leaves every existing table source unaffected. Extension aliases map the OOXML Excel
+# labels (xlsx/xlsm) to the canonical kind so those natural labels do not slip the
+# gate; legacy .xls is deliberately NOT aliased (see the note below).
 _FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
 _DB_SOURCE_KINDS: frozenset[str] = frozenset({"db-table", "db_table", "table", "db"})
 # Only OOXML Excel extensions alias to 'excel' -- openpyxl reads .xlsx/.xlsm, NOT the
@@ -77,11 +129,11 @@ def _iter_status_files(ctx: RuleContext) -> list[str]:
     ]
 
 
-def _as_list(value) -> list:
+def _as_list(value: object) -> list:
     return value if isinstance(value, list) else []
 
 
-def _stage_status(stage_block) -> str | None:
+def _stage_status(stage_block: object) -> str | None:
     if isinstance(stage_block, dict):
         status = stage_block.get("status")
         if isinstance(status, str):
@@ -89,12 +141,15 @@ def _stage_status(stage_block) -> str | None:
     return None
 
 
-def _source_kind(stage_block) -> str | None:
+def _source_kind(stage_block: object) -> str | None:
     """The NORMALIZED ``source_kind`` a source_ready block may declare. Case- and
-    whitespace-insensitive, with extension aliases (xlsx/xls/xlsm -> excel), so the
+    whitespace-insensitive, with OOXML extension aliases (xlsx/xlsm -> excel), so the
     gate cannot be slipped by a natural label like 'CSV', 'Excel ', or 'xlsx'
-    (adversarial re-review: a case-sensitive frozenset let those bypass H3). Absent ->
-    None (a DB source: the existing, unaffected default)."""
+    (adversarial re-review: a case-sensitive frozenset let those bypass H3). Legacy
+    '.xls' is deliberately NOT aliased -- openpyxl cannot read BIFF .xls, so it hits
+    the 'unrecognized source_kind' finding (the correct 'convert to .xlsx or defer'
+    signal), which the test suite pins. Absent -> None (a DB source: the existing,
+    unaffected default)."""
     if isinstance(stage_block, dict):
         kind = stage_block.get("source_kind")
         if isinstance(kind, str):
@@ -146,11 +201,34 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
             )
 
         approvals = _as_list(data.get("approvals"))
+        # Only a shape-valid approval (named decider + authority class) satisfies a
+        # stage's approval requirement -- an invalid owner is BOTH flagged below AND
+        # excluded here, so a legacy bare-role or name-only entry cannot keep an
+        # approval-required stage green (C4; Codex PR#143 review).
         approved_stages = {
             a.get("stage")
             for a in approvals
-            if isinstance(a, dict) and isinstance(a.get("stage"), str)
+            if isinstance(a, dict)
+            and isinstance(a.get("stage"), str)
+            and _owner_is_valid(a.get("owner"))
         }
+
+        # C4 enforcement: every approval must name its DECIDER + authority class.
+        for a in approvals:
+            if not isinstance(a, dict):
+                continue
+            if not _owner_is_valid(a.get("owner")):
+                stage = a.get("stage")
+                findings.append(
+                    _finding(
+                        f"approval for stage {stage!r} has invalid owner "
+                        f"{a.get('owner')!r}; record the decider by name + authority "
+                        'class (e.g. "Ada Lovelace (data_owner)") -- a bare role, a '
+                        "name without a class, or an unknown class does not count "
+                        "toward the stage-approval requirement",
+                        rel,
+                    )
+                )
 
         earliest_blocked_index: int | None = None
         for index, stage_name in enumerate(_STAGE_ORDER):
@@ -239,9 +317,10 @@ def check_readiness_status_consistency(ctx: RuleContext) -> Iterable[Finding]:
                         _finding(
                             f"stage 'source_ready' has unrecognized source_kind "
                             f"{kind!r} -- use a file kind "
-                            f"({sorted(_FILE_SOURCE_KINDS)} / xlsx / xls) or a DB kind "
-                            f"({sorted(_DB_SOURCE_KINDS)}); an unknown kind must not "
-                            "silently skip the file-source encoding gate",
+                            f"({sorted(_FILE_SOURCE_KINDS)}; xlsx/xlsm alias to excel; "
+                            f"legacy .xls is unsupported -- convert to .xlsx) or a DB "
+                            f"kind ({sorted(_DB_SOURCE_KINDS)}); an unknown kind must "
+                            "not silently skip the file-source encoding gate",
                             loc,
                         )
                     )
