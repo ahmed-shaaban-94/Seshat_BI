@@ -6,7 +6,8 @@ Repo-specific rules. Global rules in `~/.claude/CLAUDE.md` still apply.
 
 A **standalone analytics service** — NOT bound by the Retail Tower OS
 orchestrator / contract-boundary rules. Power BI primary; DigitalOcean Postgres
-source. Data flows `raw` → `marts` → Power BI.
+source. Data flows `bronze` → `silver` → `gold`; Power BI reads the `gold`
+schema only.
 
 For new retail mart work, start from `docs/worked-examples/c086-pharmacy.md` and follow the medallion playbook.
 
@@ -23,9 +24,9 @@ For new retail mart work, start from `docs/worked-examples/c086-pharmacy.md` and
 
 ## Conventions
 
-SQL: `snake_case`; schemas `raw`/`marts`; `vw_`/`fct_`/`dim_` prefixes; numbered
-idempotent migrations. DAX: `PascalCase` measures in display folders. Full detail
-in `docs/conventions.md`.
+SQL: `snake_case`; schemas `bronze`/`silver`/`gold`; `vw_`/`fct_`/`dim_` prefixes;
+numbered idempotent migrations. DAX: `PascalCase` measures in display folders. Full
+detail in `docs/conventions.md`.
 
 ## Scope discipline (YAGNI)
 
