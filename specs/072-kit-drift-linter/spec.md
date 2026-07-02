@@ -4,7 +4,15 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-02)
+
+> Ratified under owner-delegated authority: the owner was shown the DEC-2 cut (the
+> source-vs-constitution check removed; MINOR-5 stays partially open) in the ratify
+> question and directed "ask advisor and decide" (2026-07-02); the advisor reviewed and
+> approved 072 as specified, EXPLICITLY accepting the source-vs-constitution CUT and that
+> the fenced-body-vs-constitution assurance stays human-reviewed-at-ratify. Recorded per
+> the delegated-authority pattern (cf. spec 062); reversible pre-merge. analyze: 0
+> CRITICAL / 0 HIGH, 16/16 FR+SC mapped, no dangling refs. Build authorized (15 tasks).
 
 **Input**: The Phase-2 backstage enforcement deferred by feature 070: a CI-runnable
 linter that fails loud when a compass PROJECTION drifts from the canonical kit source.

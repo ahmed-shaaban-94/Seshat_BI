@@ -91,11 +91,19 @@ not silently lost.
 > rationale. To ratify: set `spec.md` `**Status**:` to `Ratified (<name>, <date>)`,
 > record the rationale (explicitly accepting DEC-2, the CUT), and authorize the build.
 
-- **Decision** (ratify / revise / reject): ______
-- **Named owner**: ______
-- **Date**: ______
-- **Rationale / conditions** (must acknowledge the source-vs-constitution CUT): ______
-- **Build authorization** (may the 15 tasks proceed?): ______
+- **Decision** (ratify / revise / reject): **ratify**
+- **Named owner**: **Ahmed Shaaban** (via owner-delegated authority)
+- **Date**: **2026-07-02**
+- **Rationale / conditions** (must acknowledge the source-vs-constitution CUT): **Owner
+  was shown DEC-2 (the source-vs-constitution CUT; MINOR-5 stays partially open) in the
+  ratify question and directed "ask advisor and decide". The advisor reviewed and
+  approved 072 as specified, EXPLICITLY accepting the CUT and that the
+  fenced-body-vs-constitution assurance remains human-reviewed-at-ratify. No conditions
+  beyond the spec as written. Recorded per the delegated-authority pattern (cf. spec
+  062); reversible pre-merge.**
+- **Build authorization** (may the 15 tasks proceed?): **Yes.** The 15 tasks are
+  authorized to build, TDD, on branch `072-kit-drift-linter`. Merge of the resulting PR
+  to `main` remains a separate act requiring explicit owner approval (two-party review).
 
-Until this slot is filled, `spec.md` stays `Draft`, no task is implemented, and nothing
-merges to `main`.
+`spec.md` is now `Ratified (Ahmed Shaaban, 2026-07-02)`. Build proceeds; nothing merges
+to `main` without a separate owner approval.
