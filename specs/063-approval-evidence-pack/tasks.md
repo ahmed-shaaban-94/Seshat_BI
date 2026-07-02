@@ -31,7 +31,8 @@ module is added.
   with the ordered sections from data-model.md (header, gate requirements, readiness states
   [selected + prior only], open blockers, unresolved assumptions [per contract], blocking
   parked-on edges, pending contracts, approval slot). Placeholders only; ASCII/UTF-8 no BOM;
-  short paths. NO score field, NO count field (FR-012, FR-017, FR-018, FR-020, FR-021).
+  short paths. NO score field, NO count field (FR-006, FR-007, FR-012, FR-017, FR-018, FR-020,
+  FR-021).
 - [ ] T003 [SETUP] Embed the F024 module contract in the template banner / to be reused by the
   skill: Product Module / `artifact-writing`; Core Authority READ list; derived artifact
   WRITTEN; EXECUTES none; forbidden operations (no approvals[] write, no stage->pass, no truth,
@@ -44,9 +45,10 @@ module is added.
 resolves to a committed path; approval slot empty; no score/count.
 
 - [ ] T004 [US1] Author `.claude/skills/approval-evidence-pack/SKILL.md`: purpose, the input
-  contract (five reads), the stage-key -> readiness-doc 1:1 map (data-model.md), the ordered
-  compose steps, and the surface-never-assert + empty-approvals discipline reused verbatim in
-  spirit from F028. (FR-001, FR-003, FR-004, FR-005, FR-009)
+  contract (five reads, committed-only -- no live DB/PBIP/F016/F031-33), the stage-key ->
+  readiness-doc 1:1 map (data-model.md), the ordered compose steps, and the surface-never-
+  assert + empty-approvals discipline reused verbatim in spirit from F028.
+  (FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-009)
 - [ ] T005 [US1] In SKILL.md, specify the empty-approval-slot terminal section and the
   structural incapability to write `approvals[]` / move a stage / grant approval / define
   business meaning. (FR-009, FR-010)
