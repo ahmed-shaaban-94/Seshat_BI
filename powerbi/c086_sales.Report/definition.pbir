@@ -3,7 +3,7 @@
   "version": "4.0",
   "datasetReference": {
     "byPath": {
-      "path": "../c086 _sales.SemanticModel"
+      "path": "../c086_sales.SemanticModel"
     }
   }
 }

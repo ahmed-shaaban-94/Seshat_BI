@@ -61,7 +61,7 @@ stages:
 
   semantic_model_ready:
     status: "blocked"
-    # A PBIP model (powerbi/c086 _sales.SemanticModel, 30 measures) and 33 metric
+    # A PBIP model (powerbi/c086_sales.SemanticModel, 30 measures) and 33 metric
     # contracts (mappings/c086/metrics/) EXIST but were built ahead of the pipeline
     # (audit finding C14). The metric-contract DEFINITIONS are now owner-approved
     # (2026-07-02), but the stage stays blocked: it cannot pass until gold_ready
@@ -74,7 +74,7 @@ stages:
 
   dashboard_ready:
     status: "not_started"
-    # A 5-page report exists (powerbi/c086 _sales.Report), built ahead of the
+    # A 5-page report exists (powerbi/c086_sales.Report), built ahead of the
     # pipeline (audit finding C14). Not entered until semantic_model_ready passes.
     evidence: []
     blocking_reasons: []

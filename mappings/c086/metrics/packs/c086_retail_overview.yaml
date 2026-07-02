@@ -7,7 +7,7 @@
 # from members (a pack is no more ready than its least-ready contract).
 #
 # Bound to the gold star gold.fct_sales (246,916 invoice lines, 2023-2025).
-# DAX for these measures lives in the PBIP model (powerbi/c086 _sales.SemanticModel),
+# DAX for these measures lives in the PBIP model (powerbi/c086_sales.SemanticModel),
 # organized into display folders matching the families below. NetSales/TotalUnits
 # are the base measures every composed measure references.
 # =============================================================================

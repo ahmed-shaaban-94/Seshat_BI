@@ -30,10 +30,9 @@ columns. The measure and table definitions in `definition/` are left unchanged
 
 The current, refreshable c086 semantic model is:
 
-    powerbi/c086 _sales.SemanticModel
+    powerbi/c086_sales.SemanticModel
 
-(Note the space before `_sales` in the folder name.) It binds to the live 0006
-gold star (`gross_sales`, `quantity`, `is_return`).
+It binds to the live 0006 gold star (`gross_sales`, `quantity`, `is_return`).
 
 ## NetSales means something DIFFERENT here (finding C15)
 

@@ -89,8 +89,8 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
 - **Tier:** Mixed — gold **table present**; reconciliation **needs real data**.
 - **Evidence (present):** a gold fact table exists in the committed, live c086
   semantic model,
-  `powerbi/c086 _sales.SemanticModel/definition/tables/gold fct_sales.tmdl`
-  (note the space before `_sales`), built by migration 0006
+  `powerbi/c086_sales.SemanticModel/definition/tables/gold fct_sales.tmdl`,
+  built by migration 0006
   (`warehouse/migrations/0006_create_gold_sales_c086_star.sql`). It supplies
   `gross_sales`, `quantity`, and `is_return` at transaction-line grain.
 - **Superseded anchor (do not cite as current):** an earlier trace pointed at
@@ -112,8 +112,8 @@ Net Sales is the base realized-revenue KPI most other retail KPIs derive from
   semantic-model readiness gate.
 - **Evidence (present):** a real, refreshable measure exists —
   `measure NetSales = SUM('gold fct_sales'[gross_sales])` in
-  `powerbi/c086 _sales.SemanticModel/definition/tables/_Measures.tmdl` (note the
-  space before `_sales`), alongside `GrossSales`
+  `powerbi/c086_sales.SemanticModel/definition/tables/_Measures.tmdl`,
+  alongside `GrossSales`
   (`CALCULATE([NetSales], is_return = FALSE())`) and `Returns`
   (`CALCULATE([NetSales], is_return = TRUE())`), so `GrossSales + Returns =
   NetSales`.
