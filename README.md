@@ -235,11 +235,10 @@ read readiness status
 | `src/retail/` | The `retail` CLI package: static + live governance surfaces. |
 | `warehouse/` | Tool-agnostic medallion SQL: `bronze` / `silver` / `gold` + migrations. |
 | `powerbi/` | Power BI PBIP artifacts. Power BI reads `gold` only. |
-| `specs/` | Feature specs, plans, tasks, checklists (30 spec directories). |
+| `specs/` | Feature specs, plans, tasks, checklists (one directory per feature; see `specs/README.md`). |
 | `mappings/` | Filled per-table source-mapping artifacts, one folder per table. |
 | `templates/` | Generic blanks: profiles, maps, contracts, readiness, dashboards, handoff packs. |
 | `reports/` | Dashboard / page / visual blueprints and delivery artifacts. |
-| `registries/` | Business-meaning registry + Arabic/English retail dictionary. |
 | `pipelines/` | Ingestion area: manual now, automated feed later. |
 | `docs/readiness/` | The seven-stage Readiness System spine. |
 | `docs/roadmap/` | Delivered ledger + the planned companion tier. |
