@@ -109,4 +109,8 @@ returns, pre-aggregated grain) must override explicitly rather than silently —
 "override when" clauses make those forks visible. Pairs with `docs/medallion-playbook.md`
 (the process) and the `medallion-cleaning` skill (the interactive driver).
 
-See `docs/worked-examples/retail-store-sales.md` for all 16 defaults applied and validated end-to-end.
+See `docs/worked-examples/retail-store-sales.md` for a filled instance validated
+end-to-end -- it adopts the defaults AND records its two deliberate deviations
+(RC4: `customer_id` kept as a KEEP deviation; RC8: N/A, the dataset has no
+returns) in section 2, which is exactly the adopt-or-override record this ADR
+requires (it is not an all-16-defaults example).

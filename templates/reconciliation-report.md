@@ -6,9 +6,9 @@
 > the workflow -- the others are authored before silver SQL; this one is filled only after
 > silver and gold are built and a live DB is reachable.
 >
-> For a **filled instance**, see `docs/worked-examples/retail-store-sales.md` section 5
-> (penny-exact reconciliation across the fact measures, unmatched fact rows landing on
-> the `-1` unknown members). The worked example is a *filled instance*, not the universal
+> For a **filled instance**, see `docs/worked-examples/retail-store-sales.md` section 4
+> (Gold Ready: penny-exact reconciliation across the fact measures, unmatched fact rows
+> landing on the `-1` unknown members). The worked example is a *filled instance*, not the universal
 > schema -- keep its dataset specifics out of this template.
 
 ---

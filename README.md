@@ -202,9 +202,8 @@ allowed action:
 2. `.specify/memory/constitution.md` -- the full governance law.
 3. `docs/readiness/readiness-model.md` -- the seven-stage spine.
 4. `docs/architecture/readiness-pipeline.md` -- how readiness sits on the kit.
-5. `docs/worked-examples/retail-store-sales.md` -- the first filled example (not the schema).
-6. `docs/worked-examples/retail-store-sales.md` -- the second example; the full spine to Dashboard Ready.
-7. `docs/worked-examples/README.md` -- the worked-examples index (compares them; which to read when).
+5. `docs/worked-examples/retail-store-sales.md` -- the filled worked example: all seven stages end-to-end (a filled instance, not the schema).
+6. `docs/worked-examples/README.md` -- the worked-examples index (what each example shows; which section to read when).
 
 <details>
 <summary><b>Typical agent flow</b></summary>
