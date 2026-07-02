@@ -393,6 +393,14 @@ def _run_init(args) -> int:
 
     if result.already_bootstrapped:
         print("already bootstrapped -- re-projected the SESHAT-KIT regions.")
+        # Fold (074): on a re-run, show WHAT the re-projection moved (e.g. after a
+        # package upgrade), not just "already bootstrapped".
+        if result.changed_targets:
+            print("changed targets:")
+            for t in result.changed_targets:
+                print(f"    {t}")
+        else:
+            print("no targets changed (already in sync).")
     for w in result.written:
         print(f"wrote {w}")
     for name in result.fenced:

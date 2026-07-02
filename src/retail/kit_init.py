@@ -37,12 +37,19 @@ _NEXT_STEP = (
 
 @dataclass(frozen=True)
 class BootstrapResult:
-    """Outcome of a substrate bootstrap run."""
+    """Outcome of a substrate bootstrap run.
+
+    ``changed_targets`` (feature 074) lists the substrate targets whose bytes the
+    re-projection actually altered -- the what-changed diff surfaced on a re-run
+    (e.g. after the user upgraded the package and its projection logic moved). Empty
+    when a re-run re-projected identical bytes (nothing moved).
+    """
 
     written: tuple[str, ...]
     fenced: tuple[str, ...]
     already_bootstrapped: bool
     next_step: str
+    changed_targets: tuple[str, ...] = ()
 
 
 def bootstrap(repo: Path | str) -> BootstrapResult:
@@ -59,7 +66,16 @@ def bootstrap(repo: Path | str) -> BootstrapResult:
         _has_fence(repo / f) for f in _FENCED_FILES
     )
 
+    changed: list[str] = []
+
+    # `project_all` always rewrites compass.yaml + manifests, so derive "changed"
+    # from an explicit before/after byte capture (not a no-op signal, which these
+    # writers don't provide -- feature 074).
+    before = {rel: _read_bytes(repo / rel) for rel in _projected_targets(repo)}
     written = compass_project.project_all(repo)
+    for rel in written:
+        if _read_bytes(repo / rel) != before.get(rel):
+            changed.append(rel)
 
     source = compass_project.load_source(repo)
     prose = compass_project.render_prose(source)
@@ -77,13 +93,41 @@ def bootstrap(repo: Path | str) -> BootstrapResult:
                 f"cannot write SESHAT-KIT fence in {name}: {result.stopped_reason}"
             )
         fenced.append(name)
+        # `write_fence` reports whether the fenced body actually moved.
+        if result.changed:
+            changed.append(f"{name} (SESHAT-KIT fence)")
 
     return BootstrapResult(
         written=written,
         fenced=tuple(fenced),
         already_bootstrapped=was_bootstrapped,
         next_step=_NEXT_STEP,
+        changed_targets=tuple(changed),
     )
+
+
+def _read_bytes(path: Path) -> bytes | None:
+    """Read a file's bytes, or None if it does not exist yet (a new target)."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
+def _projected_targets(repo: Path) -> tuple[str, ...]:
+    """The compass/manifest paths ``project_all`` (re)writes, for the before-snapshot.
+
+    Mirrors ``compass_project.project_all``'s output set so the before/after diff
+    lines up; a target absent before a first bootstrap reads as None -> changed.
+    """
+    rels = [compass_project.COMPASS_REL, compass_project.MANIFEST_REL]
+    integ = repo / compass_project.INTEGRATIONS_DIR_REL
+    if integ.exists():
+        rels.extend(
+            f"{compass_project.INTEGRATIONS_DIR_REL}/{p.name}"
+            for p in sorted(integ.glob("*.json"))
+        )
+    return tuple(rels)
 
 
 def _has_fence(path: Path) -> bool:

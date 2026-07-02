@@ -103,3 +103,38 @@ def test_rerun_leaves_outside_fence_bytes_identical(repo) -> None:
     kit_init.bootstrap(repo)
     after = (repo / "CLAUDE.md").read_text(encoding="utf-8")
     assert before == after
+
+
+# --- Fold (074): what-changed diff on re-projection ---------------------------
+
+
+def test_first_bootstrap_reports_targets_changed(repo) -> None:
+    # On a fresh bootstrap every written/fenced target is newly created -> changed.
+    result = kit_init.bootstrap(repo)
+    assert result.changed_targets  # non-empty
+    # compass.yaml + both fenced files are among the changed targets
+    joined = " ".join(result.changed_targets)
+    assert ".seshat/compass.yaml" in joined
+    assert "AGENTS.md" in joined and "CLAUDE.md" in joined
+
+
+def test_rerun_unchanged_source_reports_no_changed_targets(repo) -> None:
+    kit_init.bootstrap(repo)
+    result2 = kit_init.bootstrap(repo)
+    assert result2.already_bootstrapped is True
+    assert result2.changed_targets == ()  # nothing moved on an in-sync re-run
+
+
+def test_rerun_after_source_change_reports_the_changed_target(repo) -> None:
+    kit_init.bootstrap(repo)
+    # mutate the source version (a projected key) so compass.yaml re-projects anew
+    src = repo / SOURCE_REL
+    text = src.read_text(encoding="utf-8").replace(
+        'version: "0.2.0"', 'version: "0.3.0"'
+    )
+    assert 'version: "0.3.0"' in text  # guard: the replace actually landed
+    src.write_text(text, encoding="utf-8")
+    result2 = kit_init.bootstrap(repo)
+    joined = " ".join(result2.changed_targets)
+    # compass.yaml re-projected to a different value -> reported changed
+    assert ".seshat/compass.yaml" in joined
