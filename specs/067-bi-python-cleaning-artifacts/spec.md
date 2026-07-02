@@ -4,7 +4,19 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-02)
+
+> Ratified under the recorded ADOPT-batch autonomous authority dated 2026-07-02
+> (owner directive: build+ratify+merge the entire ADOPT bucket; the advisor
+> exercises the delegated per-spec ratify authority). A recorded per-spec override
+> within that batch, not a standing waiver. Both Principle-V items resolved
+> conservatively in Clarifications: (1) verdict = a 4-state CATEGORICAL set
+> (CLEANING SOUND / OPEN FINDINGS / GRAIN VIOLATED / BLOCKED) mirroring the shipped
+> aggregation-grain-checklist, no score/tally; (2) off-spine, no roadmap F-row.
+> Docs-only (a new cleaning-review checklist + INDEX/knowledge/README route flips
+> under skills/bi-python-knowledge/); NO runtime code, NO retail rule, NO golden
+> files; single-node pandas fork boundary + aggregation-checklist fork boundary
+> preserved. analyze: clean (0/0); plan-review: PASS-WITH-NOTES.
 
 **Input**: User description: "I2. Land bi-python's Planned Cleaning Artifacts"
 
@@ -303,19 +315,22 @@ integrated them into the requirements. They are reversible edits.
   easy. Mitigation baked into the spec: SC-002 + FR-008..FR-011 make the flip
   complete and bounded so there is nothing stale to catch at landing time.
 
-#### Deferred to human ratifier (Principle V -- NOT answered here)
+#### Principle-V rulings (RESOLVED under the ADOPT-batch autonomous authority, 2026-07-02)
 
-The following are definitional / off-spine calls the ledger and layer never
-self-resolve. They are recorded, left open, and MUST be ruled by a human before
-or at ratification. They do NOT block planning of the docs-only scope (the
-checklist's SHAPE and structure are fully plannable without them).
+Both definitional calls are resolved with conservative, no-score defaults that
+mirror the already-shipped aggregation-grain-checklist precedent (a settled
+four-state categorical shape), so nothing new or threshold-like is introduced.
 
-- **Cleaning-verdict vocabulary** (FR-006): the exact canonical categorical
-  status set for the cleaning-review checklist (e.g. a "sound" state, an
-  "unresolved findings" state, a "grain violated" state, a "blocked" state) and
-  each status's pass criteria. Mirror the aggregation checklist's four-state
-  shape, but the precise wording + pass criteria is a definitional call a human
-  should ratify so it does not smuggle a hidden threshold or score.
-- **Roadmap-stage mapping** (FR-016): whether I2 advances any roadmap F-row or
-  stays off-spine as an idea-bank content-completion item (`f_row: none`). The
-  ledger never self-assigns an F-row (Principle V / IL1 contract).
+- **Cleaning-verdict vocabulary** (FR-006) -- RESOLVED. The checklist ends on a
+  CATEGORICAL four-state verdict mirroring the shipped aggregation-grain-checklist
+  shape verbatim: `CLEANING SOUND` (every section passed), `OPEN FINDINGS`
+  (one or more sections flag an item a human must record a ruling on),
+  `GRAIN VIOLATED` (row-count accountability broke -- rows changed without a
+  recorded reason), `BLOCKED` (a required input is missing/unreadable). Each state
+  is a plain pass/flag classification with NO numeric score, NO percentage, NO
+  "N of M" tally (hard rule #9). The state is observed from the section checkboxes,
+  never computed into a cleanliness number.
+- **Roadmap-stage mapping** (FR-016) -- RESOLVED. Off-spine: I2 advances no
+  7-stage readiness stage and takes NO roadmap F-row (`f_row: none`), consistent
+  with every idea-bank content item and the IL1 contract (a human may add a row
+  later; the ledger never self-assigns one).
