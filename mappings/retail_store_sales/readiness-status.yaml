@@ -102,7 +102,7 @@ approvals:
   # day -- it was given against a handoff pack framing DiscountedTransactionRate as
   # 33.55%, which was corrected to the approved known-status definition (50.37%). The
   # approved artifact materially changed, so the approval no longer applies; a fresh
-  # publish approval against the corrected pack is required (publish_ready = warning).
+  # publish approval against the corrected pack is required (publish_ready = blocked).
 
 # --- the single next allowed action -----------------------------------------
 next_action: "publish RE-APPROVAL -- the data owner reviews the CORRECTED handoff pack (DiscountedTransactionRate now = known-status 50.37%, not the retracted 33.55% framing) and records a fresh {stage: publish_ready, owner, at} entry -> publish_ready becomes pass. Stages 1-6 remain pass. (Optional, the owner's call: re-affirm semantic_model_ready/dashboard_ready, both approved citing this contract -- though the dashboard design always described the known-status rate.) Live publish to a Power BI workspace is the deferred F016 execution adapter."
