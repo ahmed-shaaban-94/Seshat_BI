@@ -7,17 +7,19 @@ mapping work begins. Maps to medallion-playbook Phase 1.
 
 ## Purpose
 
-Establish that the raw `<schema>.<table>` source has been measured and proposed
-for understanding -- BEFORE a single source-map decision is made. "Ready" here
-means the mechanical numbers are recorded and the semantic profile rows are
-PROPOSED for human confirmation, never invented. This is the floor every later
-stage stands on: no mapping, no silver, no judgment calls yet.
+Establish that the raw source has been measured and proposed for understanding --
+BEFORE a single source-map decision is made. A raw source is **either a DB
+`<schema>.<table>` OR a standalone file (CSV / Excel)**; both land in bronze and both
+are profiled through the same gate. "Ready" here means the mechanical numbers are
+recorded and the semantic profile rows are PROPOSED for human confirmation, never
+invented. This is the floor every later stage stands on: no mapping, no silver, no
+judgment calls yet.
 
 ## Required artifacts
 
 | Artifact | What it must contain |
 |----------|----------------------|
-| `mappings/<table>/source-profile.md` | row count, column count; per-column missingness measured as `'' OR NULL` (not `IS NULL` alone); candidate-key uniqueness proof; returns-column population; PROPOSED semantics |
+| `mappings/<table>/source-profile.md` | row count, column count; per-column missingness measured as `'' OR NULL` (not `IS NULL` alone); candidate-key uniqueness proof; returns-column population; PROPOSED semantics. **`Source kind` defaults to `db-table` when absent** (existing DB profiles need no change); set it to `csv`/`excel` ONLY for a standalone file source, and then also fill the File-source addendum -- format, encoding (`[PROPOSED]`), delimiter/quote (csv), header row, and the enumerated in-scope sheet list (Excel) |
 
 The profile is the ONLY required artifact at this stage. The other four mapping
 artifacts (`source-map.yaml`, `assumptions.md`, `unresolved-questions.md`,
@@ -39,9 +41,35 @@ review. See `docs/source-intelligence.md` for how a filled copy contributes evid
 | Profile review | The numbers are recorded AND the semantic rows are PROPOSED (not invented), flagged for human confirmation |
 
 This stage has no `retail check` / `retail validate` gate. The gate is a review:
-confirm the mechanical numbers came from `profile.py` over a read-only
-connection, and confirm each semantic proposal is marked as a proposal awaiting
-sign-off, not stated as fact.
+confirm the mechanical numbers came from a read-only profiling pass over the landed
+source, and confirm each semantic proposal is marked as a proposal awaiting sign-off,
+not stated as fact.
+
+- For a **DB source**, the numbers come from `profile.py` over a read-only connection.
+- For a **file source (csv/excel)**, the numbers come from `file_profile.py` -- the
+  read-only file profiler. It computes the same mechanical set (row/col count,
+  `'' OR NULL` missingness, distinct cardinality, candidate-PK proof) from the file's
+  raw cells; CSV uses the stdlib (no extra), Excel uses the optional `files` extra
+  (`pip install 'retail[files]'`). The file-grain reasoning that guides the read
+  (encoding, delimiter, header row, sheet selection) lives in
+  `skills/bi-python-knowledge/` (route: profile a standalone file source).
+
+  **A file source reaches `pass` like a DB source does -- with one extra gate, and
+  that gate is ENFORCED, not just prose.** The mechanical numbers self-evidence
+  (recorded from `file_profile.py`). BUT a file has no declared schema, so the detected
+  **encoding** (and, for CSV, the delimiter and header-row) is a `[PROPOSED]` inference
+  that every text column rests on: a wrong encoding silently corrupts every label
+  (PY-CN-082). Encoding-confirmation is therefore a GATING semantic proposal -- treated
+  exactly like the semantic rows: the data owner must confirm the encoding (and
+  delimiter/header) before this stage can read `pass`.
+
+  This is machine-checked by **rule RS1**: mark the `source_ready` stage block with
+  `source_kind: csv` (or `excel`) in `readiness-status.yaml`, and RS1 will REFUSE a
+  `pass` on that stage until a matching `{stage: source_ready}` entry is recorded in
+  `approvals[]` (the owner's encoding-confirmation). A DB source omits `source_kind`
+  and is unaffected. Until confirmed, record `warning`, not `pass`. If no reader is
+  available at all (Excel without the `files` extra), fall back to deferred-boundary
+  mode: `[PENDING LIVE PROFILE]` + `warning`, never a fabricated `pass`.
 
 ## Statuses
 
@@ -49,8 +77,8 @@ sign-off, not stated as fact.
 |--------|--------------|
 | `not_started` | no `source-profile.md` for `<table>` yet |
 | `blocked` | a required number is missing/unmeasurable, or semantics were INVENTED instead of proposed -- see Blocking reasons |
-| `warning` | profile recorded but with a noted caveat (e.g. `[PENDING LIVE PROFILE]` rows in deferred-boundary mode) -- does not auto-promote |
-| `pass` | every required number recorded from `profile.py`; semantics PROPOSED + flagged; evidence cites `mappings/<table>/source-profile.md` |
+| `warning` | profile recorded but with a noted caveat (e.g. `[PENDING LIVE PROFILE]` rows in deferred-boundary mode; or a **file source** whose encoding/delimiter/header is still `[PROPOSED]`, unconfirmed by the owner) -- does not auto-promote |
+| `pass` | every required number recorded from `profile.py` (DB) or `file_profile.py` (file); semantics PROPOSED + flagged; **for a file source, the owner has CONFIRMED the encoding (and delimiter/header)**; evidence cites `mappings/<table>/source-profile.md` |
 
 ## Blocking reasons
 
@@ -63,6 +91,10 @@ sign-off, not stated as fact.
   asserted) rather than PROPOSED for confirmation.
 - Numbers fabricated because the live boundary was unavailable, instead of
   marking them `[PENDING LIVE PROFILE]`.
+- **File source only:** `Source kind` is csv/excel but the File-source addendum is
+  missing; encoding/delimiter/header ASSERTED as fact instead of `[PROPOSED]`; or (Excel)
+  the sheets not enumerated and the profiled sheet not stated -- the first sheet assumed
+  silently to be the data.
 
 ## Required owner / approval
 
@@ -94,6 +126,7 @@ source-mapping workflow to author the source-map decisions.
 - `../source-intelligence.md` -- Layer 2: how the OPTIONAL registry + dictionary feed this stage's evidence.
 - `../../templates/business-meaning-registry.md`, `../../templates/retail-term-dictionary.md` -- the OPTIONAL semantic-proposal artifacts.
 - `../../.claude/skills/source-mapping/SKILL.md` -- the skill that runs this stage; calls `profile.py` as the mechanical profiler.
-- `../../src/retail/profile.py` -- the mechanical profiler (row/col counts, `'' OR NULL` missingness, candidate-PK proof).
+- `../../src/retail/profile.py` -- the mechanical profiler for a DB table (row/col counts, `'' OR NULL` missingness, candidate-PK proof).
+- `../../src/retail/file_profile.py` -- the mechanical profiler for a CSV/Excel file source (same measures, driver-free; CSV on the stdlib, Excel via the `files` extra).
 - `../medallion-playbook.md` -- Phase 1, which this stage maps to.
 - C086 is the first worked example -- a filled instance, not the schema: `../worked-examples/c086-pharmacy.md`.
