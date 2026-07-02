@@ -65,7 +65,31 @@ def test_init_idempotent_second_run(repo, capsys) -> None:
     code = cli.main(["init", "--repo", str(repo)])
     out = capsys.readouterr().out
     assert code == 0
-    assert "already bootstrapped" in out
+    assert "already bootstrapped" in out  # phrase preserved (existing contract)
     assert (repo / "AGENTS.md").read_text(encoding="utf-8").count(
         "<!-- SESHAT-KIT START -->"
     ) == 1
+
+
+def test_init_rerun_prints_no_change_diff(repo, capsys) -> None:
+    # Fold (074): an in-sync re-run reports nothing changed.
+    cli.main(["init", "--repo", str(repo)])
+    capsys.readouterr()
+    cli.main(["init", "--repo", str(repo)])
+    out = capsys.readouterr().out
+    assert "no targets changed" in out.lower() or "nothing changed" in out.lower()
+
+
+def test_init_rerun_prints_changed_targets_after_source_edit(repo, capsys) -> None:
+    # Fold (074): after a source change, the re-run diff names the changed target.
+    cli.main(["init", "--repo", str(repo)])
+    src = repo / SOURCE_REL
+    src.write_text(
+        src.read_text(encoding="utf-8").replace('version: "0.2.0"', 'version: "0.3.0"'),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+    cli.main(["init", "--repo", str(repo)])
+    out = capsys.readouterr().out
+    assert "changed" in out.lower()
+    assert "compass.yaml" in out
