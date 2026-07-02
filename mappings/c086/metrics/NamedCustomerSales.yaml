@@ -24,6 +24,9 @@ binds_to:
   pii_sensitive: false
 
 readiness:
-  status: "not_started"
-  evidence: []
+  status: "warning"
+  evidence:
+    - "definition approved by Ahmed Shaaban (data_owner) 2026-07-02 (adversarial-audit remediation, F009 metric-owner sign-off)"
   blocking_reasons: []
+  warnings:
+    - "live value not yet captured: c086 gold is not built (silver/gold SQL authored 0005/0006, not applied + live-validated). Promote to pass after a read-only retail validate run."

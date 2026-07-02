@@ -60,13 +60,17 @@ stages:
     blocking_reasons: []
 
   semantic_model_ready:
-    status: "not_started"
+    status: "blocked"
     # A PBIP model (powerbi/c086 _sales.SemanticModel, 30 measures) and 33 metric
     # contracts (mappings/c086/metrics/) EXIST but were built ahead of the pipeline
-    # (audit finding C14). The stage is not entered until gold_ready passes and the
-    # contracts carry owner approval.
-    evidence: []
-    blocking_reasons: []
+    # (audit finding C14). The metric-contract DEFINITIONS are now owner-approved
+    # (2026-07-02), but the stage stays blocked: it cannot pass until gold_ready
+    # passes (the contracts' live values are unverified -- gold is not built).
+    evidence:
+      - "metric-contract definitions approved by Ahmed Shaaban (data_owner) 2026-07-02: 30 of 33 at warning (definition-approved, live value pending gold build); 2 Principle-V calls ratified (ABC 20% threshold; SalesPerProduct denominator = products sold); CustomerRepeatRate stays blocked (walk-in identity gap, no owner resolution)."
+    blocking_reasons:
+      - "gold_ready is not pass (c086 gold not built), so the metric contracts' live values are unverified and this stage cannot pass. Definitions are approved; promotion waits on the gold build + a read-only retail validate run."
+      - "CustomerRepeatRate contract remains blocked: whole-base repeat rate is undefinable while walk-ins collapse to one WALK_IN identity; needs a named human scope decision (not yet made)."
 
   dashboard_ready:
     status: "not_started"

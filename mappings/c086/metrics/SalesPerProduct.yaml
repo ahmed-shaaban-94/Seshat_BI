@@ -11,17 +11,19 @@ formula_intent: >-
   basis is an owner judgment call; verify live.
 owner: "Pharmacy Sales Analytics lead"
 binds_to:
-  # BLOCKED (AL1): binding held as placeholder until owner picks the denominator basis
-  #   (products-that-sold vs full catalog). intended on resolution: gold.fct_sales / [gross_sales, product_sk]
-  gold_table: "gold.<fact>"
+  # RATIFIED 2026-07-02: owner chose the denominator basis (distinct products that
+  #   SOLD, not catalog size), so the binding is now settled to the real columns.
+  gold_table: "gold.fct_sales"
   columns:
-    - "<gross_sales>"
-    - "<product_sk>"
+    - "gross_sales"
+    - "product_sk"
   pii_sensitive: false
 
 readiness:
-  status: "blocked"
-  evidence: []
-  blocking_reasons:
-    - "denominator basis is a judgment call: distinct products that SOLD vs full catalog size (9,669). Owner must choose before promotion."
-    - "no live ground-truth value captured; must be confirmed against the live fact."
+  status: "warning"
+  evidence:
+    - "Principle-V ratification by Ahmed Shaaban (data_owner) 2026-07-02: the denominator is distinct products that ACTUALLY SOLD (rows present on the fact), NOT the full catalog size (decision affirmed via the audit-remediation prompt)."
+    - "definition approved by Ahmed Shaaban (data_owner) 2026-07-02 (F009 metric-owner sign-off)."
+  blocking_reasons: []
+  warnings:
+    - "live ground-truth value not yet captured: c086 gold is not built. Promote to pass after a read-only retail validate run confirms the value against the live fact."
