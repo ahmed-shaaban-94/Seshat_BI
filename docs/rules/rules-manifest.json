@@ -104,6 +104,10 @@
     "title": "Theme styling values are faithful to the design tokens they compile from"
   },
   {
+    "id": "DL4",
+    "title": "A filled design-review evidence record carries every required field"
+  },
+  {
     "id": "G1",
     "title": ".gitignore correctness"
   },
