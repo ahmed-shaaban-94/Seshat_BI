@@ -89,7 +89,7 @@ dashboard too."
 |---|---|
 | `demo init` never run (no working directory at all) | Render a report with every stage `not_started` and `next_action` = "run `retail demo init`"; exit 0 (Edge Cases: cold-start report MUST NOT error) |
 | `demo run` never called, but `init`/`load` were | Compute the offline-only legs inline and render; note in the report that the live leg (if a DSN is configured) has not yet been checked by a `run` |
-| Computed snapshot is stale relative to changed fixtures (e.g. someone hand-edited a fixture after the last `run`) | Report what the snapshot says, but this is a known limitation to flag in `tasks.md`/future work -- NOT a defect this spec-work phase is required to solve (the demo is not expected to file-watch); the honest baseline behavior is still correct because the offline legs `report` computes inline are always freshly derived |
+| Computed snapshot is stale relative to changed fixtures (e.g. someone hand-edited a fixture after the last `run`) | Report what the snapshot says, but this is a known limitation to flag in `tasks.md`/future work -- NOT a defect this spec-work phase is required to solve (the demo is not expected to file-watch); the honest baseline behavior is still correct because the offline legs `report` computes inline are always freshly derived. **RATIFIER-RESOLVED 2026-07-03:** the `run`->snapshot / `report`->snapshot split is confirmed NOT a second state engine (it matches the recompute-and-render model in AGENTS.md; offline legs are always re-derived inline, only the live/gold leg is cached), and the bounded live-leg staleness window is ACCEPTED as a documented limitation (refresh by re-running `demo run`). This closes 083's open ratifier question. |
 
 ## What this verb explicitly does NOT do
 
