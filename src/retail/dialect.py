@@ -218,9 +218,18 @@ class SqlServerDialect:
         text = str(message)
 
         # Pass 1 (authoritative): exact-value component scrub, longest-first.
+        # The yes/no skip is scoped to the BOOLEAN keywords only (Encrypt,
+        # TrustServerCertificate) -- it exists to avoid over-redacting those
+        # non-secret flags. It must NOT apply keyword-agnostically: a PWD/UID/
+        # DATABASE/SERVER value that happens to literally equal "yes"/"no"
+        # is still a real credential and must be scrubbed (security over
+        # cosmetic over-redaction).
+        _BOOLEAN_KEYWORDS = ("ENCRYPT", "TRUSTSERVERCERTIFICATE")
         secrets: set[str] = set()
         for kw, val in self._parse_tokens(config or ""):
-            if not val or val.lower() in ("yes", "no"):
+            if not val:
+                continue
+            if kw in _BOOLEAN_KEYWORDS and val.lower() in ("yes", "no"):
                 continue
             if kw == "SERVER":
                 # SERVER=host,port -- scrub the bare host independently, since

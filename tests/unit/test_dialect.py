@@ -296,6 +296,39 @@ def test_sqlserver_redact_regression_simple_password_still_scrubbed() -> None:
     assert "topsecret" not in out
 
 
+@pytest.mark.parametrize("secret_value", ["yes", "no", "YES", "No"])
+def test_sqlserver_redact_scrubs_credential_equal_to_yes_no(secret_value: str) -> None:
+    # R4 CONFIRMED DEFECT: pass-1's component scrub skipped ANY value equal to
+    # "yes"/"no" (case-insensitively), regardless of which keyword it came
+    # from. That guard exists to avoid over-redacting the boolean keywords
+    # (Encrypt=yes, TrustServerCertificate=yes) -- but it also let a PWD/UID/
+    # DATABASE/SERVER value that literally equals "yes"/"no" slip past pass 1
+    # untouched. Pass 2 only catches the "KW=value" prefixed form, so once the
+    # driver reformats the error into bare text (no "PWD=" prefix survives),
+    # the credential leaks verbatim. The skip must be scoped to the BOOLEAN
+    # keywords only (ENCRYPT / TRUSTSERVERCERTIFICATE), not to the value text.
+    d = get_dialect("sqlserver")
+    cfg = (
+        "DRIVER={ODBC Driver 18 for SQL Server};SERVER=h,1433;"
+        f"DATABASE=proddb;UID={secret_value};PWD={secret_value};Encrypt=yes"
+    )
+    # Simulate the driver reformatting the error so the secret appears BARE
+    # (no "PWD="/"UID=" prefix survives) -- this is what pass 1 must catch.
+    out = d.redact(f"login failed: credential '{secret_value}' rejected", cfg)
+    assert secret_value not in out
+
+
+def test_sqlserver_redact_leaves_encrypt_boolean_keyword_unredacted() -> None:
+    # Companion guard: the yes/no skip must still apply to the boolean
+    # keywords themselves (Encrypt=yes / TrustServerCertificate=yes) -- those
+    # are not secrets and redacting the bare word "yes" everywhere would be
+    # needless over-redaction noise for the common (non-credential) case.
+    d = get_dialect("sqlserver")
+    cfg = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=h,1433;Encrypt=yes"
+    out = d.redact("connected with Encrypt=yes", cfg)
+    assert "Encrypt=yes" in out
+
+
 def test_sqlserver_redact_scrubs_leading_brace_password_regression() -> None:
     # R4 REGRESSION adversarial: a password that is itself an unbalanced
     # brace-opener ("{secret", no closing "}") used to defeat the old

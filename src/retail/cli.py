@@ -446,12 +446,15 @@ def _run_kit_lint(args: argparse.Namespace) -> int:
 def _safe_target_label(engine: str, config: object) -> str:
     """A credential-free label for the "running against ..." status line.
 
-    A DSN string keeps only the host segment (matches the pre-existing
-    Postgres behavior); a kwargs dict (MySQL/Snowflake) never echoes any
-    value, only the engine name -- no field of the dict is guaranteed secret-
-    free enough to print, so the label is engine-only for those.
+    A Postgres DSN string keeps only the host segment (matches the
+    pre-existing behavior, unchanged). Every OTHER string-shaped config --
+    today that's only the SQL-Server ODBC keyword string, which embeds
+    PWD=/UID= directly with no "@" delimiter to split on -- is NOT safe to
+    echo even partially, so it falls through to the engine-only label (same
+    posture as the kwargs-dict engines, MySQL/Snowflake): no field of a
+    non-Postgres config is guaranteed secret-free enough to print.
     """
-    if isinstance(config, str):
+    if engine == "postgres" and isinstance(config, str):
         return config.split("@")[-1] if "@" in config else config
     return engine
 
@@ -632,7 +635,7 @@ def _run_validate(args: argparse.Namespace) -> int:
     print(f"retail validate: running live checks against {safe_host}", file=sys.stderr)
     try:
         runner = _make_runner(config)
-        findings = run_live_checks(runner, targets)
+        findings = run_live_checks(runner, targets, dialect=dialect)
     except Exception as exc:
         print(
             "error: live validation failed at the DB boundary "
@@ -784,7 +787,6 @@ def _run_value_check(args: argparse.Namespace) -> int:
 
     from .core import Severity
     from .dialect import get_dialect
-    from .identifiers import quote_identifier
     from .metric_drift import load_definition
     from .runner import _format
     from .validate import resolve_dsn
@@ -873,11 +875,11 @@ def _run_value_check(args: argparse.Namespace) -> int:
             if expected.aggregation == "ratio":
                 num_sql = _filter_to_sql(
                     (definition or {}).get("numerator", {}).get("filter"),
-                    quote_identifier,
+                    dialect.quote_ident,
                 )
                 den_sql = _filter_to_sql(
                     (definition or {}).get("denominator", {}).get("filter"),
-                    quote_identifier,
+                    dialect.quote_ident,
                 )
                 if num_sql is None or den_sql is None:
                     print(
@@ -911,7 +913,9 @@ def _run_value_check(args: argparse.Namespace) -> int:
         runner = _make_runner(config)
         findings = []
         for name, expected in expectations:
-            findings.extend(check_expected_value(runner, name, expected))
+            findings.extend(
+                check_expected_value(runner, name, expected, dialect=dialect)
+            )
     except ValueError as exc:
         # an unsafe identifier in a contract -> clean message, no traceback
         print(
