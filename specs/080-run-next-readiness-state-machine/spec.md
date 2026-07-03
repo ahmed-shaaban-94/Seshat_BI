@@ -359,9 +359,11 @@ evidence" flag for that stage, in addition to whatever next action it computes.
   This reading is load-bearing: the constitution and readiness model are explicit
   that "the spine adds no new gate" and RS1 tracks exactly four approval-required
   stages plus the Source Ready file-source special case. Inventing an eighth
-  ("grain_ready") or ninth ("kpi_ready") stage would contradict that. If this
-  reading is wrong and the task intends genuinely new stages, that is a
-  scope-changing decision -- see NEEDS CLARIFICATION #1.
+  ("grain_ready") or ninth ("kpi_ready") stage would contradict that.
+  **RATIFIED 2026-07-03 (Ahmed Shaaban, data_owner): reading (a) is confirmed —
+  grain/KPI approvals map onto the existing `mapping_ready` / `semantic_model_ready`
+  seams; no new stages, no constitution/readiness-model amendment. See the RESOLVED
+  entry under "NEEDS CLARIFICATION" below.**
 - **Assumption A6 (no persisted run-state)**: "state machine" in the feature name
   describes the CONCEPTUAL model (an ordered walk through the seven stages with
   transition rules), not a running process or a persisted counter. Every
@@ -481,15 +483,17 @@ scope-changing unknowns), the following is flagged. It does not block writing
 this spec because Assumption A5 supplies a documented default; it is flagged
 because a wrong default here would change the shape of the state machine itself.
 
-1. **[NEEDS CLARIFICATION-1]**: Does "grain approval" and "KPI approval" in the
-   task description mean (a) the existing judgment calls already folded into
-   `mapping_ready` and `semantic_model_ready` respectively (Assumption A5's
-   reading, adopted as the default in this spec), or (b) two genuinely NEW,
-   separately-tracked approval stages/fields the readiness spine does not
-   currently have? Adopting (b) would require a constitution/readiness-model
-   amendment (a new stage or a new approval sub-field) before this feature could
-   be built, which is explicitly out of scope for a spec-only slice. This spec
-   proceeds under reading (a).
+1. **[RESOLVED 2026-07-03 — reading (a) RATIFIED]**: "grain approval" and "KPI
+   approval" in the task description mean **(a) the existing judgment calls already
+   folded into `mapping_ready` and `semantic_model_ready`** respectively — NOT two
+   genuinely-new separately-tracked stages. Ratified by the repo owner (Ahmed
+   Shaaban, data_owner) on 2026-07-03; no constitution/readiness-model amendment is
+   required, the spine keeps its four approval-required stages, and this feature
+   introduces no new stage. (Original question retained for the record: reading (b)
+   — two new stages/fields — was NOT chosen; it would have required a
+   constitution/readiness-model amendment and is out of scope.) This resolves the
+   sole open ratifier question for 080; the spec was already written under reading
+   (a) (Assumption A5), so no spec text changes beyond this ratification note.
 
 (Only one marker is used; the other candidate ambiguities -- the
 `next_action`-disagreement handling and the persisted-state question -- were
