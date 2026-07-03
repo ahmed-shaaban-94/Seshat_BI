@@ -998,6 +998,48 @@ still be present and clearly marked as the user's own.`,
   { label: 'synthesize:merge', phase: 'Synthesize', ...JUDGE }
 )
 
+// ---- USER-IDEA PRESERVER (JS-enforced survival, upstream of the panel) -----------
+// ROOT-CAUSE FIX: the synthesizer is a schema-less LLM told (in prose) never to merge
+// away an origin:user idea. Observed failure (run wf_927fa9f5): it disobeyed -- absorbed
+// 5 of 6 user ideas into engine candidates and demoted them to merge-ledger footnotes,
+// even emitting a FALSE self-check ("ALL 6 PRESENT"). The downstream lostUserIdeas guard
+// correctly DETECTED the loss and bannered it, but a detector cannot recover a verdict --
+// the 5 ideas never reached the panel, so the "Your Ideas" lane was empty. Prose alone is
+// not a guarantee. We hold the ground truth (userIdeas from the interpreter), so we ENFORCE
+// survival in JS: any user idea whose title is not present in the synthesizer's text is
+// RE-APPENDED as an explicit, clearly-tagged protected candidate BEFORE the skeptic + panel
+// see the set -- so every user idea always gets a real adversarial + panel verdict regardless
+// of what the synthesizer did. Match on proseKey (the same identity the render lane re-asserts
+// on), substring-either-direction to tolerate a light rewording the synth may have kept.
+const _synthText = typeof synthesis === 'string' ? synthesis : JSON.stringify(synthesis)
+const _synthKey = proseKey(_synthText)
+const _missingUserIdeas = userIdeas.filter(u => {
+  const k = proseKey(u.title)
+  return !!k && !_synthKey.includes(k)     // absent from the synth text entirely
+})
+const _preservedBlock = _missingUserIdeas.length
+  ? '\n\n=== PROTECTED USER IDEAS RE-INJECTED (origin:user -- the synthesizer dropped or merged these; '
+    + 'they are the human OWN ideas and MUST be reviewed on their own merits, never treated as duplicates to skip) ===\n'
+    + _missingUserIdeas.map(u =>
+        'TITLE: ' + u.title + '\n'
+        + 'ORIGIN: user\n'
+        + 'HORIZON: ' + u.horizon + '\n'
+        + 'SERVES: ' + u.serves + '\n'
+        + 'STRENGTHENS_LAYER: ' + u.strengthens_layer + '\n'
+        + 'PITCH: ' + u.pitch + '\n'
+        + 'WHY_IT_FITS: ' + u.why_it_fits + '\n'
+        + 'ROUGH_SHAPE: ' + u.rough_shape
+      ).join('\n\n')
+  : ''
+// synthesized = the set the skeptic + panel actually read: the synthesizer's output plus any
+// user idea it dropped, re-appended. When the synth kept them all, this equals synthesis.
+const synthesized = _synthText + _preservedBlock
+if (_missingUserIdeas.length) {
+  log('user-idea preserver: re-injected ' + _missingUserIdeas.length
+    + ' user idea(s) the synthesizer dropped, so the panel reviews them: '
+    + _missingUserIdeas.map(u => u.title).join('; '))
+}
+
 // ===================== 6. ADVERSARIAL VERIFY (universal coverage) =====================
 phase('Verify')
 // Every idea is challenged -- no "only the tempting ones" escape hatch. Default
@@ -1015,7 +1057,7 @@ reasoning layer into an executor or a stats engine? Then rule it survived / weak
 with one line of why.
 
 === SHIP STATUS (for the duplicate-of-shipped check) ===\n${JSON.stringify((explore_map && explore_map.ship_status) || [], null, 2)}
-=== SYNTHESIZED CANDIDATES ===\n${synthesis}`,
+=== SYNTHESIZED CANDIDATES ===\n${synthesized}`,
   { label: 'verify:skeptic', phase: 'Verify', schema: VERIFY_SCHEMA, ...JUDGE }
 )
 
@@ -1060,7 +1102,7 @@ user idea is genuinely ineligible or weak, say so plainly (that honest verdict I
 asked for), and the steelman stage will look for a narrower eligible seam.
 
 === SHIP STATUS ===\n${JSON.stringify((explore_map && explore_map.ship_status) || [], null, 2)}${MEMORY_LINE}
-=== SYNTHESIZED CANDIDATES ===\n${synthesis}
+=== SYNTHESIZED CANDIDATES ===\n${synthesized}
 === ADVERSARIAL SKEPTIC\u0027S CHALLENGES ===\n${verify ? JSON.stringify(verify) : S(40,115,107,101,112,116,105,99,32,112,114,111,100,117,99,101,100,32,110,111,116,104,105,110,103,41)}`,
     { label: p.label, phase: 'Panel-review', schema: PANEL_REVIEWER_SCHEMA, ...JUDGE }
   ).then(r => r ? { ...r, _key: p.key } : null)
