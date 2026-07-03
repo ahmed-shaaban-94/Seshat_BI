@@ -83,7 +83,59 @@ class PostgresDialect:
         )
 
 
-_DIALECTS: dict[str, type] = {"postgres": PostgresDialect}
+_MSSQL_TEXT_TYPES = frozenset({"varchar", "nvarchar", "char", "nchar", "text", "ntext"})
+
+
+class SqlServerDialect:
+    name = "sqlserver"
+
+    def quote_ident(self, name: str, *, context: str = "identifier") -> str:
+        v = validate_identifier(name, context=context)
+        return f"[{v}]"
+
+    def quote_qualified(
+        self, name: str, *, context: str, min_parts: int = 1, max_parts: int = 2
+    ) -> str:
+        validated = validate_qualified_identifier(
+            name, context=context, min_parts=min_parts, max_parts=max_parts
+        )
+        return ".".join(f"[{p}]" for p in validated.split("."))
+
+    def count_where(self, predicate: str) -> str:
+        return f"COUNT(CASE WHEN {predicate} THEN 1 END)"
+
+    def distinct_tuple_count(
+        self, cols: tuple[str, ...], table: str, where: str | None = None
+    ) -> str:
+        joined = ", ".join(cols)
+        w = f" WHERE {where}" if where else ""
+        return (
+            f"(SELECT COUNT(*) FROM (SELECT DISTINCT {joined} FROM {table}{w}) AS sub)"
+        )
+
+    def is_text_type(self, data_type: str) -> bool:
+        return data_type.lower() in _MSSQL_TEXT_TYPES
+
+    def placeholder(self) -> str:
+        return "?"
+
+    def translate_params(self, sql: str) -> str:
+        return sql.replace("%s", "?")
+
+    def columns_query(self) -> str:
+        # INFORMATION_SCHEMA columns are UPPERCASE-labelled; alias to lowercase so
+        # callers read r[0]/r[1] identically across engines. Uses ? placeholders.
+        return (
+            "SELECT COLUMN_NAME AS column_name, DATA_TYPE AS data_type "
+            "FROM INFORMATION_SCHEMA.COLUMNS "
+            "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION"
+        )
+
+
+_DIALECTS: dict[str, type] = {
+    "postgres": PostgresDialect,
+    "sqlserver": SqlServerDialect,
+}
 
 
 def get_dialect(name: str) -> Dialect:

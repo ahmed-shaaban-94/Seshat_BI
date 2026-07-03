@@ -41,3 +41,36 @@ def test_postgres_columns_query_is_information_schema() -> None:
     assert "table_schema = %s" in sql
     assert "table_name = %s" in sql
     assert "ORDER BY ordinal_position" in sql
+
+
+def test_sqlserver_count_where_is_count_case() -> None:
+    d = get_dialect("sqlserver")
+    # COUNT(CASE ...) — exact on empty input (returns 0, not NULL like SUM).
+    assert d.count_where("x IS NULL") == "COUNT(CASE WHEN x IS NULL THEN 1 END)"
+
+
+def test_sqlserver_distinct_tuple_is_derived_table() -> None:
+    d = get_dialect("sqlserver")
+    assert d.distinct_tuple_count(("a", "b"), "s.t") == (
+        "(SELECT COUNT(*) FROM (SELECT DISTINCT a, b FROM s.t) AS sub)"
+    )
+
+
+def test_sqlserver_quote_ident_brackets() -> None:
+    assert get_dialect("sqlserver").quote_ident("col") == "[col]"
+
+
+def test_sqlserver_placeholder_is_qmark() -> None:
+    assert get_dialect("sqlserver").placeholder() == "?"
+
+
+def test_sqlserver_translate_params_percent_s_to_qmark() -> None:
+    d = get_dialect("sqlserver")
+    assert d.translate_params("WHERE a = %s AND b = %s") == "WHERE a = ? AND b = ?"
+
+
+def test_sqlserver_is_text_type() -> None:
+    d = get_dialect("sqlserver")
+    assert d.is_text_type("varchar")
+    assert d.is_text_type("NVARCHAR")
+    assert not d.is_text_type("int")
