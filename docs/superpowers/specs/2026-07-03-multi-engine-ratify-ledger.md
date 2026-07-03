@@ -2,7 +2,7 @@
 
 - **Date:** 2026-07-03
 - **Branch:** `worktree-multi-engine-db`
-- **Status:** ⏸ **AWAITING HUMAN RATIFICATION** — this is a Principle-V judgment call the agent structurally cannot self-grant.
+- **Status:** ✅ **RATIFIED** by Ahmed Shaaban (repo owner), 2026-07-04. Applied to `.specify/memory/constitution.md` as amendment 1.7.0. This was a named human's explicit Principle-V act; the agent transcribed the decision and did not self-grant it.
 - **Design:** `docs/superpowers/specs/2026-07-03-multi-engine-db-support-design.md`
 - **Plan:** `docs/superpowers/plans/2026-07-03-multi-engine-db-support.md`
 
