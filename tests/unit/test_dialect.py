@@ -109,9 +109,10 @@ def test_snowflake_quote_ident_uppercases() -> None:
 
 
 def test_snowflake_quote_qualified_uppercases_each_part() -> None:
-    assert get_dialect("snowflake").quote_qualified(
-        "bronze.my_table", context="t"
-    ) == '"BRONZE"."MY_TABLE"'
+    assert (
+        get_dialect("snowflake").quote_qualified("bronze.my_table", context="t")
+        == '"BRONZE"."MY_TABLE"'
+    )
 
 
 def test_snowflake_count_where_is_count_case() -> None:
@@ -133,3 +134,39 @@ def test_snowflake_columns_query_uppercases_filter() -> None:
     sql = get_dialect("snowflake").columns_query()
     assert "INFORMATION_SCHEMA.COLUMNS" in sql
     assert "%s" in sql  # snowflake default paramstyle is pyformat
+
+
+@pytest.mark.parametrize("engine", ["postgres", "sqlserver", "mysql", "snowflake"])
+def test_count_where_predicate_is_embedded_verbatim(engine: str) -> None:
+    # R3: the conditional-count fragment must count only matching rows; every engine
+    # embeds the predicate. (PG uses FILTER, the others COUNT(CASE) — both count 0,
+    # never NULL, on zero matches; the string form encodes that.)
+    frag = get_dialect(engine).count_where("v IS NULL")
+    assert "v IS NULL" in frag
+    assert frag.startswith(("count(", "COUNT("))
+
+
+def test_r2_param_translation_qmark_only_for_pyodbc() -> None:
+    # R2: only the qmark engine rewrites %s -> ?; the pyformat engines leave it.
+    assert get_dialect("sqlserver").translate_params("a=%s") == "a=?"
+    for e in ("postgres", "mysql", "snowflake"):
+        assert get_dialect(e).translate_params("a=%s") == "a=%s"
+
+
+def test_distinct_tuple_form_is_portable_for_new_engines() -> None:
+    # R (portability): the three new engines all use the derived-table form.
+    for e in ("sqlserver", "mysql", "snowflake"):
+        out = get_dialect(e).distinct_tuple_count(("a", "b"), "s.t")
+        assert out.startswith("(SELECT COUNT(*) FROM (SELECT DISTINCT a, b")
+        assert out.endswith("AS sub)")
+
+
+def test_normalize_catalog_literal_identity_for_non_snowflake() -> None:
+    # Guards against a future "simplify to one method" refactor silently breaking
+    # Postgres (and the other non-folding engines) by uppercasing everywhere.
+    for e in ("postgres", "sqlserver", "mysql"):
+        assert get_dialect(e).normalize_catalog_literal("Bronze") == "Bronze"
+
+
+def test_normalize_catalog_literal_uppercases_for_snowflake() -> None:
+    assert get_dialect("snowflake").normalize_catalog_literal("bronze") == "BRONZE"
