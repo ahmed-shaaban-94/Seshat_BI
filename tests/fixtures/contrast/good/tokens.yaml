@@ -1,0 +1,8 @@
+colors:
+  background: "#FFFFFF"
+  text:
+    primary: "#1A1D21"
+    secondary: "#3C434B"
+    muted: "#6B7480"
+accessibility:
+  min_text_contrast_ratio: "4.5:1"
