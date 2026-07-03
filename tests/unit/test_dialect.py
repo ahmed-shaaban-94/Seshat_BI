@@ -349,6 +349,32 @@ def test_sqlserver_redact_scrubs_password_with_brace_and_close_brace() -> None:
     assert "a{b}c" not in out
 
 
+def test_sqlserver_redact_scrubs_password_containing_literal_keyword() -> None:
+    # R4 REGRESSION adversarial (3rd leak): a password that itself contains a
+    # literal ODBC KEYWORD= token (e.g. "secret;DATABASE=x"). If redact() ran
+    # its KW=value regex pass BEFORE the exact-value component pass, the regex
+    # would rewrite the "DATABASE=x" fragment *inside the password text* in the
+    # message, so the later verbatim whole-value replace would no longer match
+    # and the password prefix ("secret") would leak. The fix runs the exact
+    # component-value scrub FIRST, so the whole credential is removed before the
+    # regex can mangle it.
+    for pw in ("secret;DATABASE=x", "h0tP@ss;SERVER=y", "pw;PWD=z"):
+        env = {
+            "ANALYTICS_DB_HOST": "h",
+            "ANALYTICS_DB_USER": "u",
+            "ANALYTICS_DB_NAME": "analytics",
+            "ANALYTICS_DB_PASSWORD": pw,
+        }
+        d = get_dialect("sqlserver")
+        cfg = d.resolve_config(env)
+        assert cfg is not None
+        out = d.redact(f"login failed for password '{pw}' rejected", cfg)
+        assert pw not in out, f"full password leaked for {pw!r}: {out!r}"
+        # the high-entropy prefix before the embedded keyword must not survive
+        prefix = pw.split(";", 1)[0]
+        assert prefix not in out, f"password prefix {prefix!r} leaked: {out!r}"
+
+
 def test_mysql_resolve_config_builds_kwargs_dict() -> None:
     d = get_dialect("mysql")
     env = {

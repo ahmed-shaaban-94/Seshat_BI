@@ -195,26 +195,29 @@ class SqlServerDialect:
         splitting on every `;` blindly.
 
         Two passes, mirroring `_redact_dsn`'s component-level scrub for
-        psycopg2: (1) a best-effort `KW=value` regex pass directly against the
-        message text (covers brace and bare forms, and stops at a following
-        `;` OR `}`); (2) a component-level pass that re-derives each secret
-        VALUE from the config string (unwrapping braces, and splitting SERVER
-        on the LAST `,` to isolate the bare host) and replaces it verbatim
-        wherever it appears -- this is what catches the driver reformatting
-        the error into its own text (e.g. FreeTDS "TCP Provider: host 'X' not
-        found", which never contains "SERVER=" or the port at all). Component
-        values are scrubbed longest-first so a short value (e.g. a username
-        that is a substring of the host) cannot pre-empt a longer overlapping
-        match, matching `_redact_dsn`'s discipline.
+        psycopg2. ORDER MATTERS: (1) the AUTHORITATIVE component-level pass
+        runs FIRST -- it re-derives each secret VALUE from the config string
+        (unwrapping braces, and splitting SERVER on the LAST `,` to isolate the
+        bare host) and replaces it verbatim wherever it appears; this is what
+        catches the driver reformatting the error into its own text (e.g.
+        FreeTDS "TCP Provider: host 'X' not found", which never contains
+        "SERVER=" or the port at all). Component values are scrubbed
+        longest-first so a short value (e.g. a username that is a substring of
+        the host) cannot pre-empt a longer overlapping match, matching
+        `_redact_dsn`'s discipline. (2) a best-effort `KW=value` regex pass
+        runs SECOND as a defence-in-depth backstop (covers brace and bare
+        forms, stops at a following `;` OR `}`).
+
+        The component pass MUST precede the regex pass: if a password itself
+        contains a literal `KEYWORD=` (e.g. `secret;DATABASE=x`), a regex-first
+        order would rewrite the `DATABASE=x` fragment INSIDE the password text,
+        so the later verbatim whole-value replace no longer matches and the
+        password prefix (`secret`) leaks. Running the exact-value replace first
+        scrubs the whole credential before the regex can mangle it.
         """
         text = str(message)
-        for kw in ("PWD", "UID"):
-            # Brace form first (value may legitimately contain ';'), then bare.
-            text = re.sub(rf"({kw}=)\{{[^}}]*\}}", r"\1<redacted>", text)
-            text = re.sub(rf"({kw}=)[^;]*", r"\1<redacted>", text)
-        for kw in ("SERVER", "DATABASE"):
-            text = re.sub(rf"({kw}=)[^;]*", r"\1<redacted>", text)
 
+        # Pass 1 (authoritative): exact-value component scrub, longest-first.
         secrets: set[str] = set()
         for kw, val in self._parse_tokens(config or ""):
             if not val or val.lower() in ("yes", "no"):
@@ -231,6 +234,14 @@ class SqlServerDialect:
 
         for secret in sorted(secrets, key=len, reverse=True):
             text = text.replace(secret, "<redacted>")
+
+        # Pass 2 (defence-in-depth backstop): KW=value regex on the message.
+        for kw in ("PWD", "UID"):
+            # Brace form first (value may legitimately contain ';'), then bare.
+            text = re.sub(rf"({kw}=)\{{[^}}]*\}}", r"\1<redacted>", text)
+            text = re.sub(rf"({kw}=)[^;]*", r"\1<redacted>", text)
+        for kw in ("SERVER", "DATABASE"):
+            text = re.sub(rf"({kw}=)[^;]*", r"\1<redacted>", text)
         return text
 
     @staticmethod
