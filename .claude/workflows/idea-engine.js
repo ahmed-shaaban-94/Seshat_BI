@@ -1,11 +1,12 @@
 export const meta = {
   name: 'idea-engine',
-  description: 'Idea generator for Seshat BI. Ground maps the real repo with five subsystem explorers + a reconcile-verify pass; Memory reads the prior bank so shipped/settled ideas are not regenerated; four lenses (creative / BI analyst / technical / design) generate in parallel, then cross-pollinate; a completeness critic finds blind spots and triggers one targeted fill pass; a synthesizer merges; an adversarial skeptic challenges EVERY candidate (default-refuted); a four-standpoint reviewer PANEL scores value/feasibility and rules eligibility; a pure-JS aggregate takes the median, gates eligibility, and applies a demote-only clamp. Every agent stage runs on Opus at xhigh effort. Output: a ranked NOW/HORIZON idea BANK, rendered deterministically -- exploratory inspiration, not a roadmap or commitment.',
-  whenToUse: 'When you want a deep, exhaustive, rigorously vetted, history-aware idea bank for the project. All-Opus, xhigh effort, multi-round, multi-explorer, panel-reviewed -- thorough and heavy (many agents/tokens/time). Re-runnable; pass a focus string or {focus,sinceRef,date,ascii}. Output is an idea bank, never a plan.',
+  description: 'Idea generator for Seshat BI. Ground maps the real repo with five subsystem explorers + a reconcile-verify pass; Memory reads the prior bank so shipped/settled ideas are not regenerated; six role lenses (creative / BI analyst / technical / design / business-consumer / newcomer-operator) generate in parallel, then cross-pollinate; a completeness critic finds blind spots and triggers one targeted fill pass; a synthesizer merges; an adversarial skeptic challenges EVERY candidate (default-refuted); a four-standpoint reviewer PANEL scores value/feasibility and rules eligibility; a pure-JS aggregate takes the median, gates eligibility, and applies a demote-only clamp. Each idea is tagged with WHO it serves (end_user / operator / tool_internal) so a run heavy on tool-internal self-checking is a visible signal, not hidden. Every agent stage runs on Opus at xhigh effort. Output: a ranked NOW/HORIZON idea BANK, rendered deterministically -- exploratory inspiration, not a roadmap or commitment.',
+  whenToUse: 'When you want a deep, exhaustive, rigorously vetted, history-aware idea bank for the project -- OR when you want to hand the engine your OWN rough/half-formed idea(s) to expand into a reviewable shape and run through the same skeptic + reviewer panel. All-Opus, xhigh effort, multi-round, multi-explorer, panel-reviewed -- thorough and heavy (many agents/tokens/time). Re-runnable; pass a focus string, or {focus,sinceRef,date,ascii}, or {ideas:["rough words","another"]} / {seed:"rough words"} to review your own ideas (a bare string is treated as both focus AND a single seed idea). When ideas are supplied they are expanded, tagged origin:user, reviewed like any idea, and surfaced in a "Your Ideas" lane at the top. Output is an idea bank, never a plan.',
   phases: [
     { title: 'Ground',         detail: '5 subsystem explorers map the repo in parallel; JS merge + reconcile-verify', model: 'opus' },
     { title: 'Memory',         detail: 'read prior bank + Ground ship-status: label shipped/settled ideas (no re-litigation)', model: 'opus' },
-    { title: 'Generate',       detail: 'creative / BI / technical / design lenses propose in parallel (round 1)', model: 'opus' },
+    { title: 'Interpret',      detail: 'expand the USER\'S own rough idea(s) into reviewable shape + surface the chosen/rejected readings (only when ideas supplied)', model: 'opus' },
+    { title: 'Generate',       detail: 'creative / BI / technical / design / consumer / operator lenses propose in parallel (round 1)', model: 'opus' },
     { title: 'Cross-pollinate',detail: 'each lens reacts to the others; surface cross-disciplinary ideas', model: 'opus' },
     { title: 'Completeness',   detail: 'critic finds blind spots -> one more targeted generation pass', model: 'opus' },
     { title: 'Synthesize',     detail: 'merge + dedupe into one candidate set', model: 'opus' },
@@ -17,6 +18,26 @@ export const meta = {
   ],
 }
 const S = (...c) => String.fromCharCode(...c)
+
+// Shared title-normalizer (module scope so the render stage can re-assert user-idea origin by
+// title, using the SAME canonical identity aggregatePanel groups on -- a leading #N/N. number if
+// present, else lowercased punctuation/whitespace-normalized prose). Keeping one definition means
+// the render-side re-assert and the panel-side grouping can never drift apart.
+const normKey = t => {
+  const s = String(t || '').trim()
+  const m = s.match(/^#?\s*(\d+)\s*[.:)]/)          // "#41.", "41.", "41)", "41:"
+  if (m) return 'n' + m[1]
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()   // fallback: normalized prose
+}
+// proseKey: user-idea matching ONLY. normKey collapses a numbered title ("#41. Foo") to "n41"
+// for PANEL GROUPING -- correct there (reviewers keep the number, reword the trailing title), but
+// WRONG for matching a survived user idea back to its interpreter title (which carries no number
+// and normalizes to prose). proseKey STRIPS any leading list number, then normalizes prose, so a
+// numbered candidate and the un-numbered interpreter title compare equal. Must NOT replace normKey
+// in aggregatePanel (that would resurrect the number-collision over-count the file warns about).
+const proseKey = t => String(t || '').trim()
+  .replace(/^#?\s*\d+\s*[.:)]\s*/, '')                 // drop a leading "#41." / "41)" / "41:" prefix
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 // Device-portable: never hardcode a machine path. The agents that consume REPO resolve
 // the real repo root themselves at runtime (`git rev-parse --show-toplevel`), so this works
@@ -50,6 +71,23 @@ const SINCE_REF = (typeof _A.sinceRef === 'string'
 const DATE = (typeof _A.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(_A.date)) ? _A.date : null
 // ascii: normalize rendered output to ASCII (-- and ->). Default true (Principle IX).
 const ASCII = typeof _A.ascii === 'boolean' ? _A.ascii : true
+// USER IDEAS: the user's own rough/half-formed idea(s) to expand + review. Accepts
+// args.ideas (array of strings) OR args.seed (single string) OR -- as a convenience --
+// a bare string arg is treated as BOTH the focus AND a single seed idea (a user who
+// types one idea shouldn't have to learn the object form). Trimmed, empties dropped,
+// capped at 8 so a paste can't fan the pipeline out unbounded. Absent/empty -> null,
+// and the Interpret stage is skipped (workflow behaves exactly as before).
+const USER_IDEAS = (() => {
+  const out = []
+  if (Array.isArray(_A.ideas)) for (const s of _A.ideas) if (typeof s === 'string' && s.trim()) out.push(s.trim())
+  if (typeof _A.seed === 'string' && _A.seed.trim()) out.push(_A.seed.trim())
+  // bare-string arg: it is FOCUS already; also treat it as a single seed idea to review.
+  if (!out.length && typeof _c.value === 'string' && _c.value.trim()) out.push(_c.value.trim())
+  const seen = new Set()
+  const dedup = out.filter(s => { const k = s.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true })
+  return dedup.length ? dedup.slice(0, 8) : null
+})()
+const HAS_USER_IDEAS = !!(USER_IDEAS && USER_IDEAS.length)
 const FOCUS_LINE = FOCUS
   ? `\nFOCUS for this run (bias ideas toward this, but don\u0027t ignore strong off-theme ideas): ${FOCUS}\n`
   : ''
@@ -108,19 +146,60 @@ const IDEA_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'pitch', 'horizon', 'why_it_fits', 'rough_shape', 'strengthens_layer'],
+        required: ['title', 'pitch', 'horizon', 'why_it_fits', 'rough_shape', 'strengthens_layer', 'serves'],
         properties: {
           title: { type: 'string' },
           pitch: { type: 'string', description: '2-3 sentences: what it is and the value' },
           horizon: { type: 'string', enum: ['NOW', 'HORIZON'] },
           why_it_fits: { type: 'string' },
           rough_shape: { type: 'string', description: 'the seam it touches, not full impl' },
+          // WHO this idea ultimately serves -- the meta-bloat signal. 'end_user' = a business
+          // reader/analyst gets analytical value; 'operator' = someone running/adopting the kit
+          // gets a lower ramp; 'tool_internal' = the kit checks/maintains ITSELF (reconcilers,
+          // self-audits, wiring gates). A run heavy on tool_internal is over-producing bookkeeping
+          // -- selfMetrics tallies this so the ratio is a durable, self-correcting signal. Judged
+          // honestly by the lens; never assigned by index. Mirrors strengthens_layer's rails.
+          serves: { type: 'string', enum: ['end_user', 'operator', 'tool_internal'], description: 'who the idea ultimately serves: business reader (end_user), kit runner/adopter (operator), or the kit itself (tool_internal)' },
           // Which knowledge layer / spine this idea would strengthen -- surfaces layer
           // starvation in self-metrics. The lens JUDGES this; nothing is assigned by index.
           // 'design-system' = the Power BI presentation FOUNDATION (theme tokens, background/
           // canvas conventions, layout blueprints, accessibility/contrast, design-review
           // evidence) -- governance of the design layer, never report authoring.
           strengthens_layer: { type: 'string', enum: ['bi-sql', 'bi-dax', 'bi-python', 'bi-bigdata', 'retail-kpi', 'docs-spine', 'design-system', 'none'], description: 'the knowledge layer this most strengthens, or none' },
+        },
+      },
+    },
+  },
+}
+
+// The INTERPRET stage shape: it EXPANDS the user's rough words into fully-shaped ideas
+// AND surfaces the reading it chose + the readings it rejected -- so a misread is visible,
+// not silent (this recovers the value of pick-from-readings WITHOUT interrupting the run).
+// Each expanded idea carries the full IDEA fields plus the accountability note. These ideas
+// are injected into the candidate pool tagged origin:user and reviewed like any other.
+const INTERPRET_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['expanded'],
+  properties: {
+    expanded: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'pitch', 'horizon', 'why_it_fits', 'rough_shape', 'strengthens_layer', 'serves', 'original_words', 'chosen_reading', 'rejected_readings', 'eligible_guess'],
+        properties: {
+          title: { type: 'string' },
+          pitch: { type: 'string', description: '2-3 sentences: what it is and the value' },
+          horizon: { type: 'string', enum: ['NOW', 'HORIZON'] },
+          why_it_fits: { type: 'string' },
+          rough_shape: { type: 'string', description: 'the seam it touches, not full impl' },
+          strengthens_layer: { type: 'string', enum: ['bi-sql', 'bi-dax', 'bi-python', 'bi-bigdata', 'retail-kpi', 'docs-spine', 'design-system', 'none'] },
+          serves: { type: 'string', enum: ['end_user', 'operator', 'tool_internal'] },
+          original_words: { type: 'string', description: 'the user raw words, verbatim -- the accountability anchor' },
+          chosen_reading: { type: 'string', description: 'one sentence: how you read the rough words to shape this idea' },
+          rejected_readings: { type: 'array', items: { type: 'string' }, description: 'other plausible readings you did NOT pick, so the user can see if you misread them' },
+          eligible_guess: { type: 'boolean', description: 'honest first guess whether it respects the hard principles; the panel rules for real' },
         },
       },
     },
@@ -170,11 +249,13 @@ const PANEL_REVIEWER_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'horizon', 'eligible', 'ineligibility_reason', 'consistency', 'value_score', 'feasibility_score', 'verdict', 'survived_verification', 'prior_status', 'relitigation', 'rationale', 'strengthens_layer'],
+        required: ['title', 'horizon', 'eligible', 'ineligibility_reason', 'consistency', 'value_score', 'feasibility_score', 'verdict', 'survived_verification', 'prior_status', 'relitigation', 'rationale', 'strengthens_layer', 'serves', 'origin'],
         properties: {
           title: { type: 'string' },
           horizon: { type: 'string', enum: ['NOW', 'HORIZON'] },
           strengthens_layer: { type: 'string', enum: ['bi-sql', 'bi-dax', 'bi-python', 'bi-bigdata', 'retail-kpi', 'docs-spine', 'design-system', 'none'], description: 'carried from the idea: the knowledge layer it most strengthens' },
+          serves: { type: 'string', enum: ['end_user', 'operator', 'tool_internal'], description: 'carried from the idea: who it ultimately serves (the meta-bloat signal)' },
+          origin: { type: 'string', enum: ['user', 'engine'], description: 'carried from the idea: user = the human proposed it, engine = a lens generated it' },
           eligible: { type: 'boolean' },
           ineligibility_reason: { type: 'string', description: 'named principle, or "" if eligible' },
           consistency: { type: 'string', enum: ['consistent', 'minor-tension', 'conflict'] },
@@ -224,7 +305,7 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
   // complete eligibility ruling. Track the shortfall so the gate can refuse to pass.
   const expected = Number.isFinite(expectedReviewers) ? expectedReviewers : live.length
   const panel_failed = Math.max(0, expected - live.length)
-  // STABLE GROUPING KEY. The three reviewers all reference an idea by its leading number
+  // STABLE GROUPING KEY. The four reviewers all reference an idea by its leading number
   // (e.g. "#41. Symptom Concierge (which-layer-owns-this-symptom router)" vs "41. Symptom
   // Concierge -- cross-layer ... router") but PHRASE the trailing title differently. Grouping
   // on the raw free-text title therefore SPLIT one idea into 2-3 rows with divergent scores
@@ -233,12 +314,7 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
   // form so near-identical prose still merges. Display keeps the first-seen human title.
   // Defined BEFORE challengedTitles so the skeptic set is normalized on the same key -- else
   // the coverage clamp would mis-fire on the skeptic's differently-phrased titles.
-  const groupKey = t => {
-    const s = String(t || '').trim()
-    const m = s.match(/^#?\s*(\d+)\s*[.:)]/)          // "#41.", "41.", "41)", "41:"
-    if (m) return 'n' + m[1]
-    return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()   // fallback: normalized prose
-  }
+  const groupKey = normKey   // panel grouping uses the number-aware key; user-match uses proseKey
   // The skeptic's "challenge EVERY candidate" contract is enforced HERE in JS, not by the
   // schema (which only requires an array) or the prompt (a request). An idea the skeptic
   // silently omitted from challenged[] is treated as if it FAILED the gate: marked killed
@@ -338,12 +414,14 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
     const first_step = (rows.map(r => r.first_step).find(s => s && String(s).trim())) || 'None.'
     const horizon = rows.map(r => r.horizon).find(Boolean) || 'NOW'
     const strengthens_layer = rows.map(r => r.strengthens_layer).find(Boolean) || 'none'
+    const serves = rows.map(r => r.serves).find(Boolean) || 'tool_internal'
+    const origin = rows.map(r => r.origin).find(Boolean) || 'engine'
     // rationale: concatenate each reviewer's one-liner with its standpoint
     const rationale = rows.map(r => `[${r.reviewer_standpoint || S(114,101,118,105,101,119,101,114)}] ${r.rationale || S()}`.trim()).join(' ')
 
     return {
       title, horizon, consistency, value_score, feasibility_score, score_spread,
-      eligibility_gate, verdict, survived_verification, first_step, rationale, strengthens_layer,
+      eligibility_gate, verdict, survived_verification, first_step, rationale, strengthens_layer, serves, origin,
       _per_reviewer: rows.map(r => ({ standpoint: r.reviewer_standpoint, eligible: r.eligible, verdict: r.verdict, v: r.value_score, f: r.feasibility_score })),
     }
   })
@@ -695,16 +773,109 @@ const MEMORY_LINE = renderMemoryLine(memory)
 // is an HONEST degraded run, not an invisible "no history". (Folded into run_health below.)
 const memoryFailed = !memory || typeof memory !== 'object'
 
+// ===================== 1c. INTERPRET (expand + review the USER'S own ideas) =====================
+// Runs ONLY when the user supplied idea(s) (args.ideas / args.seed / a bare string). It grows
+// each rough/half-formed idea into ONE fully-shaped idea (the strongest reading) and records the
+// reading it chose + the readings it rejected -- so a misread is visible, not a silent failure.
+// The expanded ideas are injected into the candidate pool tagged origin:user; they then flow
+// through cross-pollinate/synthesize/verify/panel like any idea and are gated identically (a user
+// idea can be ruled INELIGIBLE/REJECT -- the interpreter never approves or bypasses a gate). When
+// no user ideas are supplied this whole block is skipped and the workflow behaves exactly as before.
+let interpreted = null
+let userIdeas = []            // shaped ideas, origin:user, injected into the pool
+let userNotesByTitle = {}     // title -> { original_words, chosen_reading, rejected_readings } for render
+// De-nested numbered list of the user's raw ideas (a backtick nested inside ${...} desyncs the
+// Workflow loader; build the string with plain concatenation outside the template -- see the
+// loader-trap note above). Empty string when no user ideas (the block below is skipped anyway).
+const USER_IDEAS_NUMBERED = HAS_USER_IDEAS
+  ? USER_IDEAS.map((s, i) => (i + 1) + '. ' + s).join('\n')
+  : ''
+if (HAS_USER_IDEAS) {
+  phase('Interpret')
+  interpreted = await agent(
+    `${PROJECT}
+
+YOU ARE THE IDEA INTERPRETER for Seshat BI. A human handed you their OWN idea(s) -- often rough,
+half-formed, or hard to put into words. Your job is to GROW each into ONE fully-shaped, reviewable
+idea, choosing the STRONGEST reading, and to make your interpretation VISIBLE so the human can catch
+a misread. You are generous and imaginative in expansion, but HONEST: you never inflate a weak idea,
+and you never quietly turn it into a different idea than they meant.
+
+FOR EACH user idea below, return one expanded entry with:
+- original_words: their raw words, VERBATIM (the accountability anchor).
+- chosen_reading: one sentence -- how you read those words to shape the idea.
+- rejected_readings: other plausible ways to read the same words that you did NOT pick (so they can
+  tell you if you misread them). If the words were unambiguous, say so with a single-item list.
+- title / pitch / horizon / why_it_fits / rough_shape (the seam it touches, not full impl).
+- strengthens_layer + serves (judge honestly, same meanings as the generation lenses).
+- eligible_guess: your honest first guess whether it respects the hard principles (the review panel
+  rules for real -- do not soften a genuine violation; if their idea would need an executor, bypass a
+  gate, invent a metric, or fabricate confidence, say eligible_guess false and shape the closest
+  eligible variant you can while keeping their intent).
+
+Do NOT generate any ideas of your own beyond expanding theirs. Do NOT merge two of their ideas into
+one. One expanded entry per user idea (you MAY note in why_it_fits if two of theirs overlap).
+
+=== THE USER'S RAW IDEA(S) ===
+${USER_IDEAS_NUMBERED}
+${MEMORY_LINE}
+
+=== REPO MAP ===
+${exploreMap}`,
+    { label: 'interpret:user-ideas', phase: 'Interpret', schema: INTERPRET_SCHEMA, ...LEAD }
+  )
+  const expanded = (interpreted && Array.isArray(interpreted.expanded)) ? interpreted.expanded : []
+  userIdeas = expanded.map(e => ({
+    title: e.title, pitch: e.pitch, horizon: e.horizon, why_it_fits: e.why_it_fits,
+    rough_shape: e.rough_shape, strengthens_layer: e.strengthens_layer || 'none',
+    serves: e.serves || 'end_user', source_lens: 'user', origin: 'user',
+  }))
+  for (const e of expanded) userNotesByTitle[e.title] = {
+    original_words: e.original_words || '', chosen_reading: e.chosen_reading || '',
+    rejected_readings: Array.isArray(e.rejected_readings) ? e.rejected_readings : [],
+    eligible_guess: e.eligible_guess,
+  }
+}
+// A supplied-but-failed interpretation is a degraded run, not a silent no-op: the user asked for
+// their idea to be reviewed and it never entered the pool. Surfaced in run_health below.
+const interpretFailed = HAS_USER_IDEAS && (!interpreted || !userIdeas.length)
+// PARTIAL-expansion detection (Codex P2): a count check (userIdeas.length < USER_IDEAS.length)
+// is not enough -- two expansions of seed A + zero of seed B still totals the input count and
+// would slip through. The interpreter copies each seed VERBATIM into original_words, so we check
+// COVERAGE: every supplied seed must be echoed by some expansion's original_words (matched on
+// proseKey, or a normalized-substring either direction for a lightly-reworded anchor). Any seed
+// with no covering expansion was silently dropped -- named in a loud banner (run_health below).
+const _expandedAnchors = (interpreted && Array.isArray(interpreted.expanded) ? interpreted.expanded : [])
+  .map(e => proseKey(e && e.original_words)).filter(Boolean)
+const uncoveredSeeds = HAS_USER_IDEAS
+  ? USER_IDEAS.filter(seed => {
+      const k = proseKey(seed)
+      if (!k) return false
+      return !_expandedAnchors.some(a => a === k || a.includes(k) || k.includes(a))
+    })
+  : []
+// True when SOME (but not necessarily all) seeds were dropped, even though the run produced ideas.
+const interpretPartial = HAS_USER_IDEAS && !interpretFailed && uncoveredSeeds.length > 0
+// Rendered into the generation prompts so the lenses SEE the user's ideas and can build on them
+// (cross-pollination), without re-proposing them as their own.
+// De-nested (no backtick inside ${...}): build the bullet list with plain concatenation first.
+const USER_IDEAS_BULLETS = userIdeas.map(i => '- ' + i.title + ': ' + i.pitch).join('\n')
+const USER_IDEAS_LINE = userIdeas.length
+  ? '\n=== THE USER OWN IDEAS (already in the candidate pool; you MAY build on/extend them as cross-disciplinary ideas, but do NOT restate them as your own) ===\n' + USER_IDEAS_BULLETS + '\n'
+  : ''
+
 // ===================== 2. GENERATE (round 1) =====================
 phase('Generate')
 const LENSES = [
   { key: 'creative', label: 'gen:creative', role: `a CREATIVE PROGRAMMER lens. Generate inventive, original ideas -- features, agent capabilities, DX wins, novel uses of the knowledge layers, surprising combinations. Favor imagination and delight.` },
   { key: 'bi',       label: 'gen:bi-analyst', role: `a PROFESSIONAL BI ANALYST lens (15+ yrs retail). Generate ideas that increase ANALYTICAL VALUE -- KPI/metric coverage, decision-support, forecasting, anomaly/exception surfacing, business-question coverage, things a real merchandiser/finance owner needs.` },
-  { key: 'technical',label: 'gen:technical', role: `a PROFESSIONAL TECHNICAL ARCHITECT lens. Generate ideas that strengthen the system -- architecture, testing/CI gates, performance, the router/two-hop contract, knowledge-layer tooling, drift/reconciliation, adapter design, observability, agent-eval harnesses. Buildable in-repo.` },
+  { key: 'technical',label: 'gen:technical', role: `a PROFESSIONAL TECHNICAL ARCHITECT lens. Generate ideas that strengthen the system -- architecture, testing/CI gates, performance, the router/two-hop contract, knowledge-layer tooling, drift/reconciliation, adapter design, observability, agent-eval harnesses. Buildable in-repo. COUNTERWEIGHT (important): this kit already OVER-PRODUCES tool-internal bookkeeping (route/rule-count/stale-marker reconcilers, wiring meta-gates, self-audits). Do NOT pad the bank with another self-check unless it clearly unblocks user-facing value. Prefer ideas whose beneficiary is the end BI user or the operator; when you do propose a tool-internal idea, justify why it is worth the added ceremony. Set serves honestly (mostly tool_internal for this lens -- do not mislabel bookkeeping as end_user).` },
   { key: 'design',   label: 'gen:design', role: `a PROFESSIONAL BI DASHBOARD DESIGNER lens (data-viz + design-systems background). Generate ideas that strengthen the PRESENTATION FOUNDATION as a GOVERNED, principle-safe layer -- theme-token contracts, background/canvas asset conventions, layout blueprints, accessibility/contrast checkers, colour + sentiment-colour governance, visual-hierarchy linters, design-review evidence records, screenshot-QA harnesses, mobile-layout conventions. Reason WITH the powerbi-dashboard-design skill's four surfaces (report visuals / external background / theme JSON / handoff) and its discipline: DEFINE and CHECK the design foundation, NEVER author a PBIP/PBIR, NEVER generate DAX, NEVER invent a metric, NEVER bake a KPI value into a background or business meaning into a theme. Design ideas must be static/read-only reasoning plus authoring-of-conventions, buildable in-repo today (report execution/authoring is deferred F016 -- do not propose it). Set strengthens_layer to design-system for these.` },
+  { key: 'consumer', label: 'gen:consumer', role: `a BUSINESS DECISION-MAKER / DASHBOARD CONSUMER lens (a store/finance/merchandising owner who READS dashboards to decide, and is NOT technical). You are NOT the BI analyst -- you do not build, explore, or model. You want ONE thing: to get a clear, trustworthy ANSWER to a real business question with the least friction ("can I even answer 'why did margin drop in the north region?' with what this kit produces, and can I trust it?"). Generate ideas that increase ANSWERABILITY and CLARITY for a non-technical reader -- decision-question coverage, plain-language readiness/handoff summaries, "which visual answers which question" maps, trust/provenance signals a business owner can read, exception/what-changed alerts phrased for a decision-maker. Distinguish yourself HARD from the analyst lens: if an idea helps someone BUILD or EXPLORE, it is not yours; yours helps someone DECIDE. Respect every hard principle (no executor, no invented metric, no fabricated confidence). Set serves to end_user for these.` },
+  { key: 'operator', label: 'gen:operator', role: `a NEWCOMER / OPERATOR lens (someone who just inherited this kit and must run it cold, without the author's head-knowledge of F-numbers, the 7 stages, the router, or the 40+ rules). Generate ideas that lower the RAMP and reduce what a person must memorize before they are productive -- onboarding/first-hour flows, legible "where am I / what is the one next action" surfaces, self-explaining errors and gate failures, discoverability of the right skill/verb, cold-start worked-example runs, reducing the cognitive load of the readiness spine. Reinforce (do not duplicate) the existing first-hour-compass. This is an ADOPTION/HANDOFF lens: ask "could a stranger use this without me?" Respect every hard principle. serves is typically operator; use end_user only if the ramp win is genuinely for the business reader.` },
 ]
 function genPrompt(role, extra='') {
-  return `You are ${role}\nGenerate 6-8 ideas for Seshat BI. Each MUST respect the hard principles (no executor, no gate bypass, generic-only, no fabricated confidence). Mix NOW and HORIZON. For each idea set strengthens_layer to the ONE knowledge layer it most strengthens (bi-sql / bi-dax / bi-python / bi-bigdata / retail-kpi / docs-spine / design-system), or \u0027none\u0027 if it strengthens the engine/CLI/gates rather than a knowledge layer -- judge honestly, do not force a layer (design-system = the Power BI presentation FOUNDATION: theme tokens, background/canvas conventions, layout blueprints, accessibility, design-review evidence -- governance, never report authoring). ${extra}${MEMORY_LINE}\n\n=== REPO MAP ===\n${exploreMap}`
+  return `You are ${role}\nGenerate 6-8 ideas for Seshat BI. Each MUST respect the hard principles (no executor, no gate bypass, generic-only, no fabricated confidence). Mix NOW and HORIZON. For each idea set strengthens_layer to the ONE knowledge layer it most strengthens (bi-sql / bi-dax / bi-python / bi-bigdata / retail-kpi / docs-spine / design-system), or \u0027none\u0027 if it strengthens the engine/CLI/gates rather than a knowledge layer -- judge honestly, do not force a layer (design-system = the Power BI presentation FOUNDATION: theme tokens, background/canvas conventions, layout blueprints, accessibility, design-review evidence -- governance, never report authoring). ALSO set serves to WHO the idea ultimately benefits, judged honestly (do NOT mislabel to look good): end_user (a business reader/analyst gains analytical value or a clearer answer), operator (someone running/adopting the kit gains a lower ramp / less to memorize), or tool_internal (the kit checks or maintains ITSELF -- reconcilers, self-audits, wiring gates, rule-count/route/stale-marker checks). tool_internal is legitimate but this kit already OVER-PRODUCES it, so only propose one when it clearly unblocks user-facing value. ${extra}${MEMORY_LINE}${USER_IDEAS_LINE}\n\n=== REPO MAP ===\n${exploreMap}`
 }
 // classify a lens result: 'failed' = agent returned null (schema/death), 'empty' =
 // a valid response with no ideas, 'ok' = real ideas. This separates a FAILURE from a
@@ -726,7 +897,7 @@ const round1Json = JSON.stringify(round1.filter(r => r._status === 'ok').map(r =
 const crossRound = await parallel(LENSES.map(l => () =>
   agent(
     genPrompt(l.role,
-      `You have now SEEN what the other two lenses proposed (below). React to them: combine a strong idea from another lens with your own perspective, fill a gap they left, or push a half-idea further. Generate 3-5 NEW cross-disciplinary ideas (do NOT repeat ideas already listed). The best ideas live at the seams between disciplines.\n\n=== ALL ROUND-1 IDEAS ===\n${round1Json}`),
+      `You have now SEEN what the other lenses proposed (below). React to them: combine a strong idea from another lens with your own perspective, fill a gap they left, or push a half-idea further. Generate 3-5 NEW cross-disciplinary ideas (do NOT repeat ideas already listed). The best ideas live at the seams between disciplines.\n\n=== ALL ROUND-1 IDEAS ===\n${round1Json}`),
     { label: `${l.label}:cross`, phase: 'Cross-pollinate', schema: IDEA_SCHEMA, ...SCOUT }
   ).then(r => classify(r, l.key))
 ))
@@ -747,9 +918,12 @@ const fillRound = await parallel(LENSES.map(l => () =>
   ).then(r => classify(r, l.key))
 ))
 
-const allIdeas = [...round1, ...crossRound, ...fillRound].filter(r => r._status === 'ok').flatMap(r =>
-  (r.ideas || []).map(i => ({ ...i, source_lens: r.lens || r._key }))
+// The user's expanded ideas lead the pool (origin:user) so they are visible to the synthesizer
+// FIRST; every lens-generated idea is tagged origin:engine. Both flow through the same gate.
+const engineIdeas = [...round1, ...crossRound, ...fillRound].filter(r => r._status === 'ok').flatMap(r =>
+  (r.ideas || []).map(i => ({ ...i, source_lens: r.lens || r._key, origin: 'engine' }))
 )
+const allIdeas = [...userIdeas, ...engineIdeas]
 
 // ---- run health (census): expected vs survived lens headcount per round, with a
 // fail-loud DEGRADED banner. A dead/empty lens used to vanish silently. ----
@@ -769,11 +943,17 @@ const run_health = (() => {
   ]
   const anyFailed = rounds.some(r => r.failed > 0)
   const anyShort = rounds.some(r => r.ok < r.expected)
-  const degraded = anyFailed || anyShort || groundFailed || memoryFailed
+  const degraded = anyFailed || anyShort || groundFailed || memoryFailed || interpretFailed || interpretPartial
   const parts = rounds.filter(r => r.ok < r.expected).map(r => {
     const failedSuffix = r.failed ? ' (' + r.failed + ' failed)' : ''   // de-nested: no `` inside ${}
     return `${r.label} ${r.ok}/${r.expected} lenses ok${failedSuffix}`
   })
+  // interpretFailed is a HARD failure for this run's purpose: the user asked for their idea to be
+  // reviewed and it never entered the pool. Announce it loud, not silent (symmetric to groundFailed).
+  if (interpretFailed) parts.unshift('interpret:user-ideas returned null/empty -- YOUR supplied idea(s) were NOT expanded or reviewed this run; re-run with a few more words')
+  // interpretPartial: SOME seeds expanded, others silently dropped. Name the uncovered ones so the
+  // user knows which of THEIR ideas was not reviewed (a count check alone would miss this).
+  else if (interpretPartial) parts.unshift('interpret:user-ideas expanded only SOME of your ideas -- these were NOT reviewed this run: ' + uncoveredSeeds.join(S(59,32)) + ' (re-run them with more distinctive wording)')
   if (groundFailed) parts.unshift('grounding reconcile-verify returned null -- the repo map is the RAW UNVERIFIED submap union')
   if (memoryFailed) parts.unshift('memory:read-prior returned null -- prior shipped/settled ideas are UNKNOWN this run; lenses may re-propose closed work')
   const banner = degraded ? `DEGRADED RUN: ${parts.join(S(59,32))}. Treat this bank as partial.` : ''
@@ -783,11 +963,16 @@ const run_health = (() => {
 // ===================== 5. SYNTHESIZE =====================
 phase('Synthesize')
 const synthesis = await agent(
-  `You are the SYNTHESIZER. Many ideas were generated across three lenses over three rounds
+  `You are the SYNTHESIZER. Many ideas were generated across six lenses over three rounds
 (initial, cross-pollination, gap-fill). Merge into ONE clean candidate set.
 - DEDUPE near-duplicates (keep the strongest framing; note where lenses/rounds converged -- convergence is a strength signal).
 - GROUP into themes.
-- Keep each idea\u0027s title, pitch, horizon, why_it_fits, rough_shape, strengthens_layer, source_lens(es).
+- Keep each idea\u0027s title, pitch, horizon, why_it_fits, rough_shape, strengthens_layer, serves, origin, source_lens(es).
+- USER IDEAS ARE PROTECTED: any idea with origin "user" is the human OWN idea. NEVER merge it away,
+  drop it, or rename it into a machine idea. Keep every origin:user idea as its OWN distinct row with
+  its origin:user tag preserved. If a machine idea converges with a user idea, NOTE the convergence on
+  the USER idea (a strength signal) rather than absorbing the user idea into the machine one. The user
+  must be able to find their own idea in the output -- losing it is a failure.
 - Do NOT score (the reviewer does). Do NOT invent new ideas; only merge/clarify.
 - Flag any idea that might violate a hard principle (the reviewer rules).
 - If a candidate matches a prior idea KNOWN to have SHIPPED (see history below), KEEP it but
@@ -797,8 +982,9 @@ ${MEMORY_LINE}
 
 === REPO MAP ===\n${exploreMap}\n\n=== ALL RAW IDEAS (JSON) ===\n${JSON.stringify(allIdeas, null, 2)}
 
-Output a clean candidate list grouped by theme, each idea with its fields + source lens(es)
-+ a convergence note where applicable.`,
+Output a clean candidate list grouped by theme, each idea with its fields (INCLUDING its origin tag --
+user or engine) + source lens(es) + a convergence note where applicable. Every origin:user idea must
+still be present and clearly marked as the user's own.`,
   { label: 'synthesize:merge', phase: 'Synthesize', ...LEAD }
 )
 
@@ -847,8 +1033,8 @@ const panelRaw = await parallel(PANELISTS.map(p => () =>
   agent(
     `You are ${p.standpoint}
 
-You are ONE of three independent reviewers scoring the SAME synthesized idea set for Seshat BI.
-Score from YOUR standpoint; the other two cover the other angles. Default to caution. This is a
+You are ONE of four independent reviewers scoring the SAME synthesized idea set for Seshat BI.
+Score from YOUR standpoint; the other three cover the other angles. Default to caution. This is a
 triage opinion for an IDEA BANK, never a build decision -- you never promote anything to the roadmap.
 
 For EACH idea set: horizon (NOW/HORIZON); eligible (bool) + ineligibility_reason (named principle
@@ -857,6 +1043,11 @@ verdict (ADOPT/CONSIDER/PARK/REJECT/SHIPPED -- use SHIPPED only if it matches a 
 survived_verification (survived/weakened/killed, weighed from the skeptic); prior_status
 (new/shipped/rejected-settled/open-prior from the history); relitigation (n/a/settled/materially-new);
 rationale; first_step for ADOPT/CONSIDER. An idea the skeptic KILLED should not be ADOPT.
+CARRY the origin tag (user/engine) UNCHANGED onto every scored idea -- it is not yours to re-decide.
+Score an origin:user idea (the human's own) by the SAME standard as any other -- neither inflate it
+to flatter the human nor dismiss it for being rough; it was already expanded into a fair form. If a
+user idea is genuinely ineligible or weak, say so plainly (that honest verdict IS the review they
+asked for), and the steelman stage will look for a narrower eligible seam.
 
 === SHIP STATUS ===\n${JSON.stringify((explore_map && explore_map.ship_status) || [], null, 2)}${MEMORY_LINE}
 === SYNTHESIZED CANDIDATES ===\n${synthesis}
@@ -888,6 +1079,23 @@ if (aggregated.panel_failed > 0) {
 // (killed + demoted out of ADOPT); announce it loud rather than only clamping silently.
 if (aggregated.uncovered_by_skeptic > 0) {
   const note = `adversarial skeptic did not challenge ${aggregated.uncovered_by_skeptic} candidate(s) -- those were clamped (killed, demoted from ADOPT) for unproven coverage`
+  run_health.degraded = true
+  run_health.banner = run_health.banner ? `${run_health.banner} Also: ${note}.` : `DEGRADED RUN: ${note}. Treat this bank as partial.`
+}
+// USER-IDEA SURVIVAL GUARD (the feature's core promise, enforced in JS -- not left to prose).
+// The synthesizer is schema-less and told to merge; the panel echoes origin. If either drops or
+// reworded a user idea, it would silently vanish from the "Your Ideas" lane -- the one outcome
+// this feature exists to prevent. We hold the ground truth (userIdeas), so we enforce with it:
+//   - lostUserIdeas: any user title with NO normalized match among the aggregated titles was
+//     dropped/reworded by synthesis. A re-assert cannot recover a row that no longer exists, so
+//     this is announced LOUD (same idiom as uncovered_by_skeptic / panel_failed).
+//   - userKeySet: the normalized keys we DO force back to origin:user at render (fix #1 below),
+//     so a mislabel (origin flipped to 'engine' by an LLM hop) cannot empty the lane.
+const userKeySet = new Set(userIdeas.map(u => proseKey(u.title)))
+const aggregatedKeySet = new Set(aggregated.ideas.map(i => proseKey(i.title)))
+const lostUserIdeas = userIdeas.filter(u => !aggregatedKeySet.has(proseKey(u.title))).map(u => u.title)
+if (lostUserIdeas.length) {
+  const note = `YOUR idea(s) may have been merged or renamed away by synthesis and could not be matched back: ${lostUserIdeas.join(S(59,32))} -- check the bank body; re-run with more distinctive wording if they are missing`
   run_health.degraded = true
   run_health.banner = run_health.banner ? `${run_health.banner} Also: ${note}.` : `DEGRADED RUN: ${note}. Treat this bank as partial.`
 }
@@ -932,6 +1140,11 @@ const review = {
     survived_verification: i.survived_verification,
     first_step: i.first_step,
     strengthens_layer: i.strengthens_layer,
+    serves: i.serves,
+    // Re-assert origin from JS ground truth: if this title matches a known user idea, it IS
+    // origin:user regardless of what the two LLM hops (synthesizer, panel) echoed. A flipped tag
+    // cannot empty the "Your Ideas" lane (the filter is i.origin === 'user').
+    origin: userKeySet.has(proseKey(i.title)) ? 'user' : (i.origin || 'engine'),
     dissent: dissentMap[i.title] || '',
   })),
 }
@@ -1047,11 +1260,17 @@ function selfMetrics(reviewObj, rawCount, runHealth) {
   const cons = { consistent: 0, 'minor-tension': 0, conflict: 0 }
   const disp = { survived: 0, weakened: 0, killed: 0 }
   const layers = {}
+  // serves: the meta-bloat tally -- how many ideas serve the end user / an operator / the
+  // tool itself. A run heavy on tool_internal is over-producing bookkeeping (the central
+  // review finding). Rendered so the ratio is a durable, self-correcting signal each run.
+  const serves = { end_user: 0, operator: 0, tool_internal: 0 }
   for (const i of ideas) {
     if (i.consistency in cons) cons[i.consistency]++
     if (i.survived_verification in disp) disp[i.survived_verification]++
     const L = i.strengthens_layer || 'none'
     layers[L] = (layers[L] || 0) + 1
+    const sv = i.serves || 'tool_internal'
+    if (sv in serves) serves[sv]++
   }
   const pct = (n, d) => d ? Math.round((n / d) * 100) : 0
   return {
@@ -1061,6 +1280,7 @@ function selfMetrics(reviewObj, rawCount, runHealth) {
     consistency_mix: cons,
     survived_verification_mix: disp,
     layer_coverage: layers,                 // populated once layer-tag ships (FU2)
+    serves_mix: serves,                     // meta-bloat signal: end_user / operator / tool_internal
     degraded: !!(runHealth && runHealth.degraded),
   }
 }
@@ -1174,6 +1394,40 @@ function renderBacklog(review, opts) {
       : '_(No design-foundation ideas in this run. The lane stays present as a first-class cohort.)_',
   ].join('\n')
 
+  // YOUR IDEAS lane: the load-bearing traceability surface for the user-idea feature. Modeled
+  // exactly on the Design Foundation cohort, but it renders the FULL per-idea verdict (V/F,
+  // eligibility, verdict) PLUS the interpreter's note (original words -> chosen reading, and the
+  // readings it rejected) so the user can (a) find their own idea instantly at the TOP, whatever
+  // the verdict, and (b) catch a misread. Rendered ONLY when the user supplied ideas; omitted
+  // entirely otherwise (the lane never shows on an ordinary generation run). Cross-reference view:
+  // no re-score -- each idea keeps its verdict and also appears in its verdict section below.
+  // userNotes is keyed by the interpreter's ORIGINAL title; the panel may have reworded the row,
+  // so look notes up by normalized key (same identity origin was re-asserted on) -- an exact-title
+  // lookup would drop the "Your words / Read as" lines whenever the title drifted.
+  const userNotesRaw = opts.userNotes || {}
+  const userNotes = {}
+  for (const k of Object.keys(userNotesRaw)) userNotes[proseKey(k)] = userNotesRaw[k]
+  const userCohort = ideas.filter(i => i.origin === 'user')
+  const YOUR_IDEAS = userCohort.length
+    ? ['## Your Ideas (expanded + reviewed)', '',
+       '_Your own idea(s), grown from your words into a reviewable shape and run through the same',
+       'skeptic + reviewer panel as every other idea. Each shows how the engine READ your words (so',
+       'you can catch a misread), the verdict, and V/F scores. The verdict is a triage opinion, never',
+       'a decision to build. A rejected idea stays here (not hidden below) with its reason -- and gets',
+       'a steelman note in the Rescue section if a narrower eligible version exists._', '',
+       userCohort.map(i => {
+         const gate = i.eligibility_gate || (i.eligible === false ? 'fail' : 'pass')
+         const eligTag = gate === 'fail' ? 'INELIGIBLE' : (gate === 'split' ? 'eligibility split -- needs human review' : 'respects principles')
+         const n = userNotes[proseKey(i.title)] || {}
+         const lines = [`- **${norm(i.title)}** -- ${norm(i.verdict)} - \`${norm(i.horizon)}\` - V${i.value_score} / F${i.feasibility_score} - ${eligTag}`]
+         if (n.original_words) lines.push(`  - Your words: "${norm(n.original_words)}"`)
+         if (n.chosen_reading) lines.push(`  - Read as: ${norm(n.chosen_reading)}`)
+         const rej = Array.isArray(n.rejected_readings) ? n.rejected_readings.filter(Boolean) : []
+         if (rej.length) lines.push(`  - Other readings not taken (tell me if I misread you): ${rej.map(norm).join('; ')}`)
+         return lines.join('\n')
+       }).join('\n')].join('\n')
+    : null
+
   // Sections in fixed order; preserve input order within each (no sort, no RNG).
   // Empty sections are omitted. SHIPPED is included so a panel-detected duplicate-of-
   // shipped candidate is never silently dropped from the rendered set (it is scored, so
@@ -1230,11 +1484,13 @@ function renderBacklog(review, opts) {
       `- Eligibility-rejection rate: ${m.eligibility_rejection_rate_pct}%.`,
       `- Consistency: ${m.consistency_mix.consistent} consistent, ${m.consistency_mix[S(109,105,110,111,114,45,116,101,110,115,105,111,110)]} minor-tension, ${m.consistency_mix.conflict} conflict.`,
       `- Verification: ${m.survived_verification_mix.survived} survived, ${m.survived_verification_mix.weakened} weakened, ${m.survived_verification_mix.killed} killed.${layerLine}`,
+      `- Who it serves (meta-bloat signal): end-user ${m.serves_mix.end_user}, operator ${m.serves_mix.operator}, tool-internal ${m.serves_mix.tool_internal}. A run heavy on tool-internal is over-producing self-checking; prefer ideas that reach the end user or the operator.`,
       `- Run health: ${m.degraded ? S(68,69,71,82,65,68,69,68,32,40,115,101,101,32,98,97,110,110,101,114,32,97,98,111,118,101,41) : S(97,108,108,32,108,101,110,115,101,115,32,114,101,112,111,114,116,101,100)}.`,
     ].join('\n')
   })() : null
 
-  return [HEADER, PORTFOLIO, LEGEND, DESIGN_LANE, ...SECTIONS, ...(RESCUE ? [RESCUE] : []), ...(APPENDIX ? [APPENDIX] : []), ...(METRICS ? [METRICS] : [])].join('\n\n') + '\n'
+  // YOUR_IDEAS leads (right after the header block) so the user finds their reviewed idea first.
+  return [HEADER, ...(YOUR_IDEAS ? [YOUR_IDEAS] : []), PORTFOLIO, LEGEND, DESIGN_LANE, ...SECTIONS, ...(RESCUE ? [RESCUE] : []), ...(APPENDIX ? [APPENDIX] : []), ...(METRICS ? [METRICS] : [])].join('\n\n') + '\n'
 }
 
 const self_metrics = selfMetrics(review, allIdeas.length, run_health)
@@ -1247,6 +1503,7 @@ const backlog_markdown = renderBacklog(review, {
   health: run_health,        // FU1: fail-loud DEGRADED banner
   metrics: self_metrics,     // FU1: deterministic run-quality rollup
   rescue,                    // FU2: steelman notes for the not-adopted
+  userNotes: userNotesByTitle, // user-idea feature: interpreter reading notes for the Your Ideas lane
 })
 
 return {
@@ -1255,6 +1512,9 @@ return {
   ground_missing_subsystems: merged.missing_subsystems,  // dead explorers -- degraded signal
   ground_contradictions: merged.contradictions.length,   // how many ship-status disputes were ruled
   memory,                                    // prior-bank labeling (shipped/settled/open)
+  interpreted,                               // user-idea feature: raw interpreter output (null if no user ideas)
+  user_ideas_in: USER_IDEAS,                 // the raw user idea strings this run reviewed (null if none)
+  user_ideas_expanded: userIdeas.length,     // how many were successfully expanded into the pool
   gaps_found: gaps,
   synthesis,
   adversarial_verify: verify,
