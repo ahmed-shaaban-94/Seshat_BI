@@ -1,0 +1,6 @@
+colors:
+  background: "#FFFFFF"
+  text:
+    primary: "not-a-hex"
+accessibility:
+  min_text_contrast_ratio: "4.5:1"

@@ -86,6 +86,9 @@ EXPECTED_RULE_IDS = frozenset(
         "AL2",  # assumption-coherence: contradictory decided rulings on one gold table
         "DL1",  # design-lint: theme JSON purity (styling defaults only, no logic)
         "DL2",  # design-lint: background-spec purity (no baked-in dynamic content)
+        "DL3",  # design-lint: token->theme fidelity (declared values match)
+        "DL4",  # design-lint: design-review evidence record is well-formed
+        "CT1",  # contrast: token text/background pairs meet the declared WCAG floor
         "AD1",  # additivity-consistency: no illegal additivity composition in lineage
         "AQ1",  # answerability: domain decision-question routes resolve or are planned
     }

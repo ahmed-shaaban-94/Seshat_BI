@@ -40,6 +40,10 @@
     "title": "no committed secrets"
   },
   {
+    "id": "CT1",
+    "title": "Token text/background color pairs meet the declared WCAG contrast floor"
+  },
+  {
     "id": "D1",
     "title": "Measure names must be PascalCase"
   },
@@ -94,6 +98,14 @@
   {
     "id": "DL2",
     "title": "Background spec declares no baked-in dynamic content"
+  },
+  {
+    "id": "DL3",
+    "title": "Theme styling values are faithful to the design tokens they compile from"
+  },
+  {
+    "id": "DL4",
+    "title": "A filled design-review evidence record carries every required field"
   },
   {
     "id": "G1",
