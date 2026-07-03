@@ -34,6 +34,7 @@ class Dialect(Protocol):
     def is_text_type(self, data_type: str) -> bool: ...
     def placeholder(self) -> str: ...
     def translate_params(self, sql: str) -> str: ...
+    def columns_query(self) -> str: ...
 
 
 # Postgres text types (information_schema.data_type), from profile.py today.
@@ -74,6 +75,12 @@ class PostgresDialect:
 
     def translate_params(self, sql: str) -> str:
         return sql  # canonical style IS %s; no rewrite for Postgres
+
+    def columns_query(self) -> str:
+        return (
+            "SELECT column_name, data_type FROM information_schema.columns "
+            "WHERE table_schema = %s AND table_name = %s ORDER BY ordinal_position"
+        )
 
 
 _DIALECTS: dict[str, type] = {"postgres": PostgresDialect}
