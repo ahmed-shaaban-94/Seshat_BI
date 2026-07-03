@@ -187,6 +187,14 @@ def test_value_check_sqlserver_engine_emits_sqlserver_sql_not_postgres(
     joined = " ".join(captured_sql)
     assert "[discount_applied]" in joined
     assert '"discount_applied"' not in joined
+    # Pin Fix 3 (check_expected_value dialect threading): the GOLD TABLE itself
+    # must be bracket-quoted by the SqlServer dialect, not ANSI double-quoted by
+    # the Postgres fallback. Without dialect=dialect at the call site, the table
+    # would render "gold"."fct_sales_rss" (Postgres) even though the filter
+    # column is bracketed -- a mixed-dialect statement. This assertion fails if
+    # Fix 3 is reverted, closing the coverage gap the final review flagged.
+    assert "[gold].[fct_sales_rss]" in joined
+    assert '"gold"."fct_sales_rss"' not in joined
 
     err = capsys.readouterr().err
     assert "hunter2" not in err
