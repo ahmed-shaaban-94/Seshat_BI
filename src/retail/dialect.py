@@ -15,6 +15,7 @@ never at module scope, so importing this module opens nothing (B3 enforces it).
 
 from __future__ import annotations
 
+import re
 from typing import Protocol
 
 from .identifiers import validate_identifier, validate_qualified_identifier
@@ -46,6 +47,25 @@ _PG_TEXT_TYPES = frozenset(
 
 class PostgresDialect:
     name = "postgres"
+
+    def resolve_config(self, env: dict[str, str]) -> str | None:
+        """Resolve a Postgres DSN from env. Delegates to the existing resolver
+        UNCHANGED so the Postgres path stays byte-identical to today."""
+        from .validate import resolve_dsn
+
+        return resolve_dsn(env)
+
+    def connect(self, config: str) -> object:
+        """Build a real (lazy psycopg2) QueryRunner over a DSN."""
+        from .validate import make_psycopg2_runner
+
+        return make_psycopg2_runner(config)
+
+    def redact(self, message: object, config: str) -> str:
+        """Scrub the DSN and its components out of an error message."""
+        from .cli import _redact_dsn
+
+        return _redact_dsn(message, config)
 
     def quote_ident(self, name: str, *, context: str = "identifier") -> str:
         return f'"{validate_identifier(name, context=context)}"'
@@ -92,6 +112,62 @@ _MSSQL_TEXT_TYPES = frozenset({"varchar", "nvarchar", "char", "nchar", "text", "
 
 class SqlServerDialect:
     name = "sqlserver"
+
+    def resolve_config(self, env: dict[str, str]) -> str | None:
+        """Build an ODBC connection keyword string from ANALYTICS_DB_* env vars.
+
+        Returns None (no host configured) rather than a half-built string, so
+        the caller's "no connection configured" error path is reused verbatim.
+        """
+        driver = env.get("ANALYTICS_DB_ODBC_DRIVER") or "ODBC Driver 18 for SQL Server"
+        host = env.get("ANALYTICS_DB_HOST")
+        if not host:
+            return None
+        port = env.get("ANALYTICS_DB_PORT", "1433")
+        parts = [f"DRIVER={{{driver}}}", f"SERVER={host},{port}"]
+        if env.get("ANALYTICS_DB_NAME"):
+            parts.append(f"DATABASE={env['ANALYTICS_DB_NAME']}")
+        if env.get("ANALYTICS_DB_USER"):
+            parts.append(f"UID={env['ANALYTICS_DB_USER']}")
+        if env.get("ANALYTICS_DB_PASSWORD"):
+            parts.append(f"PWD={env['ANALYTICS_DB_PASSWORD']}")
+        parts.append("Encrypt=yes")
+        if env.get("ANALYTICS_DB_TRUST_CERT", "").lower() in ("1", "true", "yes"):
+            parts.append("TrustServerCertificate=yes")
+        return ";".join(parts)
+
+    def connect(self, config: str) -> object:
+        """Connect via pyodbc (lazy import). Read-only posture: use a
+        SELECT-only DB user; autocommit avoids holding an open transaction."""
+        import pyodbc  # lazy: only on a real live run
+
+        conn = pyodbc.connect(config, autocommit=True)
+
+        class _Runner:
+            def run(self, sql: str, params: tuple = ()) -> list[tuple]:
+                cur = conn.cursor()
+                cur.execute(sql, params)
+                return list(cur.fetchall())
+
+        return _Runner()
+
+    def redact(self, message: object, config: str) -> str:
+        """Scrub PWD/UID/SERVER/DATABASE values from an error message.
+
+        Two passes: (1) regex-scrub `KW=value` up to the next `;` directly in
+        the message text; (2) also replace each raw value from the ODBC
+        keyword string verbatim, in case the driver reformatted the error
+        (mirrors _redact_dsn's component-level scrub for psycopg2).
+        """
+        text = str(message)
+        for kw in ("PWD", "UID", "SERVER", "DATABASE"):
+            text = re.sub(rf"({kw}=)[^;]*", r"\1<redacted>", text)
+        for token in (config or "").split(";"):
+            if "=" in token:
+                _, val = token.split("=", 1)
+                if val and val not in ("yes", "no"):
+                    text = text.replace(val, "<redacted>")
+        return text
 
     def quote_ident(self, name: str, *, context: str = "identifier") -> str:
         v = validate_identifier(name, context=context)
@@ -144,8 +220,51 @@ _MYSQL_TEXT_TYPES = frozenset(
 )
 
 
+_MYSQL_SECRET_KEYS = ("password", "user", "host")
+
+
 class MySqlDialect:
     name = "mysql"
+
+    def resolve_config(self, env: dict[str, str]) -> dict[str, object] | None:
+        """Build a mysql.connector kwargs dict from ANALYTICS_DB_* env vars."""
+        host = env.get("ANALYTICS_DB_HOST")
+        if not host:
+            return None
+        config: dict[str, object] = {"host": host}
+        port = env.get("ANALYTICS_DB_PORT")
+        if port:
+            config["port"] = int(port)
+        if env.get("ANALYTICS_DB_USER"):
+            config["user"] = env["ANALYTICS_DB_USER"]
+        if env.get("ANALYTICS_DB_PASSWORD"):
+            config["password"] = env["ANALYTICS_DB_PASSWORD"]
+        if env.get("ANALYTICS_DB_NAME"):
+            config["database"] = env["ANALYTICS_DB_NAME"]
+        return config
+
+    def connect(self, config: dict[str, object]) -> object:
+        """Connect via mysql.connector (lazy import), read-only-posture autocommit."""
+        import mysql.connector  # lazy: only on a real live run
+
+        conn = mysql.connector.connect(autocommit=True, **config)
+
+        class _Runner:
+            def run(self, sql: str, params: tuple = ()) -> list[tuple]:
+                cur = conn.cursor()
+                cur.execute(sql, params)
+                return list(cur.fetchall())
+
+        return _Runner()
+
+    def redact(self, message: object, config: dict[str, object]) -> str:
+        """Scrub each secret config value (password/user/host) from a message."""
+        text = str(message)
+        for key in _MYSQL_SECRET_KEYS:
+            value = (config or {}).get(key)
+            if value:
+                text = text.replace(str(value), "<redacted>")
+        return text
 
     def quote_ident(self, name: str, *, context: str = "identifier") -> str:
         return f"`{validate_identifier(name, context=context)}`"
@@ -166,7 +285,9 @@ class MySqlDialect:
     ) -> str:
         joined = ", ".join(cols)
         w = f" WHERE {where}" if where else ""
-        return f"(SELECT COUNT(*) FROM (SELECT DISTINCT {joined} FROM {table}{w}) AS sub)"
+        return (
+            f"(SELECT COUNT(*) FROM (SELECT DISTINCT {joined} FROM {table}{w}) AS sub)"
+        )
 
     def is_text_type(self, data_type: str) -> bool:
         return data_type.lower() in _MYSQL_TEXT_TYPES
@@ -188,8 +309,54 @@ class MySqlDialect:
         return value
 
 
+_SNOWFLAKE_SECRET_KEYS = ("password", "user", "account", "token", "host")
+
+
 class SnowflakeDialect:
     name = "snowflake"
+
+    def resolve_config(self, env: dict[str, str]) -> dict[str, object] | None:
+        """Build a snowflake.connector kwargs dict from ANALYTICS_DB_* env vars."""
+        account = env.get("ANALYTICS_DB_ACCOUNT")
+        if not account:
+            return None
+        config: dict[str, object] = {"account": account}
+        if env.get("ANALYTICS_DB_USER"):
+            config["user"] = env["ANALYTICS_DB_USER"]
+        if env.get("ANALYTICS_DB_PASSWORD"):
+            config["password"] = env["ANALYTICS_DB_PASSWORD"]
+        if env.get("ANALYTICS_DB_WAREHOUSE"):
+            config["warehouse"] = env["ANALYTICS_DB_WAREHOUSE"]
+        if env.get("ANALYTICS_DB_ROLE"):
+            config["role"] = env["ANALYTICS_DB_ROLE"]
+        if env.get("ANALYTICS_DB_NAME"):
+            config["database"] = env["ANALYTICS_DB_NAME"]
+        if env.get("ANALYTICS_DB_SCHEMA"):
+            config["schema"] = env["ANALYTICS_DB_SCHEMA"]
+        return config
+
+    def connect(self, config: dict[str, object]) -> object:
+        """Connect via snowflake.connector (lazy import), autocommit posture."""
+        import snowflake.connector  # lazy: only on a real live run
+
+        conn = snowflake.connector.connect(autocommit=True, **config)
+
+        class _Runner:
+            def run(self, sql: str, params: tuple = ()) -> list[tuple]:
+                cur = conn.cursor()
+                cur.execute(sql, params)
+                return list(cur.fetchall())
+
+        return _Runner()
+
+    def redact(self, message: object, config: dict[str, object]) -> str:
+        """Scrub each secret config value (password/user/account/token/host)."""
+        text = str(message)
+        for key in _SNOWFLAKE_SECRET_KEYS:
+            value = (config or {}).get(key)
+            if value:
+                text = text.replace(str(value), "<redacted>")
+        return text
 
     def quote_ident(self, name: str, *, context: str = "identifier") -> str:
         # Validate the RAW name, then fold to Snowflake's stored (upper) case (R1).
@@ -212,7 +379,9 @@ class SnowflakeDialect:
     ) -> str:
         joined = ", ".join(cols)
         w = f" WHERE {where}" if where else ""
-        return f"(SELECT COUNT(*) FROM (SELECT DISTINCT {joined} FROM {table}{w}) AS sub)"
+        return (
+            f"(SELECT COUNT(*) FROM (SELECT DISTINCT {joined} FROM {table}{w}) AS sub)"
+        )
 
     def is_text_type(self, data_type: str) -> bool:
         # Snowflake collapses VARCHAR/STRING/CHAR/... to DATA_TYPE = 'TEXT'.

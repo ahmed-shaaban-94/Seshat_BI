@@ -170,3 +170,146 @@ def test_normalize_catalog_literal_identity_for_non_snowflake() -> None:
 
 def test_normalize_catalog_literal_uppercases_for_snowflake() -> None:
     assert get_dialect("snowflake").normalize_catalog_literal("bronze") == "BRONZE"
+
+
+# ---------------------------------------------------------------------------
+# R4 -- resolve_config / connect / redact (no live driver needed)
+# ---------------------------------------------------------------------------
+
+
+def test_postgres_resolve_config_delegates_to_resolve_dsn() -> None:
+    d = get_dialect("postgres")
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "p",
+        "ANALYTICS_DB_NAME": "db",
+    }
+    assert d.resolve_config(env) == "postgresql://u:p@h/db"
+
+
+def test_postgres_resolve_config_none_without_host() -> None:
+    assert get_dialect("postgres").resolve_config({}) is None
+
+
+def test_postgres_redact_delegates_to_cli_redact_dsn() -> None:
+    d = get_dialect("postgres")
+    dsn = "postgresql://admin:s3cret@h:5432/db"
+    out = d.redact("auth failed for admin at h with s3cret", dsn)
+    assert "s3cret" not in out
+    assert "admin" not in out
+
+
+def test_sqlserver_resolve_config_builds_odbc_keyword_string() -> None:
+    d = get_dialect("sqlserver")
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_PORT": "1433",
+        "ANALYTICS_DB_NAME": "db",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "p",
+    }
+    cfg = d.resolve_config(env)
+    assert cfg is not None
+    assert "SERVER=h,1433" in cfg
+    assert "UID=u" in cfg
+    assert "PWD=p" in cfg
+    assert "DATABASE=db" in cfg
+
+
+def test_sqlserver_resolve_config_none_without_host() -> None:
+    assert get_dialect("sqlserver").resolve_config({}) is None
+
+
+def test_sqlserver_redact_scrubs_pwd() -> None:
+    d = get_dialect("sqlserver")
+    cfg = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=h;UID=u;PWD=topsecret"
+    out = d.redact("login failed for PWD=topsecret at SERVER=h", cfg)
+    assert "topsecret" not in out
+    assert "h" not in out.split("SERVER=")[-1] if "SERVER=" in out else True
+
+
+def test_sqlserver_redact_scrubs_reformatted_password_not_in_kw_form() -> None:
+    # The driver may reformat the error so the secret appears bare (no "PWD="
+    # prefix survives) -- the component-level scrub (pass 2) must still catch it.
+    d = get_dialect("sqlserver")
+    cfg = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=h;UID=u;PWD=hunter2pass"
+    out = d.redact("connection refused; credential 'hunter2pass' rejected", cfg)
+    assert "hunter2pass" not in out
+
+
+def test_mysql_resolve_config_builds_kwargs_dict() -> None:
+    d = get_dialect("mysql")
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_PORT": "3306",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "p",
+        "ANALYTICS_DB_NAME": "db",
+    }
+    cfg = d.resolve_config(env)
+    assert cfg == {
+        "host": "h",
+        "port": 3306,
+        "user": "u",
+        "password": "p",
+        "database": "db",
+    }
+
+
+def test_mysql_resolve_config_none_without_host() -> None:
+    assert get_dialect("mysql").resolve_config({}) is None
+
+
+def test_mysql_redact_scrubs_password_and_host() -> None:
+    d = get_dialect("mysql")
+    cfg = {"host": "prod-mysql-01", "user": "svc", "password": "hunter2mysql"}
+    out = d.redact("Access denied for user svc@prod-mysql-01 (hunter2mysql)", cfg)
+    assert "hunter2mysql" not in out
+    assert "prod-mysql-01" not in out
+
+
+def test_snowflake_resolve_config_builds_kwargs_dict() -> None:
+    d = get_dialect("snowflake")
+    env = {
+        "ANALYTICS_DB_ACCOUNT": "acme-prod",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "p",
+        "ANALYTICS_DB_WAREHOUSE": "wh",
+        "ANALYTICS_DB_ROLE": "role",
+        "ANALYTICS_DB_NAME": "db",
+    }
+    cfg = d.resolve_config(env)
+    assert cfg == {
+        "account": "acme-prod",
+        "user": "u",
+        "password": "p",
+        "warehouse": "wh",
+        "role": "role",
+        "database": "db",
+    }
+
+
+def test_snowflake_resolve_config_none_without_account() -> None:
+    assert get_dialect("snowflake").resolve_config({}) is None
+
+
+def test_snowflake_redact_scrubs_password_and_account() -> None:
+    d = get_dialect("snowflake")
+    cfg = {"account": "acme-prod", "user": "u", "password": "hunter2"}
+    out = d.redact("auth error for acme-prod user u pw hunter2", cfg)
+    assert "hunter2" not in out
+    assert "acme-prod" not in out
+
+
+@pytest.mark.parametrize("engine", ["sqlserver", "mysql", "snowflake"])
+def test_each_engine_connect_is_lazy_no_import_error_at_module_scope(
+    engine: str,
+) -> None:
+    # Constructing/calling resolve_config/redact must never trigger the driver
+    # import -- only connect() does, and only when actually invoked. Merely
+    # calling get_dialect + resolve_config/redact (without connect) must not
+    # raise ImportError even when the optional driver package isn't installed.
+    d = get_dialect(engine)
+    d.resolve_config({})
+    d.redact("no secrets here", {} if engine != "sqlserver" else "")
