@@ -1,0 +1,25 @@
+order_id,order_date,product_name,product_category,quantity,unit_price,line_total,store_location,payment_method
+ORD-000001,2026-01-02,Alpha Notebook,Stationery,2,3.50,7.00,North,card
+ORD-000002,2026-01-02,Beta Pen Pack,Stationery,5,1.20,6.00,North,cash
+ORD-000003,2026-01-03,Gamma Mug,Homeware,1,8.00,8.00,South,card
+ORD-000004,2026-01-03,Delta Bottle,Homeware,3,4.50,13.50,Online,voucher
+ORD-000005,2026-01-04,Epsilon Cable,Electronics,2,6.75,13.50,North,card
+ORD-000006,2026-01-04,Zeta Charger,Electronics,1,12.00,12.00,South,card
+ORD-000007,2026-01-05,Eta Notebook,Stationery,4,3.50,14.00,Online,cash
+ORD-000008,2026-01-05,Theta Mug,Homeware,2,8.00,16.00,North,voucher
+ORD-000009,2026-01-06,Iota Pen Pack,Stationery,3,1.20,3.60,South,cash
+ORD-000010,2026-01-06,Kappa Bottle,Homeware,1,4.50,4.50,Online,card
+ORD-000011,2026-01-07,Lambda Cable,Electronics,5,6.75,33.75,North,card
+ORD-000012,2026-01-07,Mu Charger,Electronics,2,12.00,24.00,South,voucher
+ORD-000013,2026-01-08,Nu Notebook,Stationery,1,3.50,3.50,Online,cash
+ORD-000014,2026-01-08,Xi Mug,Homeware,3,8.00,24.00,North,card
+ORD-000015,2026-01-09,Omicron Bottle,Homeware,2,4.50,9.00,South,card
+ORD-000016,2026-01-09,Pi Cable,Electronics,1,6.75,6.75,Online,voucher
+ORD-000017,2026-01-10,Rho Charger,Electronics,4,12.00,48.00,North,card
+ORD-000018,2026-01-10,Sigma Pen Pack,Stationery,2,1.20,2.40,South,cash
+ORD-000019,2026-01-11,Tau Mug,Homeware,1,8.00,8.00,Online,card
+ORD-000020,2026-01-11,Upsilon Bottle,Homeware,5,4.50,22.50,North,voucher
+ORD-000021,2026-01-12,Phi Notebook,Stationery,3,3.50,10.50,South,card
+ORD-000022,2026-01-12,Chi Cable,Electronics,2,6.75,13.50,Online,cash
+ORD-000023,2026-01-13,Psi Charger,Electronics,1,12.00,12.00,North,card
+ORD-000024,2026-01-13,Omega Mug,Homeware,2,8.00,16.00,South,card

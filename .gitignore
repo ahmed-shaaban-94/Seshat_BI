@@ -73,3 +73,8 @@ specs/038-tabular-editor-bpa-adapter/evidence/smoke-*.md
 
 # Local git worktrees (isolated workspaces)
 .worktrees/
+
+# Demo harness (spec 083) working directory: `retail demo init` materializes the
+# committed sample fixtures here for a throwaway run; the durable source is the
+# committed mappings/demo_sample_orders/ + tests/fixtures/demo/. Never committed.
+.demo-work/
