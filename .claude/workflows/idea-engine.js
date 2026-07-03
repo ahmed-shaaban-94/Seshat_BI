@@ -29,6 +29,15 @@ const normKey = t => {
   if (m) return 'n' + m[1]
   return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()   // fallback: normalized prose
 }
+// proseKey: user-idea matching ONLY. normKey collapses a numbered title ("#41. Foo") to "n41"
+// for PANEL GROUPING -- correct there (reviewers keep the number, reword the trailing title), but
+// WRONG for matching a survived user idea back to its interpreter title (which carries no number
+// and normalizes to prose). proseKey STRIPS any leading list number, then normalizes prose, so a
+// numbered candidate and the un-numbered interpreter title compare equal. Must NOT replace normKey
+// in aggregatePanel (that would resurrect the number-collision over-count the file warns about).
+const proseKey = t => String(t || '').trim()
+  .replace(/^#?\s*\d+\s*[.:)]\s*/, '')                 // drop a leading "#41." / "41)" / "41:" prefix
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 // Device-portable: never hardcode a machine path. The agents that consume REPO resolve
 // the real repo root themselves at runtime (`git rev-parse --show-toplevel`), so this works
@@ -305,7 +314,7 @@ function aggregatePanel(panel, expectedReviewers, verifyRec) {
   // form so near-identical prose still merges. Display keeps the first-seen human title.
   // Defined BEFORE challengedTitles so the skeptic set is normalized on the same key -- else
   // the coverage clamp would mis-fire on the skeptic's differently-phrased titles.
-  const groupKey = normKey   // module-scope shared normalizer (render re-assert uses the same)
+  const groupKey = normKey   // panel grouping uses the number-aware key; user-match uses proseKey
   // The skeptic's "challenge EVERY candidate" contract is enforced HERE in JS, not by the
   // schema (which only requires an array) or the prompt (a request). An idea the skeptic
   // silently omitted from challenged[] is treated as if it FAILED the gate: marked killed
@@ -830,6 +839,23 @@ ${exploreMap}`,
 // A supplied-but-failed interpretation is a degraded run, not a silent no-op: the user asked for
 // their idea to be reviewed and it never entered the pool. Surfaced in run_health below.
 const interpretFailed = HAS_USER_IDEAS && (!interpreted || !userIdeas.length)
+// PARTIAL-expansion detection (Codex P2): a count check (userIdeas.length < USER_IDEAS.length)
+// is not enough -- two expansions of seed A + zero of seed B still totals the input count and
+// would slip through. The interpreter copies each seed VERBATIM into original_words, so we check
+// COVERAGE: every supplied seed must be echoed by some expansion's original_words (matched on
+// proseKey, or a normalized-substring either direction for a lightly-reworded anchor). Any seed
+// with no covering expansion was silently dropped -- named in a loud banner (run_health below).
+const _expandedAnchors = (interpreted && Array.isArray(interpreted.expanded) ? interpreted.expanded : [])
+  .map(e => proseKey(e && e.original_words)).filter(Boolean)
+const uncoveredSeeds = HAS_USER_IDEAS
+  ? USER_IDEAS.filter(seed => {
+      const k = proseKey(seed)
+      if (!k) return false
+      return !_expandedAnchors.some(a => a === k || a.includes(k) || k.includes(a))
+    })
+  : []
+// True when SOME (but not necessarily all) seeds were dropped, even though the run produced ideas.
+const interpretPartial = HAS_USER_IDEAS && !interpretFailed && uncoveredSeeds.length > 0
 // Rendered into the generation prompts so the lenses SEE the user's ideas and can build on them
 // (cross-pollination), without re-proposing them as their own.
 // De-nested (no backtick inside ${...}): build the bullet list with plain concatenation first.
@@ -917,7 +943,7 @@ const run_health = (() => {
   ]
   const anyFailed = rounds.some(r => r.failed > 0)
   const anyShort = rounds.some(r => r.ok < r.expected)
-  const degraded = anyFailed || anyShort || groundFailed || memoryFailed || interpretFailed
+  const degraded = anyFailed || anyShort || groundFailed || memoryFailed || interpretFailed || interpretPartial
   const parts = rounds.filter(r => r.ok < r.expected).map(r => {
     const failedSuffix = r.failed ? ' (' + r.failed + ' failed)' : ''   // de-nested: no `` inside ${}
     return `${r.label} ${r.ok}/${r.expected} lenses ok${failedSuffix}`
@@ -925,6 +951,9 @@ const run_health = (() => {
   // interpretFailed is a HARD failure for this run's purpose: the user asked for their idea to be
   // reviewed and it never entered the pool. Announce it loud, not silent (symmetric to groundFailed).
   if (interpretFailed) parts.unshift('interpret:user-ideas returned null/empty -- YOUR supplied idea(s) were NOT expanded or reviewed this run; re-run with a few more words')
+  // interpretPartial: SOME seeds expanded, others silently dropped. Name the uncovered ones so the
+  // user knows which of THEIR ideas was not reviewed (a count check alone would miss this).
+  else if (interpretPartial) parts.unshift('interpret:user-ideas expanded only SOME of your ideas -- these were NOT reviewed this run: ' + uncoveredSeeds.join(S(59,32)) + ' (re-run them with more distinctive wording)')
   if (groundFailed) parts.unshift('grounding reconcile-verify returned null -- the repo map is the RAW UNVERIFIED submap union')
   if (memoryFailed) parts.unshift('memory:read-prior returned null -- prior shipped/settled ideas are UNKNOWN this run; lenses may re-propose closed work')
   const banner = degraded ? `DEGRADED RUN: ${parts.join(S(59,32))}. Treat this bank as partial.` : ''
@@ -1062,9 +1091,9 @@ if (aggregated.uncovered_by_skeptic > 0) {
 //     this is announced LOUD (same idiom as uncovered_by_skeptic / panel_failed).
 //   - userKeySet: the normalized keys we DO force back to origin:user at render (fix #1 below),
 //     so a mislabel (origin flipped to 'engine' by an LLM hop) cannot empty the lane.
-const userKeySet = new Set(userIdeas.map(u => normKey(u.title)))
-const aggregatedKeySet = new Set(aggregated.ideas.map(i => normKey(i.title)))
-const lostUserIdeas = userIdeas.filter(u => !aggregatedKeySet.has(normKey(u.title))).map(u => u.title)
+const userKeySet = new Set(userIdeas.map(u => proseKey(u.title)))
+const aggregatedKeySet = new Set(aggregated.ideas.map(i => proseKey(i.title)))
+const lostUserIdeas = userIdeas.filter(u => !aggregatedKeySet.has(proseKey(u.title))).map(u => u.title)
 if (lostUserIdeas.length) {
   const note = `YOUR idea(s) may have been merged or renamed away by synthesis and could not be matched back: ${lostUserIdeas.join(S(59,32))} -- check the bank body; re-run with more distinctive wording if they are missing`
   run_health.degraded = true
@@ -1115,7 +1144,7 @@ const review = {
     // Re-assert origin from JS ground truth: if this title matches a known user idea, it IS
     // origin:user regardless of what the two LLM hops (synthesizer, panel) echoed. A flipped tag
     // cannot empty the "Your Ideas" lane (the filter is i.origin === 'user').
-    origin: userKeySet.has(normKey(i.title)) ? 'user' : (i.origin || 'engine'),
+    origin: userKeySet.has(proseKey(i.title)) ? 'user' : (i.origin || 'engine'),
     dissent: dissentMap[i.title] || '',
   })),
 }
@@ -1377,7 +1406,7 @@ function renderBacklog(review, opts) {
   // lookup would drop the "Your words / Read as" lines whenever the title drifted.
   const userNotesRaw = opts.userNotes || {}
   const userNotes = {}
-  for (const k of Object.keys(userNotesRaw)) userNotes[normKey(k)] = userNotesRaw[k]
+  for (const k of Object.keys(userNotesRaw)) userNotes[proseKey(k)] = userNotesRaw[k]
   const userCohort = ideas.filter(i => i.origin === 'user')
   const YOUR_IDEAS = userCohort.length
     ? ['## Your Ideas (expanded + reviewed)', '',
@@ -1389,7 +1418,7 @@ function renderBacklog(review, opts) {
        userCohort.map(i => {
          const gate = i.eligibility_gate || (i.eligible === false ? 'fail' : 'pass')
          const eligTag = gate === 'fail' ? 'INELIGIBLE' : (gate === 'split' ? 'eligibility split -- needs human review' : 'respects principles')
-         const n = userNotes[normKey(i.title)] || {}
+         const n = userNotes[proseKey(i.title)] || {}
          const lines = [`- **${norm(i.title)}** -- ${norm(i.verdict)} - \`${norm(i.horizon)}\` - V${i.value_score} / F${i.feasibility_score} - ${eligTag}`]
          if (n.original_words) lines.push(`  - Your words: "${norm(n.original_words)}"`)
          if (n.chosen_reading) lines.push(`  - Read as: ${norm(n.chosen_reading)}`)
