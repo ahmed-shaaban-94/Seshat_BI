@@ -42,6 +42,19 @@ db = [
 files = [
     "openpyxl>=3.1",
 ]
+# `livetest` extra (spec 082): the optional Docker-orchestration library for the
+# LOCAL live-validation suite (tests/live_db/). It stands up an ephemeral Postgres
+# container so `retail validate` / `value-check`'s already-built live checks run
+# against real materialized rows. NOT in `dev` -- so CI installs no Docker
+# orchestration and the `live_db`-marked tests are deselected (`pytest -m unit`);
+# the suite passing without this extra proves the live-DB tests self-skip honestly
+# (never a hidden pass) when the harness is absent. Also disjoint from `db` (that
+# extra stays driver-only). testcontainers is imported LAZILY (inside the fixture),
+# and each live_db test module `pytest.importorskip`s it, so collection never errors
+# when the extra is not installed.
+livetest = [
+    "testcontainers[postgres]>=4.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/retail"]
@@ -53,7 +66,12 @@ line-length = 88
 select = ["E", "F", "I"]
 
 [tool.pytest.ini_options]
-markers = ["unit", "integration"]
+markers = [
+    "unit",
+    "integration",
+    "live_db",
+    "seed: name the seed scenario .sql file for a live_db test (spec 082)",
+]
 testpaths = ["tests"]
 # "src" lets tests import the `retail` package; "." puts the repo root on
 # sys.path so the shared helper import `from tests.unit._gitfix import ...`

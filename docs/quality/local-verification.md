@@ -86,3 +86,23 @@ Replace `<table>` with a mapped table folder under `mappings/` (for example,
   GitHub Actions.
 - Readiness is `status` + `evidence` + `blocking_reasons`. A missing check is a
   blocker or a pending item, never a silent pass.
+
+## Local live-validation suite (opt-in, spec 082)
+
+The `tests/live_db/` suite proves `retail validate` / `retail value-check`'s live
+checks against a real, local, ephemeral PostgreSQL container -- no cloud, no real
+credentials. It is OPT-IN and gated on Docker + the `livetest` extra:
+
+```bash
+pip install -e ".[db,livetest]"     # psycopg2 + the Docker-orchestration lib
+pytest -m live_db                     # requires a running Docker daemon
+```
+
+- **`pytest -m unit` and CI never run these** (they are `live_db`-marked, and CI
+  installs only `dev`) -- so the default suite stays repo-only and driver-free.
+- **When Docker or the `livetest` extra is absent, these tests SKIP honestly** with
+  a named reason (`docker not available`, `driver not installed`, `container failed
+  to start`, `port conflict`, `seed failed`) -- never a hidden pass. The
+  precondition contract is `specs/082-postgres-live-validation-suite/contracts/live-pass-contract.md`.
+- A clean live run is recorded by 057 as `warning` (evidence a human may cite),
+  never as a stage `pass` -- see the do-not-fake-pass rule above.
