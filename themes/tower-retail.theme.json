@@ -1,18 +1,18 @@
 {
   "name": "Tower Retail (starter)",
   "dataColors": [
-    "#1F3A5F",
-    "#3E6D9C",
-    "#5C8AB0",
-    "#8FB0C9",
-    "#C7A35A",
-    "#6E7B8B",
-    "#A7B3C0",
-    "#D8DEE6"
+    "#1F4E79",
+    "#4A6572",
+    "#2E7D5B",
+    "#B5832A",
+    "#7A5C8E",
+    "#3F7CAC",
+    "#9E6B4A",
+    "#5B7B6E"
   ],
   "background": "#FFFFFF",
   "foreground": "#1F2937",
-  "tableAccent": "#1F3A5F",
+  "tableAccent": "#1F4E79",
   "good": "#2E7D32",
   "neutral": "#B8860B",
   "bad": "#B23A2E",
