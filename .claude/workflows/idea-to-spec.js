@@ -6,7 +6,7 @@ export const meta = {
     { title: 'Pre-flight' },                                                           // in-script, no agent
     { title: 'Ground',       detail: 'read-only: confirm the idea\'s seams + map its roadmap stage', model: 'opus' },
     { title: 'Plan (per-idea, isolated)', detail: 'one worktree agent: branch -> specify -> clarify -> plan -> tasks -> analyze -> adversarial review', model: 'opus' },
-    { title: 'Ratify ledger', detail: 'read-only assembler: present the ledger and STOP at the human gate', model: 'opus' },
+    { title: 'Ratify ledger', detail: 'read-only assembler: present the ledger and STOP at the human gate', model: 'sonnet' },
   ],
 }
 const S = (...c) => String.fromCharCode(...c)
@@ -173,7 +173,7 @@ if (INPUT.section) {
     `then read <repo-root>/${BACKLOG_PATH} and return its FULL verbatim content in\u0027content\u0027 ` +
     `(found:true). If the file does not exist, return found:false and content:\u0022\u0022. Do NOT summarize, ` +
     `truncate, reformat, or interpret -- return the raw bytes as text. Read nothing else.`,
-    { label: 'preflight:read-backlog', phase: 'Pre-flight', schema: READ_SCHEMA, model: 'opus', effort: 'low' }
+    { label: 'preflight:read-backlog', phase: 'Pre-flight', schema: READ_SCHEMA, model: 'sonnet', effort: 'high' }
   )
   if (!backlogRead || !backlogRead.found || !backlogRead.content) {
     const reason = `${BACKLOG_PATH} not found or empty -- run the idea-engine first to produce a bank.`
@@ -405,7 +405,7 @@ const ledger = await agent(
   `branch -- and note the implement workflow refuses the spec until that human Status edit lands. If ` +
   `BLOCKED, how_to_ratify instead states what must be fixed and that NO ratify path is offered yet. ` +
   `ASCII only.`,
-  { label: 'ratify-ledger', phase: 'Ratify ledger', schema: RATIFY_SCHEMA, model: 'opus', effort: 'high' }
+  { label: 'ratify-ledger', phase: 'Ratify ledger', schema: RATIFY_SCHEMA, model: 'sonnet', effort: 'high' }
 )
 
 return {
