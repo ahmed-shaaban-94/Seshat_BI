@@ -140,11 +140,14 @@ class SqlServerDialect:
         the value is indistinguishable from the next `KEYWORD=` separator and
         `config.split(";")` truncates the value (R4).
 
-        Known limitation (not hardened here, out of R4's `;`/bare-host scope):
-        this brace-wraps but does not double an internal literal `}` the way
-        full ODBC escaping requires (`}}` inside a braced value). A password
-        containing `}` is not a case this fix targets; `;` and bare-host
-        leakage are.
+        A literal `}` inside the value is escaped by DOUBLING it (`}}`) before
+        wrapping, per full ODBC brace-escaping rules -- a brace-quoted value
+        starts after the opening `{` and ends at the first `}` that is NOT
+        doubled; a `{` inside the value is just a literal character (bracing
+        is not nestable). Without doubling, a password containing `}` would
+        both (a) build a malformed connection string pyodbc's ODBC parser
+        cannot round-trip, and (b) fail to fully scrub in `redact()` via
+        `_parse_tokens`, which now parses these exact rules (R4).
         """
         driver = env.get("ANALYTICS_DB_ODBC_DRIVER") or "ODBC Driver 18 for SQL Server"
         host = env.get("ANALYTICS_DB_HOST")
@@ -155,9 +158,11 @@ class SqlServerDialect:
         if env.get("ANALYTICS_DB_NAME"):
             parts.append(f"DATABASE={env['ANALYTICS_DB_NAME']}")
         if env.get("ANALYTICS_DB_USER"):
-            parts.append("UID={" + env["ANALYTICS_DB_USER"] + "}")
+            parts.append("UID={" + env["ANALYTICS_DB_USER"].replace("}", "}}") + "}")
         if env.get("ANALYTICS_DB_PASSWORD"):
-            parts.append("PWD={" + env["ANALYTICS_DB_PASSWORD"] + "}")
+            parts.append(
+                "PWD={" + env["ANALYTICS_DB_PASSWORD"].replace("}", "}}") + "}"
+            )
         parts.append("Encrypt=yes")
         if env.get("ANALYTICS_DB_TRUST_CERT", "").lower() in ("1", "true", "yes"):
             parts.append("TrustServerCertificate=yes")
@@ -236,35 +241,52 @@ class SqlServerDialect:
         OUTSIDE of a brace-wrapped value (``KEY={...}``) -- a brace-wrapped
         value may legitimately contain a literal ``;`` (that is the whole
         point of the ODBC brace-escape), and a blind split truncates it.
-        Also unwraps the surrounding ``{}`` from the returned value.
-        """
-        tokens: list[str] = []
-        depth = 0
-        current: list[str] = []
-        for ch in config:
-            if ch == "{":
-                depth += 1
-                current.append(ch)
-            elif ch == "}":
-                depth = max(0, depth - 1)
-                current.append(ch)
-            elif ch == ";" and depth == 0:
-                tokens.append("".join(current))
-                current = []
-            else:
-                current.append(ch)
-        if current:
-            tokens.append("".join(current))
 
+        ODBC brace-quoting is NON-NESTABLE, so this is a char-scan, not
+        depth-counting: once a value opens with ``{``, an interior ``{`` is
+        just a literal character; a doubled ``}}`` is a literal ``}`` (part
+        of the value); the first SINGLE ``}`` (not followed by another ``}``)
+        terminates the value. The returned value is unescaped (``}}`` -> ``}``).
+        """
         pairs: list[tuple[str, str]] = []
-        for token in tokens:
-            if "=" not in token:
+        i = 0
+        n = len(config)
+        while i < n:
+            # Find the end of this token's KEYWORD= prefix (up to '=' or ';').
+            sep = config.find("=", i)
+            semi = config.find(";", i)
+            if sep == -1 or (semi != -1 and semi < sep):
+                # No '=' before the next ';' (or no '=' at all) -- not a
+                # KEYWORD=value token; skip past this segment.
+                i = semi + 1 if semi != -1 else n
                 continue
-            kw, val = token.split("=", 1)
-            kw = kw.strip().upper()
-            if val.startswith("{") and val.endswith("}") and len(val) >= 2:
-                val = val[1:-1]
-            pairs.append((kw, val))
+
+            kw = config[i:sep].strip().upper()
+            val_start = sep + 1
+
+            if val_start < n and config[val_start] == "{":
+                # Brace-quoted value: scan for the terminating single '}'.
+                chars: list[str] = []
+                j = val_start + 1
+                while j < n:
+                    if config[j] == "}":
+                        if j + 1 < n and config[j + 1] == "}":
+                            chars.append("}")
+                            j += 2
+                            continue
+                        j += 1  # consume the terminating brace
+                        break
+                    chars.append(config[j])
+                    j += 1
+                pairs.append((kw, "".join(chars)))
+                # After the closing brace, skip to just past the next ';'.
+                next_semi = config.find(";", j)
+                i = next_semi + 1 if next_semi != -1 else n
+            else:
+                # Bare (unbraced) value: terminated by ';' or end-of-string.
+                end = semi if semi != -1 else n
+                pairs.append((kw, config[val_start:end]))
+                i = end + 1
         return pairs
 
     def quote_ident(self, name: str, *, context: str = "identifier") -> str:

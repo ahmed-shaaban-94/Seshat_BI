@@ -296,6 +296,59 @@ def test_sqlserver_redact_regression_simple_password_still_scrubbed() -> None:
     assert "topsecret" not in out
 
 
+def test_sqlserver_redact_scrubs_leading_brace_password_regression() -> None:
+    # R4 REGRESSION adversarial: a password that is itself an unbalanced
+    # brace-opener ("{secret", no closing "}") used to defeat the old
+    # depth-counting _parse_tokens. resolve_config produced "PWD={{secret}"
+    # (the literal wrapping brace + the value's own leading brace); the old
+    # depth-counter saw depth go 1 -> 2 on "{{", then 2 -> 1 on the real "}",
+    # so depth never returned to 0, the value was mis-scanned, val[1:-1]
+    # unwrapping failed, and the raw secret "{secret" was never scrubbed.
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "{secret",
+    }
+    d = get_dialect("sqlserver")
+    cfg = d.resolve_config(env)
+    assert cfg is not None
+    out = d.redact("login failed: password '{secret' rejected; Encrypt=yes", cfg)
+    assert "{secret" not in out
+
+
+def test_sqlserver_resolve_config_doubles_literal_closing_brace() -> None:
+    # A literal "}" in the value must be escaped by doubling before wrapping,
+    # per real (non-nestable) ODBC brace-quoting -- this is also a connection
+    # -correctness fix: pyodbc's own ODBC parser expects the doubled form.
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "pw}x",
+    }
+    d = get_dialect("sqlserver")
+    cfg = d.resolve_config(env)
+    assert cfg is not None
+    assert "PWD={pw}}x}" in cfg
+    out = d.redact("login failed: password 'pw}x' rejected", cfg)
+    assert "pw}x" not in out
+
+
+def test_sqlserver_redact_scrubs_password_with_brace_and_close_brace() -> None:
+    # Password containing both "{" and "}" -- interior "{" is a plain literal
+    # (bracing is non-nestable), interior "}" must be doubled/unescaped correctly.
+    env = {
+        "ANALYTICS_DB_HOST": "h",
+        "ANALYTICS_DB_USER": "u",
+        "ANALYTICS_DB_PASSWORD": "a{b}c",
+    }
+    d = get_dialect("sqlserver")
+    cfg = d.resolve_config(env)
+    assert cfg is not None
+    assert "PWD={a{b}}c}" in cfg
+    out = d.redact("login failed: password 'a{b}c' rejected", cfg)
+    assert "a{b}c" not in out
+
+
 def test_mysql_resolve_config_builds_kwargs_dict() -> None:
     d = get_dialect("mysql")
     env = {
