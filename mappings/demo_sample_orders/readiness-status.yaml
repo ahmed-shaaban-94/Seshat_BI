@@ -1,0 +1,99 @@
+# =============================================================================
+# readiness-status.yaml  --  demo_sample_orders (spec 083 local demo harness)
+# =============================================================================
+# Per-table readiness state (ADR 0004), all seven stages. GENERIC, invented demo
+# fixture -- not client data, not C086. Four statuses + evidence + blockers,
+# never a numeric score. ASCII only, UTF-8 no BOM.
+#
+# This is the COMMITTED, TRACKED fixture. `retail demo` verbs NEVER write to it
+# (they operate on a throwaway copy in .demo-work/). The approvals[] below are
+# ILLUSTRATIVE, pre-committed fixtures with fictional named owners -- clearly
+# labeled, never presented by a `demo run` as something the run produced (FR-016).
+# =============================================================================
+
+# --- identity ---------------------------------------------------------------
+table: "bronze.demo_sample_orders"
+source_id: "demo_sample_orders"
+source_family: "demo_generic_orders"
+
+# --- where we are -----------------------------------------------------------
+# Offline ceiling: Source/Mapping/Silver reach pass from committed artifacts +
+# static retail check; Gold Ready onward is blocked-deferred because its gate is
+# the LIVE retail validate (needs a reachable DB). The demo's honest stopping point.
+current_stage: "gold_ready"
+mapping_version: "1"
+
+# --- the seven stages -------------------------------------------------------
+stages:
+
+  source_ready:
+    status: "pass"
+    source_kind: "csv"        # a FILE source -> RS1 requires a source_ready approval below
+    evidence:
+      - "mappings/demo_sample_orders/source-profile.md (24 rows; 9 cols; order_id unique, ratio 1.00; line_total identity 24/24)"
+      - "encoding + semantics confirmed (illustrative fixture approval below)"
+    blocking_reasons: []
+
+  mapping_ready:
+    status: "pass"
+    evidence:
+      - "mappings/demo_sample_orders/source-map.yaml (grain=order line, PK=order_id, gold star: fct_order_line + 3 dims + dim_date)"
+      - "mappings/demo_sample_orders/assumptions.md (RC defaults adopted as-is; no deviation)"
+      - "mappings/demo_sample_orders/unresolved-questions.md (Gate status: CLEARED; Q1-Q4 answered)"
+      - "approval recorded in approvals[] below (illustrative fixture)"
+    blocking_reasons: []
+
+  silver_ready:
+    status: "pass"
+    evidence:
+      - "warehouse/migrations/0005_create_silver_demo_sample_orders.sql (authored; static retail check S1-S7 pass)"
+    blocking_reasons: []
+
+  gold_ready:
+    status: "blocked"
+    evidence: []
+    blocking_reasons:
+      - "Gold Ready's gate is the LIVE retail validate; no reachable DB in offline demo mode. Run the optional live leg (demo load + demo run with a local Postgres DSN) to advance."
+
+  semantic_model_ready:
+    status: "not_started"
+    evidence: []
+    blocking_reasons: []
+
+  dashboard_ready:
+    status: "not_started"
+    evidence: []
+    blocking_reasons: []
+
+  publish_ready:
+    status: "not_started"
+    evidence: []
+    blocking_reasons: []
+
+# --- approvals (ILLUSTRATIVE fixtures; fictional named owners) ---------------
+# Each is a pre-committed demonstration of the named-human approval shape RS1
+# enforces (Person Name (authority_class)). NONE was produced by a demo run.
+approvals:
+  - stage: "source_ready"
+    owner: "Jordan Rivera (analyst)"       # illustrative fixture -- fictional named owner
+    at: "2026-07-03"
+    note: "ILLUSTRATIVE fixture: confirms the CSV encoding + column semantics for a file source. Not produced by any demo run."
+  - stage: "mapping_ready"
+    owner: "Jordan Rivera (analyst)"       # illustrative fixture -- fictional named owner
+    at: "2026-07-03"
+    note: "ILLUSTRATIVE fixture: accepts the reviewed source-map (grain, gold star, RC defaults). Not produced by any demo run."
+  - stage: "semantic_model_ready"
+    owner: "Jordan Rivera (metric_owner)"  # illustrative fixture -- fictional named owner (US3)
+    at: "2026-07-03"
+    note: "ILLUSTRATIVE fixture (US3): demonstrates a metric-owner approval label. Semantic Model Ready is NOT pass -- this entry exists only so the demo report can show how an illustrative approval is labeled, never presented as run-produced."
+
+# --- top-level blockers -----------------------------------------------------
+# RS1 requires the top-level blocking_reasons[] to mirror the current (blocked)
+# stage's blockers. current_stage is gold_ready = blocked (offline ceiling).
+blocking_reasons:
+  - "Gold Ready's gate is the LIVE retail validate; no reachable DB in offline demo mode. Run the optional live leg (demo load + demo run with a local Postgres DSN) to advance."
+
+# --- next action ------------------------------------------------------------
+next_action: "Run the optional live leg (demo load + demo run with a local Postgres DSN) to advance Gold Ready past its live-validate gate; offline, Gold Ready is honestly blocked."
+last_checked_at: "2026-07-03"
+checked_by: "demo fixture (authored, not a demo run)"

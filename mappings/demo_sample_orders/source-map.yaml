@@ -1,0 +1,27 @@
+# source-map.yaml -- demo_sample_orders (spec 083 demo fixture; GENERIC, invented)
+# Pre-filled, pre-reviewed mapping-gate artifact for the local demo harness.
+# Not client data, not C086. ASCII only, UTF-8 no BOM.
+
+source_id: "demo_sample_orders"
+source_family: "demo_generic_orders"
+source_kind: "csv"
+
+grain: "one order line"
+primary_key: ["order_id"]
+
+# gold star target (Kimball): one fact + conformed dims + date dim.
+gold_star:
+  fact: "fct_order_line"
+  measures: ["quantity", "unit_price", "line_total"]
+  dimensions:
+    - name: "dim_product"
+      attributes: ["product_name", "product_category"]
+    - name: "dim_store"
+      attributes: ["store_location"]
+    - name: "dim_payment"
+      attributes: ["payment_method"]
+    - name: "dim_date"
+      built_from: "order_date"
+
+# PII: none present in this sample (no customer-identifying column).
+pii: "none present"

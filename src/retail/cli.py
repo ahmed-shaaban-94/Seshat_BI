@@ -261,6 +261,41 @@ def _build_parser() -> argparse.ArgumentParser:
         help="exit non-zero if any finding is present (default: advisory, exit 0)",
     )
 
+    # `demo` verb group (spec 083): prove the readiness spine on a generic sample.
+    demo_p = sub.add_parser(
+        "demo",
+        help="local demo harness: prove the readiness spine on a generic sample",
+    )
+    demo_sub = demo_p.add_subparsers(dest="demo_command", required=True)
+
+    demo_init = demo_sub.add_parser(
+        "init", help="materialize the demo fixtures into .demo-work/ (idempotent)"
+    )
+    demo_init.add_argument("--repo", default=".", help="repo root")
+    demo_init.add_argument(
+        "--force", action="store_true", help="refresh an existing working dir"
+    )
+
+    demo_load = demo_sub.add_parser(
+        "load", help="offline: skip with reason; live: write demo-scoped sample"
+    )
+    demo_load.add_argument("--repo", default=".", help="repo root")
+    demo_load.add_argument("--dsn", default=None, help="Postgres DSN for the live leg")
+
+    demo_run = demo_sub.add_parser(
+        "run", help="recompute per-stage readiness status (no separate state engine)"
+    )
+    demo_run.add_argument("--repo", default=".", help="repo root")
+    demo_run.add_argument("--dsn", default=None, help="Postgres DSN for the live leg")
+
+    demo_report = demo_sub.add_parser(
+        "report", help="render status + evidence + blockers (never a score/dashboard)"
+    )
+    demo_report.add_argument("--repo", default=".", help="repo root")
+    demo_report.add_argument(
+        "--format", choices=["text", "json"], default="text", help="output format"
+    )
+
     return parser
 
 
@@ -328,6 +363,11 @@ def main(argv: list[str] | None = None) -> int:
         from .doctor import run_doctor
 
         return run_doctor(Path(args.repo), strict=args.strict)
+
+    if args.command == "demo":
+        from .demo import run_demo
+
+        return run_demo(args)
 
     return 0
 
