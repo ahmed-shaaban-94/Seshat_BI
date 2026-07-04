@@ -420,6 +420,24 @@ def _observe_rule(rule_id: str, fn: Rule) -> set[str]:
                 "      row_height: 30\n",
             )
             tracked = ["design/grids/demo-grid.yaml"]
+        elif rule_id == "SF1":
+            # SF1 emits BOTH classes over one synthetic repo (mirrors S4b's
+            # multi-class fixture): an UNDECLARED same-basename collision -> ERROR,
+            # AND a spine entry that no longer names a live collision -> WARNING
+            # (stale entry). Without this, SF1 is only ever reached via the
+            # missing-manifest ERROR path and its WARNING branch goes unobserved.
+            _write(
+                repo,
+                "docs/quality/shared-spine.yaml",
+                "checklists:\n  gone.md: shared\n",
+            )
+            _write(repo, "skills/pack-a/checklists/dup.md", "content A\n")
+            _write(repo, "skills/pack-b/checklists/dup.md", "content B\n")
+            tracked = [
+                "docs/quality/shared-spine.yaml",
+                "skills/pack-a/checklists/dup.md",
+                "skills/pack-b/checklists/dup.md",
+            ]
         elif rule_id == "CT1":
             # tokens with a text/background pair below the declared floor -> CT1 ERRORs.
             _write(

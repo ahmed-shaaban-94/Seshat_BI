@@ -166,6 +166,10 @@
     "SC2": [
       "error"
     ],
+    "SF1": [
+      "error",
+      "warning"
+    ],
     "SL1": [
       "error"
     ]
