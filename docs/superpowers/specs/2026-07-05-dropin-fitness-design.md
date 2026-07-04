@@ -1,6 +1,7 @@
 # Drop-in fitness: making the kit degrade gracefully in a foreign BI repo (Specs A–E)
 
-**Status:** design, approved for full-chain implementation
+**Status:** Spec A SHIPPED (this PR). Specs C, D, B, E are designed below and tracked as
+follow-ups — not yet implemented.
 **Branch:** `spec/dropin-fitness`
 **Origin:** eval verdict — running the kit against the `GitHub/BI` fixture (a repo built
 from an early kit snapshot) exposed that the kit is *over-fitted to itself*: dropped into a
