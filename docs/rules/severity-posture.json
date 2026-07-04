@@ -167,7 +167,8 @@
       "error"
     ],
     "SF1": [
-      "error"
+      "error",
+      "warning"
     ],
     "SL1": [
       "error"

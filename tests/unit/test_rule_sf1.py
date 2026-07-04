@@ -106,6 +106,22 @@ def test_stale_entry_is_warning() -> None:
     assert "no longer" in findings[0].message
 
 
+# --- Codex #182 P2a: recursive checklist glob (skills/**/checklists/) ----------
+
+
+def test_nested_skill_path_collision_is_detected() -> None:
+    """Codex #182 P2a: the documented scope is skills/**/checklists/*.md, but the
+    one-segment regex skipped a nested pack (skills/vendor/bi-python-knowledge/
+    checklists/agg.md), missing a same-basename collision that must be declared.
+    The nested copy collides with skills/bi-bigdata-knowledge/checklists/agg.md
+    and is undeclared -> SF1 must ERROR."""
+    findings = _one("nested_collision")
+    assert len(findings) == 1
+    assert findings[0].severity is Severity.ERROR
+    assert "agg.md" in findings[0].message
+    assert "undeclared" in findings[0].message
+
+
 # --- SC-004: the rule never writes the manifest -------------------------------
 
 

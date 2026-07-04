@@ -32,7 +32,10 @@ from ..registry import register
 RULE_ID = "SF1"
 
 SPINE_REL = "docs/quality/shared-spine.yaml"
-_CHECKLIST_RE = re.compile(r"^skills/[^/]+/checklists/[^/]+\.md$")
+# Match the DOCUMENTED recursive scope skills/**/checklists/*.md (Codex #182 P2a):
+# one-or-more path segments may sit between skills/ and checklists/ (a nested pack
+# like skills/vendor/bi-python-knowledge/checklists/agg.md), not exactly one.
+_CHECKLIST_RE = re.compile(r"^skills/(?:[^/]+/)+checklists/[^/]+\.md$")
 _VALID_VALUES = ("shared", "distinct")
 
 
