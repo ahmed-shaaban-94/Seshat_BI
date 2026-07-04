@@ -30,9 +30,22 @@ from ..registry import register
 
 RULE_ID = "DL6"
 
-_INSTANCE_SUFFIX = "/visual-spec.yaml"
+# Filled visual-spec DISCOVERY convention (shared -- A4/A11 will reuse this glob
+# when they are built; the binding decision for those rules is made then, but the
+# path shape is anchored here). A filled spec is a YAML file that is EITHER named
+# visual-spec.yaml OR lives under a `visuals/` | `visual-specs/` directory with an
+# arbitrary basename -- the latter is the documented page-blueprint convention
+# (templates/dashboard-page-blueprint.yaml:200 shows spec_ref
+# `.../visuals/<visual_id>.yaml`).
+# The path predicate is intentionally generous: the real false-positive guard is
+# the content check below (a file with no `anti_pattern_checks` mapping is skipped),
+# and `anti_pattern_checks` is distinctive (design-review-evidence uses the distinct
+# key `anti_patterns_checked`). The generic template + committed test fixtures are
+# always excluded.
 _BARE_INSTANCE = "visual-spec.yaml"
+_INSTANCE_SUFFIX = "/visual-spec.yaml"
 _TEMPLATE_PATH = "templates/visual-spec.yaml"
+_SPEC_DIR_RE = re.compile(r"(^|/)(visuals|visual-specs)/[^/]+\.ya?ml$")
 
 # An angle-bracket token (the G6/PP1 unfilled-placeholder convention). A
 # blocking_reasons entry that is only a placeholder is not a real reason.
@@ -45,7 +58,11 @@ def _iter_instances(ctx: RuleContext) -> list[str]:
     for p in ctx.tracked_files:
         if p == _TEMPLATE_PATH or is_test_path(p):
             continue
-        if p.endswith(_INSTANCE_SUFFIX) or p == _BARE_INSTANCE:
+        if (
+            p == _BARE_INSTANCE
+            or p.endswith(_INSTANCE_SUFFIX)
+            or _SPEC_DIR_RE.search(p)
+        ):
             out.append(p)
     return out
 

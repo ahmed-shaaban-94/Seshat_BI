@@ -73,6 +73,29 @@ def test_no_instances_zero_findings() -> None:
     assert list(check_visual_spec_selfcheck(_ctx("warehouse/x.sql", "README.md"))) == []
 
 
+def test_blueprint_path_spec_is_discovered_and_errors() -> None:
+    """Codex #180: a filled spec authored the documented page-blueprint way --
+    `.../visuals/<visual_id>.yaml`, an arbitrary basename under a visuals/ dir, NOT
+    literally visual-spec.yaml -- must be DISCOVERED by DL6 (else the guard silently
+    misses the very files it exists to check). This one self-attests an anti-pattern
+    with no reason, so DL6 must ERROR."""
+    findings = list(
+        check_visual_spec_selfcheck(_ctx("blueprint_path/visuals/exec_kpi_sales.yaml"))
+    )
+    assert len(findings) == 1
+    assert findings[0].severity is Severity.ERROR
+    assert "kpi_without_comparison" in findings[0].message
+
+
+def test_blueprint_path_good_spec_passes() -> None:
+    """A blueprint-path spec that IS well-formed (a true check paired with a real
+    reason) passes -- discovery is broad, but the good fixture confirms the path
+    widening did not turn every discovered file into a finding."""
+    assert list(check_visual_spec_selfcheck(_ctx("good/visual-spec.yaml"))) == []
+    # (the good fixture also proves the original visual-spec.yaml basename still
+    # resolves after the predicate was broadened -- no regression)
+
+
 def test_fixture_exemption_excludes_tests_paths() -> None:
     """A visual-spec under tests/ is a committed fixture -> exempt (is_test_path)."""
     ctx = _ctx(
