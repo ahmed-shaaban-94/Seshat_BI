@@ -162,16 +162,45 @@ for the page and wallpaper. This is the theme default ONLY.
 
 ## 8. Accessibility checks
 
-Each MUST be confirmed before the theme is considered done. A failed check is a
-`blocking_reasons[]` entry or a recorded `warning` with a reason.
+Each MUST be confirmed **with named evidence** before the theme is considered
+done. A bare tick is NOT confirmation: a `[x]` with no cited evidence is an
+UN-verified self-assertion and does not close the check (the same discipline
+`DL4` applies to a design review, and hard rule #9's spirit -- do not assert a
+pass nothing verified). A failed or unevidenced check is a `blocking_reasons[]`
+entry or a recorded `warning` with a reason.
 
-- [ ] Text-to-background contrast meets a readable ratio (aim WCAG AA; dark text
-      on light surfaces by default).
-- [ ] Sentiment colors are distinguishable for common color-vision deficiencies
-      (do not rely on red/green alone -- pair with position or icon downstream).
-- [ ] Data-color sequence stays legible at small sizes and when adjacent.
-- [ ] No pure-saturated background behind dense charts (a readability concern --
-      record it as a `warning`-class design note, not a silent override).
+Evidence differs by check, because only ONE of these is computable from
+committed text:
+
+- [ ] **Contrast** -- text-to-background meets a readable ratio (aim WCAG AA;
+      dark text on light surfaces by default).
+      *Evidence: cite `CT1`'s verdict on the design-tokens the theme compiles
+      from (the WCAG ratio is CT1's deterministic job, not a self-report). A
+      theme cannot claim contrast on its own say-so.*
+- [ ] **Color-vision-deficiency distinguishability** -- sentiment colors are
+      distinguishable for common CVD (do not rely on red/green alone -- pair with
+      position or icon downstream).
+      *Evidence: a named reviewer + date (this is a human judgment call --
+      Principle V; the kit does not rule on it). Cite the reviewer, not a tick.*
+- [ ] **Small-size / adjacency legibility** -- the data-color sequence stays
+      legible at small sizes and when adjacent.
+      *Evidence: a named reviewer + date against a RENDERED page (F016 surface;
+      not verifiable from committed text). Cite the reviewer, not a tick. If no
+      render exists yet (the theme is authored before F016), leave this open and
+      hold the theme at `warning` with a reason -- NOT `pass`, and not a silent
+      tick.*
+- [ ] **No pure-saturated background behind dense charts** -- a readability
+      concern; record it as a `warning`-class design note, not a silent override.
+      *Evidence: a named reviewer + date, or the recorded `warning` note. Cite
+      it, not a tick.*
+
+> Why evidence and not a checklist: a ticked box that nothing verified is exactly
+> the self-asserted-but-unchecked accessibility pass this kit exists to prevent.
+> Contrast is delegated to `CT1` (computed); the three judgment/render checks are
+> owner/reviewer calls (Principle V) that carry a named human, never an
+> unattributed confirmation. **A future evidence-gate rule (HELD) may enforce
+> this shape on a FILLED theme spec; today no filled instance exists, so this
+> template closes the hole at the DEFINE layer.**
 
 ## 9. JSON-validation reminder (schema treated as UNCERTAIN)
 
@@ -214,10 +243,12 @@ design-review (F011/012), not this spec's.
 - **Status:** `<not_started | blocked | warning | pass>`
 - **Evidence:**
   - `<e.g. themes/<name>.theme.json validated in Power BI Desktop on <date>>`
-  - `<e.g. accessibility checklist (section 8) all confirmed>`
+  - `<e.g. section-8 contrast: CT1 clean on <tokens file> (cite CT1's verdict, not a tick)>`
+  - `<e.g. section-8 CVD/legibility/saturation: reviewed by <named_human> on <date>>`
 - **Blocking reasons (empty unless blocked):**
   - `<e.g. 'theme JSON failed to import in Desktop -- malformed key'>`
   - `<e.g. 'contrast check failed for sentiment colors'>`
+  - `<e.g. 'section-8 CVD check has no named reviewer -- self-assertion, not confirmed'>`
 
 (No `score:` / `confidence:` field exists here BY DESIGN -- rule 9.)
 
