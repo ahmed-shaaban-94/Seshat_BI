@@ -107,3 +107,37 @@ with git, git wins.**_
 extraction removed the c086 corpus). `H6 / H7 / H8 / H9 / H10 / H11` need KPI /
 time-intelligence contracts to land first. `E3` needs `B1`/`B3` module-selection
 made introspectable. `K1` needs a third gate's emission format to stabilize.
+
+## HELD — gap #6 (accessibility self-assertion) — TEMPLATE FIXED, rule held
+
+_Design/business gap #6 from the 2026-07-04 gap analysis: a theme could
+self-assert an accessibility pass (§8 "all confirmed") that nothing verified —
+the same self-asserted-but-unchecked inconsistency the kit exists to prevent
+(hard rule #9 spirit)._
+
+**Done now (DEFINE-layer fix, has teeth immediately):** `templates/theme-json-spec.md`
+§8 + Readiness rewritten so a bare checklist tick is **not** confirmation. Each
+check names its evidence: **contrast → cite `CT1`'s computed verdict** (delegated,
+not self-reported); **CVD / small-size legibility / saturated-background → a named
+reviewer + date** (Principle-V human judgment / F016-rendered, not machine-ruled).
+This closes the hole where it lives: `theme-json-spec.md` §8 is the only surface
+carrying a bare "all confirmed" accessibility *checklist* (the shape that let a
+tick stand in for evidence). Sibling surfaces like `screenshot-review.md` §5 are
+findings-log tables, a different shape, out of scope here.
+
+**Held (rule, owner decision to fire):** an evidence-gate rule — a filled theme
+spec may not reach `pass` on a bare §8 tick (contrast must cite CT1; judgment
+items must carry a named reviewer). **Shape: evidence-gate / anti-self-assertion
+(DL4-like), NOT an accessibility computation** — CT1 is the only accessibility
+dimension the kit computes *today* (WCAG text/background contrast on committed
+token hexes). CVD-distinguishability and saturation are arithmetically computable
+too (a future owner could add a CT2-style rule), but the kit does not compute them
+now and this doc does not foreclose that choice; the small-size/adjacency check is
+render-dependent (F016). Absent a computed check, all three route to a named
+reviewer — the kit does not rule on them itself (Principle V). **Not auto-built:**
+post-#144 there is **no filled theme-spec instance** in tracked files, so the rule
+would fire on an empty set (BLOCKED — no live target). It ships when (a) a filled
+theme spec lands to check, and (b) the owner fires the spec (per the
+ask-before-firing rule). **Discriminator: no *filled* theme-spec instance (one
+carrying real token hexes + a `Status:`/reviewer, not the template's placeholders)
+exists outside `templates/` today.**
