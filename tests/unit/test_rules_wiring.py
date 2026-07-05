@@ -96,6 +96,7 @@ EXPECTED_RULE_IDS = frozenset(
         "CT1",  # contrast: token text/background pairs meet the declared WCAG floor
         "AD1",  # additivity-consistency: no illegal additivity composition in lineage
         "AQ1",  # answerability: domain decision-question routes resolve or are planned
+        "HR7",  # reload-idempotency: gold deviation load declares its reload-strategy
     }
 )
 

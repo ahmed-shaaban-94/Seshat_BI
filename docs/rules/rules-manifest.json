@@ -148,6 +148,10 @@
     "title": "No real host/value in committed PBIP parameters"
   },
   {
+    "id": "HR7",
+    "title": "reload-strategy declaration for gold loads"
+  },
+  {
     "id": "P1",
     "title": "Approach-A layout"
   },
