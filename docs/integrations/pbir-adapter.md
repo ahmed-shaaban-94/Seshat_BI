@@ -28,7 +28,7 @@ split:
 | Increment | Status | What it writes |
 |-----------|--------|----------------|
 | **A -- apply a generated theme** | **SHIPPED** | a BaseTheme resource + `report.json` `themeCollection`/`resourcePackages` |
-| B -- per-visual formatting | planned (separate plan) | allow-listed formatting keys in an existing `visual.json` |
+| **B -- per-visual formatting** | **SHIPPED** | allow-listed formatting under an existing `visual.json` `objects` / `visualContainerObjects` (data binding preserved byte-for-byte, FR-003) |
 | C -- backgrounds | planned (separate plan) | a page background reference to a committed surface-2 asset |
 
 ## Increment A -- how it works
@@ -54,6 +54,27 @@ Exactly: `themeCollection.baseTheme`, its `resourcePackages` `SharedResources` i
 and the BaseTheme resource file. NOTHING else -- no `visual.json`, no `page.json`
 geometry, no semantic-model file. The allow-list is enforced by the writer's
 construction and policed by R2.
+
+## Increment B -- per-visual formatting (how it works)
+
+`retail pbir-format-visual --visual <visual.json> --formatting <json-or-path>` sets
+allow-listed formatting on an EXISTING, already-data-bound visual:
+
+- **Allow-list (increment B):** `objects` groups `{legend, labels, dataPoint,
+  categoryAxis, valueAxis, title}` (chart-content) and `visualContainerObjects`
+  groups `{border, title, subTitle, background, dropShadow}` (chrome). A container
+  or group outside this map is refused.
+- **The FR-003 guarantee:** the writer snapshots `visual.query` + `visual.visualType`
+  before the edit and asserts they are byte-identical after -- refusing to write if
+  the edit would touch the data binding. Formatting only, never binding.
+- Property values are written in the PBIR `{"expr": {"Literal": {"Value": ...}}}`
+  wrapper. Deterministic (`sort_keys`), all-or-nothing, `--force` gates overwriting a
+  property already set to a different value.
+- **Proven against a real fixture:** a Microsoft PBIP-sample data-bound `lineChart`
+  (from `data-goblin/power-bi-visual-templates`), not a self-invented shape.
+- **Latency (honest):** increment B has no live target yet -- the committed report
+  page is empty, so it formats visuals a human authors later in Desktop. It is a
+  capability, not a restyling of an existing live report.
 
 ## Validation (what keeps a write safe)
 
