@@ -4,7 +4,7 @@
 - **stage:** `semantic_model_ready`
 - **subject:** the year-start boundary + partial-period normalization for the planned `ytd-net-sales` time-intelligence metric contract
 - **owner_required:** `metric-owner`  *(a metric-contract policy decision; F009 additive class -- see Authority class below)*
-- **status:** `open`  *(a request is `open` until a named human answers it via approval-decision.md; it never answers itself)*
+- **status:** `answered`  *(ruled 2026-07-05 by Ahmed Shaaban (metric_owner): E1=A calendar year, E2=C both-baselines-to-date-primary -- see `approval-decision-YTD-year-start.md`. A request is `open` until a named human answers it via approval-decision.md; it never answers itself.)*
 
 > **Why this is packaged separately from H9.** `H9-time-intel` ruled three
 > time-intelligence policies (D1 same-store / A11, D2 primary date / A3, D3 comparison
