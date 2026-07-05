@@ -64,11 +64,17 @@
   is `CLEARED`) in the durable decision record `approval-decision-H9-time-intel.md`
   answering `approval-request-H9-time-intel.md`; a `semantic_model_ready` policy-amendment
   entry is in `readiness-status.yaml` `approvals[]`. **`net-sales-growth` is now Seeded**
-  (D2+D3 were its only open decisions; 2026-07-05). **`ytd-net-sales` is NOT yet
-  unblocked** — it carries a SEPARATE owner-pending ambiguity H9 did not touch (the
-  fiscal-vs-calendar year-start + partial-period normalization), packaged as
-  `approval-request-YTD-year-start.md`; it stays `[planned]` until that is ruled.
+  (D2+D3 were its only open decisions; 2026-07-05).
   `same-store-sales-growth` stays `[planned]` (A11 unruled).
+- **[ANSWERED -- 2026-07-05 -- YTD-year-start (the ambiguity H9 did not cover)]** The
+  `ytd-net-sales` year-boundary policies were ruled by the named metric owner: **E1 = A**
+  (calendar year; no fiscal calendar; seedable on the existing date table), **E2 = C**
+  (both partial-period comparisons -- to-date-vs-to-date primary, full-prior-year
+  secondary; mirrors D3=C). Recorded in `approval-decision-YTD-year-start.md` answering
+  `approval-request-YTD-year-start.md`; a `semantic_model_ready` policy-amendment entry
+  is in `readiness-status.yaml` `approvals[]`. **`ytd-net-sales` is now unblocked** for a
+  SEPARATE F009 seed step (author `ytd.md` [planned] -> [seeded] resolving to E1=A + E2=C;
+  not done by the console). Unblocks the YTD portion of H6/H10.
 
 ---
 
