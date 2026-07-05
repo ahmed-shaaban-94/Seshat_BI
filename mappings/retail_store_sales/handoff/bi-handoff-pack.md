@@ -20,11 +20,11 @@ publish, no execution adapter (F016 owns live publish/refresh). ASCII, UTF-8 no 
 | # | Section | Points at (existing artifact) | Resolved? |
 |---|---------|-------------------------------|-----------|
 | a | Metric contracts (stage 5, approved) | `../metrics/*.yaml` (5 contracts, all `pass`, owner-approved 2026-06-25) | yes |
-| b | Readiness scorecard | `../readiness-status.yaml` (stages 1-6 pass; publish_ready = warning, re-approval pending after the discount-rate correction) | yes |
+| b | Readiness scorecard | `../readiness-status.yaml` (all seven stages pass; publish_ready re-approved 2026-07-05 against the corrected discount-rate pack) | yes |
 | c | Reconciliation evidence (stage 4) | `../reconciliation-report.md` (silver<->gold, PASS) + `../reconciliation-bronze-to-gold.md` (bronze->gold tie + grain uniqueness, PASS) | yes |
 | d | Known data issues / caveats | `../data-issues`-equivalent + `../assumptions.md` (composed below) | yes |
 | e | Data dictionary (deployed schema) | below | yes |
-| f | Publish approval | `../readiness-status.yaml` `approvals[]` (prior approval RETRACTED after the discount-rate correction; re-approval pending) | pending |
+| f | Publish approval | `../readiness-status.yaml` `approvals[]` (RE-APPROVED 2026-07-05 by the data owner against this corrected pack; supersedes the retracted 2026-06-25 approval) | yes |
 
 ## Known data issues / caveats (MANDATORY -- all four)
 
@@ -88,24 +88,24 @@ Every deployed column appears once; business meaning carried from `../source-map
 ```yaml
 approvals:
   - stage: "publish_ready"
-    owner: "<data_owner | governance>"   # to be recorded on RE-approval of the corrected pack
-    at: "<YYYY-MM-DD>"
+    owner: "Ahmed Shaaban (data_owner)"   # RE-approval against the corrected pack
+    at: "2026-07-05"
 ```
 
 A publish approval was RECORDED 2026-06-25 and then RETRACTED the same day: it was
 given against a pack that framed `DiscountedTransactionRate` as the 33.55% floor, which
 was corrected to the approved known-status rate (50.37%). Because the approved artifact
-materially changed, the approval no longer applies. The data owner must review THIS
-corrected pack and record a fresh `publish_ready` approval -> `publish_ready` becomes
-`pass`. Until then it is `warning`. The live publish/refresh ACTION remains F016.
+materially changed, that approval no longer applied. The data owner reviewed THIS
+corrected pack and recorded a fresh `publish_ready` approval on 2026-07-05 -> all seven
+stages are `pass`. The live publish/refresh ACTION remains F016 (deferred).
 
 ## Readiness verdict for this pack
 
-`warning` -- the pack is assembled and every required section resolves to a committed
-artifact, BUT the publish approval is PENDING re-approval after the
-`DiscountedTransactionRate` correction (the prior 2026-06-25 approval was retracted).
-Stages 1-6 are `pass`; `publish_ready` becomes `pass` only when the owner re-approves
-the corrected pack. NO numeric confidence score. The live publish ACTION is F016.
+`pass` -- the pack is assembled, every required section resolves to a committed
+artifact, AND the publish approval was re-recorded 2026-07-05 by the data owner against
+this corrected pack (superseding the retracted 2026-06-25 approval given under the wrong
+`DiscountedTransactionRate` framing). All seven stages are `pass`. NO numeric confidence
+score. The live publish ACTION is the deferred F016 execution adapter.
 
 ## See also
 
