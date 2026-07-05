@@ -226,6 +226,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overwrite an existing different base theme",
     )
 
+    # PBIR per-visual formatting (adapter increment B). Sets allow-listed formatting
+    # (objects / visualContainerObjects) on an existing data-bound visual.json; the
+    # data binding (query/visualType) is preserved byte-for-byte (FR-003). Same
+    # adapter boundary as increment A: local files only, no external dependency.
+    pbirfmt = sub.add_parser(
+        "pbir-format-visual",
+        help="apply allow-listed formatting to an existing PBIR visual (adapter)",
+    )
+    pbirfmt.add_argument(
+        "--visual", required=True, metavar="PATH", help="the visual.json to format"
+    )
+    pbirfmt.add_argument(
+        "--formatting",
+        required=True,
+        metavar="JSON_OR_PATH",
+        help=(
+            "formatting as a JSON string or a path to a JSON file: "
+            '{"visualContainerObjects": {"title": {"text": "Sales"}}}'
+        ),
+    )
+    pbirfmt.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite a formatting property already set to a different value",
+    )
+
     # Rule-registry snapshot manifest (feature 043). Writes the golden inventory
     # docs/rules/rules-manifest.json from the live registry. Test-only consumer
     # (the snapshot test); adds NO new `retail check` rule.
@@ -422,6 +448,11 @@ def main(argv: list[str] | None = None) -> int:
         from .pbir_theme_apply import pbir_apply_main
 
         return pbir_apply_main(args)
+
+    if args.command == "pbir-format-visual":
+        from .pbir_visual_format import pbir_format_main
+
+        return pbir_format_main(args)
 
     if args.command == "manifest":
         return _run_manifest(args)
