@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import colorsys
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,12 @@ from .color import contrast_ratio, is_valid_hex
 
 AA_FLOOR = 4.5
 _TEXT_ROLES = ("primary", "secondary", "muted")
+
+# A theme name is a filesystem-safe slug: it becomes a filename under themes/ and
+# design/tokens/, so it must never contain a path separator or ``..`` (that would
+# let --name escape the output dirs -- e.g. into powerbi/, a hard boundary). This
+# mirrors the is_relative_to / path guards the sibling CLI verbs already enforce.
+_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # Mode-sensible default sentiment colors (conservative, accessible tones) used
 # when the caller does not override them. COLORS only -- the sentiment
@@ -73,8 +80,23 @@ def derive_ramp(accent: str, n: int = 6) -> tuple[str, ...]:
     return tuple(_hls_to_hex(h, lightness, s) for lightness in steps)
 
 
+def _validate_name(name: str) -> None:
+    """Reject a name that is not a filesystem-safe slug (no separators / ``..``).
+
+    ``name`` becomes a filename under ``themes/`` and ``design/tokens/``; a value
+    containing ``/``, ``\\`` or ``..`` would let the generator write outside its
+    output directories (a path-traversal escape). Refuse it up front.
+    """
+    if not isinstance(name, str) or _NAME_RE.match(name) is None or ".." in name:
+        raise ThemeGenError(
+            f"name must be a filesystem-safe slug "
+            f"(letters/digits/._- only, no path separators or '..'): {name!r}"
+        )
+
+
 def build_palette(seed: ThemeSeed) -> dict:
     """Resolve the seed into a full palette dict (fills ramp if none given)."""
+    _validate_name(seed.name)
     for label, val in (
         ("accent", seed.accent),
         ("background", seed.background),
@@ -94,6 +116,11 @@ def build_palette(seed: ThemeSeed) -> dict:
             if not is_valid_hex(c):
                 raise ThemeGenError(f"data color is not a #RRGGBB hex: {c!r}")
         ramp = list(seed.data_colors)
+    if not ramp:
+        raise ThemeGenError(
+            "data_colors is empty -- supply at least one #RRGGBB, or omit "
+            "--data-colors to derive a ramp from the accent"
+        )
     return {
         "colors": {
             "primary": seed.accent,
@@ -252,11 +279,13 @@ def generate(seed: ThemeSeed, repo_root: Path, force: bool = False) -> list[Path
 
 def theme_gen_main(args) -> int:
     """CLI entry: assemble a ThemeSeed from argparse args, generate, report."""
-    dcs = (
+    dcs: tuple[str, ...] | None = (
         tuple(s.strip() for s in args.data_colors.split(",") if s.strip())
         if args.data_colors
         else None
     )
+    if dcs == ():  # an all-blank --data-colors -> derive from accent, not empty
+        dcs = None
     seed = ThemeSeed(
         name=args.name,
         mode=args.mode,

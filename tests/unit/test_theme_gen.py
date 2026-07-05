@@ -148,3 +148,24 @@ def test_refuses_overwrite_without_force(tmp_path: Path) -> None:
     with pytest.raises(ThemeGenError, match="exists"):
         generate(_seed(), repo_root=tmp_path)
     generate(_seed(), repo_root=tmp_path, force=True)  # ok with force
+
+
+@pytest.mark.parametrize(
+    "bad_name",
+    ["../../pwned", "../powerbi/definition/report", "a/b", "a\\b", "..", ".hidden"],
+)
+def test_name_path_traversal_is_refused(tmp_path: Path, bad_name: str) -> None:
+    # A --name that contains a path separator or '..' must be refused and write
+    # NOTHING (it could otherwise escape themes/ into powerbi/ -- a hard boundary).
+    with pytest.raises(ThemeGenError, match="slug"):
+        generate(_seed(name=bad_name), repo_root=tmp_path)
+    # nothing escaped the tmp repo
+    assert list(tmp_path.rglob("*.theme.json")) == []
+    assert list(tmp_path.rglob("*.theme-spec.md")) == []
+
+
+def test_empty_data_colors_is_clean_error(tmp_path: Path) -> None:
+    # An empty explicit ramp must raise ThemeGenError, never an IndexError
+    # traceback (the module's "never a traceback" contract).
+    with pytest.raises(ThemeGenError, match="empty"):
+        generate(_seed(data_colors=()), repo_root=tmp_path)
