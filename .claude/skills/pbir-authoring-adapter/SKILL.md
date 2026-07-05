@@ -56,10 +56,19 @@ this bounded adapter only* -- the static core stays forbidden from writing PBIR.
 as a BaseTheme resource and repoints `report.json`'s `themeCollection` at it. Works
 on an empty report page (no visuals needed). This is the safe smallest slice.
 
-## Increments B and C (planned, separate; NOT built here)
+## Increment B -- per-visual formatting (SHIPPED)
 
-- **B -- per-visual formatting**: writes allow-listed `visual.json` formatting keys;
-  needs a report with visuals a human already authored.
+`retail pbir-format-visual --visual <visual.json> --formatting <json>` sets
+allow-listed formatting under a visual's `objects` (chart-content: legend, labels,
+dataPoint, axes) and `visualContainerObjects` (chrome: border, title, subTitle,
+background, dropShadow) subtrees. **The FR-003 guarantee:** the visual's data
+binding (`query` + `visualType`) is asserted byte-identical before+after; the write
+is refused if it would change. It formats a visual a human already authored -- it
+never binds data or creates a visual. (Latent until a human builds a visual in
+Desktop; there is no live target to format yet.)
+
+## Increment C -- backgrounds (planned, separate; NOT built)
+
 - **C -- backgrounds**: sets a page background to a committed surface-2 asset.
 
 ## Hard stops
