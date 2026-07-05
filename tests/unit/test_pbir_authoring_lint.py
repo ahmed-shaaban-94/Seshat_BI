@@ -33,10 +33,30 @@ def test_missing_basetheme_reference_fails() -> None:
     assert "does not exist" in findings[0].message
 
 
-def test_forbidden_business_key_fails() -> None:
+def test_forbidden_definition_key_fails() -> None:
     findings = list(check_pbir_report_authoring(_ctx("r2_forbidden.Report")))
-    assert any(f.rule_id == "R2" for f in findings)
-    assert any("forbidden business-logic key" in f.message for f in findings)
+    # r2_forbidden has `measureDefinition` (a DEFINITION) -> must fire, and the
+    # locator must point at that specific key (pin it, not just any finding).
+    defn = [f for f in findings if f.locator.endswith("/measureDefinition")]
+    assert len(defn) == 1
+    assert defn[0].rule_id == "R2"
+    assert "DEFINES business logic" in defn[0].message
+
+
+def test_data_bound_reference_passes() -> None:
+    # A legitimate report REFERENCES a measure via the query-grammar wrapper keys
+    # `Measure`/`Expression` (a filter bound to a measure). These are references,
+    # NOT definitions -- R2 must NOT fire (else the gate breaks on the first real
+    # report). This is the false-positive regression guard.
+    findings = list(check_pbir_report_authoring(_ctx("r2_databound.Report")))
+    assert findings == [], f"R2 false-positived on a data-bound reference: {findings}"
+
+
+def test_missing_schema_fails() -> None:
+    findings = list(check_pbir_report_authoring(_ctx("r2_noschema.Report")))
+    assert len(findings) == 1
+    assert findings[0].rule_id == "R2"
+    assert "$schema" in findings[0].message
 
 
 def test_invalid_json_fails() -> None:

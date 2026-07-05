@@ -64,17 +64,32 @@ def check_pbir_relative_reference(ctx: RuleContext) -> Iterable[Finding]:
 # --- R2: PBIR report authoring-lint (polices what the theme-application adapter
 # writes; the READ-ONLY core sibling of the companion writer, ADR 0015). It asserts
 # a committed report.json is valid, keeps its $schema, references only BaseTheme
-# resources that exist, and carries no forbidden business-logic key (the report-file
-# analogue of DL1's styling-only rule). It NEVER writes -- the writer is the adapter.
-_R2_FORBIDDEN_TOKENS = (
-    "dax",
-    "measure",
-    "calculated",
-    "expression",
-    "threshold",
-    "relationship",
-    "sourcemapping",
-    "metricdefinition",
+# resources that exist, and DEFINES no business logic (the report-file analogue of
+# DL1's styling-only rule). It NEVER writes -- the writer is the adapter.
+#
+# CRITICAL distinction (why this is a WHOLE-KEY denylist, not substring containment):
+# a legitimate PBIR report REFERENCES model objects inline via the query-grammar
+# wrapper keys ``Measure`` / ``Expression`` / ``Column`` wherever a value is
+# data-bound (a filter on a measure, a title bound to a measure). Those are
+# REFERENCES to something the model already DEFINES -- expected, legal report
+# content this adapter exists to enable. R2 forbids only keys that DEFINE business
+# logic in the report file. So it matches the WHOLE normalized key against a
+# denylist of definition-shaped keys; it does NOT do substring containment (which
+# would false-positive ``Measure``/``Expression`` references and break the gate on
+# the first realistic report).
+_R2_FORBIDDEN_KEYS = frozenset(
+    {
+        "measuredefinition",
+        "calculatedcolumn",
+        "calculatedtable",
+        "calculatedmeasure",
+        "daxexpression",
+        "daxmeasure",
+        "sourcemapping",
+        "metricdefinition",
+        "sentimentthreshold",
+        "relationshipdefinition",
+    }
 )
 
 
@@ -93,20 +108,18 @@ def _normalize(key: str) -> str:
 def _walk_forbidden(node: Any, pointer: str, rel: str) -> Iterable[Finding]:
     if isinstance(node, dict):
         for key, value in node.items():
-            nk = _normalize(key)
-            for tok in _R2_FORBIDDEN_TOKENS:
-                if tok in nk:
-                    yield Finding(
-                        rule_id="R2",
-                        severity=Severity.ERROR,
-                        message=(
-                            f"report.json carries a forbidden business-logic key "
-                            f"{key!r} (matches {tok!r}); a report file is layout + "
-                            f"styling, business meaning belongs in the model/contract"
-                        ),
-                        locator=f"{rel}#{pointer}/{key}",
-                    )
-                    break
+            if _normalize(key) in _R2_FORBIDDEN_KEYS:
+                yield Finding(
+                    rule_id="R2",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"report.json DEFINES business logic via key {key!r}; a "
+                        f"report file is layout + styling and may only REFERENCE "
+                        f"model objects, never define them (a definition belongs "
+                        f"in the semantic model / metric contract)"
+                    ),
+                    locator=f"{rel}#{pointer}/{key}",
+                )
             yield from _walk_forbidden(value, f"{pointer}/{key}", rel)
     elif isinstance(node, list):
         for i, item in enumerate(node):
