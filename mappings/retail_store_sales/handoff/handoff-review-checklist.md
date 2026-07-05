@@ -20,12 +20,11 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 - [x] Out-of-scope list present (margin, returns, demographics, live publish).
 
 ## 4. Publish approval (named human sign-off; agent never self-grants)
-- [ ] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
-      and in the pack. **PENDING RE-APPROVAL** -- a publish approval was recorded
-      2026-06-25 and then RETRACTED: it was given against a pack framing
-      DiscountedTransactionRate as 33.55%, since corrected to the approved known-status
-      rate (50.37%). The owner must re-approve the corrected pack. `publish_ready` =
-      `warning` until then.
+- [x] A `publish_ready` approval is recorded in `../readiness-status.yaml` `approvals[]`
+      and in the pack. **RE-APPROVED 2026-07-05** by the data owner against this
+      corrected pack (DiscountedTransactionRate = known-status 50.37%), superseding the
+      retracted 2026-06-25 approval that was given under the wrong 33.55% framing.
+      `publish_ready` = `pass`.
 
 ## 5. Guardrails
 - [x] No fabricated confidence/health NUMBER anywhere -- statuses + evidence + counts only.
@@ -35,11 +34,11 @@ cannot be checked is a gap. ASCII, UTF-8 no BOM.
 ## Verdict
 
 All sections + caveats + reconciliation + data-dictionary-matches-schema are
-satisfied EXCEPT the publish approval (item 4), which is pending RE-approval after the
-DiscountedTransactionRate correction (the prior 2026-06-25 approval was retracted). So
-the pack supports `publish_ready: warning` now, and `pass` the moment the owner
-re-approves the corrected pack. Stages 1-6 remain `pass`. The live publish/refresh
-ACTION is the deferred, gated F016 execution adapter.
+satisfied, INCLUDING the publish approval (item 4): the data owner re-approved the
+corrected pack on 2026-07-05 (DiscountedTransactionRate = known-status 50.37%,
+superseding the retracted 2026-06-25 approval). So the pack supports `publish_ready:
+pass`, and all seven stages are `pass`. The live publish/refresh ACTION is the
+deferred, gated F016 execution adapter (not performed here).
 
 ## See also
 
