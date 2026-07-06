@@ -303,6 +303,27 @@ def _build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="replace an existing page background"
     )
 
+    # PBIR visual geometry (adapter increment D). Sets a visual's position rectangle
+    # (x/y/width/height/z/tabOrder), preserving its data binding (FR-003) and refusing
+    # off-canvas rectangles read from the real page.json canvas. NEVER visualType /
+    # creation / unbound moves (ADR 0016). Allow-list-only; no external dependency.
+    pbirgeom = sub.add_parser(
+        "pbir-set-geometry",
+        help="set a PBIR visual's position rectangle (adapter increment D)",
+    )
+    pbirgeom.add_argument(
+        "--visual", required=True, metavar="PATH", help="the visual.json to lay out"
+    )
+    pbirgeom.add_argument(
+        "--position",
+        required=True,
+        metavar="JSON_OR_PATH",
+        help=(
+            "position as a JSON string or path: "
+            '{"x": 100, "y": 80, "width": 400, "height": 300}'
+        ),
+    )
+
     # Rule-registry snapshot manifest (feature 043). Writes the golden inventory
     # docs/rules/rules-manifest.json from the live registry. Test-only consumer
     # (the snapshot test); adds NO new `retail check` rule.
@@ -514,6 +535,11 @@ def main(argv: list[str] | None = None) -> int:
         from .pbir_page_background import pbir_page_bg_main
 
         return pbir_page_bg_main(args)
+
+    if args.command == "pbir-set-geometry":
+        from .pbir_geometry import pbir_geometry_main
+
+        return pbir_geometry_main(args)
 
     if args.command == "manifest":
         return _run_manifest(args)
