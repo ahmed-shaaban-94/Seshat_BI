@@ -30,6 +30,7 @@ split:
 | **A -- apply a generated theme** | **SHIPPED** | a BaseTheme resource + `report.json` `themeCollection`/`resourcePackages` |
 | **B -- per-visual formatting** | **SHIPPED** | allow-listed formatting under an existing `visual.json` `objects` / `visualContainerObjects` (data binding preserved byte-for-byte, FR-003) |
 | **C -- page background** | **SHIPPED** | copies a surface-2 image asset into `RegisteredResources`, registers it in `report.json`, references it from `page.json` `objects.background` via a `ResourcePackageItem` (wire format taken verbatim from a real Desktop-authored sample -- the hold was correct) |
+| **D -- visual geometry** | **SHIPPED (latent)** | an existing `visual.json`'s `position` rectangle (`x`/`y`/`width`/`height`/`z`/`tabOrder`), preserving the data binding (FR-003) and refusing off-canvas rectangles read from the real `page.json` canvas. Never `visualType`, never creates/deletes, never moves an unbound visual (ADR 0016). Authorized by ADR 0016 (ratified 2026-07-06) |
 
 ## Increment A -- how it works
 
@@ -75,6 +76,30 @@ allow-listed formatting on an EXISTING, already-data-bound visual:
 - **Latency (honest):** increment B has no live target yet -- the committed report
   page is empty, so it formats visuals a human authors later in Desktop. It is a
   capability, not a restyling of an existing live report.
+
+## Increment D -- visual geometry (how it works)
+
+`retail pbir-set-geometry --visual <visual.json> --position <json-or-path>` sets the
+layout rectangle of an EXISTING, already-bound visual (authorized by ADR 0016):
+
+- **Allow-list (increment D):** the `position` keys `{x, y, width, height, z,
+  tabOrder}` only. Any other key is refused. Every value must be a number.
+- **The FR-003 guarantee (unchanged):** the writer snapshots `visual.query` +
+  `visual.visualType` before the edit and asserts they are byte-identical after --
+  geometry is written BESIDE the binding, never through it. It never changes
+  `visualType`, never creates/deletes a visual or page, never moves an unbound visual.
+- **On-canvas guard:** the result rectangle (existing merged with requested keys) must
+  fit the page's REAL canvas, read from the sibling `page.json` top-level
+  `width`/`height` -- never a hardcoded size. Off-canvas / negative / non-numeric
+  rectangles are refused; a missing/non-numeric `page.json` is a clean error, never a
+  hardcode fallback. Overlap between visuals is ALLOWED (a design judgment, not a
+  mechanical-validity one -- ADR 0016 Q3).
+- **No `--force`:** position keys always pre-exist, so moving a visual is the operation;
+  there is no differs-then-refuse gate (it would block every move). Overwrite safety is
+  the reviewable git diff + human ratification.
+- **Latency (honest):** the committed report page has zero visuals, so increment D is
+  proven on a dedicated fixture and is LATENT until a real multi-visual report lands --
+  a capability, not a re-layout of an existing live report.
 
 ## Validation (what keeps a write safe)
 
