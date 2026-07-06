@@ -136,3 +136,28 @@ def test_partial_move_overrunning_unchanged_width_is_rejected(tmp_path):
     vp = _visual(report, "vA")  # x=100, width=300 on 1600-wide canvas
     with pytest.raises(PbirGeometryError, match="off-canvas"):
         set_geometry(vp, {"x": 1400})  # 1400 + unchanged 300 = 1700 > 1600
+
+
+def test_negative_width_rejected(tmp_path):
+    report = _report(tmp_path)
+    vp = _visual(report, "vA")
+    with pytest.raises(PbirGeometryError, match="must be positive"):
+        set_geometry(vp, {"width": -50})
+
+
+def test_negative_dimension_cannot_escape_offcanvas_guard(tmp_path):
+    # Origin x=5000 is far off a 1600-wide canvas, but width=-4000 makes
+    # rx + rw = 1000, which is NOT > canvas_w -- the overrun half of the
+    # off-canvas check alone would wrongly accept this. The width/height
+    # positivity guard must catch it first.
+    report = _report(tmp_path)
+    vp = _visual(report, "vA")
+    with pytest.raises(PbirGeometryError, match="must be positive"):
+        set_geometry(vp, {"x": 5000, "width": -4000})
+
+
+def test_zero_size_rejected(tmp_path):
+    report = _report(tmp_path)
+    vp = _visual(report, "vA")
+    with pytest.raises(PbirGeometryError, match="must be positive"):
+        set_geometry(vp, {"width": 0, "height": 0})

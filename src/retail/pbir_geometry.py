@@ -136,6 +136,15 @@ def set_geometry(visual_json: Path, position: dict) -> Path:
     for label, v in (("x", rx), ("y", ry), ("width", rw), ("height", rh)):
         if isinstance(v, bool) or not isinstance(v, (int, float)):
             raise PbirGeometryError(f"result {label} is not numeric: {v!r}")
+    # A non-positive width/height is degenerate (zero-size is invisible; negative
+    # is nonsensical) AND, left unchecked, a negative dimension can shrink x+w or
+    # y+h enough to defeat the overrun half of the off-canvas check below while the
+    # origin itself is off-canvas. Reject both before the position/overrun check.
+    if rw <= 0 or rh <= 0:
+        raise PbirGeometryError(
+            f"result rectangle width={rw} height={rh} must be positive "
+            f"(non-positive width/height is a degenerate rectangle); refusing to write"
+        )
     if rx < 0 or ry < 0 or rx + rw > canvas_w or ry + rh > canvas_h:
         raise PbirGeometryError(
             f"result rectangle x={rx} y={ry} w={rw} h={rh} is off-canvas "
