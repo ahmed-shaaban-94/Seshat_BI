@@ -29,7 +29,7 @@ split:
 |-----------|--------|----------------|
 | **A -- apply a generated theme** | **SHIPPED** | a BaseTheme resource + `report.json` `themeCollection`/`resourcePackages` |
 | **B -- per-visual formatting** | **SHIPPED** | allow-listed formatting under an existing `visual.json` `objects` / `visualContainerObjects` (data binding preserved byte-for-byte, FR-003) |
-| C -- backgrounds | **HELD** (blocked-on-real-wire-format) | a page background IMAGE reference to a committed surface-2 asset -- held until a real Desktop-authored `page.json` background + asset is provided (see `pbir-adapter-C-unblocker.md`); no schema-guess, and background COLOR is NOT a substitute (that is the surface-3 theme fill) |
+| **C -- page background** | **SHIPPED** | copies a surface-2 image asset into `RegisteredResources`, registers it in `report.json`, references it from `page.json` `objects.background` via a `ResourcePackageItem` (wire format taken verbatim from a real Desktop-authored sample -- the hold was correct) |
 
 ## Increment A -- how it works
 

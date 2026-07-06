@@ -1,6 +1,12 @@
 # Increment C unblocker -- how to provide a real page-background sample
 
-**Status of increment C:** held / blocked-on-real-wire-format.
+> **RESOLVED 2026-07-06.** The owner provided a real Desktop-authored sample (a page
+> background on the c086 sales report); increment C was built from its real wire
+> format (`ResourcePackageItem` image URL) and is now SHIPPED
+> (`retail pbir-set-page-background`). This guide is kept as the record of how the
+> hold was unblocked. The rest of the document is historical.
+
+**Status of increment C:** ~~held / blocked-on-real-wire-format~~ -> SHIPPED.
 **Reason:** no verified PBIR page-background *image* structure was found from any real
 source (the page schema delegates to `formattingObjectDefinitions`, which does not
 contain it; `gh search code` and the public PBIP sample repos turned up no `page.json`
