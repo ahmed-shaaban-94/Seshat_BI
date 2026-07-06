@@ -252,6 +252,34 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overwrite a formatting property already set to a different value",
     )
 
+    # PBIR page background (adapter increment C). Sets a page's canvas background to a
+    # committed surface-2 image asset: copies the asset into RegisteredResources,
+    # registers it in report.json, references it from page.json objects.background via
+    # a ResourcePackageItem. Allow-list-only (touches only objects.background + the
+    # RegisteredResources package); no external dependency; surface-2 purity.
+    pbirbg = sub.add_parser(
+        "pbir-set-page-background",
+        help="set a PBIR page's canvas background to a surface-2 image asset (adapter)",
+    )
+    pbirbg.add_argument(
+        "--asset", required=True, metavar="PATH", help="the image asset to use"
+    )
+    pbirbg.add_argument(
+        "--report", required=True, metavar="DIR", help="the *.Report/ dir"
+    )
+    pbirbg.add_argument(
+        "--page", required=True, metavar="PAGE_NAME", help="the page folder name"
+    )
+    pbirbg.add_argument(
+        "--scaling",
+        choices=("Fit", "Fill", "Normal"),
+        default="Fit",
+        help="image scaling (default Fit)",
+    )
+    pbirbg.add_argument(
+        "--force", action="store_true", help="replace an existing page background"
+    )
+
     # Rule-registry snapshot manifest (feature 043). Writes the golden inventory
     # docs/rules/rules-manifest.json from the live registry. Test-only consumer
     # (the snapshot test); adds NO new `retail check` rule.
@@ -453,6 +481,11 @@ def main(argv: list[str] | None = None) -> int:
         from .pbir_visual_format import pbir_format_main
 
         return pbir_format_main(args)
+
+    if args.command == "pbir-set-page-background":
+        from .pbir_page_background import pbir_page_bg_main
+
+        return pbir_page_bg_main(args)
 
     if args.command == "manifest":
         return _run_manifest(args)

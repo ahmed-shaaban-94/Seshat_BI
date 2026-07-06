@@ -67,9 +67,19 @@ is refused if it would change. It formats a visual a human already authored -- i
 never binds data or creates a visual. (Latent until a human builds a visual in
 Desktop; there is no live target to format yet.)
 
-## Increment C -- backgrounds (planned, separate; NOT built)
+## Increment C -- page background (SHIPPED)
 
-- **C -- backgrounds**: sets a page background to a committed surface-2 asset.
+`retail pbir-set-page-background --asset <img> --report <*.Report/> --page <name>
+[--scaling Fit|Fill|Normal]` sets a page's canvas background to a committed surface-2
+image asset: it copies the asset into `StaticResources/RegisteredResources/`,
+registers it in `report.json` (the RegisteredResources package), and references it
+from `page.json` `objects.background` via a `ResourcePackageItem` URL + name +
+scaling. Allow-list-only: touches ONLY `objects.background` + the RegisteredResources
+package -- every other page object (e.g. `outspacePane`) and report key is preserved.
+Surface-2 purity: references a static image, bakes no data into it. The wire format
+(`ResourcePackageItem`, `PackageType: 1`) was taken verbatim from a real
+Desktop-authored sample -- it was NOT guessed (increment C was held until that sample
+existed).
 
 ## Hard stops
 

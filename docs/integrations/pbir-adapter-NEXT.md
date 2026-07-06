@@ -16,22 +16,22 @@ Power BI report's visuals -- writing the PBIR/PBIP JSON directly, no external to
 | Slice 1 -- theme generator | **SHIPPED** (PR #204) | `retail theme-gen` -> `src/retail/theme_gen.py` |
 | Adapter A -- apply theme to a report | **SHIPPED** (PR #206) | `retail pbir-apply-theme` -> `src/retail/pbir_theme_apply.py` |
 | Adapter B -- format cards/charts | **SHIPPED** (PR #207) | `retail pbir-format-visual` -> `src/retail/pbir_visual_format.py` |
-| Adapter C -- page background image | **HELD** (PR #208 recorded it) | not built -- see below |
+| Adapter C -- page background image | **SHIPPED** (2026-07-06, from a real owner sample) | `retail pbir-set-page-background` -> `src/retail/pbir_page_background.py` |
 | Core lint R2 (polices written report.json) | SHIPPED | `src/retail/rules/pbir.py` |
 
 Everything above is green on `main` (`retail check` exit 0; full `pytest -m unit`
 passing). The three verbs chain: generate a theme -> apply it to a report -> format
 individual visuals.
 
-## The one blocked item: Increment C (page background image)
+## Increment C (page background image) -- RESOLVED / SHIPPED 2026-07-06
 
-- **Status:** held / blocked-on-real-wire-format.
-- **Reason:** the PBIR page-background *image* JSON structure could not be verified
-  from any real source, and no committed surface-2 image asset exists in this repo.
-  We chose NOT to guess it (guessing would break the real-wire-format grounding that
-  made A and B survive review).
-- **Do NOT** ship background *color* as a substitute -- that is the surface-3 theme
-  fill Slice 1 already sets; substituting it silently reframes C.
+Was held (blocked-on-real-wire-format). The owner provided a real Desktop-authored
+sample (a page background on the c086 sales report), which revealed the wire format
+that could not be guessed: the image URL is a **`ResourcePackageItem`** wrapper
+(`PackageName`/`PackageType: 1`/`ItemName`), not a Literal. C was built from that real
+format and shipped as `retail pbir-set-page-background`. The hold was vindicated --
+guessing would have produced the wrong structure. (Background *color* was correctly
+NOT used as a substitute; that is the surface-3 theme fill.)
 
 ### To unblock C (the ~5-minute task -- do this from any device with Power BI Desktop)
 
