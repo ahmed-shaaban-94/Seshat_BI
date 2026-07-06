@@ -187,6 +187,19 @@ def test_compile_refuses_when_deferred_field_differs_even_with_force(tmp_path: P
     assert "deferred" in msg
 
 
+def test_existing_theme_not_a_json_object_is_clean_error(tmp_path: Path):
+    # The existing-theme file is valid JSON but not an object (e.g. a bare
+    # array) -- must raise a clean ThemeCompileError, not a raw AttributeError
+    # when the guard later calls .get() on it.
+    tokens = _write_tokens(tmp_path, TOKENS)
+    out_path = tmp_path / "themes" / "executive-dark.theme.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ThemeCompileError, match="not a JSON object"):
+        compile_theme(tokens, out_path=None, force=True)
+
+
 def test_compile_proceeds_when_only_dl3_governed_differs_with_force(tmp_path: Path):
     # Only dataColors (DL3-governed) drifted on disk -- this is the drift the
     # verb legitimately repairs. Deferred fields are untouched, so --force

@@ -204,8 +204,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # Tokens -> theme compile (deterministic; reuses theme-gen's renderer). Reads a
-    # committed design-tokens YAML and writes its matching theme.json. The generator
-    # whose output DL3 checks; removes the hand-edit that desyncs a theme from tokens.
+    # committed design-tokens YAML and writes its matching theme.json. Repairs
+    # DL3-governed drift but refuses to overwrite hand-tuned DL3-deferred fields.
     themecompile = sub.add_parser(
         "theme-compile",
         help="compile a committed design-tokens YAML into its theme.json",

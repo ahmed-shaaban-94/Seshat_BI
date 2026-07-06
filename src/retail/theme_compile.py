@@ -5,9 +5,13 @@ rebuilding the palette from the tokens' own values and delegating to the existin
 ``theme_gen.render_theme_json`` -- the single source of the theme's JSON shape.
 It chooses no color, derives nothing, and invents no key: every value written is
 copied from the tokens. The output is byte-identical to what ``theme-gen`` wrote
-for those tokens, which is precisely the invariant DL3 (token->theme fidelity)
-asserts. This is the GENERATOR whose output DL3 checks; it removes the hand-edit
-that is otherwise the only way to desync a theme from its tokens.
+for those tokens ONLY when the theme was generated and never hand-tuned; that is
+the invariant DL3 (token->theme fidelity) asserts for a fresh theme. Once a theme
+has been hand-tuned, compile repairs DL3-GOVERNED drift (dataColors, background)
+but REFUSES to overwrite DL3-DEFERRED, human-owned fields (name, foreground,
+tableAccent, good/neutral/bad, visualStyles) even with --force -- it reports the
+conflicting fields for manual reconciliation rather than silently overriding a
+human decision (Principle V).
 
 DEFINE-only: writes one ``themes/*.theme.json``; no PBIR/visual.json/model, no
 pbi-cli / live Power BI / network. Reuses ``theme_gen``'s renderer, contrast gate,
@@ -117,7 +121,8 @@ def _derive_name(tokens_doc: dict) -> str:
     raw = meta.get("name") if isinstance(meta, dict) else None
     if not isinstance(raw, str) or not raw:
         raise ThemeCompileError(
-            "tokens missing meta.name; pass --name to set the theme basename"
+            "tokens missing meta.name; meta.name is required to derive the "
+            "theme basename"
         )
     return (
         raw[: -len(_TOKENS_NAME_SUFFIX)] if raw.endswith(_TOKENS_NAME_SUFFIX) else raw
@@ -217,7 +222,7 @@ def _deferred_field_conflicts(existing: dict, rendered: dict) -> list[str]:
 def _load_existing_theme(out: Path) -> dict:
     try:
         with out.open(encoding="utf-8-sig") as fh:
-            return json.load(fh)
+            doc = json.load(fh)
     except OSError as exc:
         raise ThemeCompileError(
             f"existing theme file could not be read ({exc.__class__.__name__}): {out}"
@@ -226,6 +231,9 @@ def _load_existing_theme(out: Path) -> dict:
         raise ThemeCompileError(
             f"existing theme file is not valid JSON ({exc.__class__.__name__}): {out}"
         ) from exc
+    if not isinstance(doc, dict):
+        raise ThemeCompileError(f"existing theme file is not a JSON object: {out}")
+    return doc
 
 
 def compile_theme(tokens_path: Path, out_path: Path | None, force: bool) -> Path:
