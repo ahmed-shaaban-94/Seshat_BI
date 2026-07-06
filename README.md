@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="assets/brand/seshat-bi-logo.png" alt="Seshat BI" width="280" />
+<img src="assets/brand/seshat-bi-hero.svg" alt="Seshat BI -- Retail BI Readiness System -- From messy retail data to trusted, governed BI." width="820" />
 
-# Seshat BI
-
-**From messy retail data to trusted, governed BI.**
+<br/>
 
 An agent-first Retail BI readiness system: profile the source, map its meaning,
 build the medallion warehouse, validate it, define metrics, prepare the semantic
@@ -12,12 +10,12 @@ model, design the dashboard -- and only then publish.
 
 <br/>
 
-![status](https://img.shields.io/badge/status-active-0B9A9A)
-![stack](https://img.shields.io/badge/warehouse-PostgreSQL-001E35)
-![bi](https://img.shields.io/badge/BI-Power%20BI%20PBIP-C69214)
-![gate](https://img.shields.io/badge/governance-retail%20check-0B9A9A)
-![python](https://img.shields.io/badge/python-3.13-001E35)
-![license](https://img.shields.io/badge/license-Apache--2.0-001E35)
+[![status](https://img.shields.io/badge/status-active-0B9A9A?style=flat-square&labelColor=001E35)](#what-is-built-today)
+[![warehouse](https://img.shields.io/badge/warehouse-PostgreSQL-0B9A9A?style=flat-square&logo=postgresql&logoColor=F7F1E7&labelColor=001E35)](#architecture)
+[![BI](https://img.shields.io/badge/BI-Power%20BI%20PBIP-C69214?style=flat-square&logo=powerbi&logoColor=001E35&labelColor=001E35)](#power-bi-policy)
+[![governance](https://img.shields.io/badge/gate-retail%20check-0B9A9A?style=flat-square&labelColor=001E35)](docs/glossary.md)
+[![python](https://img.shields.io/badge/python-3.13-C69214?style=flat-square&logo=python&logoColor=F7F1E7&labelColor=001E35)](#quickstart)
+[![license](https://img.shields.io/badge/license-Apache--2.0-0B9A9A?style=flat-square&labelColor=001E35)](LICENSE)
 
 </div>
 
