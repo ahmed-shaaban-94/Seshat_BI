@@ -1,10 +1,11 @@
 # 0016 -- The PBIR adapter may write visual GEOMETRY (increment D), bounded
 
 - **Date:** 2026-07-06
-- **Status:** **PROPOSED -- awaiting owner ratification.** This ADR is drafted to the
-  ratify line by the agent; it is NOT accepted until a named owner records ratification
-  here (Principle V; the agent may not self-ratify). No geometry writer is built or
-  authorized until that ratification.
+- **Status:** **Accepted -- RATIFIED by Ahmed Shaaban (owner) on 2026-07-06.** The owner
+  directed ratification of this ADR by name and resolved its three open questions (see
+  the Open questions block below). Increment D is authorized to be built under the terms
+  of this ADR; the writer/allow-list/lint are enumerated future work and ship no PBIR by
+  this decision.
 - **Roadmap feature:** F034 (Visual Implementation) -- increment D. Extends the
   formatting-only adapter (ADR 0015, RATIFIED 2026-07-05) to a *bounded* geometry
   (layout) capability. A/B/C (theme / per-visual formatting / page background) shipped;
@@ -120,20 +121,40 @@ geometry is written by this decision.
 - **Auto-rank the headline / reading order.** Rejected: that is the Principle-V judgment
   (decision 5); the layer proposes slots, the owner ranks.
 
-## Open questions for the owner (decide at ratification)
+## Open questions -- RESOLVED at ratification (owner, 2026-07-06)
 
-1. **`z`/stack order** -- included above as layout; confirm it is not treated as meaning.
-2. **`visualType`** -- this draft EXCLUDES it (decision 2). Confirm, or authorize it as a
-   separate, more-guarded sub-lift.
-3. **Overlap policy** -- should the lint reject ANY overlap, or allow intentional layering
-   (a KPI over a background band)? This draft rejects off-canvas but leaves overlap policy
-   to the spec.
+1. **`z`/stack order -- INCLUDED as layout.** `z` is spatial/presentation (which visual
+   sits on top), the same class as `x/y/width/height`, not data-meaning. It is required
+   by the overlap resolution below: once overlap is allowed, stacking order must be
+   controllable or layering is nondeterministic. `apply_verb: D` writes `z`.
+2. **`visualType` -- EXCLUDED (draft position confirmed).** Changing a visual's type
+   (bar->line) changes how the data *reads* -- representation-as-meaning, which
+   contradicts the adapter's "styler, not author of truth" identity (ADR 0015 decision
+   2) and has no demonstrated need. It stays forbidden and FR-003-guarded. Any future
+   `visualType` capability is a separate, more-guarded sub-lift under its own ADR.
+3. **Overlap policy -- reject OFF-CANVAS only; ALLOW overlap.** The geometry lint
+   enforces *objective mechanical validity* (negative / off-canvas / non-numeric
+   rectangles are objectively broken -> lint fails), but it MUST NOT judge whether an
+   overlap is accidental occlusion or intentional layering (a KPI over a background
+   band) -- that is a design-quality judgment the lint is structurally unqualified to
+   make (it belongs to the human render + `screenshot-review`, per the layer's stated
+   ceiling). So overlap is permitted; only off-canvas is rejected.
+   - **Build note (load-bearing):** with off-canvas as the primary geometry check, the
+     lint MUST read the REAL page canvas dimensions from the report's page definition --
+     never a hardcoded constant (e.g. 1280x720). A wrong constant makes the lint miss
+     real off-canvas or false-positive valid layouts. Verify the source of canvas
+     width/height before implementing.
 
 ## Ratification
 
-- **ratified_by:** _(empty -- a named owner signs here; the agent is structurally
-  forbidden to fill it. Until then this ADR is PROPOSED and no geometry writer is built.)_
-- **ratified_on:**
+- **ratified_by:** Ahmed Shaaban (owner)
+- **ratified_on:** 2026-07-06
+
+The owner directed ratification of this ADR by name (named-owner authority; the agent
+recorded the decision, did not self-ratify -- Principle V). Increment D may now be
+specced and built under these terms. It ships LATENT: the real report page has zero
+visuals, so the writer + lint are proven on a fixture and are latent until a real
+multi-visual report lands (same posture as A/B/C and the smart-formatting layer).
 
 ## See also
 
