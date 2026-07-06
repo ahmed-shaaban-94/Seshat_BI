@@ -15,6 +15,7 @@
 - Off-canvas guard MUST read real `page.json` `width`/`height`; NEVER hardcode a canvas size. Missing/non-numeric `page.json` dims → clean error, no fallback.
 - Overlap between visuals is ALLOWED (not checked); only off-canvas/negative/non-numeric rectangles are rejected (ratified ADR 0016 Q3).
 - Every failure raises `PbirGeometryError` (clean, no traceback). No score/confidence. No self-granted pass.
+- NO `--force` / overwrite gate. Position keys ALWAYS pre-exist on a visual, so moving a visual necessarily changes them — a "refuse if the value already differs" gate (the increment-B analogy) would fire on every real move and make the verb unusable. The overwrite safety net is the reviewable git diff + human ratification, not a per-call flag. `set_geometry(visual_json, position)` takes no `force`; there is no `--force` CLI arg. (Idempotent re-set writes identical bytes and needs no gate.)
 - All values written must be numbers (int/float). Staged JSON must be round-trip stable. Write utf-8, `newline="\n"`; read utf-8-sig.
 - Target must live under a `*.Report/` tree (traversal guard, same as increment B).
 - Fixture is GENERIC (Principle VII): placeholder page/visual names, generic dims; SHAPE copied from c086, never its literals.
@@ -27,7 +28,7 @@
 - **Create `tests/fixtures/pbir/geometry.Report/`** — a minimal generic PBIR report: one `page.json` (canvas 1600×900) + two `visual.json` files with `position` blocks. The test substrate.
 - **Create `src/retail/pbir_geometry.py`** — the writer + on-canvas guard + `pbir_geometry_main`. ~140 lines.
 - **Modify `src/retail/cli.py`** — add the `pbir-set-geometry` subparser (after the `pbir-set-page-background` parser block) + its dispatch branch (after that verb's dispatch).
-- **Create `tests/unit/test_pbir_geometry.py`** — module tests (valid write, FR-003, allow-list, off-canvas incl. the non-default-canvas decoy, overlap-allowed, missing page.json, force).
+- **Create `tests/unit/test_pbir_geometry.py`** — module tests (valid write, FR-003, allow-list, off-canvas incl. the non-default-canvas decoy, overlap-allowed, missing page.json, repeated-move-no-force-gate).
 - **Create `tests/unit/test_pbir_geometry_cli.py`** — CLI exit 0/2.
 
 ---
@@ -109,7 +110,7 @@ git commit -m "test: generic geometry fixture (1600x900 canvas, two positioned v
 **Interfaces:**
 - Produces:
   - `class PbirGeometryError(Exception)`
-  - `set_geometry(visual_json: Path, position: dict, force: bool = False) -> Path` — sets the allow-listed position keys, preserving binding, validating on-canvas against the sibling page.json; returns the written path.
+  - `set_geometry(visual_json: Path, position: dict) -> Path` — sets the allow-listed position keys, preserving binding, validating on-canvas against the sibling page.json; returns the written path. NO force param (see Global Constraints).
   - `pbir_geometry_main(args) -> int` (added in Task 3).
 
 - [ ] **Step 1: Write the failing test for a valid write + binding preservation**
@@ -248,7 +249,7 @@ def _canvas_dims(visual_json: Path) -> tuple[float, float]:
     return float(w), float(h)
 
 
-def set_geometry(visual_json: Path, position: dict, force: bool = False) -> Path:
+def set_geometry(visual_json: Path, position: dict) -> Path:
     """Set the allow-listed ``position`` keys on the visual, on-canvas + binding-safe."""
     visual_json = Path(visual_json)
     if not visual_json.is_file():
@@ -295,18 +296,9 @@ def set_geometry(visual_json: Path, position: dict, force: bool = False) -> Path
             f"(canvas {canvas_w}x{canvas_h}); refusing to write"
         )
 
-    # Overwrite gate: a DIFFERENT rectangle needs force (idempotent re-set is fine).
-    if result != doc["position"] and doc["position"] != {**doc["position"]} and not force:
-        pass  # placeholder replaced below
-    if result != doc["position"] and not force:
-        # only gate when an EXISTING key changes to a different value
-        changed = {k for k in position if doc["position"].get(k) != position[k]}
-        if changed:
-            raise PbirGeometryError(
-                f"position keys {sorted(changed)} already set to different values -- "
-                f"use force=True to overwrite"
-            )
-
+    # No overwrite gate: moving a visual necessarily changes always-present position
+    # keys, so a "differs -> refuse" gate would block every real move. Overwrite safety
+    # is the reviewable git diff + human ratification, not a per-call flag.
     doc["position"] = result
 
     binding_after = _dump(
@@ -398,13 +390,15 @@ def test_missing_page_json_is_clean_error_no_hardcode(tmp_path: Path):
         set_geometry(vp, {"x": 200, "y": 150, "width": 300, "height": 300})
 
 
-def test_overwrite_needs_force(tmp_path: Path):
+def test_repeated_move_is_allowed_no_force_gate(tmp_path: Path):
+    # Moving a visual repeatedly is the operation, not an error -- there is no
+    # force gate (position keys always pre-exist; a differs->refuse gate would
+    # block every real move). Each call just re-lays-out.
     report = _report(tmp_path)
     vp = _visual(report, "vA")
-    set_geometry(vp, {"x": 200})              # first change ok (from 100)
-    with pytest.raises(PbirGeometryError, match="force"):
-        set_geometry(vp, {"x": 250})          # different value, no force
-    assert set_geometry(vp, {"x": 250}, force=True) == vp
+    assert set_geometry(vp, {"x": 200}) == vp     # 100 -> 200, no force needed
+    assert set_geometry(vp, {"x": 250}) == vp     # 200 -> 250, still fine
+    assert _load(vp)["position"]["x"] == 250
 ```
 
 - [ ] **Step 6: Run all module tests**
@@ -501,7 +495,7 @@ def pbir_geometry_main(args) -> int:
         print(f"pbir-set-geometry: bad --position ({exc})", file=sys.stderr)
         return 2
     try:
-        written = set_geometry(Path(args.visual), position, force=args.force)
+        written = set_geometry(Path(args.visual), position)
     except PbirGeometryError as exc:
         print(f"pbir-set-geometry: {exc}", file=sys.stderr)
         return 2
@@ -533,11 +527,6 @@ In `src/retail/cli.py`, immediately AFTER the `pbir-set-page-background` subpars
         required=True,
         metavar="JSON_OR_PATH",
         help='position as a JSON string or path: {"x": 100, "y": 80, "width": 400, "height": 300}',
-    )
-    pbirgeom.add_argument(
-        "--force",
-        action="store_true",
-        help="overwrite a position key already set to a different value",
     )
 ```
 
@@ -601,10 +590,10 @@ git commit -m "docs: note pbir-set-geometry (increment D) in the adapter doc"
 
 ## Self-Review
 
-**1. Spec coverage:** writer + position allow-list (Task 2); FR-003 preserve (Task 2 test); on-canvas guard reading real page.json (Task 2 `_canvas_dims` + the REAL-canvas test); overlap allowed (test); off-canvas/negative/non-numeric rejected (tests); missing page.json clean error no-hardcode (test); force gate (test); CLI (Task 3); latent + doc (Task 4). ✓
+**1. Spec coverage:** writer + position allow-list (Task 2); FR-003 preserve (Task 2 test); on-canvas guard reading real page.json (Task 2 `_canvas_dims` + the REAL-canvas test); overlap allowed (test); off-canvas/negative/non-numeric rejected (tests); missing page.json clean error no-hardcode (test); repeated-move-no-force-gate (test); CLI (Task 3); latent + doc (Task 4). ✓ (NO force gate — dropped; see Global Constraints.)
 
 **2. Placeholder scan:** one intentional drafting artifact flagged for deletion in Task 2 Step 3 (the `pass  # placeholder` block) — the implementer is told explicitly to delete it and keep the `changed`-set gate. No other placeholders; all code + commands complete. ✓
 
-**3. Type consistency:** `set_geometry(visual_json, position, force) -> Path` consumed identically by `pbir_geometry_main` and every test. `PbirGeometryError` is the raised type throughout. `_canvas_dims -> tuple[float,float]`. Position keys `_ALLOWED_KEYS` match the fixture's `position` keys and the ADR. ✓
+**3. Type consistency:** `set_geometry(visual_json, position) -> Path` (no force) consumed identically by `pbir_geometry_main` and every test. `PbirGeometryError` is the raised type throughout. `_canvas_dims -> tuple[float,float]`. Position keys `_ALLOWED_KEYS` match the fixture's `position` keys and the ADR. ✓
 
 **Note on the REAL-canvas test:** its long comment works through why a naive decoy is impossible (1600×900 > 1280×720) and lands on the correct invariant — a rectangle valid at 1600 wide (x=1300,w=250→1550) that a writer hardcoding 1280 would WRONGLY reject; the test asserts the write SUCCEEDS, so a hardcoding writer fails it. Keep the final assertion; the comment may be trimmed by the implementer.
