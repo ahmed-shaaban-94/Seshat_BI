@@ -17,6 +17,7 @@ readiness pass and emits no score (rule #9 / Principle V).
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -35,6 +36,23 @@ class ThemeCompileError(Exception):
 
 
 _TOKENS_NAME_SUFFIX = "-design-tokens"
+
+# render_theme_json's output shape has two disjoint field groups:
+#   - DL3-GOVERNED (dataColors, background): DL3 already reconciles these, so
+#     compile legitimately repairs drift here -- safe to overwrite.
+#   - DL3-DEFERRED (this tuple): DL3 does NOT check these; a committed theme
+#     may be hand-tuned here under a named-owner ruling (e.g. tower-retail.
+#     theme.json, commit 947e4fa). Silently overwriting them would destroy a
+#     human judgment call, so compile must refuse rather than repair.
+_DL3_DEFERRED_FIELDS = (
+    "name",
+    "foreground",
+    "tableAccent",
+    "good",
+    "neutral",
+    "bad",
+    "visualStyles",
+)
 
 
 def palette_from_tokens(tokens_doc: dict) -> dict:
@@ -182,16 +200,60 @@ def _resolve_out(
     return root / compiles_to
 
 
+def _deferred_field_conflicts(existing: dict, rendered: dict) -> list[str]:
+    """Names of DL3-deferred fields where ``existing`` and ``rendered`` disagree.
+
+    Deferred fields are human-owned (DL3 never reconciles them); comparing
+    decoded JSON values (not raw file text) means CRLF/whitespace differences
+    in the committed file can never register as a conflict.
+    """
+    return [
+        field
+        for field in _DL3_DEFERRED_FIELDS
+        if existing.get(field) != rendered.get(field)
+    ]
+
+
+def _load_existing_theme(out: Path) -> dict:
+    try:
+        with out.open(encoding="utf-8-sig") as fh:
+            return json.load(fh)
+    except OSError as exc:
+        raise ThemeCompileError(
+            f"existing theme file could not be read ({exc.__class__.__name__}): {out}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ThemeCompileError(
+            f"existing theme file is not valid JSON ({exc.__class__.__name__}): {out}"
+        ) from exc
+
+
 def compile_theme(tokens_path: Path, out_path: Path | None, force: bool) -> Path:
     tokens_doc = _load_tokens(tokens_path)
     seed = seed_from_tokens(tokens_doc, name_override=None)
     palette = palette_from_tokens(tokens_doc)
     check_contrast_or_raise(palette)  # refuse a theme CT1 would reject
     out = _resolve_out(tokens_doc, tokens_path, out_path)
-    if out.exists() and not force:
-        raise ThemeCompileError(f"{out} exists -- refusing to overwrite (use --force)")
+    rendered_str = render_theme_json(palette, seed)
+    if out.exists():
+        existing = _load_existing_theme(out)
+        conflicts = _deferred_field_conflicts(existing, json.loads(rendered_str))
+        if conflicts:
+            # Runs even when force=True: force overwrites DL3-governed drift,
+            # it must never bypass a human-owned/DL3-deferred field conflict.
+            names = ", ".join(sorted(conflicts))
+            raise ThemeCompileError(
+                f"{out} has hand-tuned DL3-deferred field(s) that differ from "
+                f"the compiled tokens: {names}. These fields are human-owned "
+                "(DL3 does not check them) and compile will not silently "
+                "overwrite them -- reconcile the discrepancy by hand."
+            )
+        if not force:
+            raise ThemeCompileError(
+                f"{out} exists -- refusing to overwrite (use --force)"
+            )
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_theme_json(palette, seed), encoding="utf-8", newline="\n")
+    out.write_text(rendered_str, encoding="utf-8", newline="\n")
     return out
 
 

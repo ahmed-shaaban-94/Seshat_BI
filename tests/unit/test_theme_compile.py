@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -165,3 +166,39 @@ def test_no_compiles_to_and_no_out_is_clean_error(tmp_path: Path):
     tokens = _write_tokens(tmp_path, doc)
     with pytest.raises(ThemeCompileError, match="compiles_to"):
         compile_theme(tokens, out_path=None, force=False)
+
+
+def test_compile_refuses_when_deferred_field_differs_even_with_force(tmp_path: Path):
+    # tower-retail-shaped case: the committed theme was hand-tuned by the owner
+    # in a DL3-deferred field ("good"). compile must refuse to clobber it, even
+    # with --force.
+    tokens = _write_tokens(tmp_path, TOKENS)
+    out = compile_theme(tokens, out_path=None, force=False)  # first write
+
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    assert doc["good"] != "#111111"  # sanity: this is really a change
+    doc["good"] = "#111111"  # simulate the owner's hand-tuned ruling
+    out.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ThemeCompileError, match="good") as exc_info:
+        compile_theme(tokens, out_path=None, force=True)
+    msg = str(exc_info.value).lower()
+    assert "human-owned" in msg
+    assert "deferred" in msg
+
+
+def test_compile_proceeds_when_only_dl3_governed_differs_with_force(tmp_path: Path):
+    # Only dataColors (DL3-governed) drifted on disk -- this is the drift the
+    # verb legitimately repairs. Deferred fields are untouched, so --force
+    # still overwrites.
+    tokens = _write_tokens(tmp_path, TOKENS)
+    out = compile_theme(tokens, out_path=None, force=False)  # first write
+
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    original_first_color = doc["dataColors"][0]
+    doc["dataColors"][0] = "#000000"  # drift only a DL3-governed field
+    out.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+
+    result = compile_theme(tokens, out_path=None, force=True)  # no raise
+    rewritten = json.loads(result.read_text(encoding="utf-8"))
+    assert rewritten["dataColors"][0] == original_first_color  # repaired
