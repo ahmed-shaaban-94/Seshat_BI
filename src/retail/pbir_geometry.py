@@ -83,29 +83,22 @@ def _canvas_dims(visual_json: Path) -> tuple[float, float]:
     return float(w), float(h)
 
 
-def set_geometry(visual_json: Path, position: dict) -> Path:
-    """Set the allow-listed ``position`` keys on the visual, on-canvas + binding-safe.
-
-    ``position`` maps a subset of ``{x, y, width, height, z, tabOrder}`` to numeric
-    values. Existing position keys not named in ``position`` are preserved. Raises
-    PbirGeometryError on a bad path, an out-of-allow-list key, a non-numeric value,
-    or a result rectangle that would fall off the page's real canvas. Returns the
-    written path.
-    """
-    visual_json = Path(visual_json)
+def _load_visual(visual_json: Path) -> dict:
+    """Load the visual.json, guarding its path + required ``visual``/``position``."""
     if not visual_json.is_file():
         raise PbirGeometryError(f"visual.json not found: {visual_json}")
-    # Guard: the file must live under a *.Report/ tree (never write elsewhere).
     if ".Report" not in str(visual_json.resolve()):
         raise PbirGeometryError("target is not inside a *.Report/ tree")
-
     doc = _load_json(visual_json, "visual.json")
     if not isinstance(doc.get("visual"), dict):
         raise PbirGeometryError("visual.json has no 'visual' object")
     if not isinstance(doc.get("position"), dict):
         raise PbirGeometryError("visual.json has no 'position' object")
+    return doc
 
-    # Validate the requested keys + numeric values up front.
+
+def _validate_requested(position: dict) -> None:
+    """Reject an empty request, an out-of-allow-list key, or a non-numeric value."""
     if not isinstance(position, dict) or not position:
         raise PbirGeometryError("position must be a non-empty object")
     for key, val in position.items():
@@ -119,18 +112,9 @@ def set_geometry(visual_json: Path, position: dict) -> Path:
                 f"position.{key} must be a number, got {type(val).__name__}: {val!r}"
             )
 
-    # Snapshot the data binding BEFORE editing -- the FR-003 oracle.
-    binding_before = _dump(
-        {
-            "query": doc["visual"].get("query"),
-            "visualType": doc["visual"].get("visualType"),
-        }
-    )
 
-    # Compute the RESULT rectangle (existing merged with requested) and validate
-    # on-canvas against the REAL canvas dims (never a hardcoded default).
-    result = {**doc["position"], **position}
-    canvas_w, canvas_h = _canvas_dims(visual_json)
+def _validate_on_canvas(result: dict, canvas_w: float, canvas_h: float) -> None:
+    """Reject a result rectangle that is non-numeric, non-positive, or off-canvas."""
     rx, ry = result.get("x", 0), result.get("y", 0)
     rw, rh = result.get("width", 0), result.get("height", 0)
     for label, v in (("x", rx), ("y", ry), ("width", rw), ("height", rh)):
@@ -151,19 +135,41 @@ def set_geometry(visual_json: Path, position: dict) -> Path:
             f"(canvas {canvas_w}x{canvas_h}); refusing to write"
         )
 
+
+def _binding_snapshot(visual: dict) -> str:
+    """The FR-003 oracle: the visual's data binding (query + visualType), dumped."""
+    return _dump({"query": visual.get("query"), "visualType": visual.get("visualType")})
+
+
+def set_geometry(visual_json: Path, position: dict) -> Path:
+    """Set the allow-listed ``position`` keys on the visual, on-canvas + binding-safe.
+
+    ``position`` maps a subset of ``{x, y, width, height, z, tabOrder}`` to numeric
+    values. Existing position keys not named in ``position`` are preserved. Raises
+    PbirGeometryError on a bad path, an out-of-allow-list key, a non-numeric value,
+    or a result rectangle that would fall off the page's real canvas. Returns the
+    written path.
+    """
+    visual_json = Path(visual_json)
+    doc = _load_visual(visual_json)
+    _validate_requested(position)
+
+    # Snapshot the data binding BEFORE editing -- the FR-003 oracle.
+    binding_before = _binding_snapshot(doc["visual"])
+
+    # Compute the RESULT rectangle (existing merged with requested) and validate it
+    # on-canvas against the REAL canvas dims (never a hardcoded default).
+    result = {**doc["position"], **position}
+    canvas_w, canvas_h = _canvas_dims(visual_json)
+    _validate_on_canvas(result, canvas_w, canvas_h)
+
     # No overwrite gate: moving a visual necessarily changes always-present position
     # keys, so a "differs -> refuse" gate would block every real move. Overwrite
     # safety is the reviewable git diff + human ratification, not a per-call flag.
     doc["position"] = result
 
     # THE FR-003 GUARANTEE: the data binding must be byte-identical after the edit.
-    binding_after = _dump(
-        {
-            "query": doc["visual"].get("query"),
-            "visualType": doc["visual"].get("visualType"),
-        }
-    )
-    if binding_after != binding_before:
+    if _binding_snapshot(doc["visual"]) != binding_before:
         raise PbirGeometryError(
             "refusing to write: the edit would alter the visual's data binding "
             "(query/visualType) -- this adapter lays out only, never binds (FR-003)"
