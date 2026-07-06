@@ -46,6 +46,25 @@ The value of this slice is therefore **not** "catch drift" (DL3 owns that). It i
 the action that risks tripping DL3. `theme-compile` is the **generator whose output DL3
 was written to verify.** Clean pairing: compile produces, DL3 checks.
 
+### Narrowed thesis (verified against the live themes) -- write scope != check scope
+
+The original framing above assumed compile's *write scope* equals DL3's *check scope*. It
+does not, and the live tree proves it: `tower-retail.theme.json` is DL3-clean (its
+`dataColors` + `background` match its tokens) yet was **hand-tuned by an owner ruling**
+(commit `947e4fa`, 2026-07-03) in fields DL3 *deliberately defers* -- `name`,
+`foreground`, `good`/`neutral`/`bad` (the 4->3 sentiment ambiguity DL3 was scoped to leave
+to a human). A naive full-document compile would silently overwrite that ruling with
+generic token defaults -- a Principle-V violation (overriding a human decision) and real
+data loss.
+
+So the honest thesis is narrower: `theme-compile` **repairs DL3-governed drift**
+(`dataColors`, `background`) on a theme, and **refuses -- even with `--force` -- when any
+DL3-deferred, human-owned field differs**, reporting those fields for manual
+reconciliation. Refusing *surfaces* the discrepancy (the DEFINE/CHECK identity); merging
+would *hide* it. Consequence: "byte-identical to what `theme-gen` wrote" holds only for a
+theme that was generated and never hand-tuned (e.g. `executive-dark`); a hand-tuned theme
+is protected, not reproduced.
+
 ## Architecture -- one deterministic verb, reusing the generator's renderer
 
 | Role | Where | What | New? |

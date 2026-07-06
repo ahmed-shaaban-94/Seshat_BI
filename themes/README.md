@@ -24,6 +24,16 @@ default formatting visuals inherit unless a visual overrides them.
 > from a caller-supplied palette, gated by DL1/DL3/CT1. It writes NO PBIR /
 > report file and depends on no external tool -- surface-3 styling only.
 
+> `retail theme-compile --tokens design/tokens/<name>-design-tokens.yaml`
+> deterministically (re)builds only the `theme.json` from an already-committed
+> tokens file, reusing the same renderer -- the generator whose output DL3
+> checks. It repairs DL3-governed drift (`dataColors`, `background`) but
+> **refuses to overwrite the DL3-deferred, human-owned fields** (`name`,
+> `foreground`, `good`/`neutral`/`bad`, ...), even with `--force`: where a theme
+> has been hand-tuned in those fields (as `tower-retail` was, per an owner
+> ruling), it reports the discrepancy for manual reconciliation rather than
+> silently reverting it.
+
 `tower-retail.theme.json` is a conservative, generic, retail-executive STARTER.
 It draws its palette, typography, and sentiment colors from the design tokens in
 `../design/tokens/tower-retail-design-tokens.yaml`, and it carries only safe
