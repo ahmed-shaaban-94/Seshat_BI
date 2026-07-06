@@ -111,3 +111,28 @@ def test_repeated_move_is_allowed_no_force_gate(tmp_path: Path):
     assert set_geometry(vp, {"x": 200}) == vp  # 100 -> 200, no force needed
     assert set_geometry(vp, {"x": 250}) == vp  # 200 -> 250, still fine
     assert _load(vp)["position"]["x"] == 250
+
+
+def test_bool_value_rejected(tmp_path):
+    report = _report(tmp_path)
+    vp = _visual(report, "vA")
+    with pytest.raises(PbirGeometryError, match="must be a number"):
+        set_geometry(vp, {"x": True})
+
+
+def test_nonnumeric_page_json_dims_is_clean_error(tmp_path):
+    report = _report(tmp_path)
+    page = report / "definition" / "pages" / "pg" / "page.json"
+    d = json.loads(page.read_text(encoding="utf-8-sig"))
+    d["width"] = "wide"  # non-numeric
+    page.write_text(json.dumps(d), encoding="utf-8")
+    vp = _visual(report, "vA")
+    with pytest.raises(PbirGeometryError, match="numeric"):
+        set_geometry(vp, {"x": 200, "y": 150, "width": 300, "height": 300})
+
+
+def test_partial_move_overrunning_unchanged_width_is_rejected(tmp_path):
+    report = _report(tmp_path)
+    vp = _visual(report, "vA")  # x=100, width=300 on 1600-wide canvas
+    with pytest.raises(PbirGeometryError, match="off-canvas"):
+        set_geometry(vp, {"x": 1400})  # 1400 + unchanged 300 = 1700 > 1600
