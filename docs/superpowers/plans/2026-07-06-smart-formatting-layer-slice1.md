@@ -63,7 +63,7 @@ git commit -m "$(printf 'docs: formatting-plan.md ledger template (smart-formatt
 
 **Interfaces:**
 - Consumes: `retail.core.{Finding, RuleContext, Severity, is_test_path}`, `retail.registry.register`. The ledger template shape from Task 1.
-- Produces: rule `DL7` via `@register("DL7", "Formatting-plan ledger is well-formed (citations resolve, allow-list-only, no score)")`, function `check_formatting_plan(ctx) -> Iterable[Finding]`. Discovers committed `**/formatting-plan.md` (not test-path). ERROR per malformed row.
+- Produces: rule `DL7` via `@register("DL7", "Formatting-plan ledger is well-formed (citations resolve, allow-list-only, no score)")`, function `check_formatting_plan(ctx) -> Iterable[Finding]`. Discovers committed `**/formatting-plan.md` (not test-path, **and not under `templates/`** -- `templates/formatting-plan.md` is the generic copy-me template from Task 1: it intentionally carries backtick-wrapped placeholder cells, a `(none)` container, and ratify-forbidden prose that would trip DL7's row/footer checks by construction; DL7 validates *filled* ledgers only). ERROR per malformed row.
 
 - [ ] **Step 1: Write the fixtures**
 
@@ -207,7 +207,9 @@ def _iter_ledgers(ctx: RuleContext) -> list[str]:
     return [
         p
         for p in ctx.tracked_files
-        if p.endswith(_LEDGER_SUFFIX) and not is_test_path(p)
+        if p.endswith(_LEDGER_SUFFIX)
+        and not is_test_path(p)
+        and not p.startswith("templates/")
     ]
 
 
