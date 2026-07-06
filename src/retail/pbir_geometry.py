@@ -165,3 +165,29 @@ def set_geometry(visual_json: Path, position: dict) -> Path:
         raise PbirGeometryError("staged visual.json is not round-trip stable")
     visual_json.write_text(text, encoding="utf-8", newline="\n")
     return visual_json
+
+
+def pbir_geometry_main(args) -> int:
+    """CLI entry: set a visual's position rectangle from a JSON string/file."""
+    import sys
+
+    raw = args.position
+    try:
+        if raw and Path(raw).is_file():
+            position = json.loads(Path(raw).read_text(encoding="utf-8"))
+        else:
+            position = json.loads(raw) if raw else {}
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"pbir-set-geometry: bad --position ({exc})", file=sys.stderr)
+        return 2
+    try:
+        written = set_geometry(Path(args.visual), position)
+    except PbirGeometryError as exc:
+        print(f"pbir-set-geometry: {exc}", file=sys.stderr)
+        return 2
+    print(f"wrote {written}")
+    print(
+        "note: layout only -- the visual's data binding (query/visualType) is "
+        "unchanged; this grants no readiness pass (a human render + review does)."
+    )
+    return 0
