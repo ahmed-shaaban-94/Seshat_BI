@@ -57,6 +57,45 @@ def test_out_of_allowlist_container_fails() -> None:
     assert any("allow-list" in x.message.lower() for x in f)
 
 
+def test_missing_token_fails() -> None:
+    f = list(check_formatting_plan(_ctx("bad_missing_token")))
+    assert any(x.rule_id == RULE_ID for x in f)
+    assert any("token" in x.message.lower() for x in f)
+
+
+def test_self_declared_outcome_status_fails() -> None:
+    # A row may NEVER self-declare a human-render outcome (resolved) -- on ANY row,
+    # not just render-only ones (never_self_grant_approval / Principle V).
+    f = list(check_formatting_plan(_ctx("bad_self_resolved")))
+    assert any("outcome" in x.message.lower() for x in f)
+
+
+def test_score_in_rationale_prose_is_not_a_false_positive() -> None:
+    # The word "score" inside a rationale CELL must not trip the field check
+    # (line-anchored regex). clean.md's rationale has no "score:"; build one inline.
+    import tempfile
+
+    ledger = (
+        "# fixture\n\n"
+        "| target | container | group | property | value | principle_cited | "
+        "token_cited | apply_verb | status | rationale |\n"
+        "|---|---|---|---|---|---|---|---|---|---|\n"
+        "| page:x | objects | labels | show | true | #4 | number_format.integer | "
+        "B | proposed | improves clarity score for readers |\n\n"
+        "## Ratification\n\n- ratification.ratified_by:\n"
+    )
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "prose-formatting-plan.md"
+        p.write_text(ledger, encoding="utf-8")
+        ctx = RuleContext(
+            repo_root=Path(d), tracked_files=("prose-formatting-plan.md",)
+        )
+        f = list(check_formatting_plan(ctx))
+        assert not any("score" in x.message.lower() for x in f), (
+            f"prose 'score' false-positived: {[x.message for x in f]}"
+        )
+
+
 def test_severity_is_error() -> None:
     f = list(check_formatting_plan(_ctx("bad_has_score")))
     assert all(x.severity is Severity.ERROR for x in f)

@@ -13,7 +13,12 @@ committed ledger row / footer it ERRORs when:
   * an APPLYABLE row cites a RENDER-ONLY anti-pattern (#1/#5/#6/#7) as its
     resolved principle -- a category error (bolding a title does not establish
     hierarchy; that is geometry, handoff-only);
-  * the ledger contains a ``score:``/``confidence:`` field (hard rule #9);
+  * the ledger contains a ``score:``/``confidence:`` FIELD (line-anchored, so
+    prose mentioning "score" in a rationale cell does not trip -- hard rule #9);
+  * a row's ``status`` self-declares a human-render OUTCOME (resolved/approved/
+    ratified/pass/done) -- the agent may never call the result good (Principle V /
+    never_self_grant_approval); allowed statuses are proposed / needs-owner-
+    decision / blocked-orphan;
   * ``ratification.ratified_by`` is filled with an agent-shaped value (the agent
     is structurally forbidden to self-ratify -- Principle V);
   * a row's ``container`` is outside the adapter's formatting allow-list.
@@ -45,7 +50,17 @@ _ALLOWED_CONTAINERS = frozenset(
     {"objects", "visualContainerObjects", "background", "themeCollection"}
 )
 
-_SCORE_RE = re.compile(r"\b(score|confidence)\s*:", re.IGNORECASE)
+# Line-anchored so it matches a real ``score:`` / ``confidence:`` FIELD (a list
+# item or key), never the word "score" inside a prose rationale CELL. Anchoring
+# also removes the need for a whole-document exemption (which, living in the
+# copy-me template footer, could be pasted into a filled ledger and permanently
+# disable the check).
+_SCORE_RE = re.compile(r"^\s*-?\s*(score|confidence)\s*:", re.IGNORECASE | re.MULTILINE)
+
+# Statuses that assert a HUMAN-render OUTCOME -- the agent may never self-declare
+# any of these on any row (never_self_grant_approval / Principle V). The ledger's
+# allowed statuses are proposed / needs-owner-decision / blocked-orphan.
+_OUTCOME_STATUSES = frozenset({"resolved", "approved", "ratified", "pass", "done"})
 _RATIFIED_RE = re.compile(r"ratified_by\s*:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 # an agent-shaped ratifier value (empty or a quoted-empty is OK; a bare token or
 # anything containing 'agent'/'claude'/'llm' is a forbidden self-ratify).
@@ -123,12 +138,9 @@ def check_formatting_plan(ctx: RuleContext) -> Iterable[Finding]:
             )
             continue
 
-        # footer-level checks (whole document)
-        if (
-            _SCORE_RE.search(text)
-            and "no `score:`" not in text
-            and "no ``score:``" not in text
-        ):
+        # footer-level checks (whole document). Line-anchored, so no exemption is
+        # needed: prose mentioning "score" in a rationale cell no longer trips it.
+        if _SCORE_RE.search(text):
             findings.append(
                 Finding(
                     RULE_ID,
@@ -187,10 +199,27 @@ def check_formatting_plan(ctx: RuleContext) -> Iterable[Finding]:
                         loc,
                     )
                 )
-            # render-only anti-pattern cited as resolved by an applyable row
+            # A row may never self-declare a human-render OUTCOME status (the agent
+            # cannot call the result good -- that is a human render + critique
+            # outcome; never_self_grant_approval / Principle V). Applies to EVERY
+            # row, not just render-only ones.
+            status = r["status"].lower()
+            if status in _OUTCOME_STATUSES:
+                findings.append(
+                    Finding(
+                        RULE_ID,
+                        Severity.ERROR,
+                        f"row status {r['status']!r} self-declares a human-render "
+                        f"outcome; a plan row may only be proposed / "
+                        f"needs-owner-decision / blocked-orphan -- resolution is a "
+                        f"human render + critique, never self-declared (Principle V)",
+                        loc,
+                    )
+                )
+            # render-only anti-pattern cited as resolved/proposed by an applyable row
             applyable = r["apply_verb"] in ("A", "B", "C")
-            resolved = r["status"].lower() in ("resolved", "proposed")
-            if applyable and resolved and principle in _RENDER_ONLY:
+            proposed = status in ("resolved", "proposed")
+            if applyable and proposed and principle in _RENDER_ONLY:
                 findings.append(
                     Finding(
                         RULE_ID,
