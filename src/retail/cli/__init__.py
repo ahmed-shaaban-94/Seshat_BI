@@ -39,6 +39,7 @@ Structure:
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -120,7 +121,7 @@ def _lazy(module_path: str, func_name: str):
     return handler
 
 
-_DISPATCH: dict[str, object] = {
+_DISPATCH: dict[str, Callable[[object], int]] = {
     "check": _run_check,
     "validate": _lazy(".commands.validate", "run_validate"),
     "semantic-check": _lazy(".commands.semantic", "run_semantic_check"),
@@ -154,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     handler = _DISPATCH.get(args.command)
     if handler is None:
         return 0
-    return handler(args)  # type: ignore[operator]
+    return handler(args)
 
 
 def _safe_target_label(engine: str, config: object) -> str:
