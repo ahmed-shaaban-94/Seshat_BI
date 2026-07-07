@@ -77,7 +77,9 @@ The ordering is non-negotiable, and the gates are the product:
 
 ## Quickstart
 
-Seshat BI ships a Python package, `retail`, with two governance surfaces.
+Seshat BI ships a Python package exposing two console commands -- `retail` (the
+canonical dev name) and `seshat` (the product-brand alias); both dispatch the same
+entry point, so every command below works under either name.
 
 ```bash
 # clone
@@ -91,7 +93,11 @@ pip install -e ".[dev]"
 
 # run the static governance gate over the whole repo
 retail check                       # exit 0 == the repo is governance-clean
+seshat check                       # same command, product-brand alias
 ```
+
+> New user starting a fresh project? `seshat init-project my-retail-bi` scaffolds an
+> empty workspace. Install-path details: [`docs/install/user-install.md`](docs/install/user-install.md).
 
 Not installing the package? Run the checker straight from source:
 
@@ -140,6 +146,9 @@ planned but not yet built, see the [Roadmap](#roadmap).)
 | **`retail semantic-check` (L3 contract drift)** | Detects when a committed measure's denominator drifts from its metric contract. |
 | **`retail value-check` (L4 value proxy)** | Recomputes a measure's live aggregate and compares it to an owner-approved expected value within tolerance -- never fakes a pass. |
 | **`retail generate` (DAX Generator)** | Generates a verified best-practice DAX measure from an approved metric contract, with a self-proving loop. |
+| **`retail status` (agent-control surface)** | A read-only `--format json` projection of committed readiness state (per-table `current_stage`, `evidence`, `blocking_reasons`, `next_action`) for an agent/host to poll -- a projection of committed evidence, never a computed or fabricated score. |
+| **`seshat` command + `init-project`** | `seshat` is the product-brand alias of `retail` (same entry point). `seshat init-project <name>` scaffolds a fresh, empty Retail-BI project workspace for a new user. |
+| **PBIR authoring adapters** | Deterministic, local-file, reviewable writers for committed PBIR JSON: `pbir-apply-theme`, `pbir-format-visual`, `pbir-set-page-background`, `pbir-set-geometry` -- style/lay out existing bound visuals; never create/retype a visual or grant a stage. Publish/execution stays gated (F016). |
 | **Readiness spine (F005-F015, incl. F011A)** | The full seven-stage model: source intelligence, grain confidence, metric contracts, semantic-model readiness, dashboard design + the four-surface Visual Foundation, QC control room, reconciliation ledger, drift detector. |
 | **Companion Modules & Adapters (F025-F030)** | Six docs-first skills: PR readiness reviewer, readiness viewer, approval console, evidence-pack generator, and optional **dbt** / **Dagster** adapters (advisory only -- they never create truth). |
 | **F034 authoring slice** | The trace template, Dashboard Ready evidence item, and the read-only visual-implementation-review workflow (the built page itself stays a human Power BI Desktop action). |
