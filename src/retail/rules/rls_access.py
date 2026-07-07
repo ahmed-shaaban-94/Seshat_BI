@@ -83,10 +83,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
 from ..sql import iter_sql_files, strip_sql_comments
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 RULE_ID = "HR6"
 
@@ -157,6 +161,23 @@ class _GoldTable:
         self.is_dim = table_name.lower().startswith("dim_")
 
 
+def _extract_columns(body: str) -> frozenset[str]:
+    """Extract the lowercased column names from a ``CREATE TABLE`` body: split
+    on depth-0 commas, skip empty entries and table-level constraint clauses
+    (``PRIMARY KEY``, ``CONSTRAINT ...``, etc.), and take the leading word of
+    each remaining entry as a column name."""
+    columns: set[str] = set()
+    for part in _split_top_level_commas(body):
+        if not part.strip():
+            continue
+        if _CONSTRAINT_LEAD_RE.match(part):
+            continue
+        col_m = _COLUMN_NAME_RE.match(part)
+        if col_m:
+            columns.add(col_m.group(1).lower())
+    return frozenset(columns)
+
+
 def _read_gold_schema(ctx: RuleContext) -> dict[str, _GoldTable]:
     """Static structure mapping ``gold.<table>`` -> its column set + fact/dim
     classification, read from committed ``warehouse/migrations/*.sql`` text
@@ -180,17 +201,8 @@ def _read_gold_schema(ctx: RuleContext) -> dict[str, _GoldTable]:
             open_idx = m.end() - 1  # the "(" the regex matched
             close_idx = _find_matching_paren(clean, open_idx)
             body = clean[open_idx + 1 : close_idx]
-            columns: set[str] = set()
-            for part in _split_top_level_commas(body):
-                if not part.strip():
-                    continue
-                if _CONSTRAINT_LEAD_RE.match(part):
-                    continue
-                col_m = _COLUMN_NAME_RE.match(part)
-                if col_m:
-                    columns.add(col_m.group(1).lower())
             schema[f"gold.{table_name.lower()}"] = _GoldTable(
-                frozenset(columns), table_name
+                _extract_columns(body), table_name
             )
     return schema
 
@@ -212,17 +224,14 @@ def _err(rel: str, message: str) -> Finding:
     )
 
 
-def _check_one_contract(
-    rel: str, data: object, schema: dict[str, _GoldTable]
-) -> tuple[list[Finding], str | None]:
-    """Check one parsed role-contract mapping. Returns (findings, name) where
-    ``name`` is the declared role name (or None if absent/invalid) so the
-    caller can separately check for duplicate names across files."""
+def _extract_declared_fields(
+    rel: str, data: dict[object, object]
+) -> tuple[list[Finding], str | None, str | None, str | None]:
+    """Validate the declared ``name`` and ``filter: {gold_table, column}``
+    shape of one role contract. Returns (findings, name, gold_table, column);
+    each field is None when missing/blank/wrong-type (its shape defect already
+    emitted as a Finding), so the binding/readiness checks can key off it."""
     findings: list[Finding] = []
-
-    if not isinstance(data, dict):
-        findings.append(_err(rel, "role contract must be a YAML mapping"))
-        return findings, None
 
     name = data.get("name")
     if not isinstance(name, str) or not name.strip():
@@ -259,62 +268,145 @@ def _check_one_contract(
         )
         gold_table = None
 
-    if gold_table:
-        table_key = gold_table.strip().lower()
-        if not table_key.startswith("gold."):
-            findings.append(
-                _err(
-                    rel,
-                    f"role '{role_label}' filter.gold_table {gold_table!r} does not "
-                    "reference the gold schema (a silver/bronze binding is not "
-                    "allowed -- Principle III)",
-                )
+    return findings, name, gold_table, column
+
+
+def _check_binding(
+    rel: str,
+    role_label: str,
+    gold_table: str | None,
+    column: str | None,
+    schema: dict[str, _GoldTable],
+) -> list[Finding]:
+    """Resolve the declared ``filter.gold_table``/``filter.column`` binding
+    against the committed gold structure. Fails closed with one ERROR per
+    defect: a non-gold (silver/bronze) table, a gold table absent from the
+    committed migrations, a fact-classified table, or a column not on the
+    resolved table."""
+    if not gold_table:
+        return []
+
+    table_key = gold_table.strip().lower()
+    if not table_key.startswith("gold."):
+        return [
+            _err(
+                rel,
+                f"role '{role_label}' filter.gold_table {gold_table!r} does not "
+                "reference the gold schema (a silver/bronze binding is not "
+                "allowed -- Principle III)",
             )
-        else:
-            table = schema.get(table_key)
-            if table is None:
+        ]
+
+    table = schema.get(table_key)
+    if table is None:
+        return [
+            _err(
+                rel,
+                f"role '{role_label}' filter.gold_table {gold_table!r} does "
+                "not exist in the committed gold migration SQL",
+            )
+        ]
+
+    findings: list[Finding] = []
+    if not table.is_dim:
+        kind = "a fact" if table.is_fact else "neither a dim nor a fact"
+        findings.append(
+            _err(
+                rel,
+                f"role '{role_label}' filter.gold_table {gold_table!r} is "
+                f"{kind} table; an RLS role must bind to a gold "
+                "DIMENSION (dim_*) table, not a fact table",
+            )
+        )
+    if column and column.strip().lower() not in table.columns:
+        findings.append(
+            _err(
+                rel,
+                f"role '{role_label}' filter.column {column!r} does not "
+                f"exist on {gold_table!r} per the committed gold "
+                "migration SQL",
+            )
+        )
+    return findings
+
+
+def _check_readiness(
+    rel: str, role_label: str, data: dict[object, object]
+) -> list[Finding]:
+    """A ``readiness.status`` of ``"pass"`` with an empty ``evidence[]`` is an
+    unearned pass -- one ERROR Finding (mirrors the metric-contract precedent).
+    Any other readiness shape/status is a lifecycle state HR6 does not judge."""
+    readiness = data.get("readiness")
+    if not isinstance(readiness, dict):
+        return []
+    status = readiness.get("status")
+    evidence = readiness.get("evidence")
+    if status == "pass" and not evidence:
+        return [
+            _err(
+                rel,
+                f"role '{role_label}' readiness.status is 'pass' but "
+                "evidence[] is empty; a pass requires non-empty evidence",
+            )
+        ]
+    return []
+
+
+def _check_one_contract(
+    rel: str, data: object, schema: dict[str, _GoldTable]
+) -> tuple[list[Finding], str | None]:
+    """Check one parsed role-contract mapping. Returns (findings, name) where
+    ``name`` is the declared role name (or None if absent/invalid) so the
+    caller can separately check for duplicate names across files."""
+    if not isinstance(data, dict):
+        return [_err(rel, "role contract must be a YAML mapping")], None
+
+    findings, name, gold_table, column = _extract_declared_fields(rel, data)
+    role_label = name if name else "<unnamed role>"
+    findings.extend(_check_binding(rel, role_label, gold_table, column, schema))
+    findings.extend(_check_readiness(rel, role_label, data))
+
+    return findings, name
+
+
+def _load_and_check(
+    ctx: RuleContext, rel: str, schema: dict[str, _GoldTable], yaml: ModuleType
+) -> tuple[list[Finding], str | None]:
+    """Read, parse, and check one committed role-contract file. Returns
+    (findings, name); ``name`` is None whenever the file cannot be read or is
+    not valid YAML (fail-closed with one ERROR Finding), so a defective file
+    never participates in the cross-file duplicate-name check. ``yaml`` is
+    passed in (imported once by the caller) to keep the retail check import
+    path stdlib-light -- PyYAML must not be pulled in at module import time."""
+    try:
+        raw = (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        return [_err(rel, f"could not read role contract: {exc}")], None
+
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        return [_err(rel, f"role contract is not valid YAML: {exc}")], None
+
+    return _check_one_contract(rel, data, schema)
+
+
+def _duplicate_name_findings(names_seen: dict[str, list[str]]) -> list[Finding]:
+    """One ERROR Finding per file for every role ``name`` declared by two or
+    more committed contracts (the template requires case-sensitive
+    uniqueness)."""
+    findings: list[Finding] = []
+    for name, rels in names_seen.items():
+        if len(rels) > 1:
+            for rel in rels:
                 findings.append(
                     _err(
                         rel,
-                        f"role '{role_label}' filter.gold_table {gold_table!r} does "
-                        "not exist in the committed gold migration SQL",
+                        f"role name {name!r} is declared by more than one "
+                        f"committed role contract: {', '.join(sorted(rels))}",
                     )
                 )
-            else:
-                if not table.is_dim:
-                    kind = "a fact" if table.is_fact else "neither a dim nor a fact"
-                    findings.append(
-                        _err(
-                            rel,
-                            f"role '{role_label}' filter.gold_table {gold_table!r} is "
-                            f"{kind} table; an RLS role must bind to a gold "
-                            "DIMENSION (dim_*) table, not a fact table",
-                        )
-                    )
-                if column and column.strip().lower() not in table.columns:
-                    findings.append(
-                        _err(
-                            rel,
-                            f"role '{role_label}' filter.column {column!r} does not "
-                            f"exist on {gold_table!r} per the committed gold "
-                            "migration SQL",
-                        )
-                    )
-
-    readiness = data.get("readiness")
-    if isinstance(readiness, dict):
-        status = readiness.get("status")
-        evidence = readiness.get("evidence")
-        if status == "pass" and not evidence:
-            findings.append(
-                _err(
-                    rel,
-                    f"role '{role_label}' readiness.status is 'pass' but "
-                    "evidence[] is empty; a pass requires non-empty evidence",
-                )
-            )
-
-    return findings, name
+    return findings
 
 
 @register(RULE_ID, "RLS role contract binds to a real dim column")
@@ -327,40 +419,19 @@ def check_rls_role_bindings(ctx: RuleContext) -> Iterable[Finding]:
         # synthesizes a finding, a pass, or a block for their absence.
         return []
 
+    import yaml  # lazy: keep retail check import path stdlib-light
+
     schema = _read_gold_schema(ctx)
 
     findings: list[Finding] = []
     names_seen: dict[str, list[str]] = {}
 
     for rel in contract_files:
-        import yaml  # lazy: keep retail check import path stdlib-light
-
-        try:
-            raw = (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
-        except OSError as exc:
-            findings.append(_err(rel, f"could not read role contract: {exc}"))
-            continue
-
-        try:
-            data = yaml.safe_load(raw)
-        except yaml.YAMLError as exc:
-            findings.append(_err(rel, f"role contract is not valid YAML: {exc}"))
-            continue
-
-        contract_findings, name = _check_one_contract(rel, data, schema)
+        contract_findings, name = _load_and_check(ctx, rel, schema, yaml)
         findings.extend(contract_findings)
         if name:
             names_seen.setdefault(name, []).append(rel)
 
-    for name, rels in names_seen.items():
-        if len(rels) > 1:
-            for rel in rels:
-                findings.append(
-                    _err(
-                        rel,
-                        f"role name {name!r} is declared by more than one "
-                        f"committed role contract: {', '.join(sorted(rels))}",
-                    )
-                )
+    findings.extend(_duplicate_name_findings(names_seen))
 
     return findings
