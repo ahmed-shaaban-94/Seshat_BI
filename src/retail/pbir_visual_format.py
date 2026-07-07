@@ -98,9 +98,7 @@ def _load_visual_doc(visual_json: Path) -> tuple[dict, dict]:
 
 def _binding_snapshot(visual: dict) -> str:
     """Serialize the FR-003 data-binding oracle (query + visualType) for compare."""
-    return _dump(
-        {"query": visual.get("query"), "visualType": visual.get("visualType")}
-    )
+    return _dump({"query": visual.get("query"), "visualType": visual.get("visualType")})
 
 
 def _validate_formatting(formatting: dict) -> None:

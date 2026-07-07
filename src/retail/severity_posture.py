@@ -214,8 +214,7 @@ _YAML_DL2 = "forbidden_dynamic_content:\n  kpi_value: true\n"
 
 # tokens declare data_colors but the theme drifts -> DL3 ERRORs.
 _YAML_DL3_TOKENS = (
-    "meta: { compiles_to: demo.theme.json }\n"
-    "colors:\n  data_colors:\n    - '#111111'\n"
+    "meta: { compiles_to: demo.theme.json }\ncolors:\n  data_colors:\n    - '#111111'\n"
 )
 _JSON_DL3_THEME = '{"dataColors": ["#999999"]}\n'
 

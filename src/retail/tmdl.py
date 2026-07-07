@@ -574,9 +574,7 @@ def _is_shared_expression_header(stripped: str, ind: int) -> bool:
     return bool(re.match(r"expression\s+\S", stripped)) and ind == 0
 
 
-def _parse_m_partition_source(
-    lines: list[str], i: int, n: int
-) -> tuple[str, int]:
+def _parse_m_partition_source(lines: list[str], i: int, n: int) -> tuple[str, int]:
     """Parse a partition-source block for :func:`iter_m_sources`.
 
     Returns the raw (unstripped, newline-joined) multi-line body text and the
