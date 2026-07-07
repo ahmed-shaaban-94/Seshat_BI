@@ -3,12 +3,29 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from .. import gitutil
 from ..core import Finding, RuleContext, Severity, is_test_path
 from ..registry import register
+
+
+def _absent_findings(
+    required: Iterable[str],
+    is_present: Callable[[str], bool],
+    make_finding: Callable[[str], Finding],
+) -> list[Finding]:
+    """One ERROR Finding per required item that is not present.
+
+    The shared shape behind the several "every required X must exist" checks
+    (P1 layout paths, G1 .gitignore entries, C2 .env.example keys): iterate the
+    required collection, keep the absent ones, and build each rule's own
+    Finding. Callers supply the presence test and the Finding factory so the
+    rule_id / message / locator stay per-rule.
+    """
+    return [make_finding(item) for item in required if not is_present(item)]
+
 
 # ---------------------------------------------------------------------------
 # G5 — Windows MAX_PATH discipline
@@ -52,16 +69,16 @@ def _is_pbip_signature(path: str) -> bool:
 
 
 def _missing_required_layout(tracked: set[str]) -> list[Finding]:
-    return [
-        Finding(
+    return _absent_findings(
+        REQUIRED_PATHS,
+        lambda required: required in tracked,
+        lambda required: Finding(
             rule_id="P1",
             severity=Severity.ERROR,
             message=f"required layout path is missing: {required}",
             locator=required,
-        )
-        for required in REQUIRED_PATHS
-        if required not in tracked
-    ]
+        ),
+    )
 
 
 def _pbip_placement_finding(path: str) -> Finding | None:
@@ -120,16 +137,16 @@ DEFINITION_PROBE_PATHS = (
 
 
 def _missing_required_ignores(lines: set[str]) -> list[Finding]:
-    return [
-        Finding(
+    return _absent_findings(
+        REQUIRED_IGNORES,
+        lambda required: required in lines,
+        lambda required: Finding(
             rule_id="G1",
             severity=Severity.ERROR,
             message=f".gitignore must contain '{required}'",
             locator=".gitignore",
-        )
-        for required in REQUIRED_IGNORES
-        if required not in lines
-    ]
+        ),
+    )
 
 
 def _ignored_definition_findings(ctx: RuleContext) -> list[Finding]:
@@ -498,16 +515,16 @@ def _parse_env_pairs(text: str) -> dict[str, str]:
 
 
 def _missing_required_keys(pairs: dict[str, str]) -> list[Finding]:
-    return [
-        Finding(
+    return _absent_findings(
+        REQUIRED_ENV_KEYS,
+        lambda key: key in pairs,
+        lambda key: Finding(
             rule_id="C2",
             severity=Severity.ERROR,
             message=f".env.example missing key {key}",
             locator=".env.example",
-        )
-        for key in REQUIRED_ENV_KEYS
-        if key not in pairs
-    ]
+        ),
+    )
 
 
 def _nonempty_must_be_empty(pairs: dict[str, str]) -> list[Finding]:
