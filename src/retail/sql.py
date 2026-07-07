@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from .core import RuleContext
@@ -78,6 +79,92 @@ def _dollar_quote_end(text: str, i: int) -> int | None:
     return len(text) if j == -1 else j + len(open_tag)
 
 
+def _line_comment_end(text: str, i: int) -> int:
+    """Index of the newline terminating a ``--`` comment opening at ``text[i]``.
+
+    The newline itself is NOT consumed (callers re-process it for line
+    accounting). An unterminated comment fails closed to EOF.
+    """
+    j = text.find("\n", i)
+    return len(text) if j == -1 else j
+
+
+def _block_comment_end(text: str, i: int) -> int:
+    """Index just past the ``*/`` closing a ``/* */`` comment opening at ``text[i]``.
+
+    An unterminated block comment fails closed to EOF.
+    """
+    j = text.find("*/", i)
+    return len(text) if j == -1 else j + 2
+
+
+def _quoted_span_end(text: str, i: int) -> int:
+    """Index just past the close quote of a ``'...'``/``"..."`` span at ``text[i]``.
+
+    ``text[i]`` is the opening quote. Returns the index after the matching close
+    quote, or EOF if unterminated. A PG doubled-quote escape (``''``/``""``) is
+    left as two adjacent spans -- this reproduces the existing behavior exactly and
+    is correct for comment-stripping (whose only job is to neutralize comments).
+    """
+    ch = text[i]
+    j = text.find(ch, i + 1)
+    return len(text) if j == -1 else j + 1
+
+
+def _blank_span(span: str) -> str:
+    """Map each char in ``span`` to a space, keeping newlines, so downstream line
+    numbers and columns outside the removed span are unchanged."""
+    return "".join("\n" if c == "\n" else " " for c in span)
+
+
+# ``tokenize_sql`` branch producers. Each takes ``(text, i, line)`` where ``text[i]``
+# opens the span, and returns ``(token_or_None, new_line, next_i)``: the placeholder
+# token to emit (or ``None`` when the span produces no token), the updated 1-based
+# line after crossing the span, and the index to resume scanning from. Line
+# accounting lives here so the main loop is a flat dispatcher.
+
+
+def _scan_line_comment(
+    text: str, i: int, line: int
+) -> tuple[SqlToken | None, int, int]:
+    """A ``--`` comment: emits no token; a single-line span never changes ``line``."""
+    return None, line, _line_comment_end(text, i)
+
+
+def _scan_block_comment(
+    text: str, i: int, line: int
+) -> tuple[SqlToken | None, int, int]:
+    """A ``/* */`` comment: emits no token; ``line`` advances past inner newlines."""
+    end = _block_comment_end(text, i)
+    return None, line + text.count("\n", i, end), end
+
+
+def _scan_quoted_token(
+    text: str, i: int, line: int
+) -> tuple[SqlToken | None, int, int]:
+    """A ``'...'``/``"..."`` span collapses to an empty-text placeholder token so no
+    inner word leaks; ``line`` is advanced to the token's end line."""
+    end = _quoted_span_end(text, i)
+    new_line = line + text.count("\n", i, end)
+    return SqlToken("", new_line), new_line, end
+
+
+def _scan_dollar_token(
+    text: str, i: int, line: int
+) -> tuple[SqlToken | None, int, int]:
+    """A ``$$``/``$tag$`` PL/pgSQL body collapses to a placeholder token (like a
+    string literal) so no inner word leaks; line accounting spans the body.
+
+    Returns ``(None, line, i)`` unchanged when ``text[i]`` is NOT a dollar-quote
+    opener (e.g. ``$1``), signalling the caller to fall through to word-matching.
+    """
+    end = _dollar_quote_end(text, i)
+    if end is None:
+        return None, line, i
+    new_line = line + text.count("\n", i, end)
+    return SqlToken("", new_line), new_line, end
+
+
 def tokenize_sql(text: str) -> list[SqlToken]:
     """Tokenize SQL, dropping comments and string-literal contents.
 
@@ -97,32 +184,20 @@ def tokenize_sql(text: str) -> list[SqlToken]:
         if ch.isspace():
             i += 1
             continue
-        if text.startswith("--", i):
-            j = text.find("\n", i)
-            i = n if j == -1 else j
-            continue
-        if text.startswith("/*", i):
-            j = text.find("*/", i)
-            line += text.count("\n", i, n if j == -1 else j)
-            i = n if j == -1 else j + 2
-            continue
-        if ch in ("'", '"'):
-            j = text.find(ch, i + 1)
-            end = n if j == -1 else j
-            line += text.count("\n", i, end)
-            tokens.append(SqlToken("", line))
-            i = n if j == -1 else j + 1
-            continue
-        if ch == "$":
-            end = _dollar_quote_end(text, i)
-            if end is not None:
-                # A PL/pgSQL body collapses to a placeholder token (like a string
-                # literal) so no inner word leaks; line accounting spans the body.
-                line += text.count("\n", i, end)
-                tokens.append(SqlToken("", line))
-                i = end
+
+        # Dispatch the span-producing branches. Each producer returns
+        # (token_or_None, new_line, next_i); a producer that does not consume its
+        # opener (dollar non-opener) returns next_i == i so we fall through.
+        producer = _tokenize_producer(text, i, ch)
+        if producer is not None:
+            tok, line, next_i = producer(text, i, line)
+            if next_i != i:
+                if tok is not None:
+                    tokens.append(tok)
+                i = next_i
                 continue
-            # not a dollar-quote opener (e.g. `$1`); fall through to skip the `$`.
+            # not consumed (e.g. `$1`); fall through to word-matching.
+
         m = word.match(text, i)
         if m:
             tokens.append(SqlToken(m.group(0), line))
@@ -130,6 +205,24 @@ def tokenize_sql(text: str) -> list[SqlToken]:
             continue
         i += 1
     return tokens
+
+
+# Producer type: (text, i, line) -> (token_or_None, new_line, next_i).
+_TokenProducer = Callable[[str, int, int], tuple["SqlToken | None", int, int]]
+
+
+def _tokenize_producer(text: str, i: int, ch: str) -> _TokenProducer | None:
+    """Select the span producer for the token opening at ``text[i]``, or ``None``
+    when no span opens here and the caller should word-match directly."""
+    if text.startswith("--", i):
+        return _scan_line_comment
+    if text.startswith("/*", i):
+        return _scan_block_comment
+    if ch in ("'", '"'):
+        return _scan_quoted_token
+    if ch == "$":
+        return _scan_dollar_token
+    return None
 
 
 def strip_sql_comments(text: str) -> str:
@@ -158,39 +251,29 @@ def strip_sql_comments(text: str) -> str:
         # Inside a quoted span, copy through until the matching close quote; never
         # interpret a comment marker here.
         if ch in ("'", '"'):
-            out.append(ch)
-            i += 1
-            while i < n:
-                out.append(text[i])
-                if text[i] == ch:
-                    i += 1
-                    break
-                i += 1
+            end = _quoted_span_end(text, i)
+            out.append(text[i:end])
+            i = end
             continue
         if ch == "$":
             end = _dollar_quote_end(text, i)
             if end is not None:
                 # Blank a PL/pgSQL body (a `--`/quoted-ident inside it is data, not
                 # code) but keep columns + newlines so line numbers downstream hold.
-                span = text[i:end]
-                out.append("".join("\n" if c == "\n" else " " for c in span))
+                out.append(_blank_span(text[i:end]))
                 i = end
                 continue
             # not a dollar-quote opener (e.g. `$1`); copy the `$` through below.
         if text.startswith("--", i):
-            j = text.find("\n", i)
-            end = n if j == -1 else j
-            out.append(
-                " " * (end - i)
-            )  # keep columns; newline (if any) added next loop
+            end = _line_comment_end(text, i)
+            # keep columns; the newline (if any) is copied through next loop
+            out.append(" " * (end - i))
             i = end
             continue
         if text.startswith("/*", i):
-            j = text.find("*/", i)
-            end = n if j == -1 else j + 2
-            span = text[i:end]
+            end = _block_comment_end(text, i)
             # preserve newlines inside the block so line numbers downstream hold
-            out.append("".join("\n" if c == "\n" else " " for c in span))
+            out.append(_blank_span(text[i:end]))
             i = end
             continue
         out.append(ch)
@@ -226,6 +309,59 @@ def stale_schema_tokens(text: str) -> list[tuple[str, int]]:
     return hits
 
 
+def _collect_statement_tokens(
+    toks: list[SqlToken], stmt_start_idx: int
+) -> list[SqlToken]:
+    """Return the tokens from ``stmt_start_idx`` up to (not including) the next ";".
+
+    Bounding at the statement terminator prevents leakage from a preceding
+    ``SET search_path`` statement into the target-zone detection.
+    """
+    stmt: list[SqlToken] = []
+    for i in range(stmt_start_idx, len(toks)):
+        if toks[i].text == ";":
+            break
+        stmt.append(toks[i])
+    return stmt
+
+
+def _qualified_zone(stmt: list[SqlToken], pos: int) -> str:
+    """Return the zone at ``stmt[pos]`` iff it is an explicit ``<zone>.<name>``.
+
+    ``pos`` must point at the candidate schema qualifier. The token earns a zone
+    only when it is a zone token AND immediately followed by ".". Anything else --
+    an out-of-range ``pos``, a non-zone token, or a missing dot -- is "unknown"
+    (fail-closed).
+    """
+    if pos >= len(stmt):
+        return "unknown"
+    candidate = stmt[pos].text.lower()
+    if candidate in _ZONE_TOKENS:
+        if pos + 1 < len(stmt) and stmt[pos + 1].text == ".":
+            return candidate
+    return "unknown"
+
+
+def _index_ddl_zone(stmt: list[SqlToken], stmt_texts_upper: list[str]) -> str | None:
+    """Zone for a CREATE/DROP INDEX statement, or ``None`` if it is not one.
+
+    For an index DDL the target is the TABLE after the ON keyword, not the index
+    name itself. Returns a zone or "unknown" (never ``None``) when it IS an index
+    DDL; returns ``None`` only when the caller should fall through to the general
+    case.
+    """
+    verb = stmt[0].text.upper()
+    is_index_ddl = (
+        verb in ("CREATE", "DROP")
+        and "INDEX" in stmt_texts_upper
+        and "ON" in stmt_texts_upper
+    )
+    if not is_index_ddl:
+        return None
+    on_pos = stmt_texts_upper.index("ON")
+    return _qualified_zone(stmt, on_pos + 1)
+
+
 def schema_zone(toks: list[SqlToken], stmt_start_idx: int) -> str:
     """Return the schema zone of the DDL target object.
 
@@ -242,52 +378,19 @@ def schema_zone(toks: list[SqlToken], stmt_start_idx: int) -> str:
       An unqualified target, a search_path-only qualification, or anything
       ambiguous returns "unknown" (fail-closed).
     """
-    n = len(toks)
-    # Collect this statement's tokens up to (not including) the next ";".
-    stmt: list[SqlToken] = []
-    for i in range(stmt_start_idx, n):
-        if toks[i].text == ";":
-            break
-        stmt.append(toks[i])
-
+    stmt = _collect_statement_tokens(toks, stmt_start_idx)
     if not stmt:
         return "unknown"
 
-    verb = stmt[0].text.upper()
     stmt_texts_upper = [t.text.upper() for t in stmt]
 
-    # Special case: CREATE INDEX / DROP INDEX -> zone is from the TABLE after ON.
-    # Detect: verb is CREATE/DROP and a modifier keyword INDEX is present before ON.
-    is_index_ddl = (
-        verb in ("CREATE", "DROP")
-        and "INDEX" in stmt_texts_upper
-        and "ON" in stmt_texts_upper
-    )
-    if is_index_ddl:
-        on_pos = stmt_texts_upper.index("ON")
-        # Token after ON should be <schema>.<name> or just <name>
-        if on_pos + 1 < len(stmt):
-            candidate = stmt[on_pos + 1].text.lower()
-            if candidate in _ZONE_TOKENS:
-                # Check for the dot after it
-                if on_pos + 2 < len(stmt) and stmt[on_pos + 2].text == ".":
-                    return candidate
-        return "unknown"
+    index_zone = _index_ddl_zone(stmt, stmt_texts_upper)
+    if index_zone is not None:
+        return index_zone
 
     # General case: skip the verb and any modifier keywords to find the target.
-    # Walk forward from position 1 (skip verb), skip modifiers/keywords.
     pos = 1
     while pos < len(stmt) and stmt[pos].text.upper() in _DDL_MODIFIERS:
         pos += 1
 
-    # At pos we should have the first "real" identifier.
-    if pos >= len(stmt):
-        return "unknown"
-
-    candidate = stmt[pos].text.lower()
-    if candidate in _ZONE_TOKENS:
-        # Must be followed by "." to be a schema qualifier.
-        if pos + 1 < len(stmt) and stmt[pos + 1].text == ".":
-            return candidate
-
-    return "unknown"
+    return _qualified_zone(stmt, pos)
