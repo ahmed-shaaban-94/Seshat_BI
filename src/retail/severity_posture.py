@@ -48,6 +48,7 @@ import pkgutil
 import subprocess
 import tempfile
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 from .core import Finding, RegisteredRule, Rule, RuleContext, Severity
@@ -168,6 +169,124 @@ _EXPR_G6 = 'expression Server = "a-real-host" meta [IsParameterQuery=true]\n'
 # A UTF-8 BOM-prefixed json file -> G3 ERROR.
 _JSON_G3 = "﻿{}\n"
 
+# A readiness-status.yaml whose current_stage is ahead of a not_started gate -> RS1.
+_YAML_RS1 = (
+    'table: "bronze.demo"\n'
+    'current_stage: "mapping_ready"\n'
+    "stages:\n"
+    "  source_ready:\n"
+    '    status: "pass"\n'
+    "    evidence: []\n"
+    "    blocking_reasons: []\n"
+    "  mapping_ready:\n"
+    '    status: "not_started"\n'
+    "    evidence: []\n"
+    "    blocking_reasons: []\n"
+)
+
+# A filled per-table scorecard with a status outside the enum -> SL1 ERROR.
+_MD_SL1 = (
+    "# Coverage scorecard\n\n"
+    "> Table: `schema.demo` -- generic grain\n\n"
+    "| KPI | Contract | Coverage status | Blocker |\n"
+    "|-----|----------|-----------------|---------|\n"
+    "| Demo KPI | -- | Sorta covered | -- |\n"
+)
+
+# A metric contract with an unresolved assumption (blocked + reasons) AND a settled
+# gold binding -> AL1 fails loud (ERROR).
+_YAML_AL1 = (
+    "name: DemoMetric\n"
+    "binds_to:\n"
+    '  gold_table: "gold.fct_demo"\n'
+    "  columns:\n"
+    '    - "net_amount"\n'
+    "readiness:\n"
+    '  status: "blocked"\n'
+    '  blocking_reasons: ["A4 gross/net denominator not ruled"]\n'
+)
+
+# A theme carrying a forbidden business-logic key -> DL1 ERRORs.
+_JSON_DL1 = '{"measure": "bad"}\n'
+
+# A background spec with a forbidden_dynamic_content key set true -> DL2 ERRORs.
+_YAML_DL2 = "forbidden_dynamic_content:\n  kpi_value: true\n"
+
+# tokens declare data_colors but the theme drifts -> DL3 ERRORs.
+_YAML_DL3_TOKENS = (
+    "meta: { compiles_to: demo.theme.json }\n"
+    "colors:\n  data_colors:\n    - '#111111'\n"
+)
+_JSON_DL3_THEME = '{"dataColors": ["#999999"]}\n'
+
+# A design-review evidence record missing a required field -> DL4 ERRORs.
+_MD_DL4 = "## Record\n\n- **page_id:** `p01`\n"
+
+# A layout grid whose column arithmetic does NOT close -> DL5 ERRORs.
+# usable width = 200 - 10 - 10 = 180, but 4*25 + 3*20 = 160 != 180.
+_YAML_DL5 = (
+    "grid_id: demo\n"
+    "profiles:\n"
+    '  "p":\n'
+    "    canvas: { width: 200, height: 150 }\n"
+    "    margin: { top: 10, right: 10, bottom: 10, left: 10 }\n"
+    "    grid:\n"
+    "      columns: 4\n"
+    "      rows: 3\n"
+    "      gutter: 20\n"
+    "      column_width: 25\n"
+    "      row_height: 30\n"
+)
+
+# SF1 emits BOTH classes over one synthetic repo (mirrors S4b's multi-class
+# fixture): an UNDECLARED same-basename collision -> ERROR, AND a spine entry that
+# no longer names a live collision -> WARNING (stale entry). Without this, SF1 is
+# only ever reached via the missing-manifest ERROR path and its WARNING branch
+# goes unobserved.
+_YAML_SF1_SPINE = "checklists:\n  gone.md: shared\n"
+_MD_SF1_DUP_A = "content A\n"
+_MD_SF1_DUP_B = "content B\n"
+
+# tokens with a text/background pair below the declared floor -> CT1 ERRORs.
+_YAML_CT1 = (
+    "colors:\n"
+    "  background: '#FFFFFF'\n"
+    "  text:\n    primary: '#CCCCCC'\n"
+    "accessibility:\n  min_text_contrast_ratio: '4.5:1'\n"
+)
+
+# A tracked path longer than MAX_REL_PATH -> G5 ERROR. G5 reads ctx.tracked_files
+# only (the path string), never disk, so the file is NOT materialized (a >260-char
+# path would hit Windows MAX_PATH).
+_G5_LONG_REL = "warehouse/" + ("d/" * 100) + "f.sql"
+
+# A trivial always-parseable SQL file, tracked so ls-files based rules see content
+# without triggering their own findings (G2 empty-case INFO, P1/A1 missing-path).
+_SQL_TRIVIAL = "SELECT 1;\n"
+
+# The shared TMDL table path the D-family and C1 all target.
+_TMDL_TABLE_REL = "powerbi/M.SemanticModel/definition/tables/t.tmdl"
+
+
+def _env_example_text() -> str:
+    # A complete .env.example so C2's example-file sub-check is satisfied and the
+    # ONLY finding is the tracked-.env ERROR (a focused, single-class observation).
+    keys = (
+        "ANALYTICS_DB_HOST=",
+        "ANALYTICS_DB_PORT=5432",
+        "ANALYTICS_DB_NAME=",
+        "ANALYTICS_DB_USER=",
+        "ANALYTICS_DB_PASSWORD=",
+        "ANALYTICS_DB_SSLMODE=require",
+    )
+    return "\n".join(keys) + "\n"
+
+
+# A tracked .env (the ".env must never be tracked" ERROR) paired with a complete
+# .env.example so C2's example-file sub-check is satisfied -> a single-class ERROR.
+_ENV_C2 = "SECRET=1\n"
+_ENV_EXAMPLE_C2 = _env_example_text()
+
 
 def _run(repo: Path, *args: str) -> None:
     subprocess.run(
@@ -202,289 +321,145 @@ def _classes(findings: Iterable[Finding]) -> set[str]:
     return out
 
 
+@dataclass(frozen=True)
+class _Fixture:
+    """The synthetic-repo recipe for forcing ONE rule to fire.
+
+    ``files`` are written to disk in order (each a ``(rel, body)`` pair).
+    ``tracked`` is the ``ctx.tracked_files`` list; when left ``None`` it defaults
+    to the rels from ``files`` in order (the common case). It is set explicitly
+    only where it must diverge from what was written -- G5 tracks an unmaterialized
+    over-length path, P2 tracks nothing and drives only ``commit_message``.
+    """
+
+    files: tuple[tuple[str, str], ...] = ()
+    tracked: tuple[str, ...] | None = None
+    commit_message: str | None = None
+
+    def tracked_files(self) -> tuple[str, ...]:
+        if self.tracked is not None:
+            return self.tracked
+        return tuple(rel for rel, _ in self.files)
+
+
+def _tmdl_fixture(body: str) -> _Fixture:
+    """A single-table TMDL fixture at the shared D-family / C1 path."""
+    return _Fixture(files=((_TMDL_TABLE_REL, body),))
+
+
+# rule_id -> the synthetic-repo recipe that forces it to fire. A rule_id absent
+# from this table falls through to the default empty fixture -> no-finding marker.
+_RULE_FIXTURES: dict[str, _Fixture] = {
+    "S1": _Fixture(files=(("warehouse/a.sql", _SQL_S1),)),
+    "S2": _Fixture(files=(("warehouse/a.sql", _SQL_S2),)),
+    "S3": _Fixture(files=(("warehouse/a.sql", _SQL_S3),)),
+    "S4a": _Fixture(files=(("warehouse/migrations/bad_name.sql", _SQL_S4A_BADNAME),)),
+    "S4b": _Fixture(files=(("warehouse/a.sql", _SQL_S4B),)),
+    "S5": _Fixture(files=(("warehouse/a.sql", _SQL_S5),)),
+    "S6": _Fixture(files=(("warehouse/a.sql", _SQL_S6),)),
+    "S7": _Fixture(files=(("warehouse/a.sql", _SQL_S7),)),
+    "S8": _Fixture(files=(("warehouse/a.sql", _SQL_S8),)),
+    "D1": _tmdl_fixture(_TMDL_D1),
+    "D2": _tmdl_fixture(_TMDL_D2),
+    "D3": _tmdl_fixture(_TMDL_D3),
+    "D4": _tmdl_fixture(_TMDL_D4),
+    "D5": _tmdl_fixture(_TMDL_D5),
+    "D6": _tmdl_fixture(_TMDL_D6),
+    "D7": _tmdl_fixture(_TMDL_D7),
+    "D8": _tmdl_fixture(_TMDL_D8),
+    "D9": _tmdl_fixture(_TMDL_D9),
+    "D10": _tmdl_fixture(_TMDL_D10),
+    "D11": _tmdl_fixture(_TMDL_D11),
+    "C1": _tmdl_fixture(_TMDL_C1),
+    "B1": _Fixture(files=(("src/retail/rules/synthetic_probe.py", _PY_B1),)),
+    "R1": _Fixture(files=(("powerbi/M.Report/definition.pbir", _PBIR_R1),)),
+    "RS1": _Fixture(files=(("mappings/demo/readiness-status.yaml", _YAML_RS1),)),
+    # a real (non-placeholder) parameter value -> G6 ERROR.
+    "G6": _Fixture(
+        files=(("powerbi/M.SemanticModel/definition/expressions.tmdl", _EXPR_G6),)
+    ),
+    # a UTF-8 BOM-prefixed json file -> G3 ERROR.
+    "G3": _Fixture(
+        files=(("powerbi/M.SemanticModel/definition/model.json", _JSON_G3),)
+    ),
+    # a tracked over-length path (NOT materialized) -> G5 ERROR.
+    "G5": _Fixture(tracked=(_G5_LONG_REL,)),
+    # an empty .gitattributes -> every required glob missing -> ERROR.
+    "G4": _Fixture(files=((".gitattributes", "# empty\n"),)),
+    # an empty .gitignore -> required ignores missing -> ERROR.
+    "G1": _Fixture(files=((".gitignore", "\n"),)),
+    # no PBIP-signature tracked file -> the INFO empty-case branch fires.
+    "G2": _Fixture(files=(("warehouse/a.sql", _SQL_TRIVIAL),)),
+    # a tracked .env -> the ".env must never be tracked" ERROR branch.
+    "C2": _Fixture(files=((".env", _ENV_C2), (".env.example", _ENV_EXAMPLE_C2))),
+    # no required layout paths tracked -> missing-path ERROR.
+    "P1": _Fixture(files=(("warehouse/a.sql", _SQL_TRIVIAL),)),
+    # a non-conforming commit subject supplied via the contract field.
+    "P2": _Fixture(commit_message="not a conventional subject"),
+    # the routes manifest is absent/untracked -> A1 fails loud (ERROR).
+    "A1": _Fixture(files=(("warehouse/a.sql", _SQL_TRIVIAL),)),
+    "SL1": _Fixture(files=(("mappings/demo/demo-coverage-scorecard.md", _MD_SL1),)),
+    "AL1": _Fixture(files=(("mappings/demo/metrics/DemoMetric.yaml", _YAML_AL1),)),
+    "DL1": _Fixture(files=(("demo.theme.json", _JSON_DL1),)),
+    "DL2": _Fixture(
+        files=(("mappings/demo/background/page.background.yaml", _YAML_DL2),)
+    ),
+    "DL3": _Fixture(
+        files=(
+            ("design/tokens/demo-design-tokens.yaml", _YAML_DL3_TOKENS),
+            ("demo.theme.json", _JSON_DL3_THEME),
+        )
+    ),
+    "DL4": _Fixture(files=(("reports/demo/design-review-evidence.md", _MD_DL4),)),
+    "DL5": _Fixture(files=(("design/grids/demo-grid.yaml", _YAML_DL5),)),
+    "SF1": _Fixture(
+        files=(
+            ("docs/quality/shared-spine.yaml", _YAML_SF1_SPINE),
+            ("skills/pack-a/checklists/dup.md", _MD_SF1_DUP_A),
+            ("skills/pack-b/checklists/dup.md", _MD_SF1_DUP_B),
+        )
+    ),
+    "CT1": _Fixture(files=(("design/tokens/demo-design-tokens.yaml", _YAML_CT1),)),
+}
+
+
+def _git_add_best_effort(repo: Path, tracked: Iterable[str]) -> None:
+    """git-add each tracked rel so check-ignore / ls-files based rules see it.
+
+    Best-effort: a path git refuses to add (e.g. the deliberately over-length G5
+    path on Windows MAX_PATH) is skipped -- G5 reads ``ctx.tracked_files`` only and
+    never touches git.
+    """
+    for rel in tracked:
+        try:
+            _run(repo, "add", "--force", rel)
+        except subprocess.CalledProcessError:
+            pass
+
+
 def _observe_rule(rule_id: str, fn: Rule) -> set[str]:
     """Force one registered rule to fire over a minimal synthetic repo.
 
     Returns the SET of severity class string values the rule emits. An empty set
     means the rule could not be forced to fire (caller records the marker).
     """
+    fixture = _RULE_FIXTURES.get(rule_id, _Fixture())
+    tracked = fixture.tracked_files()
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
-        tracked: list[str] = []
-        commit_message: str | None = None
-
-        if rule_id == "S1":
-            _write(repo, "warehouse/a.sql", _SQL_S1)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S2":
-            _write(repo, "warehouse/a.sql", _SQL_S2)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S3":
-            _write(repo, "warehouse/a.sql", _SQL_S3)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S4a":
-            _write(repo, "warehouse/migrations/bad_name.sql", _SQL_S4A_BADNAME)
-            tracked = ["warehouse/migrations/bad_name.sql"]
-        elif rule_id == "S4b":
-            _write(repo, "warehouse/a.sql", _SQL_S4B)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S5":
-            _write(repo, "warehouse/a.sql", _SQL_S5)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S6":
-            _write(repo, "warehouse/a.sql", _SQL_S6)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S7":
-            _write(repo, "warehouse/a.sql", _SQL_S7)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "S8":
-            _write(repo, "warehouse/a.sql", _SQL_S8)
-            tracked = ["warehouse/a.sql"]
-        elif rule_id in (
-            "D1",
-            "D2",
-            "D3",
-            "D4",
-            "D5",
-            "D6",
-            "D7",
-            "D9",
-            "D10",
-            "D11",
-        ):
-            body = {
-                "D1": _TMDL_D1,
-                "D2": _TMDL_D2,
-                "D3": _TMDL_D3,
-                "D4": _TMDL_D4,
-                "D5": _TMDL_D5,
-                "D6": _TMDL_D6,
-                "D7": _TMDL_D7,
-                "D9": _TMDL_D9,
-                "D10": _TMDL_D10,
-                "D11": _TMDL_D11,
-            }[rule_id]
-            rel = "powerbi/M.SemanticModel/definition/tables/t.tmdl"
+        for rel, body in fixture.files:
             _write(repo, rel, body)
-            tracked = [rel]
-        elif rule_id in ("D8", "C1"):
-            body = _TMDL_D8 if rule_id == "D8" else _TMDL_C1
-            rel = "powerbi/M.SemanticModel/definition/tables/t.tmdl"
-            _write(repo, rel, body)
-            tracked = [rel]
-        elif rule_id == "B1":
-            rel = "src/retail/rules/synthetic_probe.py"
-            _write(repo, rel, _PY_B1)
-            tracked = [rel]
-        elif rule_id == "R1":
-            rel = "powerbi/M.Report/definition.pbir"
-            _write(repo, rel, _PBIR_R1)
-            tracked = [rel]
-        elif rule_id == "RS1":
-            rel = "mappings/demo/readiness-status.yaml"
-            _write(
-                repo,
-                rel,
-                'table: "bronze.demo"\n'
-                'current_stage: "mapping_ready"\n'
-                "stages:\n"
-                "  source_ready:\n"
-                '    status: "pass"\n'
-                "    evidence: []\n"
-                "    blocking_reasons: []\n"
-                "  mapping_ready:\n"
-                '    status: "not_started"\n'
-                "    evidence: []\n"
-                "    blocking_reasons: []\n",
-            )
-            tracked = [rel]
-        elif rule_id == "G6":
-            rel = "powerbi/M.SemanticModel/definition/expressions.tmdl"
-            _write(repo, rel, _EXPR_G6)
-            tracked = [rel]
-        elif rule_id == "G3":
-            rel = "powerbi/M.SemanticModel/definition/model.json"
-            _write(repo, rel, _JSON_G3)
-            tracked = [rel]
-        elif rule_id == "G5":
-            # a tracked path longer than MAX_REL_PATH -> ERROR. G5 reads
-            # ctx.tracked_files only (the path string), never disk, so the file
-            # is NOT materialized (a >260-char path would hit Windows MAX_PATH).
-            long_rel = "warehouse/" + ("d/" * 100) + "f.sql"
-            tracked = [long_rel]
-        elif rule_id == "G4":
-            # an empty .gitattributes -> every required glob missing -> ERROR.
-            _write(repo, ".gitattributes", "# empty\n")
-            tracked = [".gitattributes"]
-        elif rule_id == "G1":
-            # an empty .gitignore -> required ignores missing -> ERROR.
-            _write(repo, ".gitignore", "\n")
-            tracked = [".gitignore"]
-        elif rule_id == "G2":
-            # no PBIP-signature tracked file -> the INFO empty-case branch fires.
-            _write(repo, "warehouse/a.sql", "SELECT 1;\n")
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "C2":
-            # a tracked .env -> the ".env must never be tracked" ERROR branch.
-            _write(repo, ".env", "SECRET=1\n")
-            _write(repo, ".env.example", _env_example_text())
-            tracked = [".env", ".env.example"]
-        elif rule_id == "P1":
-            # no required layout paths tracked -> missing-path ERROR.
-            _write(repo, "warehouse/a.sql", "SELECT 1;\n")
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "P2":
-            # a non-conforming commit subject supplied via the contract field.
-            commit_message = "not a conventional subject"
-        elif rule_id == "A1":
-            # the routes manifest is absent/untracked -> A1 fails loud (ERROR).
-            _write(repo, "warehouse/a.sql", "SELECT 1;\n")
-            tracked = ["warehouse/a.sql"]
-        elif rule_id == "SL1":
-            # a filled per-table scorecard with a status outside the enum -> SL1 ERROR.
-            _write(
-                repo,
-                "mappings/demo/demo-coverage-scorecard.md",
-                "# Coverage scorecard\n\n"
-                "> Table: `schema.demo` -- generic grain\n\n"
-                "| KPI | Contract | Coverage status | Blocker |\n"
-                "|-----|----------|-----------------|---------|\n"
-                "| Demo KPI | -- | Sorta covered | -- |\n",
-            )
-            tracked = ["mappings/demo/demo-coverage-scorecard.md"]
-        elif rule_id == "AL1":
-            # a metric contract with an unresolved assumption (blocked + reasons) AND a
-            # settled gold binding -> AL1 fails loud (ERROR).
-            _write(
-                repo,
-                "mappings/demo/metrics/DemoMetric.yaml",
-                "name: DemoMetric\n"
-                "binds_to:\n"
-                '  gold_table: "gold.fct_demo"\n'
-                "  columns:\n"
-                '    - "net_amount"\n'
-                "readiness:\n"
-                '  status: "blocked"\n'
-                '  blocking_reasons: ["A4 gross/net denominator not ruled"]\n',
-            )
-            tracked = ["mappings/demo/metrics/DemoMetric.yaml"]
-        elif rule_id == "DL1":
-            # A theme carrying a forbidden business-logic key -> DL1 ERRORs.
-            _write(repo, "demo.theme.json", '{"measure": "bad"}\n')
-            tracked = ["demo.theme.json"]
-        elif rule_id == "DL2":
-            # A background spec with a forbidden_dynamic_content key set true.
-            _write(
-                repo,
-                "mappings/demo/background/page.background.yaml",
-                "forbidden_dynamic_content:\n  kpi_value: true\n",
-            )
-            tracked = ["mappings/demo/background/page.background.yaml"]
-        elif rule_id == "DL3":
-            # tokens declare data_colors but the theme drifts -> DL3 ERRORs.
-            _write(
-                repo,
-                "design/tokens/demo-design-tokens.yaml",
-                "meta: { compiles_to: demo.theme.json }\n"
-                "colors:\n  data_colors:\n    - '#111111'\n",
-            )
-            _write(repo, "demo.theme.json", '{"dataColors": ["#999999"]}\n')
-            tracked = [
-                "design/tokens/demo-design-tokens.yaml",
-                "demo.theme.json",
-            ]
-        elif rule_id == "DL4":
-            # A design-review evidence record missing a required field -> DL4 ERRORs.
-            _write(
-                repo,
-                "reports/demo/design-review-evidence.md",
-                "## Record\n\n- **page_id:** `p01`\n",
-            )
-            tracked = ["reports/demo/design-review-evidence.md"]
-        elif rule_id == "DL5":
-            # A layout grid whose column arithmetic does NOT close -> DL5 ERRORs.
-            # usable width = 200 - 10 - 10 = 180, but 4*25 + 3*20 = 160 != 180.
-            _write(
-                repo,
-                "design/grids/demo-grid.yaml",
-                "grid_id: demo\n"
-                "profiles:\n"
-                '  "p":\n'
-                "    canvas: { width: 200, height: 150 }\n"
-                "    margin: { top: 10, right: 10, bottom: 10, left: 10 }\n"
-                "    grid:\n"
-                "      columns: 4\n"
-                "      rows: 3\n"
-                "      gutter: 20\n"
-                "      column_width: 25\n"
-                "      row_height: 30\n",
-            )
-            tracked = ["design/grids/demo-grid.yaml"]
-        elif rule_id == "SF1":
-            # SF1 emits BOTH classes over one synthetic repo (mirrors S4b's
-            # multi-class fixture): an UNDECLARED same-basename collision -> ERROR,
-            # AND a spine entry that no longer names a live collision -> WARNING
-            # (stale entry). Without this, SF1 is only ever reached via the
-            # missing-manifest ERROR path and its WARNING branch goes unobserved.
-            _write(
-                repo,
-                "docs/quality/shared-spine.yaml",
-                "checklists:\n  gone.md: shared\n",
-            )
-            _write(repo, "skills/pack-a/checklists/dup.md", "content A\n")
-            _write(repo, "skills/pack-b/checklists/dup.md", "content B\n")
-            tracked = [
-                "docs/quality/shared-spine.yaml",
-                "skills/pack-a/checklists/dup.md",
-                "skills/pack-b/checklists/dup.md",
-            ]
-        elif rule_id == "CT1":
-            # tokens with a text/background pair below the declared floor -> CT1 ERRORs.
-            _write(
-                repo,
-                "design/tokens/demo-design-tokens.yaml",
-                "colors:\n"
-                "  background: '#FFFFFF'\n"
-                "  text:\n    primary: '#CCCCCC'\n"
-                "accessibility:\n  min_text_contrast_ratio: '4.5:1'\n",
-            )
-            tracked = ["design/tokens/demo-design-tokens.yaml"]
-        else:
-            # An unknown rule id: leave tracked empty -> no-finding marker.
-            tracked = []
 
         _init_repo(repo)
-        for rel in tracked:
-            # Best-effort: git-add so check-ignore / ls-files based rules
-            # (G1/G2/C2) see a tracked file. A path that git refuses to add
-            # (e.g. the deliberately over-length G5 path on Windows MAX_PATH) is
-            # skipped -- G5 reads ctx.tracked_files only and never touches git.
-            try:
-                _run(repo, "add", "--force", rel)
-            except subprocess.CalledProcessError:
-                pass
+        _git_add_best_effort(repo, tracked)
 
         ctx = RuleContext(
             repo_root=repo,
-            tracked_files=tuple(tracked),
+            tracked_files=tracked,
             commit_range=None,
-            commit_message=commit_message,
+            commit_message=fixture.commit_message,
         )
         return _classes(fn(ctx))
-
-
-def _env_example_text() -> str:
-    # A complete .env.example so C2's example-file sub-check is satisfied and the
-    # ONLY finding is the tracked-.env ERROR (a focused, single-class observation).
-    keys = (
-        "ANALYTICS_DB_HOST=",
-        "ANALYTICS_DB_PORT=5432",
-        "ANALYTICS_DB_NAME=",
-        "ANALYTICS_DB_USER=",
-        "ANALYTICS_DB_PASSWORD=",
-        "ANALYTICS_DB_SSLMODE=require",
-    )
-    return "\n".join(keys) + "\n"
 
 
 def _observe_l3() -> set[str]:
