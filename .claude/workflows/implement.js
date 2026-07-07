@@ -410,83 +410,147 @@ function deselectsAreExplained(v) {
   const argvMatchesIds = sorted(argvDeselects) === sorted(ds)   // no hidden argv deselect
   return idsAllAllowed && argvAllAllowed && argvMatchesIds
 }
-function completionGate(b, expectedBranch) {
-  const v = b && b.verify
-  const reasons = []
+// completionGate scores SIX independent completion criteria (a-f). Each is
+// extracted into a small pure predicate below that returns { ok, reason } (the
+// reason is null when the criterion passes). completionGate stays a flat
+// sequence: run each criterion, collect its non-null reason(s) in order, then
+// compute hardRed from the SAME booleans and return the SAME {outcome, reasons}.
+// The extraction is internal only -- no behavior, string, or ordering change.
 
-  // (a) every task accounted for -- computed in JS, not trusted from the agent's status enum.
-  // A "done" task must also be COMMITTED, or its changes are not on the PR branch: a
-  // size-only done===total check would call READY a branch missing that task's code.
+// (a) every task accounted for -- computed in JS, not trusted from the agent's status enum.
+// A "done" task must also be COMMITTED, or its changes are not on the PR branch: a
+// size-only done===total check would call READY a branch missing that task's code.
+function tasksAllDoneCriterion(b) {
   const doneArr = (b && Array.isArray(b.tasks_done)) ? b.tasks_done : null
   const total = b ? b.tasks_total : 0
   const done = doneArr ? doneArr.length : -1
   const blocked = (b && Array.isArray(b.tasks_blocked)) ? b.tasks_blocked.length : 1
   const allCommitted = !!doneArr && doneArr.every(t => t && t.committed === true)
-  const tasksAllDone = total > 0 && done === total && blocked === 0 && allCommitted
-  if (!tasksAllDone) reasons.push(`tasks incomplete: ${done}/${total} done, ${blocked} blocked` + (doneArr && !allCommitted ? ', some done tasks UNCOMMITTED (not on the branch)' : ''))
+  const ok = total > 0 && done === total && blocked === 0 && allCommitted
+  const reason = ok ? null : `tasks incomplete: ${done}/${total} done, ${blocked} blocked` + (doneArr && !allCommitted ? ', some done tasks UNCOMMITTED (not on the branch)' : '')
+  return { ok, reason }
+}
 
-  // (b) tests + lint green; the ONLY deselects are the JS allow-list; install + collection ok.
-  // The argv MUST be the real CI gate: "pytest -m unit" with NO narrowing (-k / a single
-  // file / a node-id arg), or an "N passed" summary from a narrowed run could fake green.
-  const summary = (v && v.pytest_summary_line) || ''
+// The argv MUST be the real CI gate: "pytest -m unit" with NO narrowing (-k / a single
+// file / a node-id arg), or an "N passed" summary from a narrowed run could fake green.
+// Strip the sanctioned "--deselect <node-id>" tokens BEFORE checking for narrowing --
+// a deselect value legitimately contains a .py path and a ::node-id (the CI-only test),
+// so scanning the raw argv would false-positive on the allowed deselect. After stripping,
+// the remainder must be a full "pytest -m unit" with no -k, no ::node-id, no bare .py file.
+// Reject narrowing/subset flags: -k, ::node-id, a bare .py file; the cache-subset flags
+// (--lf/--last-failed/--ff/--failed-first/--sw/--stepwise) that rerun only a CACHED subset;
+// AND the collection-ignore flags (--ignore / --ignore-glob) that drop paths at collection
+// -- all can produce "N passed" without the full unit suite. Only a clean "pytest -m unit"
+// (plus the sanctioned --deselect, already stripped) is the CI-equivalent run.
+function isFullUnitRun(v) {
   const argv = (v && v.pytest_argv) || ''
-  // Strip the sanctioned "--deselect <node-id>" tokens BEFORE checking for narrowing --
-  // a deselect value legitimately contains a .py path and a ::node-id (the CI-only test),
-  // so scanning the raw argv would false-positive on the allowed deselect. After stripping,
-  // the remainder must be a full "pytest -m unit" with no -k, no ::node-id, no bare .py file.
   const argvCore = argv.replace(/(^|\s)--deselect(\s+|=)\S+/g, ' ')
-  // Reject narrowing/subset flags: -k, ::node-id, a bare .py file; the cache-subset flags
-  // (--lf/--last-failed/--ff/--failed-first/--sw/--stepwise) that rerun only a CACHED subset;
-  // AND the collection-ignore flags (--ignore / --ignore-glob) that drop paths at collection
-  // -- all can produce "N passed" without the full unit suite. Only a clean "pytest -m unit"
-  // (plus the sanctioned --deselect, already stripped) is the CI-equivalent run.
-  const argvIsFullUnitRun = /(^|\s)-m\s+unit(\s|$)/.test(argvCore) &&
+  return /(^|\s)-m\s+unit(\s|$)/.test(argvCore) &&
     !/(^|\s)-k(\s|=)/.test(argvCore) && !/::/.test(argvCore) && !/(^|\s)[^\s-]\S*\.py(\s|$)/.test(argvCore) &&
     !/(^|\s)(--lf|--last-failed|--ff|--failed-first|--sw|--stepwise|--stepwise-skip)(\s|$)/.test(argvCore) &&
     !/(^|\s)--ignore(-glob)?(\s|=)/.test(argvCore)
-  const summaryGreen = !!(v && v.install_ok && v.pytest_collected >= 0 && argvIsFullUnitRun &&
-    /(?:^|\s)\d+ passed\b/.test(summary) && !/\b(failed|error|errors)\b/i.test(summary))
-  const deselectExplained = deselectsAreExplained(v)
-  const testsOk = !!(summaryGreen && deselectExplained && v && v.ruff_format_exit === 0 && v.ruff_check_exit === 0)
-  if (!testsOk) {
-    // install_ok stays a hard requirement (CI must install), but a FAILED install is most
-    // often the env mismatch: this builds code for a >=3.13 package, so `pip install -e
-    // ".[dev]"` cannot succeed on the documented local 3.12 -- name that distinctly so a
-    // human sees "wrong interpreter" rather than a confusing generic "tests not green".
-    if (v && v.install_ok === false) {
-      reasons.push('pip install -e ".[dev]" failed -- run implement on a >=3.13 dev toolchain (the package requires-python >=3.13; local 3.12 cannot install/build/test it). This is an environment gate, not a code failure.')
-    } else {
-      reasons.push(`tests/lint not green: \u0022${summary || S(110,111,32,118,101,114,105,102,121,32,114,101,99,111,114,100)}\u0022` +
-        (v && !argvIsFullUnitRun ? ` (argv was NOT a full \u0022pytest -m unit\u0022 run: \u0022${argv}\u0022)` : '') +
-        (v && !deselectExplained ? ' (UNEXPLAINED deselect -- not the CI-only allow-list)' : ''))
-    }
-  }
+}
 
-  // (c) the EXACT CI gate set: retail check + retail semantic-check. CI does NOT skip
-  // retail check when the merge-base is unavailable -- it falls back to BARE `retail check`
-  // (ci.yml L49-53). So the agent must do the same (run bare retail check on an unresolved
-  // range), and the gate ALWAYS scores retail_check_exit === 0. Treating an unresolved range
-  // as auto-green would advertise PR-ready locally while CI's bare run fails.
+// The pytest run is green iff install + collection ok, the argv is the full unit run,
+// and the summary reports "N passed" with no failure/error word.
+function summaryIsGreen(v) {
+  const summary = (v && v.pytest_summary_line) || ''
+  return !!(v && v.install_ok && v.pytest_collected >= 0 && isFullUnitRun(v) &&
+    /(?:^|\s)\d+ passed\b/.test(summary) && !/\b(failed|error|errors)\b/i.test(summary))
+}
+
+// (b) tests + lint green; the ONLY deselects are the JS allow-list; install + collection ok.
+function testsGreenCriterion(v) {
+  const summary = (v && v.pytest_summary_line) || ''
+  const argv = (v && v.pytest_argv) || ''
+  const argvIsFullUnitRun = isFullUnitRun(v)
+  const summaryGreen = summaryIsGreen(v)
+  const deselectExplained = deselectsAreExplained(v)
+  const ok = !!(summaryGreen && deselectExplained && v && v.ruff_format_exit === 0 && v.ruff_check_exit === 0)
+  if (ok) return { ok, reason: null }
+  // install_ok stays a hard requirement (CI must install), but a FAILED install is most
+  // often the env mismatch: this builds code for a >=3.13 package, so `pip install -e
+  // ".[dev]"` cannot succeed on the documented local 3.12 -- name that distinctly so a
+  // human sees "wrong interpreter" rather than a confusing generic "tests not green".
+  if (v && v.install_ok === false) {
+    return { ok, reason: 'pip install -e ".[dev]" failed -- run implement on a >=3.13 dev toolchain (the package requires-python >=3.13; local 3.12 cannot install/build/test it). This is an environment gate, not a code failure.' }
+  }
+  const reason = `tests/lint not green: "${summary || S(110,111,32,118,101,114,105,102,121,32,114,101,99,111,114,100)}"` +
+    (v && !argvIsFullUnitRun ? ` (argv was NOT a full "pytest -m unit" run: "${argv}")` : '') +
+    (v && !deselectExplained ? ' (UNEXPLAINED deselect -- not the CI-only allow-list)' : '')
+  return { ok, reason }
+}
+
+// (c) the EXACT CI gate set: retail check + retail semantic-check. CI does NOT skip
+// retail check when the merge-base is unavailable -- it falls back to BARE `retail check`
+// (ci.yml L49-53). So the agent must do the same (run bare retail check on an unresolved
+// range), and the gate ALWAYS scores retail_check_exit === 0. Treating an unresolved range
+// as auto-green would advertise PR-ready locally while CI's bare run fails.
+function retailChecksCriterion(v) {
   const checkGreen = !!(v && v.retail_check_exit === 0)
   const semanticGreen = !!(v && v.retail_semantic_check_exit === 0)
+  const reasons = []
   if (!checkGreen) reasons.push(`retail check exit ${v ? v.retail_check_exit : S(63)}` + (v && v.retail_check_commit_range_resolved === false ? ' (bare run; merge-base unresolved)' : ''))
   if (!semanticGreen) reasons.push(`retail semantic-check exit ${v ? v.retail_semantic_check_exit : S(63)}`)
+  return { checkGreen, semanticGreen, reasons }
+}
 
-  // (d) wiring + never-execute invariants green
-  const wiringGreen = !!(v && v.wiring_ok === true && v.never_execute_ok === true)
-  if (!wiringGreen) reasons.push('rule-wiring or never-execute (B1) invariant is red')
+// (d) wiring + never-execute invariants green
+function wiringCriterion(v) {
+  const ok = !!(v && v.wiring_ok === true && v.never_execute_ok === true)
+  return { ok, reason: ok ? null : 'rule-wiring or never-execute (B1) invariant is red' }
+}
 
-  // (e) no Principle-V wall / surfaced judgment call
-  const noWall = !!(b && b.principle_v_wall === false && (!Array.isArray(b.open_for_human) || b.open_for_human.length === 0))
-  if (!noWall) reasons.push(`Principle-V wall: ${b && b.open_for_human ? b.open_for_human.join(S(59,32)) : S(117,110,114,101,115,111,108,118,101,100,32,106,117,100,103,109,101,110,116,32,99,97,108,108)}`)
+// (e) no Principle-V wall / surfaced judgment call
+function principleVCriterion(b) {
+  const ok = !!(b && b.principle_v_wall === false && (!Array.isArray(b.open_for_human) || b.open_for_human.length === 0))
+  const reason = ok ? null : `Principle-V wall: ${b && b.open_for_human ? b.open_for_human.join(S(59,32)) : S(117,110,114,101,115,111,108,118,101,100,32,106,117,100,103,109,101,110,116,32,99,97,108,108)}`
+  return { ok, reason }
+}
 
-  // (f) the build+verify happened on the EXPECTED ratified branch, not just "not main".
-  // If verify ran on some other feature branch, the PR-ready branch the ledger advertises
-  // may not contain the tested commits -- defeating the per-task commit guarantee. Compare
-  // head_branch to the expected branch (and always reject main as a backstop).
-  const headOk = !!(v && v.head_branch && v.head_branch !== 'main' &&
+// (f) the build+verify happened on the EXPECTED ratified branch, not just "not main".
+// If verify ran on some other feature branch, the PR-ready branch the ledger advertises
+// may not contain the tested commits -- defeating the per-task commit guarantee. Compare
+// head_branch to the expected branch (and always reject main as a backstop).
+function headBranchCriterion(v, expectedBranch) {
+  const ok = !!(v && v.head_branch && v.head_branch !== 'main' &&
     (!expectedBranch || v.head_branch === expectedBranch))
-  if (!headOk) reasons.push(`HEAD at verify time is \u0022${v ? v.head_branch : S(63)}\u0022 -- must be the ratified branch \u0022${expectedBranch || S(40,101,120,112,101,99,116,101,100,41)}\u0022, never main or another branch`)
+  const reason = ok ? null : `HEAD at verify time is "${v ? v.head_branch : S(63)}" -- must be the ratified branch "${expectedBranch || S(40,101,120,112,101,99,116,101,100,41)}", never main or another branch`
+  return { ok, reason }
+}
+
+function completionGate(b, expectedBranch) {
+  const v = b && b.verify
+  const reasons = []
+
+  // (a) task/commit accounting
+  const tasks = tasksAllDoneCriterion(b)
+  if (tasks.reason !== null) reasons.push(tasks.reason)
+
+  // (b) tests + lint green
+  const tests = testsGreenCriterion(v)
+  if (tests.reason !== null) reasons.push(tests.reason)
+  const testsOk = tests.ok
+
+  // (c) retail check + semantic-check gates
+  const retail = retailChecksCriterion(v)
+  for (const r of retail.reasons) reasons.push(r)
+  const checkGreen = retail.checkGreen
+  const semanticGreen = retail.semanticGreen
+
+  // (d) wiring/never-execute invariants
+  const wiring = wiringCriterion(v)
+  if (wiring.reason !== null) reasons.push(wiring.reason)
+  const wiringGreen = wiring.ok
+
+  // (e) Principle-V wall
+  const principleV = principleVCriterion(b)
+  if (principleV.reason !== null) reasons.push(principleV.reason)
+
+  // (f) HEAD branch
+  const head = headBranchCriterion(v, expectedBranch)
+  if (head.reason !== null) reasons.push(head.reason)
+  const headOk = head.ok
 
   if (reasons.length === 0) return { outcome: 'READY_FOR_PR', reasons: [] }
   // hard red (fix-first) vs partial (honest progress / wall -- resume continues)
