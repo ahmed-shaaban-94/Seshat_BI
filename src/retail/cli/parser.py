@@ -389,6 +389,28 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     init_p.add_argument("--repo", default=".", help="repo root to bootstrap")
 
+    # `init-project` (spec 107, roadmap M3): scaffolds a FRESH, empty Retail-BI
+    # project workspace for a new user -- distinct from `init` above (which
+    # bootstraps `.seshat/` into an EXISTING repo). Pure stdlib filesystem; no
+    # DB/network; never prompts. Deliberately does NOT bootstrap `.seshat/` (see
+    # src/retail/workspace_init.py module docstring for why).
+    init_project_p = sub.add_parser(
+        "init-project",
+        help=(
+            "scaffold a fresh, empty Retail-BI project workspace for a new user "
+            "(mappings/, warehouse/{bronze,silver,gold}/, powerbi/, reports/, "
+            "evidence/, README.md, .env.example) -- no wizard"
+        ),
+    )
+    init_project_p.add_argument(
+        "name", metavar="NAME", help="workspace directory to create (under the CWD)"
+    )
+    init_project_p.add_argument(
+        "--force",
+        action="store_true",
+        help="scaffold into an existing non-empty target (never deletes user files)",
+    )
+
     # `kit-lint` (feature 072): standalone Maintenance-Automation step (NOT a `retail
     # check` rule -- it parses yaml). Fails loud (exit 1) when a compass PROJECTION
     # drifts from the canonical kit source. Read-only; reads no constitution.
