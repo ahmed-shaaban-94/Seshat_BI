@@ -1,10 +1,11 @@
 # Product-direction decision: CLI verbs (A) vs skill-driven packaging (B)
 
-> **Status: OPEN — awaiting owner ratification (Principle V).** This is an
-> advisor-recommended analysis prepared autonomously; it does NOT ratify the decision.
-> The ratification slot at the bottom is deliberately left empty for a named human to
-> fill. This decision gates roadmap milestones **M4, M6, M7, M9, M10** in
-> `seshat-bi-agent-controlled-user-tool-roadmap.md`; M1/M2/M3/M11 do not depend on it.
+> **Status: RATIFIED — Option B (skill-driven packaging), by Ahmed Shaaban (owner)
+> 2026-07-07.** The owner directed "ratify all recommended" by name; this records that
+> decision (the agent records an owner-directed ruling; it does not self-grant —
+> Principle V, same pattern as ADR 0015/0016). This decision gated roadmap milestones
+> **M4, M6, M7, M9, M10** in `seshat-bi-agent-controlled-user-tool-roadmap.md`; they are
+> now unblocked and specced under B. M1/M2 (built) and M3/M11 (specs) did not depend on it.
 
 ## The fork
 
@@ -64,12 +65,20 @@ without turning every skill into a verb.
 - **If A:** M4/M6/M7/M9/M10 each become a new CLI verb with its own spec, parser, handler,
   and tests — substantially more build, and a larger permanent CLI surface.
 
-## Ratification (Principle V — a named human fills this)
+## Ratification (Principle V — recorded from an owner-directed decision)
 
-- **decision:** _(A / B / hybrid — unfilled)_
-- **ratified_by:** _(empty — the agent is structurally forbidden to fill this)_
-- **ratified_on:** _(empty)_
-- **notes:** _(owner's rationale)_
+- **decision:** **B — skill-driven packaging.** The interface stays agent+skills (hard
+  rule #1); the CLI stays a narrow gate. M4/M6/M7/M9/M10 are delivered as an
+  install/discovery/packaging story over the already-shipped skills, with the one
+  deliberate CLI addition being a small machine-readable status surface
+  (`status --format json`, the M4 schema part) — NOT a broad verb surface.
+- **ratified_by:** Ahmed Shaaban (owner)
+- **ratified_on:** 2026-07-07
+- **notes:** Owner directed "ratify all recommended" by name (2026-07-07); the agent
+  recorded the owner-directed ruling, it did not self-ratify (Principle V; same pattern
+  as ADR 0015/0016). B was the advisor-recommended option (aligns hard rule #1, less
+  duplication, more reversible).
 
-Until this is filled, M4/M6/M7/M9/M10 are **not specced** (speccing them would presume the
-outcome). M1/M2 (shipped) and M3/M11 (specs held) proceed regardless.
+M4/M6/M7/M9/M10 are now specced under B (see specs 109–113). Per the "safe subset"
+discipline, the docs/packaging pieces are built and any net-new runtime / JSON-schema /
+CI piece is spec-and-held for review.

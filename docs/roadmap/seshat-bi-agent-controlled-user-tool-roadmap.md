@@ -1,11 +1,14 @@
 ## Seshat BI — Agent-Controlled User Tool Roadmap
 
-**Status:** **Draft / Proposed — awaiting owner ratification.** This is a
-forward-looking product-direction proposal, NOT part of the delivered ledger. It
-proposes but does not schedule, approve, or commit any milestone; each milestone
-(M1 onward) needs the normal spec/owner-ratification path before it is built
-(Principle V — `never_self_grant_approval`). The authoritative delivered ledger
-remains `docs/roadmap/roadmap.md` (F-numbered rows + commit refs) and
+**Status:** **Draft / Proposed — direction ratified, delivery in progress.** The core
+product-direction fork (A-vs-B, see the ✅ callout below) was **ratified B by Ahmed
+Shaaban (owner) 2026-07-07**. M1/M2 are built; M3/M11 and M4/M6/M7/M9/M10 are specced
+(the latter under B). This remains a forward-looking roadmap, NOT part of the delivered
+ledger: individual milestones still land through the normal spec → build → gate path,
+and net-new runtime / CI pieces are spec-and-held for review rather than auto-built
+(Principle V — `never_self_grant_approval`; the agent records owner-directed rulings,
+never self-grants). The authoritative delivered ledger remains
+`docs/roadmap/roadmap.md` (F-numbered rows + commit refs) and
 `docs/roadmap/shipped-ideas.yaml`.
 **Repository:** `ahmed-shaaban-94/Seshat_BI`
 **Target direction:** Turn Seshat BI into an installable, agent-controlled Retail BI readiness tool for other BI users and teams.
@@ -24,18 +27,16 @@ remains `docs/roadmap/roadmap.md` (F-numbered rows + commit refs) and
 > existing skill"*, NOT as net-new capability. Verify each milestone against
 > `shipped-ideas.yaml` + `.claude/skills/` before speccing it.
 
-> **⚠️ Open question for the owner (blocks M4/M6/M7/M9/M10 — a Principle-V product
-> fork the agent must NOT decide).** Hard rule #1 makes Seshat BI *agent-first*: the
-> CLI is deliberately a narrow set of gates the agent calls, and the **agent + skills
-> are the product interface**. Several milestones below add new **CLI verbs**
-> (`seshat source profile`, `mapping review`, `evidence build`, `status`,
-> `next-action`) for capabilities that already exist as skills. So the direction
-> forks: does *"installable, agent-controlled tool"* mean **(A)** the agent gains more
-> CLI verbs to call, or **(B)** the existing skills get an install/packaging story
-> while staying skill-driven? This draft adds CLI verbs by default (A); the owner must
-> rule A vs B before M4/M6/M7/M9/M10 are specced. M1 (brand alias), M2 (install docs),
-> M3 (fresh-project init), and M11 (release maturity) are genuinely new and do not
-> depend on this ruling.
+> **✅ RATIFIED: Option B (skill-driven packaging) — Ahmed Shaaban (owner) 2026-07-07.**
+> The product-direction fork below (does *"installable, agent-controlled tool"* mean
+> **(A)** more CLI verbs, or **(B)** an install/packaging story over the existing skills
+> while staying skill-driven?) is decided: **B**. Hard rule #1 holds — the agent+skills
+> stay the interface; the CLI stays a narrow gate, with the one deliberate addition being
+> a small machine-readable `status --format json` surface (M4's schema part), NOT a broad
+> verb surface. So M4/M6/M7/M9/M10 below are delivered as packaging/discovery over shipped
+> skills — read every "new CLI verb" in those milestones as "packaging over an existing
+> skill." Full decision + rationale: `docs/roadmap/decisions/cli-verbs-vs-skill-driven.md`.
+> Specced under B in specs 109–113. (M1/M2/M3/M11 never depended on this ruling.)
 
 ---
 
