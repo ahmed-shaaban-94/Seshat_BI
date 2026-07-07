@@ -1,0 +1,79 @@
+// Seshat BI — Agent-Controlled User Tool Roadmap: milestone dependency graph.
+// Source: docs/roadmap/seshat-bi-agent-controlled-user-tool-roadmap.md (Draft/Proposed).
+// Edges are derived from the draft's own scope types + execution-order ("why Nth")
+// reasoning + the Principle-V owner-ruling callout. Render:
+//   dot -Tpng  seshat-bi-agent-controlled-user-tool-roadmap.dot -o roadmap-deps.png
+//   dot -Tsvg  seshat-bi-agent-controlled-user-tool-roadmap.dot -o roadmap-deps.svg
+digraph seshat_roadmap {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=8];
+
+    // ---- legend by scope type (fill colors) ----
+    // docs-only        -> lightblue
+    // runtime + tests  -> palegreen
+    // owner decision   -> gold (diamond)
+    // gated / future   -> lightgrey (dashed border)
+
+    M0  [label="M0  Product Direction Lock\n(docs-only)", fillcolor=lightblue];
+    M1  [label="M1  seshat CLI brand alias\n(packaging / docs)", fillcolor=lightblue];
+    M2  [label="M2  Installable UX\n(pipx install, docs-first)", fillcolor=lightblue];
+    M3s [label="M3  User Workspace SPEC\n(spec/plan/tasks)", fillcolor=lightblue];
+    M3r [label="M3  Workspace Init RUNTIME\n(seshat init-project)", fillcolor=palegreen];
+    M4  [label="M4  Agent Control Protocol\n(status/next-action/JSON schemas)", fillcolor=palegreen];
+    M5  [label="M5  First-Hour Experience\n(docs + CLI polish)", fillcolor=lightblue];
+    M6  [label="M6  Source Onboarding v1\n(runtime + tests)", fillcolor=palegreen];
+    M7  [label="M7  Mapping Review UX\n(artifact-writing module)", fillcolor=palegreen];
+    M8  [label="M8  Workspace Doctor + Repair\n(doctor --format json)", fillcolor=palegreen];
+    M9  [label="M9  Evidence Pack as Product Output\n(evidence build/export)", fillcolor=palegreen];
+    M10 [label="M10 BI Delivery Layer\n(pbi review/handoff)", fillcolor=palegreen];
+    M11 [label="M11 Distribution & Release Maturity\n(changelog / versioning / CI)", fillcolor=lightblue];
+    M12 [label="M12 Power BI Execution Adapter\n(FUTURE — gated, last)", fillcolor=lightgrey, style="rounded,filled,dashed"];
+
+    // ---- the Principle-V owner decision node (gates the CLI-verb milestones) ----
+    RULING [label="OWNER RULING\nCLI verbs (A)  vs  skill-driven packaging (B)?\n(hard rule #1 — agent must NOT decide)",
+            shape=diamond, fillcolor=gold, fontsize=9];
+
+    // ---- external gate for M12 (outside this roadmap's chain) ----
+    F016 [label="F016 gate\nSemantic Model Ready = pass\n(hard rule #6)",
+          shape=note, fillcolor=lightgrey, style="filled,dashed"];
+
+    // ---- M0 locks direction before anything is specced ----
+    M0 -> M1;
+    M0 -> M2;
+    M0 -> M3s;
+    M0 -> M11;
+
+    // ---- brand alias underlies every CLI surface ----
+    M1 -> M2  [label="seshat entrypoint"];
+    M1 -> M3r [label="seshat init-project"];
+    M1 -> M4;
+    M1 -> M6;
+
+    // ---- workspace: spec before runtime (draft: "prevents drift before code") ----
+    M3s -> M3r [label="spec before code"];
+
+    // ---- a real workspace is the container the productized flows populate ----
+    M3r -> M6  [label="workspace to onboard into"];
+    M3r -> M8  [label="workspace to doctor"];
+
+    // ---- onboarding feeds mapping review; mapping + evidence feed delivery ----
+    M6 -> M7   [label="onboarded source"];
+    M7 -> M9   [label="mapping evidence"];
+    M9 -> M10  [label="evidence pack"];
+
+    // ---- the owner ruling gates every milestone that adds CLI verbs ----
+    M0 -> RULING [style=dashed, label="fork surfaces at M0"];
+    RULING -> M4  [style=dashed, label="gates"];
+    RULING -> M6  [style=dashed, label="gates"];
+    RULING -> M7  [style=dashed, label="gates"];
+    RULING -> M9  [style=dashed, label="gates"];
+    RULING -> M10 [style=dashed, label="gates"];
+
+    // ---- M12 is future / separately gated, not part of the M0..M11 chain ----
+    F016 -> M12 [style=dashed, label="unblocks"];
+
+    // ---- keep the free-of-ruling near-term slices visually grouped ----
+    { rank=same; M1; M11; }
+    { rank=same; M4; M6; }
+}
