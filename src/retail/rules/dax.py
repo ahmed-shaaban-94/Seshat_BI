@@ -82,9 +82,7 @@ def d1_pascalcase_measures(ctx: RuleContext) -> Iterable[Finding]:
             yield Finding(
                 rule_id="D1",
                 severity=Severity.ERROR,
-                message=(
-                    f"Measure '{m.name}' is not PascalCase (^[A-Z][A-Za-z0-9]*$)"
-                ),
+                message=(f"Measure '{m.name}' is not PascalCase (^[A-Z][A-Za-z0-9]*$)"),
                 locator=f"{rel}:{m.line}",
             )
 
@@ -377,9 +375,12 @@ def _scan_outer_text(text: str) -> Iterable[tuple[str, str]]:
     ``CREATE SCHEMA bronze``) via ``stale_schema_tokens``.
     """
     for token, _line in stale_schema_tokens(text):
-        yield token, (
-            f"Partition source references non-gold schema '{token}';"
-            " all sources must use the gold schema"
+        yield (
+            token,
+            (
+                f"Partition source references non-gold schema '{token}';"
+                " all sources must use the gold schema"
+            ),
         )
 
 
@@ -391,10 +392,13 @@ def _scan_string_bodies(text: str) -> Iterable[tuple[str, str]]:
     """
     for body in _extract_m_string_bodies(text):
         for token, _line in stale_schema_tokens(body):
-            yield token, (
-                "Partition source native SQL references non-gold"
-                f" schema '{token}';"
-                " all sources must use the gold schema"
+            yield (
+                token,
+                (
+                    "Partition source native SQL references non-gold"
+                    f" schema '{token}';"
+                    " all sources must use the gold schema"
+                ),
             )
 
 
@@ -409,10 +413,13 @@ def _scan_schema_option(text: str) -> Iterable[tuple[str, str]]:
     for value in _M_SCHEMA_OPTION.findall(text):
         token = value.lower()
         if token in _STALE_SCHEMAS:
-            yield token, (
-                f"Partition source uses non-gold schema option"
-                f' Schema="{value}";'
-                " all sources must use the gold schema"
+            yield (
+                token,
+                (
+                    f"Partition source uses non-gold schema option"
+                    f' Schema="{value}";'
+                    " all sources must use the gold schema"
+                ),
             )
 
 
