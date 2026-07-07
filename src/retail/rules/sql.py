@@ -44,6 +44,28 @@ def _live_sql_files(ctx: RuleContext) -> list[str]:
     return [rel for rel in iter_sql_files(ctx) if not is_test_path(rel)]
 
 
+def _s1_findings_for_text(rel: str, text: str) -> list[Finding]:
+    """S1 findings for one file's already comment-stripped `text`.
+
+    Scans each line for quoted/bracketed identifiers and flags any that is not
+    snake_case.
+    """
+    findings: list[Finding] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        for m in _QUOTED.finditer(line):
+            ident = m.group(1) if m.group(1) is not None else m.group(2)
+            if not _SNAKE.match(ident):
+                findings.append(
+                    Finding(
+                        rule_id="S1",
+                        severity=Severity.ERROR,
+                        message=f"non-snake_case identifier {ident!r}",
+                        locator=f"{rel}:{lineno}",
+                    )
+                )
+    return findings
+
+
 @register("S1", "snake_case SQL identifiers")
 def s1_snake_case_identifiers(ctx: RuleContext) -> list[Finding]:
     findings: list[Finding] = []
@@ -51,19 +73,23 @@ def s1_snake_case_identifiers(ctx: RuleContext) -> list[Finding]:
         # Strip comments first (preserving line numbers + quoted identifiers) so a
         # double-quoted phrase inside a -- or /* */ comment is not mistaken for a
         # non-snake_case identifier. Real "..."/[...] identifiers in code survive.
-        text = strip_sql_comments(_read(ctx, rel))
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            for m in _QUOTED.finditer(line):
-                ident = m.group(1) if m.group(1) is not None else m.group(2)
-                if not _SNAKE.match(ident):
-                    findings.append(
-                        Finding(
-                            rule_id="S1",
-                            severity=Severity.ERROR,
-                            message=f"non-snake_case identifier {ident!r}",
-                            locator=f"{rel}:{lineno}",
-                        )
-                    )
+        findings.extend(_s1_findings_for_text(rel, strip_sql_comments(_read(ctx, rel))))
+    return findings
+
+
+def _s2_findings_for_file(rel: str, text: str) -> list[Finding]:
+    """S2 findings for one file's raw `text`: stale `raw`/`marts` schema tokens."""
+    findings: list[Finding] = []
+    for token, line in stale_schema_tokens(text):
+        if token in ("raw", "marts"):
+            findings.append(
+                Finding(
+                    rule_id="S2",
+                    severity=Severity.ERROR,
+                    message=f"stale schema {token!r}; use bronze/silver/gold",
+                    locator=f"{rel}:{line}",
+                )
+            )
     return findings
 
 
@@ -73,18 +99,24 @@ def s2_medallion_schemas(ctx: RuleContext) -> list[Finding]:
     for rel in iter_sql_files(ctx):
         if rel in EXEMPT_S2:
             continue
-        text = _read(ctx, rel)
-        for token, line in stale_schema_tokens(text):
-            if token in ("raw", "marts"):
-                findings.append(
-                    Finding(
-                        rule_id="S2",
-                        severity=Severity.ERROR,
-                        message=f"stale schema {token!r}; use bronze/silver/gold",
-                        locator=f"{rel}:{line}",
-                    )
-                )
+        findings.extend(_s2_findings_for_file(rel, _read(ctx, rel)))
     return findings
+
+
+def _s3_view_name_token(toks: list[SqlToken], idx: int) -> SqlToken | None:
+    """Resolve the view-name token for a `VIEW` keyword at toks[idx], or None.
+
+    The view name is the next token; None if there is no next token. A schema
+    qualifier (`gold.vw_x`) puts the name two further ahead -- skip the schema
+    token and the `.`.
+    """
+    nxt = toks[idx + 1] if idx + 1 < len(toks) else None
+    if nxt is None:
+        return None
+    # gold.vw_x -> name token is two ahead (skip "gold" and ".")
+    if idx + 3 < len(toks) and toks[idx + 2].text == ".":
+        return toks[idx + 3]
+    return nxt
 
 
 @register("S3", "vw_ prefix on views")
@@ -95,15 +127,9 @@ def s3_vw_prefix(ctx: RuleContext) -> list[Finding]:
         for idx, tok in enumerate(toks):
             if tok.text.upper() != "VIEW":
                 continue
-            # the view name is the next identifier; skip a schema qualifier
-            nxt = toks[idx + 1] if idx + 1 < len(toks) else None
-            if nxt is None:
+            name_tok = _s3_view_name_token(toks, idx)
+            if name_tok is None:
                 continue
-            # gold.vw_x -> name token is two ahead (skip "gold" and ".")
-            if idx + 3 < len(toks) and toks[idx + 2].text == ".":
-                name_tok = toks[idx + 3]
-            else:
-                name_tok = nxt
             if not name_tok.text.lower().startswith("vw_"):
                 findings.append(
                     Finding(
@@ -418,35 +444,72 @@ def _strip_sql_noise(text: str) -> str:
     i, n = 0, len(text)
     while i < n:
         if text.startswith("--", i):
-            j = text.find("\n", i)
-            i = n if j == -1 else j
+            emitted, i = _consume_line_comment(text, i)
+            out.append(emitted)
             continue
         if text.startswith("/*", i):
-            j = text.find("*/", i)
-            seg = text[i : (n if j == -1 else j + 2)]
-            out.append("\n" * seg.count("\n"))  # keep line count
-            i = n if j == -1 else j + 2
+            emitted, i = _consume_block_comment(text, i)
+            out.append(emitted)
             continue
         if text[i] == "$":
-            end = _dollar_quote_end(text, i)
-            if end is not None:
-                # Collapse a PL/pgSQL body so a `-1` or `dim_` inside it never
-                # reaches the S6/S8 raw-text scan; keep newlines for line accounting.
-                seg = text[i:end]
-                out.append("''" + "\n" * seg.count("\n"))
-                i = end
+            consumed = _consume_dollar_quote(text, i)
+            if consumed is not None:
+                emitted, i = consumed
+                out.append(emitted)
                 continue
             # not a dollar-quote opener (e.g. `$1`); copy the `$` through below.
         if text[i] in ("'", '"'):
-            q = text[i]
-            j = text.find(q, i + 1)
-            seg = text[i : (n if j == -1 else j + 1)]
-            out.append("''" + "\n" * seg.count("\n"))
-            i = n if j == -1 else j + 1
+            emitted, i = _consume_quoted_string(text, i)
+            out.append(emitted)
             continue
         out.append(text[i])
         i += 1
     return "".join(out)
+
+
+def _consume_line_comment(text: str, i: int) -> tuple[str, int]:
+    """Consume a `--` line comment at `text[i]`. Emits nothing; advances to the
+    newline (kept, so line accounting is preserved) or to EOF.
+    """
+    j = text.find("\n", i)
+    return "", len(text) if j == -1 else j
+
+
+def _consume_block_comment(text: str, i: int) -> tuple[str, int]:
+    """Consume a `/* */` block comment at `text[i]`. Emits only the newlines it
+    spanned (line accounting) and advances past the closing `*/` (or to EOF).
+    """
+    n = len(text)
+    j = text.find("*/", i)
+    seg = text[i : (n if j == -1 else j + 2)]
+    return "\n" * seg.count("\n"), n if j == -1 else j + 2
+
+
+def _consume_dollar_quote(text: str, i: int) -> tuple[str, int] | None:
+    """Consume a dollar-quoted (`$$...$$`) body at `text[i]`, or None if `text[i]`
+    is not a dollar-quote opener (e.g. `$1`), in which case the caller falls
+    through to the quote/default handling.
+
+    Collapse a PL/pgSQL body to `''` so a `-1` or `dim_` inside it never reaches
+    the S6/S8 raw-text scan; keep newlines for line accounting.
+    """
+    end = _dollar_quote_end(text, i)
+    if end is None:
+        return None
+    seg = text[i:end]
+    return "''" + "\n" * seg.count("\n"), end
+
+
+def _consume_quoted_string(text: str, i: int) -> tuple[str, int]:
+    """Consume a `'...'` or `"..."` string literal at `text[i]`. Emits `''` for
+    the collapsed literal plus the newlines it spanned; advances past the closing
+    quote (or to EOF).
+    """
+    n = len(text)
+    q = text[i]
+    j = text.find(q, i + 1)
+    seg = text[i : (n if j == -1 else j + 1)]
+    return "''" + "\n" * seg.count("\n"), n if j == -1 else j + 1
 
 
 _CREATE_GOLD_DIM = re.compile(

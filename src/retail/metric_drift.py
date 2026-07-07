@@ -92,6 +92,11 @@ _RE_NE_FALSE = re.compile(
     r"^(?P<col>.+?)\s*<>\s*FALSE\s*\(\s*\)$", re.IGNORECASE | re.DOTALL
 )
 
+# Recognized spellings grouped by the op they normalize to. Order matters: the
+# first regex that both matches AND yields a non-empty column wins.
+_IS_NOT_NULL_RES = (_RE_IS_NOT_NULL, _RE_NE_BLANK, _RE_ISBLANK_EQ_FALSE)
+_IS_TRUE_RES = (_RE_IS_TRUE, _RE_TRUE_EQ, _RE_NE_FALSE)
+
 
 def _strip_column_qualification(colref: str) -> str:
     """`'gold fct_sales_rss'[discount_applied]` -> `discount_applied`; `[col]` -> `col`.
@@ -205,20 +210,11 @@ def _recognize_filter(pred: str) -> Filter | None:
     (bracket-notation only), so a non-column capture falls through to escalate.
     """
     pred = pred.strip()
-    # is_not_null spellings
-    for rx in (_RE_IS_NOT_NULL, _RE_NE_BLANK, _RE_ISBLANK_EQ_FALSE):
-        m = rx.match(pred)
-        if m:
-            col = _strip_column_qualification(m.group("col"))
-            if col:
-                return Filter(column=col, op="is_not_null")
-    # is_true spellings
-    for rx in (_RE_IS_TRUE, _RE_TRUE_EQ, _RE_NE_FALSE):
-        m = rx.match(pred)
-        if m:
-            col = _strip_column_qualification(m.group("col"))
-            if col:
-                return Filter(column=col, op="is_true")
+    for regexes, op in ((_IS_NOT_NULL_RES, "is_not_null"), (_IS_TRUE_RES, "is_true")):
+        for rx in regexes:
+            m = rx.match(pred)
+            if m and (col := _strip_column_qualification(m.group("col"))):
+                return Filter(column=col, op=op)
     return None
 
 
@@ -265,6 +261,44 @@ def _recognized_agg_func(expr: str) -> str | None:
     return None
 
 
+def _check_agg(
+    expr: str, want_func: str, *, unrecognized_detail: str
+) -> tuple[str, Verdict | None]:
+    """Resolve the top-level AGG function of `expr` and compare it to `want_func`.
+
+    Returns `(func, None)` when a recognized aggregation matches the contract, else
+    `("", verdict)` where verdict is the escalate/drift to short-circuit on. The
+    `unrecognized_detail` message is caller-supplied so the bare and CALCULATE arms
+    keep their distinct escalate wording.
+    """
+    actual_func = _recognized_agg_func(expr)
+    if actual_func is None:
+        return "", Verdict("escalate", unrecognized_detail)
+    if actual_func != want_func:
+        return "", Verdict(
+            "drift", f"aggregation {actual_func!r} != contract {want_func!r}"
+        )
+    return actual_func, None
+
+
+def _recognize_filters(
+    parts: list[str], *, detail_noun: str
+) -> frozenset[Filter] | Verdict:
+    """Map predicate texts to a recognized filter-set, or a Verdict to escalate on.
+
+    Ignores empty parts. Any unrecognized predicate escalates with a message using the
+    caller-supplied `detail_noun` (e.g. "predicate" vs "denominator predicate") so the
+    base and ratio paths keep their distinct wording.
+    """
+    recognized: set[Filter] = set()
+    for p in (x for x in parts if x.strip()):
+        f = _recognize_filter(p)
+        if f is None:
+            return Verdict("escalate", f"unrecognized {detail_noun}: {p!r}")
+        recognized.add(f)
+    return frozenset(recognized)
+
+
 def _check_base_drift(dax_expr: str, definition: dict[str, Any]) -> Verdict:
     """Verify a kind:base measure's aggregation + filter-set vs its contract.
 
@@ -288,35 +322,29 @@ def _check_base_drift(dax_expr: str, definition: dict[str, Any]) -> Verdict:
     inner = _outer_call(expr, "CALCULATE")
     if inner is None:
         # bare aggregation, no filter
-        actual_func = _recognized_agg_func(expr)
-        if actual_func is None:
-            return Verdict("escalate", "measure is not a recognized AGG(col) shape")
-        if actual_func != want_func:
-            return Verdict(
-                "drift",
-                f"aggregation {actual_func!r} != contract {want_func!r}",
-            )
+        _func, verdict = _check_agg(
+            expr,
+            want_func,
+            unrecognized_detail="measure is not a recognized AGG(col) shape",
+        )
+        if verdict is not None:
+            return verdict
         dax_filters: frozenset[Filter] = frozenset()
     else:
         parts = _split_balanced(inner)
         if parts is None or not parts:
             return Verdict("escalate", "CALCULATE arguments unbalanced")
-        inner_expr = parts[0].strip()
-        actual_func = _recognized_agg_func(inner_expr)
-        if actual_func is None:
-            return Verdict("escalate", "CALCULATE inner is not a recognized AGG(col)")
-        if actual_func != want_func:
-            return Verdict(
-                "drift",
-                f"aggregation {actual_func!r} != contract {want_func!r}",
-            )
-        recognized: set[Filter] = set()
-        for p in (x for x in parts[1:] if x.strip()):
-            f = _recognize_filter(p)
-            if f is None:
-                return Verdict("escalate", f"unrecognized predicate: {p!r}")
-            recognized.add(f)
-        dax_filters = frozenset(recognized)
+        _func, verdict = _check_agg(
+            parts[0].strip(),
+            want_func,
+            unrecognized_detail="CALCULATE inner is not a recognized AGG(col)",
+        )
+        if verdict is not None:
+            return verdict
+        filters = _recognize_filters(parts[1:], detail_noun="predicate")
+        if isinstance(filters, Verdict):
+            return filters
+        dax_filters = filters
 
     if dax_filters == contract_filters:
         return Verdict("pass", "base aggregation + filter-set matches the contract")
@@ -327,38 +355,23 @@ def _check_base_drift(dax_expr: str, definition: dict[str, Any]) -> Verdict:
     )
 
 
-def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Verdict:
-    """Compare a DIVIDE measure's denominator filter-set to its contract definition.
+def _is_ratio_needing_additive_default(d: dict[str, Any] | None) -> bool:
+    """True when `d` is a kind:ratio contract with `additive` unset.
 
-    Returns a Verdict (pass | drift | escalate | skip). ESCALATE is the default for any
-    expression not confidently recognized. Never raises on bad DAX -- escalates instead.
-    If definition.kind == "base", verify the base measure's aggregation + filter-set
-    against its own contract.
+    kind:ratio implies non-additive; the caller need not restate additive:false. An
+    explicit `additive:true` is respected (returns False), so only a truly-absent key
+    triggers the default injection.
     """
-    if definition and definition.get("kind") == "base":
-        return _check_base_drift(dax_expr, definition)
-    # kind:ratio implies non-additive; caller need not restate additive:false.
-    # Shallow-copy only when the key is truly absent (explicit additive:true respected).
-    if (
-        definition
-        and definition.get("kind") == "ratio"
-        and "additive" not in definition
-    ):
-        definition = {**definition, "additive": False}
-    # ----- existing ratio path BELOW, UNCHANGED -----
-    # Backward compat: no structured definition -> nothing to check.
-    if not definition or "denominator" not in definition:
-        return Verdict("skip", "contract has no structured `definition.denominator`")
+    return bool(d) and d.get("kind") == "ratio" and "additive" not in d
 
-    # Additive measures are not ratios; denominator filter-set logic does not apply.
-    # Require an explicit `additive: false` to proceed; True or absent -> escalate.
-    if definition.get("additive") is not False:
-        return Verdict(
-            "escalate",
-            "additive measure (or `additive` unset); "
-            "denominator filter-set logic does not apply",
-        )
 
+def _check_ratio_drift(dax_expr: str, definition: dict[str, Any]) -> Verdict:
+    """Verify a ratio (DIVIDE) measure's denominator filter-set vs its contract.
+
+    Mirrors `_check_base_drift`: build the contract filter-set, recognize the DIVIDE
+    denominator shape, map its predicates to Filters, and compare. ESCALATE is the
+    default for anything not confidently recognized.
+    """
     contract_filters = _contract_filters(definition["denominator"])
     if contract_filters is None:
         return Verdict(
@@ -386,20 +399,47 @@ def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Ver
     _base_ref, pred_texts = den
 
     # Map each denominator predicate to a recognized Filter; any unknown -> escalate.
-    dax_filters: set[Filter] = set()
-    for p in pred_texts:
-        f = _recognize_filter(p)
-        if f is None:
-            return Verdict("escalate", f"unrecognized denominator predicate: {p!r}")
-        dax_filters.add(f)
+    filters = _recognize_filters(pred_texts, detail_noun="denominator predicate")
+    if isinstance(filters, Verdict):
+        return filters
 
-    if frozenset(dax_filters) == contract_filters:
+    if filters == contract_filters:
         return Verdict("pass", "denominator filter-set matches the contract")
     return Verdict(
         "drift",
-        f"denominator filter-set {sorted((f.column, f.op) for f in dax_filters)} "
+        f"denominator filter-set {sorted((f.column, f.op) for f in filters)} "
         f"!= contract {sorted((f.column, f.op) for f in contract_filters)}",
     )
+
+
+def check_measure_drift(dax_expr: str, definition: dict[str, Any] | None) -> Verdict:
+    """Compare a DIVIDE measure's denominator filter-set to its contract definition.
+
+    Returns a Verdict (pass | drift | escalate | skip). ESCALATE is the default for any
+    expression not confidently recognized. Never raises on bad DAX -- escalates instead.
+    If definition.kind == "base", verify the base measure's aggregation + filter-set
+    against its own contract.
+    """
+    if definition and definition.get("kind") == "base":
+        return _check_base_drift(dax_expr, definition)
+    # kind:ratio implies non-additive; shallow-copy only when the key is truly absent.
+    if _is_ratio_needing_additive_default(definition):
+        definition = {**definition, "additive": False}
+
+    # Backward compat: no structured definition -> nothing to check.
+    if not definition or "denominator" not in definition:
+        return Verdict("skip", "contract has no structured `definition.denominator`")
+
+    # Additive measures are not ratios; denominator filter-set logic does not apply.
+    # Require an explicit `additive: false` to proceed; True or absent -> escalate.
+    if definition.get("additive") is not False:
+        return Verdict(
+            "escalate",
+            "additive measure (or `additive` unset); "
+            "denominator filter-set logic does not apply",
+        )
+
+    return _check_ratio_drift(dax_expr, definition)
 
 
 def load_definition(contract_path: str) -> dict[str, Any] | None:

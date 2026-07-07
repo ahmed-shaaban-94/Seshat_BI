@@ -16,6 +16,26 @@ from dataclasses import dataclass
 __all__ = ["GenResult", "generate_measure", "load_contract"]
 
 
+def _validate_ok_result(
+    dax: str | None, tmdl_block: str | None, reason: str | None
+) -> None:
+    """Enforce the ok=True invariants: dax + tmdl_block present, no reason."""
+    if dax is None or tmdl_block is None:
+        raise ValueError("ok GenResult must populate dax and tmdl_block")
+    if reason is not None:
+        raise ValueError("ok GenResult must not carry a reason")
+
+
+def _validate_refusal_result(
+    dax: str | None, tmdl_block: str | None, reason: str | None
+) -> None:
+    """Enforce the ok=False invariants: no dax/tmdl_block, reason present."""
+    if dax is not None or tmdl_block is not None:
+        raise ValueError("refusal GenResult must not carry dax/tmdl_block")
+    if not reason:
+        raise ValueError("refusal GenResult must carry a reason")
+
+
 @dataclass(frozen=True)
 class GenResult:
     """A sum type: EITHER (ok=True, dax, tmdl_block) OR (ok=False, reason).
@@ -31,16 +51,8 @@ class GenResult:
     warnings: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.ok:
-            if self.dax is None or self.tmdl_block is None:
-                raise ValueError("ok GenResult must populate dax and tmdl_block")
-            if self.reason is not None:
-                raise ValueError("ok GenResult must not carry a reason")
-        else:
-            if self.dax is not None or self.tmdl_block is not None:
-                raise ValueError("refusal GenResult must not carry dax/tmdl_block")
-            if not self.reason:
-                raise ValueError("refusal GenResult must carry a reason")
+        validate = _validate_ok_result if self.ok else _validate_refusal_result
+        validate(self.dax, self.tmdl_block, self.reason)
 
     @classmethod
     def success(
@@ -78,31 +90,45 @@ def _qualify(table: str, column: str | None) -> str:
     return f"{tbl}[{column}]" if column else tbl
 
 
-def _emit_base(defn: dict) -> tuple[str | None, str | None]:
+def _validate_base_source(
+    defn: dict,
+) -> tuple[str | None, str | None, str | None, str | None]:
+    """Validate agg + source shape -> (agg, table, column, reason).
+
+    On refusal, agg/table/column are None and reason carries the message; on
+    success reason is None. Check order: aggregation, gold.* table, then the
+    count_rows-vs-column rules.
+    """
     agg = defn.get("aggregation")
     if agg not in _AGG_TO_DAX:
-        return None, f"unsupported aggregation {agg!r}"
+        return None, None, None, f"unsupported aggregation {agg!r}"
     source = defn.get("source") or {}
     table = source.get("table")
     column = source.get("column")
     if not isinstance(table, str) or not table.startswith("gold."):
-        return None, f"source.table must be a gold.* table, got {table!r}"
+        return None, None, None, f"source.table must be a gold.* table, got {table!r}"
     if agg == "count_rows":
         if column:
-            return None, "count_rows must not specify source.column (table only)"
+            return (
+                None,
+                None,
+                None,
+                "count_rows must not specify source.column (table only)",
+            )
     elif not column:
-        return None, f"aggregation {agg!r} requires source.column"
+        return None, None, None, f"aggregation {agg!r} requires source.column"
+    return agg, table, column, None
 
-    func = _AGG_TO_DAX[agg]
-    inner = f"{func}({_qualify(table, column)})"
 
-    filters = defn.get("filter") or []
-    # Fail-closed: a malformed `filter` is a refusal, never a raise. Validate the
-    # SHAPE before iterating (a scalar or single dict would otherwise blow up).
+def _emit_filters(filters: object, table: str) -> tuple[list[str] | None, str | None]:
+    """Filter list -> (predicates, reason). Empty/absent filters -> ([], None).
+
+    Fail-closed: a malformed `filter` is a refusal, never a raise. Validate the
+    SHAPE before iterating (a scalar or single dict would otherwise blow up).
+    """
+    filters = filters or []
     if not isinstance(filters, list):
         return None, "filter must be a list of {column, op} objects"
-    if not filters:
-        return inner, None
 
     preds: list[str] = []
     tbl = "'" + table.replace(".", " ") + "'"
@@ -115,6 +141,22 @@ def _emit_base(defn: dict) -> tuple[str | None, str | None]:
         if not col or tmpl is None:
             return None, f"unrecognized filter op {op!r} on column {col!r}"
         preds.append(tmpl.format(col=f"{tbl}[{col}]"))
+    return preds, None
+
+
+def _emit_base(defn: dict) -> tuple[str | None, str | None]:
+    agg, table, column, reason = _validate_base_source(defn)
+    if reason is not None:
+        return None, reason
+
+    func = _AGG_TO_DAX[agg]
+    inner = f"{func}({_qualify(table, column)})"
+
+    preds, filter_reason = _emit_filters(defn.get("filter"), table)
+    if filter_reason is not None:
+        return None, filter_reason
+    if not preds:
+        return inner, None
     return f"CALCULATE({inner}, {', '.join(preds)})", None
 
 
@@ -168,6 +210,16 @@ def _build_tmdl_block(
     )
 
 
+def _is_d_rule(rule_id: str) -> bool:
+    """The D-rule family is D1-D11 (TMDL/DAX hygiene): a 'D' followed by a digit.
+
+    A bare startswith("D") also catches unrelated rules like DF1 (parked-on),
+    which then run against this synthetic single-TMDL context and fail loud on
+    their absent manifest -- so match the 'D' + digit shape precisely.
+    """
+    return len(rule_id) >= 2 and rule_id[0] == "D" and rule_id[1].isdigit()
+
+
 def _run_d_rules(tmdl_block: str, name: str) -> tuple[list[str], list[str]]:
     """Stage the block under a temp SemanticModel path and run D1-D11."""
     import tempfile
@@ -191,16 +243,42 @@ def _run_d_rules(tmdl_block: str, name: str) -> tuple[list[str], list[str]]:
         dest.write_text(table_text, encoding="utf-8")
         ctx = RuleContext(repo_root=root, tracked_files=(rel,))
         for reg in all_rules():
-            # The D-rule family is D1-D11 (TMDL/DAX hygiene): a 'D' followed by a
-            # digit. Match that precisely -- a bare startswith("D") also catches
-            # unrelated rules like DF1 (parked-on), which then run against this
-            # synthetic single-TMDL context and fail loud on their absent manifest.
-            if not (len(reg.id) >= 2 and reg.id[0] == "D" and reg.id[1].isdigit()):
+            if not _is_d_rule(reg.id):
                 continue
             for f in reg.rule(ctx):
                 line = _format(f)
                 (errors if f.severity is Severity.ERROR else warnings).append(line)
     return errors, warnings
+
+
+def _emit_for_kind(definition: dict) -> tuple[str | None, str | None]:
+    """Dispatch on `kind` and emit DAX -> (dax, reason). An unknown kind is a
+    refusal reason, so callers reproduce it via the shared reason path."""
+    kind = definition.get("kind") if isinstance(definition, dict) else None
+    if kind == "base":
+        return _emit_base(definition)
+    if kind == "ratio":
+        return _emit_ratio(definition)
+    return None, f"unsupported kind {kind!r} (expected base|ratio)"
+
+
+def _verify_form(
+    name: str,
+    dax: str,
+    definition: dict,
+    format_string: str | None,
+    display_folder: str | None,
+    doc_intent: str | None,
+) -> "GenResult":
+    """STEP 4: build the TMDL block, run D1-D11 form verification, and return
+    a success/refusal GenResult. Applies the presentation defaults."""
+    fmt = format_string or _default_format(definition)
+    folder = display_folder or "Measures"
+    block = _build_tmdl_block(name, dax, fmt, folder, doc_intent or "")
+    errors, warnings = _run_d_rules(block, name)
+    if errors:
+        return GenResult.refuse("D-rule ERROR(s): " + "; ".join(errors))
+    return GenResult.success(dax=dax, tmdl_block=block, warnings=tuple(warnings))
 
 
 def generate_measure(
@@ -216,13 +294,7 @@ def generate_measure(
         raise ValueError("generate_measure requires a measure name")
 
     # STEP 1+2: validate shape + emit DAX
-    kind = definition.get("kind") if isinstance(definition, dict) else None
-    if kind == "base":
-        dax, reason = _emit_base(definition)
-    elif kind == "ratio":
-        dax, reason = _emit_ratio(definition)
-    else:
-        return GenResult.refuse(f"unsupported kind {kind!r} (expected base|ratio)")
+    dax, reason = _emit_for_kind(definition)
     if reason is not None:
         return GenResult.refuse(reason)
 
@@ -234,13 +306,9 @@ def generate_measure(
         return GenResult.refuse(f"L3 {v.status}: {v.detail}")
 
     # STEP 4: build TMDL block + form verify (D1-D11)
-    fmt = format_string or _default_format(definition)
-    folder = display_folder or "Measures"
-    block = _build_tmdl_block(name, dax, fmt, folder, doc_intent or "")
-    errors, warnings = _run_d_rules(block, name)
-    if errors:
-        return GenResult.refuse("D-rule ERROR(s): " + "; ".join(errors))
-    return GenResult.success(dax=dax, tmdl_block=block, warnings=tuple(warnings))
+    return _verify_form(
+        name, dax, definition, format_string, display_folder, doc_intent
+    )
 
 
 def load_contract(path: str) -> dict:

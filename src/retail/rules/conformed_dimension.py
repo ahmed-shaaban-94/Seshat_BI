@@ -89,6 +89,24 @@ def _is_star(data: dict) -> bool:
     return isinstance(gs, dict) and gs.get("fact") is not None
 
 
+def _add_dim(out: dict[str, dict], raw: object, *, overwrite: bool) -> None:
+    """Register one raw dimension dict under its bare name (no-op if not usable).
+
+    ``overwrite`` selects the dedup rule: explicit dims are last-wins
+    (``overwrite=True``), the standalone date_dimension is first-wins
+    (``overwrite=False`` -- never displaces an explicit dim).
+    """
+    if not isinstance(raw, dict):
+        return
+    b = _bare(raw.get("name"))
+    if not b:
+        return
+    if overwrite:
+        out[b] = raw
+    else:
+        out.setdefault(b, raw)
+
+
 def _star_dimensions(data: dict) -> dict[str, dict]:
     """Map bare-name -> the raw dimension dict for one star (dims + date_dimension).
 
@@ -101,15 +119,8 @@ def _star_dimensions(data: dict) -> dict[str, dict]:
     dims = gs.get("dimensions")
     if isinstance(dims, list):
         for dim in dims:
-            if isinstance(dim, dict):
-                b = _bare(dim.get("name"))
-                if b:
-                    out[b] = dim
-    date_dim = gs.get("date_dimension")
-    if isinstance(date_dim, dict):
-        b = _bare(date_dim.get("name"))
-        if b:
-            out.setdefault(b, date_dim)
+            _add_dim(out, dim, overwrite=True)
+    _add_dim(out, gs.get("date_dimension"), overwrite=False)
     return out
 
 
@@ -129,12 +140,13 @@ def _attr_silver_types(data: dict, dim_name: str) -> dict[str, str]:
             continue
         placement = col.get("gold_placement")
         stype = col.get("silver_type")
-        if (
-            isinstance(placement, str)
-            and placement.startswith(prefix)
-            and isinstance(stype, str)
-        ):
-            out[placement[len(prefix) :]] = stype
+        if not isinstance(placement, str):
+            continue
+        if not isinstance(stype, str):
+            continue
+        if not placement.startswith(prefix):
+            continue
+        out[placement[len(prefix) :]] = stype
     return out
 
 
@@ -172,13 +184,8 @@ def _load_declarations(ctx: RuleContext) -> tuple[dict[str, dict], list[Finding]
     return decls, findings
 
 
-def _conformed_divergence(bare: str, stars: dict[str, dict]) -> str | None:
-    """Return a human-readable divergence description across >=2 stars, or None.
-
-    Compares surrogate_key and shared-attribute silver_type; only fields present
-    on BOTH sides of any pair are compared (graceful degradation).
-    """
-    # surrogate_key divergence (only among stars that declare one)
+def _surrogate_key_divergence(stars: dict[str, dict]) -> str | None:
+    """surrogate_key divergence across >=2 stars (only among stars declaring one)."""
     keys = {
         sid: dim.get("surrogate_key")
         for sid, (dim, _data) in stars.items()
@@ -187,9 +194,17 @@ def _conformed_divergence(bare: str, stars: dict[str, dict]) -> str | None:
     if len(set(keys.values())) > 1:
         pairs = ", ".join(f"{sid}={keys[sid]!r}" for sid in sorted(keys))
         return f"surrogate_key differs across stars ({pairs})"
-    # shared-attribute silver_type divergence. gold_placement in a source-map is
-    # written with the BARE dim name (e.g. "dim:dim_product.item"), so resolve the
-    # placement prefix from _bare(dim name), NOT the schema-qualified declared name.
+    return None
+
+
+def _attr_type_divergence(bare: str, stars: dict[str, dict]) -> str | None:
+    """Shared-attribute silver_type divergence across >=2 stars, or None.
+
+    Only attributes present on BOTH sides of a pair are compared (graceful
+    degradation). gold_placement in a source-map is written with the BARE dim
+    name (e.g. "dim:dim_product.item"), so resolve the placement prefix from
+    _bare(dim name), NOT the schema-qualified declared name.
+    """
     typemaps: dict[str, dict[str, str]] = {}
     for sid, (dim, data) in stars.items():
         dim_bare = _bare(dim.get("name")) or bare
@@ -206,12 +221,20 @@ def _conformed_divergence(bare: str, stars: dict[str, dict]) -> str | None:
     return None
 
 
-@register(RULE_ID, "cross-star conformed-dimension conformance")
-def check_hr1(ctx: RuleContext) -> Iterable[Finding]:
-    findings: list[Finding] = []
+def _conformed_divergence(bare: str, stars: dict[str, dict]) -> str | None:
+    """Return a human-readable divergence description across >=2 stars, or None.
 
-    # 1. discover stars
-    stars: dict[str, dict] = {}  # star_id -> source-map dict
+    Compares surrogate_key and shared-attribute silver_type; only fields present
+    on BOTH sides of any pair are compared (graceful degradation).
+    """
+    return _surrogate_key_divergence(stars) or _attr_type_divergence(bare, stars)
+
+
+def _discover_stars(ctx: RuleContext) -> dict[str, dict]:
+    """Discover each star: star_id -> source-map dict for every committed
+    ``mappings/<table>/source-map.yaml`` that carries a ``gold_star.fact`` key.
+    """
+    stars: dict[str, dict] = {}
     for rel in sorted(ctx.tracked_files):
         if is_test_path(rel):
             continue
@@ -222,55 +245,75 @@ def check_hr1(ctx: RuleContext) -> Iterable[Finding]:
         if data is None or not _is_star(data):
             continue
         stars[_star_id(data, m.group(1))] = data
+    return stars
 
-    # FR-007: engage only when >1 star exists
-    if len(stars) < 2:
-        return findings
 
-    # 2. bare-name -> {star_id: (dim_dict, source_map_dict)} across all stars
+def _index_dims_by_name(stars: dict[str, dict]) -> dict[str, dict[str, tuple]]:
+    """bare-name -> {star_id: (dim_dict, source_map_dict)} across all stars."""
     name_to_stars: dict[str, dict[str, tuple]] = {}
     for sid, data in stars.items():
         for bare, dim in _star_dimensions(data).items():
             name_to_stars.setdefault(bare, {})[sid] = (dim, data)
+    return name_to_stars
 
+
+def _evaluate_dimension(
+    bare: str, star_map: dict[str, tuple], decls: dict[str, dict]
+) -> list[Finding]:
+    """Verdict for one cross-star bare-name: undeclared collision, distinct
+    skip, or conformed divergence.
+    """
+    decl = decls.get(bare)
+    if decl is None:
+        return [
+            Finding(
+                rule_id=RULE_ID,
+                severity=Severity.ERROR,
+                message=(
+                    f"dimension {bare!r} appears in more than one star but is "
+                    "not declared in docs/quality/conformed-dimension-map.yaml; "
+                    "a human must rule it 'conformed' (one shared dimension) or "
+                    "'distinct' (deliberately separate)"
+                ),
+                locator=f"{_MAP_FILE}:{bare}",
+            )
+        ]
+    if decl["status"] == "distinct":
+        return []  # deliberately separate -- never fires
+    # conformed: verify grain/key/type agree across the covered stars
+    divergence = _conformed_divergence(bare, star_map)
+    if divergence is None:
+        return []
+    return [
+        Finding(
+            rule_id=RULE_ID,
+            severity=Severity.ERROR,
+            message=(
+                f"dimension {bare!r} is declared 'conformed' but {divergence}; "
+                "a conformed dimension must be identical across every star"
+            ),
+            locator=f"{_MAP_FILE}:{bare}",
+        )
+    ]
+
+
+@register(RULE_ID, "cross-star conformed-dimension conformance")
+def check_hr1(ctx: RuleContext) -> Iterable[Finding]:
+    findings: list[Finding] = []
+
+    stars = _discover_stars(ctx)
+    # FR-007: engage only when >1 star exists
+    if len(stars) < 2:
+        return findings
+
+    name_to_stars = _index_dims_by_name(stars)
     decls, decl_findings = _load_declarations(ctx)
     findings.extend(decl_findings)
 
-    # 3. per bare-name that appears in >=2 stars
+    # per bare-name that appears in >=2 stars
     for bare, star_map in sorted(name_to_stars.items()):
         if len(star_map) < 2:
             continue  # not a cross-star name -> nothing to conform
-        decl = decls.get(bare)
-        if decl is None:
-            findings.append(
-                Finding(
-                    rule_id=RULE_ID,
-                    severity=Severity.ERROR,
-                    message=(
-                        f"dimension {bare!r} appears in more than one star but is "
-                        "not declared in docs/quality/conformed-dimension-map.yaml; "
-                        "a human must rule it 'conformed' (one shared dimension) or "
-                        "'distinct' (deliberately separate)"
-                    ),
-                    locator=f"{_MAP_FILE}:{bare}",
-                )
-            )
-            continue
-        if decl["status"] == "distinct":
-            continue  # deliberately separate -- never fires
-        # conformed: verify grain/key/type agree across the covered stars
-        divergence = _conformed_divergence(bare, star_map)
-        if divergence is not None:
-            findings.append(
-                Finding(
-                    rule_id=RULE_ID,
-                    severity=Severity.ERROR,
-                    message=(
-                        f"dimension {bare!r} is declared 'conformed' but {divergence}; "
-                        "a conformed dimension must be identical across every star"
-                    ),
-                    locator=f"{_MAP_FILE}:{bare}",
-                )
-            )
+        findings.extend(_evaluate_dimension(bare, star_map, decls))
 
     return findings
