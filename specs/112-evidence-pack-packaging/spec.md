@@ -4,8 +4,10 @@
 
 **Created**: 2026-07-07
 
-**Status**: **DRAFT — SPEC ONLY, HELD.** Under Option B (owner-ratified 2026-07-07).
-Packaging/discovery over shipped skills, not a new verb. Held for owner review.
+**Status**: **BUILT** (docs-only) 2026-07-07 on branch `feat/112-evidence-pack-packaging`.
+Under Option B: a walkthrough over the shipped `evidence-pack-generator` +
+`approval-evidence-pack` skills — NO new CLI verb, NO new capability. Deliverable:
+`docs/user/evidence-pack.md`.
 
 **Input**: Roadmap M9 "Evidence Pack as Product Output".
 
