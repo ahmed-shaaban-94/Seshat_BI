@@ -110,8 +110,11 @@ _README_TEXT = (
     "\n"
     "1. Copy `.env.example` to `.env` and fill in your database connection "
     "parameters (never commit `.env`).\n"
-    "2. Run `retail check` to confirm the workspace baseline is clean.\n"
-    "3. Follow the readiness flow: profile your first table, then map it "
+    "2. Initialize git and make a first commit -- the checker reads git-tracked "
+    "state, so it must run inside a git repo with at least one commit:\n"
+    '   `git init && git add -A && git commit -m "chore: scaffold workspace"`\n'
+    "3. Run `retail check` to confirm the workspace baseline is clean.\n"
+    "4. Follow the readiness flow: profile your first table, then map it "
     "(the source-mapping gate) before building silver/gold SQL.\n"
 )
 
@@ -157,6 +160,47 @@ def _write_text(path: Path, text: str) -> Path:
     return path
 
 
+def _guard_target(target: Path, force: bool) -> None:
+    """Refuse a non-directory target, or a non-empty one without ``force``
+    (FR-003) -- raises ``FileExistsError`` and the caller writes NOTHING."""
+    if not target.exists():
+        return
+    if not target.is_dir():
+        raise FileExistsError(f"target exists and is not a directory: {target}")
+    if any(target.iterdir()) and not force:
+        raise FileExistsError(
+            f"target directory is not empty: {target} "
+            f"(pass force=True / --force to scaffold into it anyway)"
+        )
+
+
+def _scaffold_empty_dirs(target: Path) -> list[Path]:
+    """Create each empty workspace dir + its ``.gitkeep``; idempotent."""
+    written: list[Path] = []
+    for rel in _EMPTY_DIRS:
+        d = target / rel
+        d.mkdir(parents=True, exist_ok=True)
+        written.append(d)
+        keep = d / _GITKEEP_NAME
+        if not keep.exists():
+            _write_text(keep, "")
+        written.append(keep)
+    return written
+
+
+def _scaffold_files(target: Path) -> list[Path]:
+    """Write the workspace's static template files; deterministic, byte-identical."""
+    files = (
+        ("README.md", _README_TEXT),
+        ("warehouse/README.md", _WAREHOUSE_README_TEXT),
+        ("powerbi/README.md", _POWERBI_README_TEXT),
+        (".env.example", _ENV_EXAMPLE_TEXT),
+        (".gitignore", _GITIGNORE_TEXT),
+        (".gitattributes", _GITATTRIBUTES_TEXT),
+    )
+    return [_write_text(target / rel, text) for rel, text in files]
+
+
 def init_project(name: str, force: bool = False) -> list[Path]:
     """Scaffold a fresh Retail-BI project workspace at ``name``.
 
@@ -172,37 +216,6 @@ def init_project(name: str, force: bool = False) -> list[Path]:
     objects, most useful for a caller that wants to report what happened.
     """
     target = _validate_target(name)
-
-    if target.exists():
-        if not target.is_dir():
-            raise FileExistsError(f"target exists and is not a directory: {target}")
-        has_children = any(target.iterdir())
-        if has_children and not force:
-            raise FileExistsError(
-                f"target directory is not empty: {target} "
-                f"(pass force=True / --force to scaffold into it anyway)"
-            )
-
+    _guard_target(target, force)
     target.mkdir(parents=True, exist_ok=True)
-
-    written: list[Path] = []
-
-    for rel in _EMPTY_DIRS:
-        d = target / rel
-        d.mkdir(parents=True, exist_ok=True)
-        written.append(d)
-        keep = d / _GITKEEP_NAME
-        if not keep.exists():
-            _write_text(keep, "")
-        written.append(keep)
-
-    written.append(_write_text(target / "README.md", _README_TEXT))
-    written.append(
-        _write_text(target / "warehouse" / "README.md", _WAREHOUSE_README_TEXT)
-    )
-    written.append(_write_text(target / "powerbi" / "README.md", _POWERBI_README_TEXT))
-    written.append(_write_text(target / ".env.example", _ENV_EXAMPLE_TEXT))
-    written.append(_write_text(target / ".gitignore", _GITIGNORE_TEXT))
-    written.append(_write_text(target / ".gitattributes", _GITATTRIBUTES_TEXT))
-
-    return written
+    return _scaffold_empty_dirs(target) + _scaffold_files(target)

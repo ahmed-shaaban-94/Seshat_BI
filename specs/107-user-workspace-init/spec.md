@@ -65,8 +65,13 @@ milestone assumes.
   git-ignored and never populated with real values.
 - **FR-005** Pure local filesystem; no network, no DB, no external dependency
   (respects B1/B3 — no module-scope DB/network import).
-- **FR-006** The generated workspace passes `retail check` on creation (clean baseline,
-  no self-granted `pass`, no fabricated score).
+- **FR-006** The generated workspace passes `retail check` once it is a git repo with at
+  least one commit (clean baseline, no self-granted `pass`, no fabricated score). NOTE:
+  the P1/P2 layout+git rules read git-tracked state, so `retail check` requires
+  `git init && git add -A && git commit` first — the generated `README.md` instructs the
+  user to do this before running the check. (A bare pre-git `retail check` reports the
+  files as "missing" because they are untracked; this is a git-state precondition, not a
+  scaffolding defect.)
 
 ## Out of scope
 - Any capability *verb* (source profiling, mapping, evidence) — those are M6/M7/M9 and are
