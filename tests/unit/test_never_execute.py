@@ -118,7 +118,9 @@ def test_snowflake_and_mysql_connector_are_forbidden_roots() -> None:
 
 
 def test_is_governed_matches_core_and_rules():
-    assert _is_governed("src/retail/cli.py")
+    assert _is_governed("src/retail/cli/__init__.py")
+    assert _is_governed("src/retail/cli/parser.py")
+    assert _is_governed("src/retail/cli/commands/validate.py")
     assert _is_governed("src/retail/runner.py")
     assert _is_governed("src/retail/rules/sql.py")
     assert not _is_governed("src/retail/validate.py")  # live validator, lazily imports
@@ -130,7 +132,7 @@ def test_is_governed_matches_core_and_rules():
 
 
 def test_rule_flags_a_governed_module_with_module_scope_driver(tmp_path: Path):
-    rel = "src/retail/cli.py"
+    rel = "src/retail/cli/__init__.py"
     p = tmp_path / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text("import psycopg2\n", encoding="utf-8")
@@ -190,11 +192,11 @@ def test_real_core_modules_have_no_module_scope_execution_imports():
     repo_root = Path(__file__).resolve().parents[2]
     src_root = repo_root / "src" / "retail"
     governed = [
-        src_root / "cli.py",
         src_root / "runner.py",
         src_root / "core.py",
         src_root / "registry.py",
         *sorted((src_root / "rules").glob("*.py")),
+        *sorted((src_root / "cli").rglob("*.py")),
     ]
     offenders: dict[str, list[str]] = {}
     for path in governed:

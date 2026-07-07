@@ -154,7 +154,7 @@ def test_multiple_live_surfaces_each_flagged(tmp_path) -> None:
 def test_live_surface_set_is_disjoint_from_b1_governed(tmp_path) -> None:
     assert _LIVE_SURFACE.isdisjoint(never_execute._GOVERNED_MODULES)
     for member in _LIVE_SURFACE:
-        assert not member.startswith(never_execute._GOVERNED_PREFIX)
+        assert not member.startswith(never_execute._GOVERNED_PREFIXES)
 
 
 def test_live_surface_set_is_generic_module_paths(tmp_path) -> None:

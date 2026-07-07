@@ -623,7 +623,7 @@ def test_c2_end_to_end_flags_committed_odbc_secret(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 def test_c2_sentinel_real_repo_source_does_not_self_trip() -> None:
-    """The scanner's own extension must not flag the real dialect.py / cli.py /
+    """The scanner's own extension must not flag the real dialect.py / cli/ package /
     git_meta.py source it lives in -- those modules build ODBC/mysql/Snowflake
     config strings from env lookups, never literal secrets. This is the C2
     analog of the B3 real-file sentinel: a pre-merge guard the live gate
@@ -633,7 +633,7 @@ def test_c2_sentinel_real_repo_source_does_not_self_trip() -> None:
     src_root = repo_root / "src" / "retail"
     targets = [
         src_root / "dialect.py",
-        src_root / "cli.py",
+        *sorted((src_root / "cli").rglob("*.py")),
         src_root / "rules" / "git_meta.py",
     ]
     offenders: dict[str, list[str]] = {}

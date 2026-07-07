@@ -8,7 +8,8 @@ the ``retail check`` import chain) pull a live driver and erode the invariant.
 
 The repo's deliberate pattern is the opposite: every driver/network import is
 **lazy** -- done INSIDE the handler that actually connects (see ``validate.py`` /
-``cli.py``'s psycopg2, and the lazy ``yaml`` in ``dax_gen``/``metric_drift``).
+the ``cli/`` package's psycopg2, and the lazy ``yaml`` in ``dax_gen``/
+``metric_drift``).
 
 B1 fails closed on a **module-scope** import of a connection-capable library in the
 governed core modules, while leaving lazy in-function imports untouched. It uses
@@ -62,16 +63,20 @@ _FORBIDDEN_DOTTED: frozenset[str] = frozenset({"urllib.request", "urllib.error"}
 
 # The core import chain that must stay execution-free: importing any of these must
 # not pull a DB/network driver. Repo-relative POSIX paths (matched against tracked
-# files). The whole rules package is included via the prefix check below.
+# files). The rules package AND the cli package are included via the prefix check
+# below (the cli package split -- CodeScene hotspot -- turned the single
+# src/retail/cli.py into src/retail/cli/{__init__,parser,__main__}.py plus
+# src/retail/cli/commands/*.py; the prefix covers every file the eager
+# `import retail.cli` chain now spans, strictly more coverage than the single
+# hardcoded path it replaces).
 _GOVERNED_MODULES: frozenset[str] = frozenset(
     {
-        "src/retail/cli.py",
         "src/retail/runner.py",
         "src/retail/core.py",
         "src/retail/registry.py",
     }
 )
-_GOVERNED_PREFIX = "src/retail/rules/"
+_GOVERNED_PREFIXES: tuple[str, ...] = ("src/retail/rules/", "src/retail/cli/")
 
 
 def _root_of(name: str) -> str:
@@ -146,7 +151,7 @@ def module_scope_violations(source: str) -> list[str]:
 
 def _is_governed(path: str) -> bool:
     return path in _GOVERNED_MODULES or (
-        path.startswith(_GOVERNED_PREFIX) and path.endswith(".py")
+        path.endswith(".py") and path.startswith(_GOVERNED_PREFIXES)
     )
 
 
