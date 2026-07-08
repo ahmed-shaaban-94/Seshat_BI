@@ -26,11 +26,28 @@ from .profile import ColumnProfile, PkProof, ProfileResult
 class ParsedBaseline:
     profile: ProfileResult | None
     uncomparable: str | None  # a human reason when profile is None
+    # The candidate PK column set the baseline STATES ("**Candidate PK:**
+    # `( transaction_id )`"). The live re-profile MUST run against this exact
+    # set -- profiling observed on a guessed column compares baseline.pk and
+    # observed.pk on DIFFERENT columns, an invalid comparison that fabricates a
+    # false blocked grain_pk_drift. None when the baseline states no PK line.
+    pk_columns: tuple[str, ...] | None = None
 
 
 def _find_table_id(text: str) -> str | None:
     m = re.search(r"\|\s*Table id\s*\|\s*`?([^`|]+?)`?\s*\|", text)
     return m.group(1).strip() if m else None
+
+
+def _find_pk_columns(text: str) -> tuple[str, ...] | None:
+    """Parse the stated candidate PK, e.g. ``**Candidate PK:** `( transaction_id )```
+    or a composite ``( col_a, col_b )``. Returns the column tuple, or None when
+    no such line is present (a non-conformant baseline)."""
+    m = re.search(r"\*\*Candidate PK:\*\*\s*`\(([^`)]+)\)`", text)
+    if not m:
+        return None
+    cols = tuple(c.strip() for c in m.group(1).split(",") if c.strip())
+    return cols or None
 
 
 def _find_row_count(text: str) -> int | None:
@@ -114,4 +131,5 @@ def read_source_profile(path: str | Path) -> ParsedBaseline:
             pk=_parse_pk(text, row_count),
         ),
         uncomparable=None,
+        pk_columns=_find_pk_columns(text),
     )

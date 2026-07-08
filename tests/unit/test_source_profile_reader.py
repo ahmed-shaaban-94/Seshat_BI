@@ -26,6 +26,20 @@ def test_reads_template_conformant_profile():
     assert p.pk.total == 12575
 
 
+def test_reads_stated_candidate_pk_columns():
+    # The baseline STATES its PK ("**Candidate PK:** `( transaction_id )`"); the
+    # live re-profile must run against that exact column, not a guessed first
+    # column (guessing profiles observed.pk on a DIFFERENT column than the
+    # baseline proof describes -> an invalid comparison that fabricates a false
+    # blocked grain_pk_drift).
+    from retail.source_profile_reader import read_source_profile
+
+    parsed = read_source_profile(
+        _ROOT / "mappings" / "retail_store_sales" / "source-profile.md"
+    )
+    assert parsed.pk_columns == ("transaction_id",)
+
+
 def test_nonconformant_profile_reported_uncomparable():
     from retail.source_profile_reader import read_source_profile
 
@@ -38,3 +52,5 @@ def test_nonconformant_profile_reported_uncomparable():
         or "table" in parsed.uncomparable.lower()
     )
     assert parsed.profile is None
+    # A non-conformant baseline carries no usable PK column set either.
+    assert parsed.pk_columns is None
