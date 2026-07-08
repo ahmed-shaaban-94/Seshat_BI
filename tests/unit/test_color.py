@@ -8,6 +8,7 @@ from retail.color import (
     composite_over,
     contrast_ratio,
     delta_e76,
+    format_pt,
     hex_to_lab,
     is_valid_hex,
     relative_luminance,
@@ -96,3 +97,14 @@ def test_composite_over_above_100_raises() -> None:
 def test_composite_over_bad_hex_raises() -> None:
     with pytest.raises(ValueError):
         composite_over("nothex", "#FFFFFF", 50.0)
+
+
+def test_format_pt_collapses_integral_float_to_int() -> None:
+    assert format_pt(12.0) == 12
+    assert isinstance(format_pt(12.0), int)
+    assert format_pt(9.0) == 9
+
+
+def test_format_pt_preserves_fractional_value() -> None:
+    assert format_pt(11.5) == 11.5
+    assert isinstance(format_pt(11.5), float)

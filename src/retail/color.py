@@ -115,3 +115,13 @@ def composite_over(fg: str, bg: str, transparency_pct: float) -> str:
         bg_c = int(h_bg[i : i + 2], 16)
         out_channels.append(round(alpha * fg_c + (1.0 - alpha) * bg_c))
     return "#" + "".join(f"{v:02X}" for v in out_channels)
+
+
+def format_pt(value: float) -> float | int:
+    """Render a point size as ``int`` when integral, else keep the float.
+
+    Prevents committed integral font sizes (``12``, ``9``) from churning to
+    ``12.0``/``9.0`` on every regeneration -- a purely cosmetic JSON-shape
+    change with no accessibility meaning.
+    """
+    return int(value) if value == int(value) else value
