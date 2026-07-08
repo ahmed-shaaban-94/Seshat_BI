@@ -126,3 +126,97 @@ def classify_drift(
             )
         )
     return findings
+
+
+_DEFAULT_OWNER = {
+    "grain_pk_drift": "analyst",
+    "returns_rule_drift": "analyst",
+    "pii_surface_drift": "governance",
+    "semantic_pair_drift": "analyst",
+}
+
+_HANDOFF_QUESTION = {
+    "grain_pk_drift": "is the new grain acceptable, or is dedup a defect?",
+    "returns_rule_drift": "which column is now authoritative for returns?",
+    "pii_surface_drift": (
+        "is the reappeared/new column publish-safe? (default stays drop)"
+    ),
+    "semantic_pair_drift": "does the fanned-out pair still establish entity identity?",
+}
+
+
+def derive_status(findings: list[DriftFinding], *, observed_available: bool) -> str:
+    """Map findings to one Source-Ready spine status. Never a numeric score."""
+    if not observed_available:
+        return "pending_live_reprofile"
+    if any(f.severity == "blocked" for f in findings):
+        return "blocked"
+    if findings:
+        return "warning"
+    return "pass"
+
+
+def _handoffs(findings: list[DriftFinding]) -> list[HandoffQuestion]:
+    return [
+        HandoffQuestion(
+            question=_HANDOFF_QUESTION[f.drift_class],
+            drift_class=f.drift_class,
+            measured_fact=f"{f.column}: {f.before} -> {f.after}",
+            owner=_DEFAULT_OWNER[f.drift_class],
+        )
+        for f in findings
+        if f.principle_v
+    ]
+
+
+def to_findings_dict(
+    *,
+    baseline: ProfileResult,
+    observed: ProfileResult | None,
+    baseline_ref: str,
+    evidence: list[str],
+    reprofiled_at: str | None = None,
+    reprofiled_by: str | None = None,
+) -> dict:
+    """Serialize a drift comparison to the source-drift-findings.schema.json shape."""
+    findings = classify_drift(baseline, observed)
+    available = observed is not None
+    status = derive_status(findings, observed_available=available)
+    blocking = [
+        f"{f.drift_class} on {f.column}: {f.before} -> {f.after}"
+        for f in findings
+        if f.severity == "blocked"
+    ]
+    return {
+        "table": baseline.table,
+        "baseline": baseline_ref,
+        "observed": {
+            "available": available,
+            "reprofiled_at": reprofiled_at,
+            "reprofiled_by": reprofiled_by,
+        },
+        "findings": [
+            {
+                "drift_class": f.drift_class,
+                "column": f.column,
+                "before": f.before,
+                "after": f.after,
+                "severity": f.severity,
+                "principle_v": f.principle_v,
+                **({"note": f.note} if f.note is not None else {}),
+            }
+            for f in findings
+        ],
+        "status": status,
+        "blocking_reasons": blocking,
+        "evidence": list(evidence),
+        "principle_v_handoff": [
+            {
+                "question": h.question,
+                "drift_class": h.drift_class,
+                "measured_fact": h.measured_fact,
+                "owner": h.owner,
+            }
+            for h in _handoffs(findings)
+        ],
+    }

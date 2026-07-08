@@ -9,11 +9,20 @@ iteration order over string keys is not stable across process hash seeds.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from retail.profile import ColumnProfile, PkProof, ProfileResult
 
 pytestmark = pytest.mark.unit
+
+_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "schemas"
+    / "source-drift-findings.schema.json"
+)
 
 
 def _col(name, missing_pct=0.0, card=10):
@@ -148,3 +157,71 @@ def test_grain_pk_drift_is_blocked_and_principle_v():
     assert len(g) == 1
     assert g[0].severity == "blocked"
     assert g[0].principle_v is True
+
+
+def _validate(doc):
+    from jsonschema import Draft202012Validator
+
+    schema = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(doc)
+
+
+def test_derive_status_blocked_when_fatal_class_present():
+    from retail.drift import classify_drift, derive_status
+
+    base = _profile([_col("a"), _col("b")])
+    obs = _profile([_col("a")])  # b removed -> blocked
+    assert (
+        derive_status(classify_drift(base, obs), observed_available=True) == "blocked"
+    )
+
+
+def test_derive_status_warning_when_only_nonfatal():
+    from retail.drift import classify_drift, derive_status
+
+    base = _profile([_col("a", missing_pct=1.0)])
+    obs = _profile([_col("a", missing_pct=9.0)])  # missingness shift only
+    assert (
+        derive_status(classify_drift(base, obs), observed_available=True) == "warning"
+    )
+
+
+def test_derive_status_pass_when_no_findings():
+    from retail.drift import classify_drift, derive_status
+
+    base = _profile([_col("a")])
+    obs = _profile([_col("a")])
+    assert derive_status(classify_drift(base, obs), observed_available=True) == "pass"
+
+
+def test_deferred_live_is_pending_and_schema_valid():
+    from retail.drift import to_findings_dict
+
+    base = _profile([_col("a")])
+    doc = to_findings_dict(
+        baseline=base,
+        observed=None,
+        baseline_ref="mappings/t/source-profile.md@abc",
+        evidence=["mappings/t/source-drift-report.md"],
+    )
+    assert doc["status"] == "pending_live_reprofile"
+    assert doc["observed"]["available"] is False
+    assert doc["findings"] == []
+    _validate(doc)
+
+
+def test_full_report_schema_valid_with_findings_and_handoff():
+    from retail.drift import to_findings_dict
+
+    base = _profile([_col("a")], is_unique=True)
+    obs = _profile([_col("a")], is_unique=False)  # grain_pk_drift -> handoff
+    doc = to_findings_dict(
+        baseline=base,
+        observed=obs,
+        baseline_ref="mappings/t/source-profile.md@abc",
+        evidence=["mappings/t/source-drift-report.md"],
+    )
+    assert doc["status"] == "blocked"
+    assert any(h["drift_class"] == "grain_pk_drift" for h in doc["principle_v_handoff"])
+    assert doc["blocking_reasons"]  # non-empty
+    _validate(doc)
