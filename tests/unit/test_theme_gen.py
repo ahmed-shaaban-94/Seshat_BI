@@ -344,3 +344,67 @@ def test_min_categorical_delta_e_single_color_is_noop() -> None:
     palette = build_palette(_seed())
     palette["colors"]["data_colors"] = ["#2FB6C4"]
     check_categorical_distinctness_or_raise(palette)  # does not raise
+
+
+def test_check_ramp_deltae_raises_below_floor() -> None:
+    from retail.theme_gen import (
+        ThemeGenError,
+        build_palette,
+        check_ramp_deltae_or_raise,
+    )
+
+    palette = build_palette(
+        _seed(data_colors=("#336699", "#346699"))
+    )  # near-identical adjacent pair
+    with pytest.raises(ThemeGenError, match="deltaE76"):
+        check_ramp_deltae_or_raise(palette, floor=10.0)
+
+
+def test_check_ramp_deltae_names_both_hexes() -> None:
+    from retail.theme_gen import (
+        ThemeGenError,
+        build_palette,
+        check_ramp_deltae_or_raise,
+    )
+
+    palette = build_palette(_seed(data_colors=("#336699", "#346699")))
+    with pytest.raises(ThemeGenError) as exc_info:
+        check_ramp_deltae_or_raise(palette, floor=10.0)
+    assert "#336699" in str(exc_info.value)
+    assert "#346699" in str(exc_info.value)
+
+
+def test_check_ramp_deltae_passes_at_or_above_floor() -> None:
+    from retail.theme_gen import build_palette, check_ramp_deltae_or_raise
+
+    palette = build_palette(_seed(data_colors=("#000000", "#FFFFFF", "#000000")))
+    check_ramp_deltae_or_raise(
+        palette, floor=10.0
+    )  # no raise -- deltaE ~= 100 each hop
+
+
+def test_check_ramp_deltae_floor_is_a_real_param() -> None:
+    # Measured deltaE76 for this pair is ~0.20 (see the
+    # test_check_ramp_deltae_raises_below_floor / _names_both_hexes tests,
+    # which use floor=10.0 and do raise). A floor below that measured value
+    # must pass -- proving `floor` is a live parameter, not a fixed constant.
+    from retail.theme_gen import build_palette, check_ramp_deltae_or_raise
+
+    palette = build_palette(_seed(data_colors=("#336699", "#346699")))
+    check_ramp_deltae_or_raise(palette, floor=0.05)  # very low floor -- pair now passes
+
+
+def test_check_ramp_deltae_ignores_nonadjacent_near_duplicate() -> None:
+    # The near-identical pair sits at indices 0 and 2 (NOT adjacent); the
+    # actual adjacent pairs (0,1) and (1,2) are both well-separated. This
+    # proves check_ramp_deltae_or_raise is adjacent-only (zip(dc, dc[1:])),
+    # unlike check_categorical_distinctness_or_raise's whole-set i<j scan,
+    # which WOULD flag this same ramp (see the "_nonadjacent_pair" test
+    # above for that whole-set counterpart).
+    from retail.theme_gen import build_palette, check_ramp_deltae_or_raise
+
+    palette = build_palette(_seed())
+    palette["colors"]["data_colors"] = ["#2FB6C4", "#12263A", "#2FB6C5"]
+    check_ramp_deltae_or_raise(
+        palette, floor=10.0
+    )  # no raise -- adjacent pairs are fine

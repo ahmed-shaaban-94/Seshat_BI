@@ -163,6 +163,23 @@ def check_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
             )
 
 
+def check_ramp_deltae_or_raise(palette: dict, floor: float) -> None:
+    """Raise if any two ADJACENT data_colors entries are near-collapsed.
+
+    Deterministic CIE76 (delta_e76) distance on adjacent ramp/data_colors
+    pairs only -- NOT a colorblind-safe / whole-set claim (that is CT3's
+    idea). ``floor`` is caller-supplied; there is no built-in default here.
+    """
+    dc = palette["colors"]["data_colors"]
+    for a, b in zip(dc, dc[1:]):
+        d = delta_e76(a, b)
+        if d < floor:
+            raise ThemeGenError(
+                f"adjacent data_colors {a!r} and {b!r} are too close "
+                f"(deltaE76 {d:.2f} < floor {floor:g}) -- near-collapse risk"
+            )
+
+
 def min_categorical_delta_e(data_colors: tuple[str, ...]) -> float:
     """Minimum CIE76 deltaE76 over all i<j pairs in data_colors.
 
