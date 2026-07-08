@@ -133,9 +133,19 @@ def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
         )
         return 1
 
+    if not parsed.landed_table:
+        print(
+            "retail drift: baseline states no schema-qualified 'Landed location', "
+            "so the live re-profile has no connectable target. Treated as "
+            "uncomparable rather than guessing the schema (a bare name would "
+            "mistarget the `public` schema).",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
         runner = cli._make_runner(config)
-        observed = run_profile(runner, parsed.profile.table, parsed.pk_columns)
+        observed = run_profile(runner, parsed.landed_table, parsed.pk_columns)
     except Exception as exc:
         print(
             "retail drift: live re-profile failed at the DB boundary "

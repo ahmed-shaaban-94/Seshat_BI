@@ -32,11 +32,32 @@ class ParsedBaseline:
     # observed.pk on DIFFERENT columns, an invalid comparison that fabricates a
     # false blocked grain_pk_drift. None when the baseline states no PK line.
     pk_columns: tuple[str, ...] | None = None
+    # The schema-qualified LANDED table ("Landed location: `bronze.<table>`") the
+    # live re-profile must CONNECT to. Distinct from profile.table (the display
+    # "Table id", which the emitted findings doc reports): a bare display id makes
+    # profile() default to schema `public` and mistarget. None when unstated.
+    landed_table: str | None = None
 
 
 def _find_table_id(text: str) -> str | None:
     m = re.search(r"\|\s*Table id\s*\|\s*`?([^`|]+?)`?\s*\|", text)
     return m.group(1).strip() if m else None
+
+
+def _find_landed_table(text: str) -> str | None:
+    """Parse the schema-qualified landed object from the "Landed location" row,
+    e.g. ``| Landed location | `bronze.retail_store_sales` (...) |`` -> the
+    ``schema.table`` before any trailing parenthetical. Skips the unfilled
+    template placeholder ``<bronze.schema.table>`` and returns None when the row
+    is absent, so a live re-profile never runs against a guessed/`public` target."""
+    m = re.search(r"\|\s*Landed location\s*\|\s*`([^`|]+?)`", text)
+    if not m:
+        return None
+    name = m.group(1).strip()
+    # angle-bracket = an unfilled template placeholder, not a real table
+    if name.startswith("<") or "." not in name:
+        return None
+    return name
 
 
 def _find_pk_columns(text: str) -> tuple[str, ...] | None:
@@ -140,4 +161,5 @@ def read_source_profile(path: str | Path) -> ParsedBaseline:
         ),
         uncomparable=None,
         pk_columns=_find_pk_columns(text),
+        landed_table=_find_landed_table(text),
     )

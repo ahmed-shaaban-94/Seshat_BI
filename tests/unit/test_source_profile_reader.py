@@ -40,6 +40,22 @@ def test_reads_stated_candidate_pk_columns():
     assert parsed.pk_columns == ("transaction_id",)
 
 
+def test_landed_table_is_schema_qualified_not_the_bare_display_id():
+    # The live re-profile must connect to the LANDED object (schema-qualified,
+    # from "Landed location: `bronze.retail_store_sales`"), NOT the bare display
+    # "Table id" (`retail_store_sales`) -- a dotless name makes profile()
+    # default to schema `public` and mistarget (wrong table / UndefinedTable).
+    # ProfileResult.table stays the display id (the emitted doc's "table" field);
+    # landed_table carries the connectable identity.
+    from retail.source_profile_reader import read_source_profile
+
+    parsed = read_source_profile(
+        _ROOT / "mappings" / "retail_store_sales" / "source-profile.md"
+    )
+    assert parsed.profile.table == "retail_store_sales"  # display id unchanged
+    assert parsed.landed_table == "bronze.retail_store_sales"  # connectable target
+
+
 def test_nonconformant_profile_reported_uncomparable():
     from retail.source_profile_reader import read_source_profile
 
@@ -54,3 +70,5 @@ def test_nonconformant_profile_reported_uncomparable():
     assert parsed.profile is None
     # A non-conformant baseline carries no usable PK column set either.
     assert parsed.pk_columns is None
+    # ...nor a connectable landed-table identity.
+    assert parsed.landed_table is None
