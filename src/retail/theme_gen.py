@@ -18,7 +18,7 @@ import colorsys
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .color import contrast_ratio, delta_e76, format_pt, is_valid_hex
@@ -89,6 +89,36 @@ def derive_ramp(accent: str, n: int = 6) -> tuple[str, ...]:
         return (accent,)
     steps = [top - (top - bottom) * i / (n - 1) for i in range(n)]
     return tuple(_hls_to_hex(h, lightness, s) for lightness in steps)
+
+
+def _invert_lightness(hex_color: str) -> str:
+    """Flip the L channel (1.0 - L); hue and saturation unchanged."""
+    h, lightness, s = _hex_to_hls(hex_color)
+    return _hls_to_hex(h, 1.0 - lightness, s)
+
+
+def derive_dark_seed(light: ThemeSeed) -> ThemeSeed:
+    """Derive a dark-mode ThemeSeed from a light one by inverting bg/text
+    lightness. Accent/data_colors/sentiment/fonts pass through unchanged --
+    only the surface (background) and on-surface (text) roles invert.
+
+    Refuses a non-light input up front: --pair on an already-dark seed would
+    otherwise double-invert (light -> dark -> "dark" that is really light).
+    """
+    if light.mode != "light":
+        raise ThemeGenError(
+            f"derive_dark_seed requires mode='light', got {light.mode!r} -- "
+            "refusing to double-invert an already-dark seed"
+        )
+    return replace(
+        light,
+        mode="dark",
+        name=f"{light.name}-dark",
+        background=_invert_lightness(light.background),
+        text_primary=_invert_lightness(light.text_primary),
+        text_secondary=_invert_lightness(light.text_secondary),
+        text_muted=_invert_lightness(light.text_muted),
+    )
 
 
 def _validate_name(name: str) -> None:

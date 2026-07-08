@@ -42,6 +42,62 @@ def _seed(**over) -> ThemeSeed:
     return ThemeSeed(**d)
 
 
+LIGHT = dict(
+    name="executive-light",
+    mode="light",
+    accent="#1B6E4F",
+    background="#F5F7FA",
+    text_primary="#1A2430",
+    text_secondary="#3D4A59",
+    text_muted="#5B6B7C",
+    data_colors=None,
+    good="#1F7A4D",
+    neutral="#8A6D1D",
+    bad="#A23A3A",
+)
+
+
+def _light_seed(**over) -> ThemeSeed:
+    d = {**LIGHT, **over}
+    return ThemeSeed(**d)
+
+
+def test_derive_dark_seed_inverts_background_and_text_only() -> None:
+    from retail.theme_gen import derive_dark_seed
+
+    light = _light_seed()
+    dark = derive_dark_seed(light)
+    assert dark.mode == "dark"
+    assert dark.name == "executive-light-dark"
+    assert dark.background != light.background
+    assert dark.text_primary != light.text_primary
+    # everything else passes through unchanged
+    assert dark.accent == light.accent
+    assert dark.data_colors == light.data_colors
+    assert dark.good == light.good
+    assert dark.neutral == light.neutral
+    assert dark.bad == light.bad
+
+
+def test_derive_dark_seed_clears_contrast_floor(tmp_path: Path) -> None:
+    from retail.theme_gen import (
+        build_palette,
+        check_contrast_or_raise,
+        derive_dark_seed,
+    )
+
+    dark = derive_dark_seed(_light_seed())
+    palette = build_palette(dark)
+    check_contrast_or_raise(palette)  # must not raise
+
+
+def test_derive_dark_seed_rejects_non_light_input() -> None:
+    from retail.theme_gen import derive_dark_seed
+
+    with pytest.raises(ThemeGenError, match="mode"):
+        derive_dark_seed(_seed())  # DARK fixture: mode="dark"
+
+
 def test_derive_ramp_is_monotonic_lightness() -> None:
     from retail.color import relative_luminance
 
