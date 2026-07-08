@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from retail.color import (
+    composite_over,
     contrast_ratio,
     delta_e76,
     hex_to_lab,
@@ -68,3 +69,30 @@ def test_delta_e76_identical_colors_is_zero() -> None:
 def test_delta_e76_bad_hex_raises() -> None:
     with pytest.raises(ValueError):
         delta_e76("nothex", "#FFFFFF")
+
+
+def test_composite_over_50pct_black_over_white_is_gray() -> None:
+    assert composite_over("#000000", "#FFFFFF", 50.0) == "#808080"
+
+
+def test_composite_over_0pct_returns_fg() -> None:
+    assert composite_over("#000000", "#FFFFFF", 0.0) == "#000000"
+
+
+def test_composite_over_100pct_returns_bg() -> None:
+    assert composite_over("#000000", "#FFFFFF", 100.0) == "#FFFFFF"
+
+
+def test_composite_over_below_zero_raises() -> None:
+    with pytest.raises(ValueError):
+        composite_over("#000000", "#FFFFFF", -1.0)
+
+
+def test_composite_over_above_100_raises() -> None:
+    with pytest.raises(ValueError):
+        composite_over("#000000", "#FFFFFF", 101.0)
+
+
+def test_composite_over_bad_hex_raises() -> None:
+    with pytest.raises(ValueError):
+        composite_over("nothex", "#FFFFFF", 50.0)

@@ -85,3 +85,33 @@ def delta_e76(a: str, b: str) -> float:
     l1, a1, b1 = hex_to_lab(a)
     l2, a2, b2 = hex_to_lab(b)
     return ((l1 - l2) ** 2 + (a1 - a2) ** 2 + (b1 - b2) ** 2) ** 0.5
+
+
+def composite_over(fg: str, bg: str, transparency_pct: float) -> str:
+    """``#RRGGBB`` of ``fg`` alpha-composited over ``bg``.
+
+    ``transparency_pct`` is in [0, 100]; 0 means fully opaque ``fg`` (result
+    equals ``fg``), 100 means fully transparent ``fg`` (result equals ``bg``).
+    Blends per-channel in sRGB (gamma) space, matching how a UI framework
+    composites two already-encoded colors -- not a linear-light blend. Raises
+    ValueError for an out-of-range pct or a malformed hex so a bad caller
+    value never leaks a bare stdlib traceback downstream.
+    """
+    if not (0.0 <= transparency_pct <= 100.0):
+        raise ValueError(
+            f"transparency_pct must be in [0, 100], got {transparency_pct!r}"
+        )
+    if not is_valid_hex(fg):
+        raise ValueError(f"not a #RRGGBB hex color: {fg!r}")
+    if not is_valid_hex(bg):
+        raise ValueError(f"not a #RRGGBB hex color: {bg!r}")
+
+    alpha = 1.0 - transparency_pct / 100.0
+    h_fg = fg.lstrip("#")
+    h_bg = bg.lstrip("#")
+    out_channels = []
+    for i in (0, 2, 4):
+        fg_c = int(h_fg[i : i + 2], 16)
+        bg_c = int(h_bg[i : i + 2], 16)
+        out_channels.append(round(alpha * fg_c + (1.0 - alpha) * bg_c))
+    return "#" + "".join(f"{v:02X}" for v in out_channels)
