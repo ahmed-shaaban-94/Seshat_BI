@@ -52,6 +52,10 @@
     "title": "Token text/background color pairs meet the declared WCAG contrast floor"
   },
   {
+    "id": "CT2",
+    "title": "Adjacent data_colors/ramp entries clear the declared deltaE76 floor"
+  },
+  {
     "id": "CT3",
     "title": "Categorical data_colors entries meet the declared whole-set deltaE76 distinctness floor"
   },

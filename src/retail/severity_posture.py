@@ -423,6 +423,7 @@ _RULE_FIXTURES: dict[str, _Fixture] = {
         )
     ),
     "CT1": _Fixture(files=(("design/tokens/demo-design-tokens.yaml", _YAML_CT1),)),
+    "CT2": _Fixture(),
     "CT3": _Fixture(files=(("design/tokens/demo-design-tokens.yaml", _YAML_CT3),)),
 }
 
