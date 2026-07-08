@@ -172,6 +172,67 @@ def test_compile_refuses_failing_overlay(tmp_path: Path):
         compile_theme(tokens_path, out_path=None, force=False)
 
 
+def _generate_executive_dark(tmp_path: Path, **seed_over):
+    from retail.theme_gen import ThemeSeed, generate
+
+    seed = ThemeSeed(
+        name="executive-dark",
+        mode="dark",
+        accent="#2FB6C4",
+        background="#12263A",
+        text_primary="#F2F6FA",
+        text_secondary="#C4D1DE",
+        text_muted="#93A6B8",
+        data_colors=("#A5E3E9", "#7BD6DF", "#52C9D6", "#2FB7C5", "#25919C", "#1C6B73"),
+        good="#2E7D5B",
+        neutral="#B5832A",
+        bad="#B23A3A",
+        **seed_over,
+    )
+    generate(seed, tmp_path, force=True)
+    return (
+        tmp_path / "design/tokens/executive-dark-design-tokens.yaml",
+        tmp_path / "themes/executive-dark.theme.json",
+    )
+
+
+def test_compile_reapplies_token_font_change_with_force(tmp_path: Path):
+    """A token-driven font change recompiles cleanly over an existing theme with
+    --force -- font sizes live in the generator-owned visualStyles */* keys, so
+    they must not read as a hand-tuned DL3-deferred conflict (review finding)."""
+    tokens_path, _ = _generate_executive_dark(tmp_path, title_font_pt=12.0)
+    doc = yaml.safe_load(tokens_path.read_text(encoding="utf-8-sig"))
+    doc["typography"]["title_font_pt"] = 20.0
+    tokens_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    out = compile_theme(tokens_path, out_path=None, force=True)  # must NOT raise
+    theme = json.loads(out.read_text(encoding="utf-8"))
+    assert theme["visualStyles"]["*"]["*"]["title"][0]["fontSize"] == 20
+
+
+def test_compile_adds_token_overlay_with_force(tmp_path: Path):
+    """Adding an opt-in overlay to a committed tokens file recompiles over the
+    existing theme with --force (overlay background is generator-owned)."""
+    tokens_path, _ = _generate_executive_dark(tmp_path)
+    doc = yaml.safe_load(tokens_path.read_text(encoding="utf-8-sig"))
+    doc["transparency"] = {"overlay": {"fg": "#F2F6FA", "transparency_pct": 20.0}}
+    tokens_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    out = compile_theme(tokens_path, out_path=None, force=True)  # must NOT raise
+    theme = json.loads(out.read_text(encoding="utf-8"))
+    assert theme["visualStyles"]["*"]["*"]["background"][0]["transparency"] == 20
+
+
+def test_compile_still_refuses_hand_tuned_human_visual_style(tmp_path: Path):
+    """The granular check still protects a genuinely human-added visualStyle: a
+    hand-tuned non-generator key under */* is a DL3-deferred conflict and compile
+    refuses to clobber it even with --force."""
+    tokens_path, theme_path = _generate_executive_dark(tmp_path)
+    theme = json.loads(theme_path.read_text(encoding="utf-8"))
+    theme["visualStyles"]["*"]["*"]["wordWrap"] = [{"show": True}]
+    theme_path.write_text(json.dumps(theme, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(ThemeCompileError, match="visualStyles"):
+        compile_theme(tokens_path, out_path=None, force=True)
+
+
 def test_compile_refuses_overwrite_without_force(tmp_path: Path):
     tokens = _write_tokens(tmp_path, TOKENS)
     compile_theme(tokens, out_path=None, force=False)  # first write ok

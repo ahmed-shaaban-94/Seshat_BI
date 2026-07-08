@@ -63,6 +63,46 @@ _DL3_DEFERRED_FIELDS = (
     "visualStyles",
 )
 
+# ``visualStyles`` is deferred (above) but is NOT wholly human-owned: the
+# generator itself writes the ``*``/``*`` title/label fonts (token-driven since
+# T8) and the opt-in overlay ``background`` (T18). Those sub-keys must NOT count
+# as hand-tuned -- otherwise a legitimate token-declared font/overlay change
+# could never be recompiled over an existing theme (even with --force). Only the
+# REMAINDER of visualStyles (any other visual type or property a human added) is
+# the human-owned surface the deferred-field guard protects.
+_GENERATOR_OWNED_VISUAL_STYLE_KEYS = ("title", "labels", "background")
+
+
+def _human_owned_visual_styles(vs: object) -> object:
+    """``visualStyles`` with the generator-owned ``*``/``*`` keys removed.
+
+    Leaves everything else untouched, so comparing the returned value across
+    existing-vs-rendered detects a hand-tuned visualStyle a human added while
+    ignoring token-driven font/overlay churn the generator legitimately owns.
+    """
+    if not isinstance(vs, dict):
+        return vs
+    result = {k: v for k, v in vs.items()}
+    star = result.get("*")
+    if isinstance(star, dict):
+        new_star = {k: v for k, v in star.items()}
+        star_star = new_star.get("*")
+        if isinstance(star_star, dict):
+            pruned = {
+                k: v
+                for k, v in star_star.items()
+                if k not in _GENERATOR_OWNED_VISUAL_STYLE_KEYS
+            }
+            if pruned:
+                new_star["*"] = pruned
+            else:
+                new_star.pop("*", None)
+        if new_star:
+            result["*"] = new_star
+        else:
+            result.pop("*", None)
+    return result
+
 
 def _require_mapping(value: object, label: str) -> dict:
     """Return ``value`` as a dict, or raise naming the missing/mistyped field."""
@@ -243,11 +283,18 @@ def _deferred_field_conflicts(existing: dict, rendered: dict) -> list[str]:
     decoded JSON values (not raw file text) means CRLF/whitespace differences
     in the committed file can never register as a conflict.
     """
-    return [
-        field
-        for field in _DL3_DEFERRED_FIELDS
-        if existing.get(field) != rendered.get(field)
-    ]
+    conflicts = []
+    for field in _DL3_DEFERRED_FIELDS:
+        existing_val = existing.get(field)
+        rendered_val = rendered.get(field)
+        if field == "visualStyles":
+            # Compare only the human-owned remainder -- token-driven font/overlay
+            # churn under the generator-owned *//* keys is not a hand-tuned conflict.
+            existing_val = _human_owned_visual_styles(existing_val)
+            rendered_val = _human_owned_visual_styles(rendered_val)
+        if existing_val != rendered_val:
+            conflicts.append(field)
+    return conflicts
 
 
 def _load_existing_theme(out: Path) -> dict:
