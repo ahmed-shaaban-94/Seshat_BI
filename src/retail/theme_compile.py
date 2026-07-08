@@ -32,6 +32,8 @@ from .theme_gen import (
     ThemeGenError,
     ThemeSeed,
     _validate_name,
+    _validate_transparency,
+    check_composite_contrast_or_raise,
     check_contrast_or_raise,
     check_font_floor_or_raise,
     render_theme_json,
@@ -98,7 +100,7 @@ def palette_from_tokens(tokens_doc: dict) -> dict:
     )
     text = _require_mapping(colors.get("text"), "colors.text")
     sentiment = _require_mapping(colors.get("sentiment"), "colors.sentiment")
-    return {
+    pal: dict = {
         "colors": {
             "primary": _require_hex(colors.get("primary"), "colors.primary"),
             "secondary": _require_hex(colors.get("secondary"), "colors.secondary"),
@@ -124,6 +126,13 @@ def palette_from_tokens(tokens_doc: dict) -> dict:
             "data_colors": _require_data_colors(colors),
         }
     }
+    try:
+        transparency = _validate_transparency(tokens_doc.get("transparency"))
+    except ThemeGenError as exc:
+        raise ThemeCompileError(str(exc)) from exc
+    if transparency is not None:
+        pal["transparency"] = transparency
+    return pal
 
 
 def _derive_name(tokens_doc: dict) -> str:
@@ -182,6 +191,7 @@ def seed_from_tokens(tokens_doc: dict, name_override: str | None) -> ThemeSeed:
         bad=c["sentiment"]["danger"],
         title_font_pt=title_font_pt,
         label_font_pt=label_font_pt,
+        transparency=pal.get("transparency"),
     )
 
 
@@ -264,6 +274,7 @@ def compile_theme(tokens_path: Path, out_path: Path | None, force: bool) -> Path
     check_contrast_or_raise(palette)  # refuse a theme CT1 would reject
     try:
         check_font_floor_or_raise(seed)  # refuse a committed sub-floor font
+        check_composite_contrast_or_raise(palette)  # refuse a failing overlay
     except ThemeGenError as exc:
         raise ThemeCompileError(str(exc)) from exc
     out = _resolve_out(tokens_doc, tokens_path, out_path)

@@ -1,12 +1,12 @@
-# Transparency-role schema proposal (Idea 2 / T18 OWNER STOP)
+# Transparency-role schema (Idea 2 / T18) -- OWNER-RATIFIED 2026-07-08
 
-> **STATUS: PROPOSAL awaiting owner ratification.** No code is wired against this
-> yet. `check_composite_contrast_or_raise` and `composite_over` are already built,
-> unit-tested, and importable (T18), but **unwired** because `ThemeSeed` /
-> `build_palette` carry zero transparency fields today. This document proposes the
-> concrete schema so wiring stops being a self-invented decision (rule #9 /
-> Principle V) and becomes an owner-ratified one. Approve the five choices below
-> (or amend them) and the wiring follow-up can proceed.
+> **STATUS: RATIFIED and WIRED (2026-07-08).** The owner approved all five
+> recommended defaults below. `check_composite_contrast_or_raise` is now wired
+> into `_validate_and_collect` (and the compile leg); `ThemeSeed` carries an
+> opt-in `transparency` field; `--overlay-fg` / `--overlay-transparency-pct`
+> author it from the CLI; tokens/theme/spec emit the block only when declared,
+> so every existing default theme is byte-for-byte unchanged. This document is
+> retained as the ratified record of the five decisions.
 
 ## Why this stop exists
 

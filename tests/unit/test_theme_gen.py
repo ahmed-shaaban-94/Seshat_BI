@@ -165,11 +165,96 @@ def test_composite_contrast_passes_at_or_above_floor() -> None:
 
 
 def test_composite_contrast_no_transparency_role_is_noop() -> None:
-    # No alpha/transparency fields exist on ThemeSeed/build_palette today,
-    # so the check has nothing declared to composite against and must be a
-    # silent no-op -- never a fabricated pass, never an error on absence.
+    # A seed with no transparency block declares nothing to composite against,
+    # so the check is a silent no-op -- never a fabricated pass, never an error
+    # on absence.
     palette = build_palette(_seed())
     assert check_composite_contrast_or_raise(palette) is None
+
+
+# --- T18 wired: transparency block flows seed -> palette -> gate -> artifacts --
+
+
+def test_default_seed_emits_no_transparency_block(tmp_path: Path) -> None:
+    """Backward compat: a seed with transparency=None writes exactly what it did
+    before T18 -- no `transparency:` in tokens, no visual `background` style."""
+    generate(_seed(), repo_root=tmp_path)
+    tokens = (tmp_path / "design/tokens/executive-dark-design-tokens.yaml").read_text()
+    theme = json.loads((tmp_path / "themes/executive-dark.theme.json").read_text())
+    assert "transparency:" not in tokens
+    assert "background" not in theme["visualStyles"]["*"]["*"]
+
+
+def test_generate_with_passing_overlay_writes_and_emits_blocks(tmp_path: Path) -> None:
+    seed = _seed(transparency={"overlay": {"fg": "#F2F6FA", "transparency_pct": 0.0}})
+    generate(seed, repo_root=tmp_path)
+    tokens = yaml.safe_load(
+        (tmp_path / "design/tokens/executive-dark-design-tokens.yaml").read_text()
+    )
+    assert tokens["transparency"]["overlay"]["fg"] == "#F2F6FA"
+    assert tokens["transparency"]["overlay"]["transparency_pct"] == 0
+    theme = json.loads((tmp_path / "themes/executive-dark.theme.json").read_text())
+    bg_style = theme["visualStyles"]["*"]["*"]["background"][0]
+    assert bg_style["color"]["solid"]["color"] == "#F2F6FA"
+    assert bg_style["transparency"] == 0
+    spec = (tmp_path / "themes/executive-dark.theme-spec.md").read_text()
+    assert "[x] **Composite transparency contrast**" in spec
+
+
+def test_generate_with_failing_overlay_refuses_write(tmp_path: Path) -> None:
+    # overlay fg == background at 0% opacity -> composites to the background,
+    # 1:1 contrast -> below AA -> refuse, write nothing.
+    seed = _seed(transparency={"overlay": {"fg": "#12263A", "transparency_pct": 0.0}})
+    with pytest.raises(ThemeGenError, match="composite"):
+        generate(seed, repo_root=tmp_path)
+    assert list(tmp_path.rglob("*.theme.json")) == []
+    assert list(tmp_path.rglob("*.theme-spec.md")) == []
+
+
+def test_build_palette_rejects_unknown_transparency_role() -> None:
+    with pytest.raises(ThemeGenError, match="not allowed"):
+        build_palette(
+            _seed(transparency={"tooltip": {"fg": "#FFFFFF", "transparency_pct": 0.0}})
+        )
+
+
+def test_build_palette_rejects_out_of_range_pct() -> None:
+    with pytest.raises(ThemeGenError, match="range"):
+        build_palette(
+            _seed(
+                transparency={"overlay": {"fg": "#FFFFFF", "transparency_pct": 150.0}}
+            )
+        )
+
+
+def test_build_palette_rejects_partial_overlay_missing_pct() -> None:
+    with pytest.raises(ThemeGenError, match="number"):
+        build_palette(_seed(transparency={"overlay": {"fg": "#FFFFFF"}}))
+
+
+def test_seed_from_args_builds_overlay_from_flags() -> None:
+    from retail.theme_gen import _seed_from_args
+
+    seed = _seed_from_args(
+        _cli_args(overlay_fg="#F2F6FA", overlay_transparency_pct=20.0)
+    )
+    assert seed.transparency == {"overlay": {"fg": "#F2F6FA", "transparency_pct": 20.0}}
+
+
+def test_seed_from_args_no_overlay_flags_is_none() -> None:
+    from retail.theme_gen import _seed_from_args
+
+    assert _seed_from_args(_cli_args()).transparency is None
+
+
+def test_derive_dark_seed_passes_transparency_through() -> None:
+    from retail.theme_gen import derive_dark_seed
+
+    light = _light_seed(
+        transparency={"overlay": {"fg": "#1A2430", "transparency_pct": 10.0}}
+    )
+    dark = derive_dark_seed(light)
+    assert dark.transparency == light.transparency
 
 
 def test_derive_ramp_is_monotonic_lightness() -> None:
@@ -403,6 +488,8 @@ def _cli_args(**over) -> Namespace:
         repo=".",
         force=False,
         pair=False,
+        overlay_fg=None,
+        overlay_transparency_pct=None,
     )
     return Namespace(**{**base, **over})
 

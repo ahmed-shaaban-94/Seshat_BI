@@ -35,6 +35,12 @@ MIN_ADJACENT_DELTAE = (
 TAP_TARGET_MIN_PX = 44  # doc-only floor (WCAG 2.5.8); never written to any artifact
 _TEXT_ROLES = ("primary", "secondary", "muted")
 
+# OWNER-ratified 2026-07-08 (T18): the transparency-role schema. Choice 1 froze a
+# SINGLE opt-in ``overlay`` role (background-overlay panels / card fills); choice 2
+# froze an opaque default (a role only exists when a caller declares it). See
+# docs/superpowers/specs/2026-07-08-transparency-role-schema-proposal.md.
+_ALLOWED_TRANSPARENCY_ROLES = ("overlay",)
+
 # A theme name is a filesystem-safe slug: it becomes a filename under themes/ and
 # design/tokens/, so it must never contain a path separator or ``..`` (that would
 # let --name escape the output dirs -- e.g. into powerbi/, a hard boundary). This
@@ -66,6 +72,11 @@ class ThemeSeed:
     bad: str
     title_font_pt: float = 12.0
     label_font_pt: float = 9.0
+    # OWNER-ratified transparency roles (T18):
+    # {role: {"fg": hex, "transparency_pct": float}}. None (default) means no
+    # transparency declared -- every existing caller is unaffected and no
+    # transparency block is emitted.
+    transparency: dict | None = None
 
 
 def _hex_to_hls(h: str) -> tuple[float, float, float]:
@@ -135,6 +146,49 @@ def _validate_name(name: str) -> None:
         )
 
 
+def _validate_transparency(transparency: dict | None) -> dict | None:
+    """Validate an opt-in transparency block; None passes through as None.
+
+    Enforces the OWNER-ratified schema (T18): only the ``overlay`` role, each
+    role a ``{"fg": #RRGGBB, "transparency_pct": float in [0, 100]}`` spec.
+    Raises ThemeGenError (never a bare ValueError/KeyError) on any violation.
+    """
+    if transparency is None:
+        return None
+    if not isinstance(transparency, dict) or not transparency:
+        raise ThemeGenError(
+            f"transparency must be a non-empty dict of {{role: spec}}, got "
+            f"{transparency!r}"
+        )
+    clean: dict = {}
+    for role, spec in transparency.items():
+        if role not in _ALLOWED_TRANSPARENCY_ROLES:
+            raise ThemeGenError(
+                f"transparency role {role!r} is not allowed -- the ratified "
+                f"schema permits only {list(_ALLOWED_TRANSPARENCY_ROLES)}"
+            )
+        if not isinstance(spec, dict):
+            raise ThemeGenError(f"transparency role {role!r} spec must be a dict")
+        fg = spec.get("fg")
+        pct = spec.get("transparency_pct")
+        if not is_valid_hex(fg):
+            raise ThemeGenError(
+                f"transparency role {role!r} fg is not a #RRGGBB hex: {fg!r}"
+            )
+        if not isinstance(pct, (int, float)) or isinstance(pct, bool):
+            raise ThemeGenError(
+                f"transparency role {role!r} transparency_pct must be a number, "
+                f"got {pct!r}"
+            )
+        if not (0.0 <= float(pct) <= 100.0):
+            raise ThemeGenError(
+                f"transparency role {role!r} transparency_pct {pct!r} is out of "
+                f"range -- must be in [0, 100]"
+            )
+        clean[role] = {"fg": fg, "transparency_pct": float(pct)}
+    return clean
+
+
 def build_palette(seed: ThemeSeed) -> dict:
     """Resolve the seed into a full palette dict (fills ramp if none given)."""
     _validate_name(seed.name)
@@ -162,7 +216,7 @@ def build_palette(seed: ThemeSeed) -> dict:
             "data_colors is empty -- supply at least one #RRGGBB, or omit "
             "--data-colors to derive a ramp from the accent"
         )
-    return {
+    palette: dict = {
         "colors": {
             "primary": seed.accent,
             "secondary": ramp[min(1, len(ramp) - 1)],
@@ -180,6 +234,10 @@ def build_palette(seed: ThemeSeed) -> dict:
             "data_colors": ramp,
         }
     }
+    transparency = _validate_transparency(seed.transparency)
+    if transparency is not None:
+        palette["transparency"] = transparency
+    return palette
 
 
 def check_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
@@ -199,11 +257,13 @@ def check_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
 def check_composite_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
     """Refuse to proceed if a declared transparency role fails AA once composited.
 
-    STANDALONE and UNWIRED: no `generate()` call site invokes this today.
-    ``ThemeSeed``/``build_palette`` carry zero alpha/transparency fields, so
-    there is nothing declared to composite against -- this is a silent no-op
-    until an OWNER-approved transparency-role schema lands on ``ThemeSeed``.
-    Never fabricates a role or infers a transparency_pct from color proximity.
+    WIRED (T18, OWNER-ratified 2026-07-08): ``_validate_and_collect`` invokes
+    this in the same choke point as the other gates. It stays a silent no-op
+    for every seed that declares no ``transparency`` block (the default), so
+    existing callers are unaffected. When a caller DOES declare an ``overlay``
+    role, the role's fg is alpha-composited over the background and the result
+    must clear the AA floor or the write is refused. Never fabricates a role or
+    infers a transparency_pct from color proximity.
     """
     transparency = palette.get("transparency")
     if not isinstance(transparency, dict):
@@ -310,6 +370,23 @@ def check_font_floor_or_raise(seed: ThemeSeed) -> None:
         )
 
 
+def _render_transparency_yaml(palette: dict) -> str:
+    """A top-level ``transparency:`` block (sibling of ``colors:``), or "".
+
+    Empty string when no transparency role is declared, so a default theme's
+    tokens file is byte-for-byte what it was before T18.
+    """
+    transparency = palette.get("transparency")
+    if not transparency:
+        return ""
+    lines = ["transparency:\n"]
+    for role, spec in transparency.items():
+        lines.append(f"  {role}:\n")
+        lines.append(f'    fg: "{spec["fg"]}"\n')
+        lines.append(f"    transparency_pct: {format_pt(spec['transparency_pct'])}\n")
+    return "".join(lines)
+
+
 def render_tokens_yaml(palette: dict, seed: ThemeSeed) -> str:
     c = palette["colors"]
     ramp = "\n".join(f'    - "{h}"' for h in c["data_colors"])
@@ -335,6 +412,7 @@ def render_tokens_yaml(palette: dict, seed: ThemeSeed) -> str:
         f'    danger: "{c["sentiment"]["danger"]}"\n'
         "  data_colors:\n"
         f"{ramp}\n"
+        f"{_render_transparency_yaml(palette)}"
         "typography:\n"
         f"  title_font_pt: {format_pt(seed.title_font_pt)}\n"
         f"  label_font_pt: {format_pt(seed.label_font_pt)}\n"
@@ -350,6 +428,22 @@ def render_theme_json(palette: dict, seed: ThemeSeed) -> str:
     c = palette["colors"]
     title_pt = format_pt(seed.title_font_pt)
     label_pt = format_pt(seed.label_font_pt)
+    star_style = {
+        "title": [{"fontFamily": "Segoe UI Semibold", "fontSize": title_pt}],
+        "labels": [{"fontFamily": "Segoe UI", "fontSize": label_pt}],
+    }
+    # OWNER-ratified T18: the opt-in ``overlay`` role compiles to a Power BI
+    # visualStyles background (fg color at its transparency percent). Emitted
+    # only when declared; sRGB blend matches how the renderer composites, so the
+    # AA proof (check_composite_contrast_or_raise) is faithful to what ships.
+    overlay = (palette.get("transparency") or {}).get("overlay")
+    if overlay is not None:
+        star_style["background"] = [
+            {
+                "color": {"solid": {"color": overlay["fg"]}},
+                "transparency": format_pt(overlay["transparency_pct"]),
+            }
+        ]
     doc = {
         "name": seed.name,
         "dataColors": c["data_colors"],
@@ -359,18 +453,38 @@ def render_theme_json(palette: dict, seed: ThemeSeed) -> str:
         "good": c["sentiment"]["success"],
         "neutral": c["sentiment"]["warning"],
         "bad": c["sentiment"]["danger"],
-        "visualStyles": {
-            "*": {
-                "*": {
-                    "title": [
-                        {"fontFamily": "Segoe UI Semibold", "fontSize": title_pt}
-                    ],
-                    "labels": [{"fontFamily": "Segoe UI", "fontSize": label_pt}],
-                }
-            }
-        },
+        "visualStyles": {"*": {"*": star_style}},
     }
     return json.dumps(doc, indent=2) + "\n"
+
+
+def _composite_contrast_line(palette: dict) -> str:
+    """A computed `[x]` composite-contrast line, or "" when none is declared.
+
+    Only emitted when a transparency role exists, so a default theme's spec is
+    unchanged. A `[x]` here is a proven arithmetic fact (the role already passed
+    check_composite_contrast_or_raise before any write), never a human-judgment
+    claim.
+    """
+    transparency = palette.get("transparency")
+    if not transparency:
+        return ""
+    bg = palette["colors"]["background"]
+    parts = []
+    for role, spec in transparency.items():
+        composited = composite_over(spec["fg"], bg, spec["transparency_pct"])
+        ratio = contrast_ratio(composited, bg)
+        parts.append(
+            f"{role} {spec['fg']} at {spec['transparency_pct']:g}% -> "
+            f"{composited} = {ratio:.2f}:1"
+        )
+    return (
+        "- [x] **Composite transparency contrast** -- (computed): "
+        f"{'; '.join(parts)} vs background (all >= {AA_FLOOR:g}:1 AA). "
+        "*Evidence: sRGB alpha-composite arithmetic on the committed "
+        "transparency roles (proves the composited number, not on-screen "
+        "legibility).*\n"
+    )
 
 
 def render_spec_md(palette: dict, seed: ThemeSeed) -> str:
@@ -403,6 +517,7 @@ def render_spec_md(palette: dict, seed: ThemeSeed) -> str:
         f">= {MIN_CATEGORICAL_DELTAE:g} dE76 floor. *Evidence: CIE76 "
         "arithmetic on the committed ramp (normal-vision near-collapse "
         "guard only -- NOT a colorblind-safe claim).*\n"
+        f"{_composite_contrast_line(palette)}"
         "- [ ] **CVD distinguishability** -- OPEN: the monochromatic ramp is "
         "less category-distinguishable; needs a named reviewer (Principle V).\n"
         "- [ ] **Small-size / adjacency legibility** -- OPEN: needs a named "
@@ -447,16 +562,17 @@ def _validate_and_collect(
     """Run every self-check + build the target set; raise before any write.
 
     This is the single choke point for pre-write gates: contrast, font floor,
-    categorical distinctness (whole-set), and adjacent-ramp deltaE (near-
-    collapse) today, with room for future self-checks to slot in here too, so
-    a caller validating multiple seeds (e.g. a light/dark pair) can validate
-    all of them before writing any of them.
+    categorical distinctness (whole-set), adjacent-ramp deltaE (near-collapse),
+    and composite-transparency AA (opt-in overlay role) today, with room for
+    future self-checks to slot in here too, so a caller validating multiple
+    seeds (e.g. a light/dark pair) can validate all of them before writing any.
     """
     palette = build_palette(seed)
     check_contrast_or_raise(palette)
     check_font_floor_or_raise(seed)
     check_categorical_distinctness_or_raise(palette)
     check_ramp_deltae_or_raise(palette, MIN_ADJACENT_DELTAE)
+    check_composite_contrast_or_raise(palette)
     targets = _targets_for(seed, repo_root, palette)
     if not force:
         for p in targets:
@@ -554,6 +670,21 @@ def _font_pt_from_args(args) -> tuple[float, float]:
     return title, label
 
 
+def _transparency_from_args(args) -> dict | None:
+    """Build the opt-in overlay transparency block from CLI args, or None.
+
+    Returns None when neither overlay flag is given (the default -- no
+    transparency). A partial spec (one flag without the other) is passed
+    through as-is so ``build_palette``'s ``_validate_transparency`` raises the
+    single clean ThemeGenError, rather than duplicating that guard here.
+    """
+    fg = getattr(args, "overlay_fg", None)
+    pct = getattr(args, "overlay_transparency_pct", None)
+    if fg is None and pct is None:
+        return None
+    return {"overlay": {"fg": fg, "transparency_pct": pct}}
+
+
 def _seed_from_args(args) -> ThemeSeed:
     """Assemble a ThemeSeed from argparse ``theme-gen`` args (pure, no I/O)."""
     text_primary, text_secondary, text_muted = _text_roles_from_args(args)
@@ -573,6 +704,7 @@ def _seed_from_args(args) -> ThemeSeed:
         bad=bad,
         title_font_pt=title_font_pt,
         label_font_pt=label_font_pt,
+        transparency=_transparency_from_args(args),
     )
 
 

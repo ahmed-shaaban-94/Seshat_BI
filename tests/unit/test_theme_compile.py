@@ -115,6 +115,63 @@ def test_compile_is_byte_identical_to_theme_gen(tmp_path: Path):
     assert ref_tokens_doc  # sanity: tokens were real
 
 
+def test_compile_round_trips_transparency_overlay(tmp_path: Path):
+    """A committed tokens file carrying an opt-in overlay role compiles to the
+    same theme.json theme-gen would emit (T18 round-trip)."""
+    from retail.theme_gen import ThemeSeed, generate
+
+    seed = ThemeSeed(
+        name="executive-dark",
+        mode="dark",
+        accent="#2FB6C4",
+        background="#12263A",
+        text_primary="#F2F6FA",
+        text_secondary="#C4D1DE",
+        text_muted="#93A6B8",
+        data_colors=("#A5E3E9", "#7BD6DF", "#52C9D6", "#2FB7C5", "#25919C", "#1C6B73"),
+        good="#2E7D5B",
+        neutral="#B5832A",
+        bad="#B23A3A",
+        transparency={"overlay": {"fg": "#F2F6FA", "transparency_pct": 20.0}},
+    )
+    generate(seed, tmp_path, force=True)
+    ref_theme = (tmp_path / "themes/executive-dark.theme.json").read_bytes()
+    (tmp_path / "themes/executive-dark.theme.json").unlink()
+
+    tokens_path = tmp_path / "design/tokens/executive-dark-design-tokens.yaml"
+    out = compile_theme(tokens_path, out_path=None, force=False)
+    assert out.read_bytes() == ref_theme
+    theme = json.loads(out.read_text(encoding="utf-8"))
+    assert theme["visualStyles"]["*"]["*"]["background"][0]["transparency"] == 20
+
+
+def test_compile_refuses_failing_overlay(tmp_path: Path):
+    """A committed overlay that composites below AA is refused on compile too
+    (the gate runs on the compile leg, not just theme-gen)."""
+    doc = {
+        "meta": {
+            "name": "executive-dark-design-tokens",
+            "compiles_to": "themes/executive-dark.theme.json",
+        },
+        "colors": {
+            "primary": "#2FB6C4",
+            "secondary": "#7BD6DF",
+            "background": "#12263A",
+            "text": {"primary": "#F2F6FA", "secondary": "#C4D1DE", "muted": "#93A6B8"},
+            "sentiment": {
+                "success": "#2E7D5B",
+                "warning": "#B5832A",
+                "danger": "#B23A3A",
+            },
+            "data_colors": ["#A5E3E9", "#7BD6DF"],
+        },
+        "transparency": {"overlay": {"fg": "#12263A", "transparency_pct": 0.0}},
+    }
+    tokens_path = _write_tokens(tmp_path, doc)
+    with pytest.raises(ThemeCompileError, match="composite"):
+        compile_theme(tokens_path, out_path=None, force=False)
+
+
 def test_compile_refuses_overwrite_without_force(tmp_path: Path):
     tokens = _write_tokens(tmp_path, TOKENS)
     compile_theme(tokens, out_path=None, force=False)  # first write ok

@@ -460,6 +460,22 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="also derive and write a dark-mode pair from a light --mode seed",
     )
+    themegen.add_argument(
+        "--overlay-fg",
+        dest="overlay_fg",
+        default=None,
+        metavar="#RRGGBB",
+        help="opt-in overlay-role foreground; composited over background and "
+        "AA-gated (needs --overlay-transparency-pct)",
+    )
+    themegen.add_argument(
+        "--overlay-transparency-pct",
+        dest="overlay_transparency_pct",
+        type=float,
+        default=None,
+        metavar="PCT",
+        help="overlay opacity in [0,100]; 0 = opaque (needs --overlay-fg)",
+    )
 
     # Tokens -> theme compile (deterministic; reuses theme-gen's renderer). Reads a
     # committed design-tokens YAML and writes its matching theme.json. Repairs
