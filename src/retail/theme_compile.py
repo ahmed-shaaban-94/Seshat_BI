@@ -27,10 +27,13 @@ from pathlib import Path
 
 from .color import is_valid_hex
 from .theme_gen import (
+    MIN_LABEL_FONT_PT,
+    MIN_TITLE_FONT_PT,
     ThemeGenError,
     ThemeSeed,
     _validate_name,
     check_contrast_or_raise,
+    check_font_floor_or_raise,
     render_theme_json,
 )
 
@@ -156,6 +159,15 @@ def seed_from_tokens(tokens_doc: dict, name_override: str | None) -> ThemeSeed:
         _validate_name(name)  # reuse theme_gen's slug guard
     except ThemeGenError as exc:
         raise ThemeCompileError(str(exc)) from exc
+    # Per-KEY fallback, not per-block: a pre-feature tokens file may have no
+    # typography block at all (executive-dark), or a typography block that
+    # predates these two keys (tower-retail's base_size_pt/scale_pt block).
+    # Either way, a missing KEY falls back to the fixed constant -- never to
+    # a guessed/inherited value -- so a byte-identical recompile of an
+    # unmodified tokens file never trips a phantom font-field conflict.
+    typo = tokens_doc.get("typography") or {}
+    title_font_pt = float(typo.get("title_font_pt", MIN_TITLE_FONT_PT))
+    label_font_pt = float(typo.get("label_font_pt", MIN_LABEL_FONT_PT))
     return ThemeSeed(
         name=name,
         mode=_mode_from_style(tokens_doc),
@@ -168,6 +180,8 @@ def seed_from_tokens(tokens_doc: dict, name_override: str | None) -> ThemeSeed:
         good=c["sentiment"]["success"],
         neutral=c["sentiment"]["warning"],
         bad=c["sentiment"]["danger"],
+        title_font_pt=title_font_pt,
+        label_font_pt=label_font_pt,
     )
 
 
@@ -248,6 +262,10 @@ def compile_theme(tokens_path: Path, out_path: Path | None, force: bool) -> Path
     seed = seed_from_tokens(tokens_doc, name_override=None)
     palette = palette_from_tokens(tokens_doc)
     check_contrast_or_raise(palette)  # refuse a theme CT1 would reject
+    try:
+        check_font_floor_or_raise(seed)  # refuse a committed sub-floor font
+    except ThemeGenError as exc:
+        raise ThemeCompileError(str(exc)) from exc
     out = _resolve_out(tokens_doc, tokens_path, out_path)
     rendered_str = render_theme_json(palette, seed)
     if out.exists():

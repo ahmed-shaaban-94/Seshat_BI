@@ -215,3 +215,72 @@ def test_compile_proceeds_when_only_dl3_governed_differs_with_force(tmp_path: Pa
     result = compile_theme(tokens, out_path=None, force=True)  # no raise
     rewritten = json.loads(result.read_text(encoding="utf-8"))
     assert rewritten["dataColors"][0] == original_first_color  # repaired
+
+
+def test_seed_from_tokens_reads_typography_block() -> None:
+    tokens = {**TOKENS, "typography": {"title_font_pt": 14, "label_font_pt": 10}}
+    seed = seed_from_tokens(tokens, name_override=None)
+    assert seed.title_font_pt == 14.0
+    assert seed.label_font_pt == 10.0
+
+
+def test_seed_from_tokens_falls_back_to_constants_when_typography_absent() -> None:
+    # executive-dark shape: no typography block at all.
+    seed = seed_from_tokens(TOKENS, name_override=None)
+    assert seed.title_font_pt == 12.0
+    assert seed.label_font_pt == 9.0
+
+
+def test_seed_from_tokens_falls_back_per_key_when_typography_block_partial() -> None:
+    # tower-retail shape: a typography block exists but lacks font-pt keys.
+    tokens = {
+        **TOKENS,
+        "typography": {"font_family": "Segoe UI", "base_size_pt": 10},
+    }
+    seed = seed_from_tokens(tokens, name_override=None)
+    assert seed.title_font_pt == 12.0
+    assert seed.label_font_pt == 9.0
+
+
+def test_compile_refuses_sub_floor_title_font(tmp_path: Path) -> None:
+    tokens = {**TOKENS, "typography": {"title_font_pt": 11.9, "label_font_pt": 9}}
+    p = _write_tokens(tmp_path, tokens)
+    with pytest.raises(ThemeCompileError, match="title_font_pt"):
+        compile_theme(p, out_path=None, force=False)
+
+
+def test_custom_font_pt_round_trips_through_generate_then_compile(tmp_path: Path):
+    """Idea 4 round-trip: gen a 14pt title, compile from its own tokens, no
+    phantom DL3-deferred conflict, fontSize:14 survives byte-identical."""
+    from retail.theme_gen import ThemeSeed, generate
+
+    seed = ThemeSeed(
+        name="roundtrip",
+        mode="light",
+        accent="#2E7D5B",
+        background="#FFFFFF",
+        text_primary="#111111",
+        text_secondary="#333333",
+        text_muted="#555555",
+        data_colors=None,
+        good="#2E7D5B",
+        neutral="#B5832A",
+        bad="#B23A3A",
+        title_font_pt=14.0,
+        label_font_pt=9.0,
+    )
+    generate(seed, tmp_path, force=True)
+    theme_path = tmp_path / "themes/roundtrip.theme.json"
+    assert (
+        json.loads(theme_path.read_text())["visualStyles"]["*"]["*"]["title"][0][
+            "fontSize"
+        ]
+        == 14
+    )
+
+    # recompile from the committed tokens over the existing theme -- must NOT
+    # raise a DL3-deferred conflict, and must keep fontSize:14.
+    tokens_path = tmp_path / "design/tokens/roundtrip-design-tokens.yaml"
+    out = compile_theme(tokens_path, out_path=None, force=True)
+    recompiled = json.loads(out.read_text())
+    assert recompiled["visualStyles"]["*"]["*"]["title"][0]["fontSize"] == 14
