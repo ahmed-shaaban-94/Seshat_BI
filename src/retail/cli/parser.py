@@ -75,6 +75,100 @@ def _add_status_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_next_parser(sub: argparse._SubParsersAction) -> None:
+    """`next` (spec 080): read-only run-next readiness answer for ONE table.
+    Computes the earliest allowed action from the seven stage statuses; it never
+    writes, executes, approves, or emits a numeric score."""
+    p = sub.add_parser(
+        "next",
+        help=(
+            "read-only run-next answer for one table: next action, blocker, "
+            "approval requirement, terminal pass, or input defect"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to read from")
+    p.add_argument(
+        "--table",
+        required=True,
+        help=(
+            "table identity to inspect (matches readiness-status table, source_id, "
+            "or mappings/<table>/ directory)"
+        ),
+    )
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the stable response.",
+    )
+
+
+def _add_approvals_parser(sub: argparse._SubParsersAction) -> None:
+    """`approvals`: read-only inbox for missing/invalid approval seams."""
+    p = sub.add_parser(
+        "approvals",
+        help=(
+            "read-only approval inbox over mappings/*/readiness-status.yaml; "
+            "reports missing or invalid named-human approvals"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to read from")
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the inbox document.",
+    )
+
+
+def _add_evidence_pack_parser(sub: argparse._SubParsersAction) -> None:
+    """`evidence-pack`: read-only 10-section evidence pack preview."""
+    p = sub.add_parser(
+        "evidence-pack",
+        help=(
+            "read-only 10-section evidence pack preview for one table; "
+            "surfaces section blockers and publish_ready state"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to read from")
+    p.add_argument(
+        "--table",
+        required=True,
+        help=(
+            "table identity to inspect (matches readiness-status table, source_id, "
+            "or mappings/<table>/ directory)"
+        ),
+    )
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the pack document.",
+    )
+
+
+def _add_blockers_parser(sub: argparse._SubParsersAction) -> None:
+    """`blockers`: read-only explanations for recorded readiness blockers."""
+    p = sub.add_parser(
+        "blockers",
+        help=(
+            "read-only blocker explainer over mappings/*/readiness-status.yaml; "
+            "categorizes blockers and names the next surface"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to read from")
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the blocker document.",
+    )
+
+
 def _add_check_parser(sub: argparse._SubParsersAction) -> None:
     """`check`: static governance checks. Extracted from ``_build_parser`` (with
     ``validate``/``semantic-check``/``value-check``/``demo``) to shrink the
@@ -503,6 +597,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     _add_init_project_parser(sub)
     _add_status_parser(sub)
+    _add_next_parser(sub)
+    _add_approvals_parser(sub)
+    _add_evidence_pack_parser(sub)
+    _add_blockers_parser(sub)
 
     # `kit-lint` (feature 072): standalone Maintenance-Automation step (NOT a `retail
     # check` rule -- it parses yaml). Fails loud (exit 1) when a compass PROJECTION

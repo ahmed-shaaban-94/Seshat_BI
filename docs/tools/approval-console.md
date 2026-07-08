@@ -5,8 +5,9 @@
   wins: this is F027.
 - **Authority category:** Product Module / `artifact-writing` (the first concrete Product
   Module realized under F024; see `docs/architecture/product-modules.md`).
-- **Status:** Authored (a pure skill + two templates + this docs page; no runtime code --
-  the agent is the runtime).
+- **Status:** Runtime slice shipped for the read-only inbox: `retail approvals`
+  lists missing/invalid approval seams. Decision packaging/write-back remains the
+  agent-led artifact-writing workflow described below.
 
 ## Purpose
 
@@ -25,6 +26,19 @@ It does two things and only two:
 2. **Record** the named human's answer back into the committed artifacts -- a filled
    `templates/approval-decision.md` plus the write-through into `unresolved-questions.md`
    and `readiness-status.yaml`.
+
+## Read-only inbox
+
+```bash
+retail approvals
+retail approvals --format json
+```
+
+The inbox scans committed `mappings/*/readiness-status.yaml` files and reports
+approval seams that are blocked on review, missing a shape-valid named-human
+approval, or carrying an invalid owner such as a bare role token. It writes
+nothing and does not record a decision; use the request -> decision workflow
+below when a named human has actually answered.
 
 ## The transcribe-never-author boundary (the load-bearing rule)
 

@@ -2,8 +2,8 @@
 
 - **On-disk spec:** `specs/080-run-next-readiness-state-machine/`  **Roadmap feature:** F080
   (the roadmap F-number is authoritative when the two disagree).
-- **Status:** Authored (docs/templates/skill only; no runtime code this slice --
-  an optional pure-Python helper under `src/retail/tools/` is planned + deferred).
+- **Status:** Runtime slice shipped: `retail next` wraps the pure read-only helper
+  in `src/retail/run_next.py`.
 - **Authority category:** Product Module / `read-only` (F024 Companion Tools
   Architecture -- see `../architecture/product-modules.md`).
 - **Skill:** `../../.claude/skills/run-next-readiness/SKILL.md`.
@@ -21,6 +21,18 @@ verbatim), an `approval_required` (naming the human authority class), a
 `terminal_pass`, or an `input_defect` -- plus any caveats. The agent is the
 runtime; it computes the answer and STOPS. It creates no truth, executes nothing,
 grants no approval, and emits no numeric score.
+
+## CLI
+
+```bash
+retail next --table retail_store_sales
+retail next --table bronze.retail_store_sales --format json
+```
+
+`--table` may name the `mappings/<table>/` directory, the status file's
+`source_id`, or the status file's `table` value. The command is read-only: it
+does not run `retail check`, `retail validate`, SQL, Power BI, or any approval
+write-back.
 
 ## When to use it -- and when to use a neighbor instead
 
