@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from retail.profile import ColumnProfile, PkProof, ProfileResult
+from tests.unit._schema_check import assert_matches_schema
 
 pytestmark = pytest.mark.unit
 
@@ -160,10 +161,8 @@ def test_grain_pk_drift_is_blocked_and_principle_v():
 
 
 def _validate(doc):
-    from jsonschema import Draft202012Validator
-
     schema = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
-    Draft202012Validator(schema).validate(doc)
+    assert_matches_schema(doc, schema)
 
 
 def test_derive_status_blocked_when_fatal_class_present():

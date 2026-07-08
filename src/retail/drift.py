@@ -128,20 +128,21 @@ def classify_drift(
     return findings
 
 
+# Scoped to the drift classes classify_drift() actually emits with
+# principle_v=True today (grain_pk_drift only). returns_rule_drift,
+# pii_surface_drift, and semantic_pair_drift are not yet classified anywhere
+# in this module (see classify_drift docstring / TODO in the taxonomy) --
+# adding their entries here ahead of that work would be untested, unreachable
+# dict entries. Add each class's entry in the SAME task that wires it into
+# classify_drift(). Until then, a future principle_v=True finding for an
+# unmapped class fails loudly with KeyError in _handoffs() rather than
+# silently -- that is the intended safety net, not a bug.
 _DEFAULT_OWNER = {
     "grain_pk_drift": "analyst",
-    "returns_rule_drift": "analyst",
-    "pii_surface_drift": "governance",
-    "semantic_pair_drift": "analyst",
 }
 
 _HANDOFF_QUESTION = {
     "grain_pk_drift": "is the new grain acceptable, or is dedup a defect?",
-    "returns_rule_drift": "which column is now authoritative for returns?",
-    "pii_surface_drift": (
-        "is the reappeared/new column publish-safe? (default stays drop)"
-    ),
-    "semantic_pair_drift": "does the fanned-out pair still establish entity identity?",
 }
 
 
