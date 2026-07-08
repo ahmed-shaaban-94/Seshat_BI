@@ -120,6 +120,23 @@ def test_publish_ready_approval_is_surfaced_not_granted(tmp_path: Path) -> None:
     }
 
 
+def test_publish_ready_bare_role_approval_is_not_surfaced(tmp_path: Path) -> None:
+    _write_status(tmp_path, "orders")
+    status = tmp_path / "mappings" / "orders" / "readiness-status.yaml"
+    status.write_text(
+        status.read_text(encoding="utf-8").replace(
+            "Ahmed Shaaban (data_owner)", "data_owner"
+        ),
+        encoding="utf-8",
+    )
+    _write_complete_pack_sources(tmp_path, "orders")
+
+    result = build_evidence_pack(tmp_path, "orders")
+
+    assert result["publish_ready"]["status"] == "pass"
+    assert result["publish_ready"]["approval"] is None
+
+
 def test_missing_status_is_input_defect(tmp_path: Path) -> None:
     result = build_evidence_pack(tmp_path, "orders")
     assert result["outcome"] == "input_defect"

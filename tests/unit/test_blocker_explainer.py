@@ -110,6 +110,30 @@ approvals:
     assert item["reason"] == "invalid or missing approval for pass stage"
 
 
+def test_file_source_source_ready_missing_approval_is_explained(
+    tmp_path: Path,
+) -> None:
+    _write_status(
+        tmp_path,
+        "orders_file",
+        """\
+table: "bronze.orders_file"
+stages:
+  source_ready:
+    status: "pass"
+    source_kind: "csv"
+    evidence: ["profile"]
+  mapping_ready: {status: "not_started"}
+approvals: []
+""",
+    )
+
+    item = build_blocker_explanations(tmp_path)["items"][0]
+    assert item["stage"] == "source_ready"
+    assert item["category"] == "approval"
+    assert item["reason"] == "invalid or missing approval for pass stage"
+
+
 def test_cli_blockers_json_is_read_only_and_score_free(tmp_path: Path, capsys) -> None:
     _write_status(
         tmp_path,

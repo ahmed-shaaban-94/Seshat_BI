@@ -17,6 +17,7 @@ _STAGE_ORDER: tuple[str, ...] = (
 _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
+_FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
 
 _CATEGORY_RULES: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
     (
@@ -90,6 +91,18 @@ def _valid_owner(owner: object) -> bool:
     return _owner_is_valid(owner)
 
 
+def _source_kind(stage_block: object) -> str | None:
+    from retail.rules.readiness_status import _source_kind
+
+    return _source_kind(stage_block)
+
+
+def _approval_required(stage: str, block: dict[str, Any]) -> bool:
+    if stage in _APPROVAL_REQUIRED:
+        return True
+    return stage == "source_ready" and _source_kind(block) in _FILE_SOURCE_KINDS
+
+
 def _has_valid_approval(data: dict[str, Any], stage: str) -> bool:
     approvals = data.get("approvals")
     if not isinstance(approvals, list):
@@ -146,7 +159,7 @@ def _approval_item(
 ) -> dict[str, str] | None:
     if not isinstance(block, dict):
         return None
-    if block.get("status") != "pass" or stage not in _APPROVAL_REQUIRED:
+    if block.get("status") != "pass" or not _approval_required(stage, block):
         return None
     if _has_valid_approval(context["data"], stage):
         return None

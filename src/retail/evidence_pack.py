@@ -182,6 +182,12 @@ def _build_section(root: Path, base: Path, spec: dict[str, Any]) -> dict[str, An
     }
 
 
+def _valid_owner(owner: object) -> bool:
+    from retail.rules.readiness_status import _owner_is_valid
+
+    return _owner_is_valid(owner)
+
+
 def _approval_for(data: dict[str, Any], stage: str) -> dict[str, str] | None:
     approvals = data.get("approvals")
     if not isinstance(approvals, list):
@@ -191,7 +197,7 @@ def _approval_for(data: dict[str, Any], stage: str) -> dict[str, str] | None:
             continue
         owner = item.get("owner")
         at = item.get("at")
-        if isinstance(owner, str) and isinstance(at, str):
+        if _valid_owner(owner) and isinstance(at, str):
             return {"owner": owner, "at": at}
     return None
 
