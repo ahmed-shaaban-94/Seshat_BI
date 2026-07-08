@@ -408,3 +408,40 @@ def test_check_ramp_deltae_ignores_nonadjacent_near_duplicate() -> None:
     check_ramp_deltae_or_raise(
         palette, floor=10.0
     )  # no raise -- adjacent pairs are fine
+
+
+def test_generate_refuses_near_collapsed_data_colors(tmp_path: Path) -> None:
+    # OWNER-ratified MIN_ADJACENT_DELTAE = 3.0 (Task 14). This pair
+    # (#336699/#2B6092) measures ~2.52 dE76 apart: ABOVE the whole-set
+    # categorical floor (2.0, so check_categorical_distinctness_or_raise does
+    # NOT fire) but BELOW the adjacent-ramp floor (3.0). Only the ramp check
+    # this task wires in can refuse this pair -- a genuinely discriminating
+    # regression for Task 15's marginal behavior (a pair caught by the
+    # near-identical #336699/#346699 case, ~0.20 apart, would already be
+    # refused by the pre-existing categorical check and prove nothing new).
+    seed = _seed(data_colors=("#336699", "#2B6092", "#1F4E79"))
+    with pytest.raises(ThemeGenError, match="deltaE76"):
+        generate(seed, repo_root=tmp_path)
+    assert not (tmp_path / "themes").exists()  # refused before any write
+
+
+def test_generate_shipping_default_ramp_still_passes(tmp_path: Path) -> None:
+    # data_colors=None -> build_palette derives via derive_ramp(accent); this
+    # must clear the ratified MIN_ADJACENT_DELTAE floor. _seed() defaults to
+    # accent="#2FB6C4" (the literal DARK shipping fixture), whose derived
+    # ramp has the tightest measured margin among committed accents: min
+    # adjacent dE76 ~= 6.86, comfortably above the 3.0 floor. This is the
+    # regression Task 14's ratification exists to protect.
+    written = generate(_seed(), repo_root=tmp_path)
+    assert len(written) == 3
+
+
+def test_generate_shipping_default_sentiment_accent_ramp_also_passes(
+    tmp_path: Path,
+) -> None:
+    # Secondary regression: the other committed accent cited in the Task 14
+    # ratification evidence (#2E7D5B, min adjacent dE76 ~= 9.13) also clears
+    # the floor end-to-end.
+    seed = _seed(accent="#2E7D5B", data_colors=None)
+    written = generate(seed, repo_root=tmp_path)
+    assert len(written) == 3

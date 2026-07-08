@@ -29,6 +29,9 @@ MIN_LABEL_FONT_PT = 9.0
 MIN_CATEGORICAL_DELTAE = (
     2.0  # CIE76 JND-adjacent floor for whole-set data_colors distinctness
 )
+MIN_ADJACENT_DELTAE = (
+    3.0  # OWNER-ratified 2026-07-08 (Task 14) -- adjacent-ramp near-collapse floor
+)
 TAP_TARGET_MIN_PX = 44  # doc-only floor (WCAG 2.5.8); never written to any artifact
 _TEXT_ROLES = ("primary", "secondary", "muted")
 
@@ -385,15 +388,16 @@ def _validate_and_collect(
     """Run every self-check + build the target set; raise before any write.
 
     This is the single choke point for pre-write gates: contrast, font floor,
-    and categorical distinctness today, with room for future self-checks
-    (e.g. ramp-deltaE) to slot in here too, so a caller validating multiple
-    seeds (e.g. a light/dark pair) can validate all of them before writing
-    any of them.
+    categorical distinctness (whole-set), and adjacent-ramp deltaE (near-
+    collapse) today, with room for future self-checks to slot in here too, so
+    a caller validating multiple seeds (e.g. a light/dark pair) can validate
+    all of them before writing any of them.
     """
     palette = build_palette(seed)
     check_contrast_or_raise(palette)
     check_font_floor_or_raise(seed)
     check_categorical_distinctness_or_raise(palette)
+    check_ramp_deltae_or_raise(palette, MIN_ADJACENT_DELTAE)
     targets = _targets_for(seed, repo_root, palette)
     if not force:
         for p in targets:
