@@ -57,6 +57,10 @@ class ColumnProfile:
     missing_count: int
     missing_pct: float
     distinct_cardinality: int
+    # The type as landed (information_schema.data_type live; the "Type as landed"
+    # markdown cell for a parsed baseline). Optional so pre-existing constructors
+    # stay valid; drift's column_retyped compares it NORMALIZED (see classify).
+    landed_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +141,7 @@ def profile(
                 missing_count=missing,
                 missing_pct=pct,
                 distinct_cardinality=distinct,
+                landed_type=data_type,
             )
         )
 

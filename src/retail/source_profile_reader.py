@@ -88,12 +88,14 @@ _COL_ROW = re.compile(
 def _parse_columns(text: str) -> list[ColumnProfile]:
     cols: list[ColumnProfile] = []
     for m in _COL_ROW.finditer(text):
+        landed_type = m.group(2).strip() or None  # "Type as landed" cell
         cols.append(
             ColumnProfile(
                 name=m.group(1).strip(),
                 missing_count=int(m.group(3).replace(",", "")),
                 missing_pct=float(m.group(4)),
                 distinct_cardinality=int(m.group(5).replace(",", "")),
+                landed_type=landed_type,
             )
         )
     return cols
