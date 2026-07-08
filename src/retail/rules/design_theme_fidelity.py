@@ -254,6 +254,60 @@ def _sentiment_map_for(tokens_doc: Any) -> dict[str, str] | None:
     return raw
 
 
+def _malformed_sentiment_map_findings(
+    tokens_rel: str, tokens_doc: Any
+) -> Iterable[Finding]:
+    """One ERROR when meta.sentiment_map is declared but unusable, else nothing.
+
+    Distinguishes "no map declared" (raw absent -> inert, refuse to invent one)
+    from "declared but malformed" (a blank/non-string entry, an empty map): the
+    latter must ERROR, because silently treating a botched opt-in as absent
+    would disable the guard the author asked for while the theme-spec still
+    claims fidelity is verified.
+    """
+    raw = _raw_sentiment_map(tokens_doc)
+    if raw is None:
+        return
+    yield Finding(
+        SENTIMENT_RULE_ID,
+        Severity.ERROR,
+        f"meta.sentiment_map is declared but malformed -- it must be a "
+        f"non-empty mapping of string tokens-key -> string theme-key, "
+        f"got {raw!r}; sentiment fidelity cannot be verified",
+        f"{tokens_rel}#/meta/sentiment_map",
+    )
+
+
+def _sentiment_entry_findings(
+    tok_key: str, thm_key: str, tok_sentiment: dict, theme: dict, theme_rel: str
+) -> Iterable[Finding]:
+    """One ERROR when a single declared map entry fails to reconcile, else none."""
+    tok_val = tok_sentiment.get(tok_key)
+    thm_val = theme.get(thm_key)
+    if tok_val is None or thm_val is None:
+        yield Finding(
+            SENTIMENT_RULE_ID,
+            Severity.ERROR,
+            f"declared sentiment_map entry {tok_key!r} -> {thm_key!r} "
+            f"cannot be reconciled: "
+            f"colors.sentiment.{tok_key} is "
+            f"{'absent' if tok_val is None else tok_val!r}, "
+            f"theme.{thm_key} is "
+            f"{'absent' if thm_val is None else thm_val!r}",
+            f"{theme_rel}#/{thm_key}",
+        )
+        return
+    if tok_val != thm_val:
+        yield Finding(
+            SENTIMENT_RULE_ID,
+            Severity.ERROR,
+            f"theme {thm_key} {thm_val!r} does not match the token "
+            f"declared sentiment.{tok_key} value {tok_val!r} "
+            f"(declared correspondence {tok_key!r} -> {thm_key!r})",
+            f"{theme_rel}#/{thm_key}",
+        )
+
+
 def _reconcile_sentiment(
     tokens_rel: str, theme_rel: str, ctx: RuleContext
 ) -> Iterable[Finding]:
@@ -269,23 +323,8 @@ def _reconcile_sentiment(
         return
     sentiment_map = _sentiment_map_for(tokens_doc)
     if sentiment_map is None:
-        # Distinguish "no map declared" (inert, refuse to invent one) from "map
-        # declared but malformed". A human who opts in but botches a value (a
-        # blank/non-string entry, an empty map) must get an ERROR -- silently
-        # treating a broken opt-in as absent would disable the guard the author
-        # asked for while the theme-spec still claims fidelity is verified.
-        raw = _raw_sentiment_map(tokens_doc)
-        if raw is not None:
-            yield Finding(
-                SENTIMENT_RULE_ID,
-                Severity.ERROR,
-                f"meta.sentiment_map is declared but malformed -- it must be a "
-                f"non-empty mapping of string tokens-key -> string theme-key, "
-                f"got {raw!r}; sentiment fidelity cannot be verified",
-                f"{tokens_rel}#/meta/sentiment_map",
-            )
-        return  # no declared correspondence -- refuse to invent one
-
+        yield from _malformed_sentiment_map_findings(tokens_rel, tokens_doc)
+        return  # no usable correspondence -- refuse to invent one
     theme_doc, herr = _load_json(ctx.repo_root / theme_rel)
     if herr is not None:
         yield Finding(
@@ -296,37 +335,14 @@ def _reconcile_sentiment(
             f"{theme_rel}#/",
         )
         return
-
     colors = tokens_doc.get("colors", {}) if isinstance(tokens_doc, dict) else {}
     tok_sentiment = colors.get("sentiment", {})
     tok_sentiment = tok_sentiment if isinstance(tok_sentiment, dict) else {}
     theme = theme_doc if isinstance(theme_doc, dict) else {}
-
     for tok_key, thm_key in sentiment_map.items():
-        tok_val = tok_sentiment.get(tok_key)
-        thm_val = theme.get(thm_key)
-        if tok_val is None or thm_val is None:
-            yield Finding(
-                SENTIMENT_RULE_ID,
-                Severity.ERROR,
-                f"declared sentiment_map entry {tok_key!r} -> {thm_key!r} "
-                f"cannot be reconciled: "
-                f"colors.sentiment.{tok_key} is "
-                f"{'absent' if tok_val is None else tok_val!r}, "
-                f"theme.{thm_key} is "
-                f"{'absent' if thm_val is None else thm_val!r}",
-                f"{theme_rel}#/{thm_key}",
-            )
-            continue
-        if tok_val != thm_val:
-            yield Finding(
-                SENTIMENT_RULE_ID,
-                Severity.ERROR,
-                f"theme {thm_key} {thm_val!r} does not match the token "
-                f"declared sentiment.{tok_key} value {tok_val!r} "
-                f"(declared correspondence {tok_key!r} -> {thm_key!r})",
-                f"{theme_rel}#/{thm_key}",
-            )
+        yield from _sentiment_entry_findings(
+            tok_key, thm_key, tok_sentiment, theme, theme_rel
+        )
 
 
 @register(
