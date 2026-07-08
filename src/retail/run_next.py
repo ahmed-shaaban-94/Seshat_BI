@@ -117,9 +117,17 @@ def _table_candidate_names(table: str) -> list[str]:
     names = [normalized, normalized.rsplit(".", 1)[-1]]
     unique: list[str] = []
     for name in names:
-        if name and "/" not in name and name not in unique:
+        if _candidate_needs_append(name, unique):
             unique.append(name)
     return unique
+
+
+def _candidate_needs_append(name: str, existing: list[str]) -> bool:
+    if not name:
+        return False
+    if "/" in name:
+        return False
+    return name not in existing
 
 
 def _status_path_candidates(root: Path, table: str) -> list[Path]:
@@ -176,16 +184,25 @@ def _status_names(status_path: Path, data: dict[str, Any]) -> set[str]:
     }
 
 
+def _matches_status_identity(
+    status_path: Path,
+    data: dict[str, Any] | None,
+    error: str | None,
+    table: str,
+) -> bool:
+    if error is not None:
+        return False
+    if data is None:
+        return False
+    return table in _status_names(status_path, data)
+
+
 def _matching_status_data(
     mappings_dir: Path, table: str
 ) -> tuple[Path | None, dict[str, Any] | None, str | None]:
     for status_path in sorted(mappings_dir.glob("*/readiness-status.yaml")):
         data, error = _load_yaml_mapping(status_path)
-        if (
-            error is None
-            and data is not None
-            and table in _status_names(status_path, data)
-        ):
+        if _matches_status_identity(status_path, data, error, table):
             return status_path, data, None
     return None, None, None
 
