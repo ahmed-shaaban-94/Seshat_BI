@@ -254,11 +254,18 @@ def test_dl3_still_ignores_sentiment_after_dl8_lands() -> None:
     assert findings == []
 
 
-def test_sentiment_live_pair_inert_on_main() -> None:
-    """emits-on-main guard: neither committed tokens file declares
-    meta.sentiment_map today, so DL8 is silent on both -- including
-    tower-retail, whose sentiment colors actually drift (proving DL8 is
-    inert-by-absence, not accidentally-passing)."""
+def test_sentiment_live_pairs_are_green_on_main() -> None:
+    """emits-on-main guard for both committed pairs:
+
+    * executive-dark now DECLARES an owner-ratified meta.sentiment_map (T19,
+      2026-07-08) that is byte-exact faithful to its theme -- DL8 fires but
+      finds zero drift (green because faithful, NOT because inert).
+    * tower-retail declares NO map, so DL8 is inert-by-absence on it -- proving
+      the rule refuses to invent a correspondence even though tower's sentiment
+      colors actually drift.
+    """
+    from retail.rules.design_theme_fidelity import _load_yaml, _sentiment_map_for
+
     exec_dark = _ctx(
         "design/tokens/executive-dark-design-tokens.yaml",
         "themes/executive-dark.theme.json",
@@ -269,5 +276,19 @@ def test_sentiment_live_pair_inert_on_main() -> None:
         "themes/tower-retail.theme.json",
         repo_root=REPO_ROOT,
     )
+    # executive-dark declares a map and is faithful -> zero findings
+    exec_doc, _ = _load_yaml(
+        REPO_ROOT / "design/tokens/executive-dark-design-tokens.yaml"
+    )
+    assert _sentiment_map_for(exec_doc) == {
+        "success": "good",
+        "warning": "neutral",
+        "danger": "bad",
+    }
     assert list(check_sentiment_fidelity(exec_dark)) == []
+    # tower-retail declares no map -> inert by absence
+    tower_doc, _ = _load_yaml(
+        REPO_ROOT / "design/tokens/tower-retail-design-tokens.yaml"
+    )
+    assert _sentiment_map_for(tower_doc) is None
     assert list(check_sentiment_fidelity(tower)) == []

@@ -5,6 +5,14 @@ meta:
   style: "generated (dark)"
   version: "1"
   compiles_to: "themes/executive-dark.theme.json"
+  # OWNER-ratified 2026-07-08 (T19): the frozen 4->3 sentiment correspondence
+  # DL8 reconciles. tokens colors.sentiment.<key> == theme.<value>. See the
+  # theme-spec Clarifications entry. Not emitted by `retail theme-gen` -- a
+  # human ruling committed here by the owner, not a generator default.
+  sentiment_map:
+    success: "good"
+    warning: "neutral"
+    danger: "bad"
 colors:
   primary: "#2FB6C4"
   secondary: "#7BD6DF"
