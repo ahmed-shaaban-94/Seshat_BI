@@ -331,3 +331,31 @@ def test_returns_and_pii_handoffs_are_schema_valid():
     assert owners.get("returns_rule_drift") == "analyst"
     assert owners.get("pii_surface_drift") == "governance"
     _validate(doc)
+
+
+def test_unchanged_returns_column_is_not_returns_rule_drift():
+    # Pins the no-change guard: an authoritative returns column whose stats are
+    # UNCHANGED must not fire returns_rule_drift (else every run of a stable
+    # table would raise a false Principle-V blocker). Deleting the
+    # `before == after` guard in _returns_rule_findings must fail this.
+    from retail.drift import DriftSemantics, classify_drift
+
+    base = _profile([_col("is_return", missing_pct=2.0, card=2)])
+    obs = _profile([_col("is_return", missing_pct=2.0, card=2)])  # identical
+    findings = classify_drift(base, obs, DriftSemantics(returns_column="is_return"))
+    assert not any(f.drift_class == "returns_rule_drift" for f in findings)
+
+
+def test_dropped_pii_column_present_in_both_is_not_pii_surface_drift():
+    # Pins the "reappeared-ONLY" semantics: a dropped-PII name that is present in
+    # BOTH baseline and observed has NOT reappeared (it never left the profile),
+    # so it must not fire. Dropping the `- base_cols.keys()` from the set logic
+    # in _pii_surface_findings must fail this.
+    from retail.drift import DriftSemantics, classify_drift
+
+    base = _profile([_col("amount"), _col("ssn")])  # ssn already in the baseline
+    obs = _profile([_col("amount"), _col("ssn")])
+    findings = classify_drift(
+        base, obs, DriftSemantics(dropped_pii_columns=frozenset({"ssn"}))
+    )
+    assert not any(f.drift_class == "pii_surface_drift" for f in findings)
