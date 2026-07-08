@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .color import contrast_ratio, is_valid_hex
+from .color import contrast_ratio, format_pt, is_valid_hex
 
 AA_FLOOR = 4.5
 MIN_TITLE_FONT_PT = 12.0
@@ -205,6 +205,9 @@ def render_tokens_yaml(palette: dict, seed: ThemeSeed) -> str:
         f'    danger: "{c["sentiment"]["danger"]}"\n'
         "  data_colors:\n"
         f"{ramp}\n"
+        "typography:\n"
+        f"  title_font_pt: {format_pt(seed.title_font_pt)}\n"
+        f"  label_font_pt: {format_pt(seed.label_font_pt)}\n"
         "accessibility:\n"
         '  min_text_contrast_ratio: "4.5:1"\n'
         "  # monochromatic ramp: CVD is a named-reviewer call (Principle V)\n"
@@ -215,6 +218,8 @@ def render_tokens_yaml(palette: dict, seed: ThemeSeed) -> str:
 
 def render_theme_json(palette: dict, seed: ThemeSeed) -> str:
     c = palette["colors"]
+    title_pt = format_pt(seed.title_font_pt)
+    label_pt = format_pt(seed.label_font_pt)
     doc = {
         "name": seed.name,
         "dataColors": c["data_colors"],
@@ -227,8 +232,10 @@ def render_theme_json(palette: dict, seed: ThemeSeed) -> str:
         "visualStyles": {
             "*": {
                 "*": {
-                    "title": [{"fontFamily": "Segoe UI Semibold", "fontSize": 12}],
-                    "labels": [{"fontFamily": "Segoe UI", "fontSize": 9}],
+                    "title": [
+                        {"fontFamily": "Segoe UI Semibold", "fontSize": title_pt}
+                    ],
+                    "labels": [{"fontFamily": "Segoe UI", "fontSize": label_pt}],
                 }
             }
         },
@@ -255,12 +262,21 @@ def render_spec_md(palette: dict, seed: ThemeSeed) -> str:
         f"text.muted {ratios['muted']:.2f}:1 vs background "
         "(all >= 4.5:1 AA). *Evidence: CT1 arithmetic on the committed "
         "tokens.*\n"
+        "- [x] **Font floor** (computed): title "
+        f"{seed.title_font_pt:g}pt >= {MIN_TITLE_FONT_PT:g}pt, label "
+        f"{seed.label_font_pt:g}pt >= {MIN_LABEL_FONT_PT:g}pt. *Evidence: "
+        "check_font_floor_or_raise on the committed tokens (a number proves "
+        "the number, not on-screen legibility).*\n"
         "- [ ] **CVD distinguishability** -- OPEN: the monochromatic ramp is "
         "less category-distinguishable; needs a named reviewer (Principle V).\n"
         "- [ ] **Small-size / adjacency legibility** -- OPEN: needs a named "
         "reviewer against a rendered page (F016 surface; not yet built).\n"
         "- [ ] **No pure-saturated background behind dense charts** -- OPEN: "
-        "named-reviewer design note.\n\n"
+        "named-reviewer design note.\n"
+        "- [ ] **Tap-target sizing** -- OPEN, doc-only: interactive elements "
+        f"should target >= {TAP_TARGET_MIN_PX}px; not computable from a "
+        "DEFINE-only palette, no `tapTarget` key is ever written; needs a "
+        "named reviewer against a rendered page.\n\n"
         "## Readiness\n\n"
         "- **Status:** `warning`\n"
         "- **Evidence:**\n"
@@ -301,6 +317,7 @@ def _validate_and_collect(
     """
     palette = build_palette(seed)
     check_contrast_or_raise(palette)
+    check_font_floor_or_raise(seed)
     targets = _targets_for(seed, repo_root, palette)
     if not force:
         for p in targets:

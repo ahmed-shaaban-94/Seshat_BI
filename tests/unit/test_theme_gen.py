@@ -14,6 +14,9 @@ from retail.theme_gen import (
     build_palette,
     derive_ramp,
     generate,
+    render_spec_md,
+    render_theme_json,
+    render_tokens_yaml,
 )
 
 pytestmark = pytest.mark.unit
@@ -215,3 +218,37 @@ def test_font_floor_constants_are_fixed_values() -> None:
     assert MIN_TITLE_FONT_PT == 12.0
     assert MIN_LABEL_FONT_PT == 9.0
     assert TAP_TARGET_MIN_PX == 44
+
+
+def test_render_theme_json_uses_seed_font_sizes() -> None:
+    theme = json.loads(render_theme_json(build_palette(_seed()), _seed()))
+    title = theme["visualStyles"]["*"]["*"]["title"][0]
+    labels = theme["visualStyles"]["*"]["*"]["labels"][0]
+    assert title["fontSize"] == 12
+    assert labels["fontSize"] == 9
+
+
+def test_render_theme_json_custom_font_sizes_round_trip() -> None:
+    seed = _seed(title_font_pt=14.0, label_font_pt=10.0)
+    theme = json.loads(render_theme_json(build_palette(seed), seed))
+    assert theme["visualStyles"]["*"]["*"]["title"][0]["fontSize"] == 14
+    assert theme["visualStyles"]["*"]["*"]["labels"][0]["fontSize"] == 10
+
+
+def test_tokens_yaml_emits_typography_block() -> None:
+    tokens = yaml.safe_load(render_tokens_yaml(build_palette(_seed()), _seed()))
+    assert tokens["typography"]["title_font_pt"] == 12
+    assert tokens["typography"]["label_font_pt"] == 9
+
+
+def test_generate_refuses_sub_floor_title_font(tmp_path: Path) -> None:
+    with pytest.raises(ThemeGenError, match="title_font_pt"):
+        generate(_seed(title_font_pt=11.9), repo_root=tmp_path)
+    assert not (tmp_path / "themes").exists()  # refused before any write
+
+
+def test_spec_md_has_font_floor_line_and_tap_target_is_doc_only() -> None:
+    spec = render_spec_md(build_palette(_seed()), _seed())
+    assert "[x]" in spec and "Font floor" in spec
+    assert "tap" in spec.lower() or "Tap" in spec
+    assert '"tapTarget"' not in spec
