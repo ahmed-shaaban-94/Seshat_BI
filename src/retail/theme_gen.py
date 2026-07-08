@@ -363,6 +363,8 @@ def theme_gen_main(args) -> int:
         good=args.good or _DEFAULT_SENTIMENT["good"],
         neutral=args.neutral or _DEFAULT_SENTIMENT["neutral"],
         bad=args.bad or _DEFAULT_SENTIMENT["bad"],
+        title_font_pt=(args.title_font_pt if args.title_font_pt is not None else 12.0),
+        label_font_pt=(args.label_font_pt if args.label_font_pt is not None else 9.0),
     )
     try:
         written = generate(seed, Path(args.repo), force=args.force)

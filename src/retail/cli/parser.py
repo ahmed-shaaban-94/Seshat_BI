@@ -435,6 +435,22 @@ def _build_parser() -> argparse.ArgumentParser:
     themegen.add_argument("--good", default=None, metavar="#RRGGBB")
     themegen.add_argument("--neutral", default=None, metavar="#RRGGBB")
     themegen.add_argument("--bad", default=None, metavar="#RRGGBB")
+    themegen.add_argument(
+        "--title-font-pt",
+        dest="title_font_pt",
+        type=float,
+        default=None,
+        metavar="PT",
+        help="title font size in points (default 12.0; floor enforced, not settable)",
+    )
+    themegen.add_argument(
+        "--label-font-pt",
+        dest="label_font_pt",
+        type=float,
+        default=None,
+        metavar="PT",
+        help="label font size in points (default 9.0; floor enforced, not settable)",
+    )
     themegen.add_argument("--repo", default=".", help="repo root to write into")
     themegen.add_argument(
         "--force", action="store_true", help="overwrite existing files"
