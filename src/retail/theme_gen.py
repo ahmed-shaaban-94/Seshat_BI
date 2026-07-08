@@ -21,11 +21,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .color import contrast_ratio, format_pt, is_valid_hex
+from .color import contrast_ratio, delta_e76, format_pt, is_valid_hex
 
 AA_FLOOR = 4.5
 MIN_TITLE_FONT_PT = 12.0
 MIN_LABEL_FONT_PT = 9.0
+MIN_CATEGORICAL_DELTAE = (
+    2.0  # CIE76 JND-adjacent floor for whole-set data_colors distinctness
+)
 TAP_TARGET_MIN_PX = 44  # doc-only floor (WCAG 2.5.8); never written to any artifact
 _TEXT_ROLES = ("primary", "secondary", "muted")
 
@@ -160,6 +163,54 @@ def check_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
             )
 
 
+def min_categorical_delta_e(data_colors: tuple[str, ...]) -> float:
+    """Minimum CIE76 deltaE76 over all i<j pairs in data_colors.
+
+    Returns float("inf") when fewer than 2 colors are present (no pair to
+    compare, so nothing can violate a distinctness floor).
+    """
+    n = len(data_colors)
+    if n < 2:
+        return float("inf")
+    best = float("inf")
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = delta_e76(data_colors[i], data_colors[j])
+            if d < best:
+                best = d
+    return best
+
+
+def check_categorical_distinctness_or_raise(
+    palette: dict, floor: float = MIN_CATEGORICAL_DELTAE
+) -> None:
+    """Refuse to proceed if any two data_colors entries collapse under floor.
+
+    Whole-set (all i<j pairs), not just adjacent -- catches a normal-vision
+    near-duplicate anywhere in the categorical palette. Does not auto-widen
+    hue: a caught collision is refused, never silently corrected (auto-
+    correction can't be justified CVD-safe without a named reviewer).
+    """
+    data_colors = tuple(palette["colors"].get("data_colors") or ())
+    n = len(data_colors)
+    if n < 2:
+        return
+    worst_pair: tuple[str, str] | None = None
+    worst = float("inf")
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = delta_e76(data_colors[i], data_colors[j])
+            if d < worst:
+                worst = d
+                worst_pair = (data_colors[i], data_colors[j])
+    if worst < floor and worst_pair is not None:
+        raise ThemeGenError(
+            f"categorical distinctness: data_colors {worst_pair[0]} and "
+            f"{worst_pair[1]} are {worst:.2f} dE76 apart, below the "
+            f"{floor:g} dE76 floor -- refusing to write (would fail CT3)"
+        )
+
+
 def check_font_floor_or_raise(seed: ThemeSeed) -> None:
     """Refuse a title/label font size below the fixed accessibility floor.
 
@@ -267,6 +318,12 @@ def render_spec_md(palette: dict, seed: ThemeSeed) -> str:
         f"{seed.label_font_pt:g}pt >= {MIN_LABEL_FONT_PT:g}pt. *Evidence: "
         "check_font_floor_or_raise on the committed tokens (a number proves "
         "the number, not on-screen legibility).*\n"
+        "- [x] **Categorical distinctness (whole-set)** -- CT3 (computed): "
+        f"min pairwise dE76 across data_colors = "
+        f"{min_categorical_delta_e(tuple(c['data_colors'])):.2f}, "
+        f">= {MIN_CATEGORICAL_DELTAE:g} dE76 floor. *Evidence: CIE76 "
+        "arithmetic on the committed ramp (normal-vision near-collapse "
+        "guard only -- NOT a colorblind-safe claim).*\n"
         "- [ ] **CVD distinguishability** -- OPEN: the monochromatic ramp is "
         "less category-distinguishable; needs a named reviewer (Principle V).\n"
         "- [ ] **Small-size / adjacency legibility** -- OPEN: needs a named "
@@ -310,14 +367,16 @@ def _validate_and_collect(
 ) -> dict[Path, str]:
     """Run every self-check + build the target set; raise before any write.
 
-    This is the single choke point for pre-write gates: contrast today, and
-    the future font-floor / categorical-distinctness / ramp-deltaE self-checks
-    slot in here too, so a caller validating multiple seeds (e.g. a light/dark
-    pair) can validate all of them before writing any of them.
+    This is the single choke point for pre-write gates: contrast, font floor,
+    and categorical distinctness today, with room for future self-checks
+    (e.g. ramp-deltaE) to slot in here too, so a caller validating multiple
+    seeds (e.g. a light/dark pair) can validate all of them before writing
+    any of them.
     """
     palette = build_palette(seed)
     check_contrast_or_raise(palette)
     check_font_floor_or_raise(seed)
+    check_categorical_distinctness_or_raise(palette)
     targets = _targets_for(seed, repo_root, palette)
     if not force:
         for p in targets:

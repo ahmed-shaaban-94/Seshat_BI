@@ -290,3 +290,57 @@ def test_seed_from_args_provided_font_flags_pass_through() -> None:
     seed = _seed_from_args(_cli_args(title_font_pt=14.0, label_font_pt=10.0))
     assert seed.title_font_pt == 14.0
     assert seed.label_font_pt == 10.0
+
+
+def test_min_categorical_delta_e_default_ramp_passes_floor() -> None:
+    from retail.theme_gen import MIN_CATEGORICAL_DELTAE, min_categorical_delta_e
+
+    palette = build_palette(_seed())
+    got = min_categorical_delta_e(tuple(palette["colors"]["data_colors"]))
+    assert got >= MIN_CATEGORICAL_DELTAE
+
+
+def test_check_categorical_distinctness_or_raise_flags_near_identical_pair() -> None:
+    from retail.theme_gen import check_categorical_distinctness_or_raise
+
+    palette = build_palette(_seed())
+    palette["colors"]["data_colors"] = ["#2FB6C4", "#2FB6C5", "#12263A"]
+    with pytest.raises(ThemeGenError) as exc:
+        check_categorical_distinctness_or_raise(palette)
+    msg = str(exc.value)
+    assert "#2FB6C4" in msg
+    assert "#2FB6C5" in msg
+
+
+def test_check_categorical_distinctness_or_raise_flags_nonadjacent_pair() -> None:
+    # The near-identical pair sits at indices 0 and 2, not adjacent -- proves
+    # the check is whole-set (all i<j pairs), not just neighboring entries.
+    from retail.theme_gen import check_categorical_distinctness_or_raise
+
+    palette = build_palette(_seed())
+    palette["colors"]["data_colors"] = ["#2FB6C4", "#12263A", "#2FB6C5"]
+    with pytest.raises(ThemeGenError) as exc:
+        check_categorical_distinctness_or_raise(palette)
+    msg = str(exc.value)
+    assert "#2FB6C4" in msg
+    assert "#2FB6C5" in msg
+
+
+def test_check_categorical_distinctness_or_raise_honors_floor_param() -> None:
+    from retail.theme_gen import check_categorical_distinctness_or_raise
+
+    palette = build_palette(_seed())
+    palette["colors"]["data_colors"] = ["#2FB6C4", "#2FB6C5"]
+    check_categorical_distinctness_or_raise(palette, floor=0.0)  # does not raise
+
+
+def test_min_categorical_delta_e_single_color_is_noop() -> None:
+    from retail.theme_gen import (
+        check_categorical_distinctness_or_raise,
+        min_categorical_delta_e,
+    )
+
+    assert min_categorical_delta_e(("#2FB6C4",)) == float("inf")
+    palette = build_palette(_seed())
+    palette["colors"]["data_colors"] = ["#2FB6C4"]
+    check_categorical_distinctness_or_raise(palette)  # does not raise
