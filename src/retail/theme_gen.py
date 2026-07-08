@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from .color import contrast_ratio, delta_e76, format_pt, is_valid_hex
+from .color import composite_over, contrast_ratio, delta_e76, format_pt, is_valid_hex
 
 AA_FLOOR = 4.5
 MIN_TITLE_FONT_PT = 12.0
@@ -193,6 +193,35 @@ def check_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
                 f"contrast: text.{role} {text[role]} on {bg} is "
                 f"{ratio:.2f}:1, below the {floor:g}:1 AA floor -- refusing "
                 f"to write (would fail CT1)"
+            )
+
+
+def check_composite_contrast_or_raise(palette: dict, floor: float = AA_FLOOR) -> None:
+    """Refuse to proceed if a declared transparency role fails AA once composited.
+
+    STANDALONE and UNWIRED: no `generate()` call site invokes this today.
+    ``ThemeSeed``/``build_palette`` carry zero alpha/transparency fields, so
+    there is nothing declared to composite against -- this is a silent no-op
+    until an OWNER-approved transparency-role schema lands on ``ThemeSeed``.
+    Never fabricates a role or infers a transparency_pct from color proximity.
+    """
+    transparency = palette.get("transparency")
+    if not isinstance(transparency, dict):
+        return  # nothing declared to check
+    bg = palette["colors"]["background"]
+    for role, spec in transparency.items():
+        fg = spec.get("fg")
+        pct = spec.get("transparency_pct")
+        if fg is None or pct is None:
+            continue
+        composited = composite_over(fg, bg, pct)
+        ratio = contrast_ratio(composited, bg)
+        if ratio < floor:
+            raise ThemeGenError(
+                f"composite contrast: transparency role {role!r} "
+                f"({fg} at {pct:g}% over {bg}) composites to {composited}, "
+                f"{ratio:.2f}:1 vs background, below the {floor:g}:1 AA "
+                f"floor -- refusing (would fail CT1 once rendered)"
             )
 
 

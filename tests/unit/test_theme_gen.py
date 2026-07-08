@@ -13,6 +13,7 @@ from retail.theme_gen import (
     ThemeGenError,
     ThemeSeed,
     build_palette,
+    check_composite_contrast_or_raise,
     derive_ramp,
     generate,
     render_spec_md,
@@ -140,6 +141,35 @@ def test_generate_pair_writes_nothing_if_dark_side_fails_aa(tmp_path: Path) -> N
         generate_pair(light, repo_root=tmp_path)
     assert list(tmp_path.rglob("*.theme.json")) == []
     assert list(tmp_path.rglob("*.theme-spec.md")) == []
+
+
+def test_composite_contrast_raises_below_floor() -> None:
+    palette = build_palette(_seed())
+    bg = palette["colors"]["background"]
+    palette_with_weak_fg = {
+        **palette,
+        "transparency": {"overlay": {"fg": bg, "transparency_pct": 0.0}},
+    }
+    with pytest.raises(ThemeGenError, match="composite"):
+        check_composite_contrast_or_raise(palette_with_weak_fg, floor=4.5)
+
+
+def test_composite_contrast_passes_at_or_above_floor() -> None:
+    palette = build_palette(_seed())
+    fg = palette["colors"]["text"]["primary"]
+    palette_with_strong_fg = {
+        **palette,
+        "transparency": {"overlay": {"fg": fg, "transparency_pct": 0.0}},
+    }
+    check_composite_contrast_or_raise(palette_with_strong_fg, floor=4.5)  # no raise
+
+
+def test_composite_contrast_no_transparency_role_is_noop() -> None:
+    # No alpha/transparency fields exist on ThemeSeed/build_palette today,
+    # so the check has nothing declared to composite against and must be a
+    # silent no-op -- never a fabricated pass, never an error on absence.
+    palette = build_palette(_seed())
+    assert check_composite_contrast_or_raise(palette) is None
 
 
 def test_derive_ramp_is_monotonic_lightness() -> None:
