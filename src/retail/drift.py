@@ -117,7 +117,16 @@ def _normalize_type(landed_type: str | None) -> str | None:
     """Canonicalize a landed type for comparison. The baseline (human markdown)
     writes `TEXT`; a live information_schema re-profile returns `text` -- the
     SAME type. Lowercase + strip so a case/whitespace-only difference is NOT read
-    as a retype (otherwise every bronze-all-TEXT column would false-fire)."""
+    as a retype (otherwise every bronze-all-TEXT column would false-fire).
+
+    SCOPE (deliberate, not an oversight): case/whitespace fold ONLY. SQL type
+    SYNONYMS (`varchar` == `character varying`, `int` == `integer`, `timestamptz`
+    == `timestamp with time zone`) are NOT canonicalized -- a synonym map is a
+    deferred follow-on. It is a LATENT gap, not active: the only comparable
+    baseline this repo lands is faithful-all-TEXT bronze, so the only pair that
+    can occur today is `TEXT`/`text`, which this handles. Add the synonym fold
+    (with a test) in the SAME change that first lands a non-TEXT column whose
+    markdown uses a shorthand differing from `information_schema.data_type`."""
     if landed_type is None:
         return None
     return landed_type.strip().lower()
