@@ -28,6 +28,16 @@ def _dropped_pii(columns: list[dict[str, Any]]) -> frozenset[str]:
     )
 
 
+def _real_source_column(value: object) -> str | None:
+    """A `derived_from` value is a usable source column only if it is a non-empty
+    string that is not an unfilled template placeholder (`<...>`)."""
+    if not isinstance(value, str):
+        return None
+    if not value or value.startswith("<"):  # empty or a <placeholder>
+        return None
+    return value
+
+
 def _returns_column(doc: dict[str, Any]) -> str | None:
     """The AUTHORITATIVE SOURCE column the returns rule keys on: the is_return
     derived column's `derived_from`. classify_drift watches the profiled BRONZE
@@ -37,10 +47,7 @@ def _returns_column(doc: dict[str, Any]) -> str | None:
     is an unfilled placeholder (<...>)."""
     for d in doc.get("derived_columns") or []:
         if d.get("name") == "is_return":
-            src = d.get("derived_from")
-            if isinstance(src, str) and src and not src.startswith("<"):
-                return src
-            return None
+            return _real_source_column(d.get("derived_from"))
     return None
 
 

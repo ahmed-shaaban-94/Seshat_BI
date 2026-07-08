@@ -103,24 +103,49 @@ def _resolve_live_config(args: argparse.Namespace, cli: object, dialect: object)
     return dialect.resolve_config(dict(os.environ))
 
 
-def _resolve_semantics(args: argparse.Namespace):
-    """Load returns/PII semantics for the live leg: --source-map if given, else
-    the source-map.yaml sibling of --baseline. Absent -> None (those classes stay
-    silent). A NAMED path that is missing/unreadable raises _SemanticsError (a
-    clean error, not a silent skip). Returns DriftSemantics | None."""
+def _source_map_path(args: argparse.Namespace) -> Path | None:
+    """Which source-map.yaml to load: --source-map if given (must exist, else
+    _SemanticsError), else the sibling of --baseline (None if that has none)."""
     sm_arg = getattr(args, "source_map", None)
     if sm_arg is not None:
-        sm_path = Path(sm_arg)
-        if not sm_path.is_file():
+        path = Path(sm_arg)
+        if not path.is_file():
             raise _SemanticsError(f"--source-map file not found: {sm_arg}")
-    else:
-        sm_path = Path(args.baseline).parent / "source-map.yaml"
-        if not sm_path.is_file():
-            return None
+        return path
+    sibling = Path(args.baseline).parent / "source-map.yaml"
+    return sibling if sibling.is_file() else None
+
+
+def _resolve_semantics(args: argparse.Namespace):
+    """Load returns/PII semantics for the live leg. None when no source-map is
+    present (those classes stay silent). A NAMED-but-missing/malformed path
+    raises _SemanticsError (a clean error, not a silent skip)."""
+    path = _source_map_path(args)
+    if path is None:
+        return None
     try:
-        return load_drift_semantics(sm_path)
+        return load_drift_semantics(path)
     except (OSError, ValueError) as exc:
-        raise _SemanticsError(f"cannot load source-map {sm_path}: {exc}") from exc
+        raise _SemanticsError(f"cannot load source-map {path}: {exc}") from exc
+
+
+def _uncomparable_precondition(parsed: object) -> str | None:
+    """The baseline-shape reasons a live re-profile can't run: no stated PK to
+    re-prove grain on, or no schema-qualified landed table to connect to. Returns
+    the reason (caller reports it + rc 1), or None when the baseline is usable."""
+    if not parsed.pk_columns:
+        return (
+            "baseline states no candidate PK column set, so the live re-profile "
+            "cannot re-prove grain on the same key. Treated as uncomparable "
+            "rather than guessing a key."
+        )
+    if not parsed.landed_table:
+        return (
+            "baseline states no schema-qualified 'Landed location', so the live "
+            "re-profile has no connectable target. Treated as uncomparable rather "
+            "than guessing the schema (a bare name would mistarget `public`)."
+        )
+    return None
 
 
 def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
@@ -157,23 +182,9 @@ def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
         )
         return 1
 
-    if not parsed.pk_columns:
-        print(
-            "retail drift: baseline states no candidate PK column set, so the "
-            "live re-profile cannot re-prove grain on the same key. Treated as "
-            "uncomparable rather than guessing a key.",
-            file=sys.stderr,
-        )
-        return 1
-
-    if not parsed.landed_table:
-        print(
-            "retail drift: baseline states no schema-qualified 'Landed location', "
-            "so the live re-profile has no connectable target. Treated as "
-            "uncomparable rather than guessing the schema (a bare name would "
-            "mistarget the `public` schema).",
-            file=sys.stderr,
-        )
+    reason = _uncomparable_precondition(parsed)
+    if reason is not None:
+        print(f"retail drift: {reason}", file=sys.stderr)
         return 1
 
     # Returns/PII semantics from the source-map (flag > sibling; absent -> None).
