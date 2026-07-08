@@ -76,4 +76,51 @@ def classify_drift(
                 note="any mapping/silver reference is now broken",
             )
         )
+
+    # Per-surviving-column shifts (columns present in BOTH).
+    for name in base_cols.keys() & obs_cols.keys():
+        b = base_cols[name]
+        o = obs_cols[name]
+        if b.missing_pct != o.missing_pct:
+            findings.append(
+                DriftFinding(
+                    drift_class="missingness_shift",
+                    column=name,
+                    before=f"{b.missing_pct:.2f}%",
+                    after=f"{o.missing_pct:.2f}%",
+                    severity="warning",
+                    principle_v=False,
+                )
+            )
+        if b.distinct_cardinality != o.distinct_cardinality:
+            findings.append(
+                DriftFinding(
+                    drift_class="cardinality_shift",
+                    column=name,
+                    before=f"{b.distinct_cardinality} distinct",
+                    after=f"{o.distinct_cardinality} distinct",
+                    severity="warning",
+                    principle_v=False,
+                )
+            )
+
+    # Grain / PK drift -- a Principle-V human seam. The candidate PK that was
+    # unique on the baseline is no longer unique, or NULLs appeared in the PK.
+    if baseline.pk.is_unique and (not observed.pk.is_unique or observed.pk.null_pk > 0):
+        before = f"is_unique=true, null_pk={baseline.pk.null_pk}"
+        after = (
+            f"is_unique={str(observed.pk.is_unique).lower()}, "
+            f"null_pk={observed.pk.null_pk}"
+        )
+        findings.append(
+            DriftFinding(
+                drift_class="grain_pk_drift",
+                column="(candidate PK)",
+                before=before,
+                after=after,
+                severity="blocked",
+                principle_v=True,
+                note="grain is never auto-rejudged; raise for the analyst",
+            )
+        )
     return findings

@@ -65,3 +65,48 @@ def test_findings_are_deterministically_ordered():
     findings = classify_drift(base, obs)
     added = [f.column for f in findings if f.drift_class == "column_added"]
     assert added == sorted(added)
+
+
+def test_missingness_shift_reports_measured_before_after():
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", missing_pct=3.1)])
+    obs = _profile([_col("a", missing_pct=11.7)])
+    findings = classify_drift(base, obs)
+    ms = [f for f in findings if f.drift_class == "missingness_shift"]
+    assert len(ms) == 1
+    assert ms[0].before == "3.10%"
+    assert ms[0].after == "11.70%"
+    assert ms[0].severity == "warning"
+
+
+def test_cardinality_shift_reported():
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", card=5)])
+    obs = _profile([_col("a", card=42)])
+    findings = classify_drift(base, obs)
+    cs = [f for f in findings if f.drift_class == "cardinality_shift"]
+    assert len(cs) == 1
+    assert cs[0].before == "5 distinct"
+    assert cs[0].after == "42 distinct"
+
+
+def test_no_shift_when_equal():
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", missing_pct=3.1, card=5)])
+    obs = _profile([_col("a", missing_pct=3.1, card=5)])
+    assert classify_drift(base, obs) == []
+
+
+def test_grain_pk_drift_is_blocked_and_principle_v():
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a")], is_unique=True, null_pk=0)
+    obs = _profile([_col("a")], is_unique=False, null_pk=0)
+    findings = classify_drift(base, obs)
+    g = [f for f in findings if f.drift_class == "grain_pk_drift"]
+    assert len(g) == 1
+    assert g[0].severity == "blocked"
+    assert g[0].principle_v is True
