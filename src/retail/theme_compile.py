@@ -27,10 +27,15 @@ from pathlib import Path
 
 from .color import is_valid_hex
 from .theme_gen import (
+    MIN_LABEL_FONT_PT,
+    MIN_TITLE_FONT_PT,
     ThemeGenError,
     ThemeSeed,
     _validate_name,
+    _validate_transparency,
+    check_composite_contrast_or_raise,
     check_contrast_or_raise,
+    check_font_floor_or_raise,
     render_theme_json,
 )
 
@@ -57,6 +62,46 @@ _DL3_DEFERRED_FIELDS = (
     "bad",
     "visualStyles",
 )
+
+# ``visualStyles`` is deferred (above) but is NOT wholly human-owned: the
+# generator itself writes the ``*``/``*`` title/label fonts (token-driven since
+# T8) and the opt-in overlay ``background`` (T18). Those sub-keys must NOT count
+# as hand-tuned -- otherwise a legitimate token-declared font/overlay change
+# could never be recompiled over an existing theme (even with --force). Only the
+# REMAINDER of visualStyles (any other visual type or property a human added) is
+# the human-owned surface the deferred-field guard protects.
+_GENERATOR_OWNED_VISUAL_STYLE_KEYS = ("title", "labels", "background")
+
+
+def _human_owned_visual_styles(vs: object) -> object:
+    """``visualStyles`` with the generator-owned ``*``/``*`` keys removed.
+
+    Leaves everything else untouched, so comparing the returned value across
+    existing-vs-rendered detects a hand-tuned visualStyle a human added while
+    ignoring token-driven font/overlay churn the generator legitimately owns.
+    """
+    if not isinstance(vs, dict):
+        return vs
+    result = {k: v for k, v in vs.items()}
+    star = result.get("*")
+    if isinstance(star, dict):
+        new_star = {k: v for k, v in star.items()}
+        star_star = new_star.get("*")
+        if isinstance(star_star, dict):
+            pruned = {
+                k: v
+                for k, v in star_star.items()
+                if k not in _GENERATOR_OWNED_VISUAL_STYLE_KEYS
+            }
+            if pruned:
+                new_star["*"] = pruned
+            else:
+                new_star.pop("*", None)
+        if new_star:
+            result["*"] = new_star
+        else:
+            result.pop("*", None)
+    return result
 
 
 def _require_mapping(value: object, label: str) -> dict:
@@ -95,7 +140,7 @@ def palette_from_tokens(tokens_doc: dict) -> dict:
     )
     text = _require_mapping(colors.get("text"), "colors.text")
     sentiment = _require_mapping(colors.get("sentiment"), "colors.sentiment")
-    return {
+    pal: dict = {
         "colors": {
             "primary": _require_hex(colors.get("primary"), "colors.primary"),
             "secondary": _require_hex(colors.get("secondary"), "colors.secondary"),
@@ -121,6 +166,13 @@ def palette_from_tokens(tokens_doc: dict) -> dict:
             "data_colors": _require_data_colors(colors),
         }
     }
+    try:
+        transparency = _validate_transparency(tokens_doc.get("transparency"))
+    except ThemeGenError as exc:
+        raise ThemeCompileError(str(exc)) from exc
+    if transparency is not None:
+        pal["transparency"] = transparency
+    return pal
 
 
 def _derive_name(tokens_doc: dict) -> str:
@@ -156,6 +208,15 @@ def seed_from_tokens(tokens_doc: dict, name_override: str | None) -> ThemeSeed:
         _validate_name(name)  # reuse theme_gen's slug guard
     except ThemeGenError as exc:
         raise ThemeCompileError(str(exc)) from exc
+    # Per-KEY fallback, not per-block: a pre-feature tokens file may have no
+    # typography block at all (executive-dark), or a typography block that
+    # predates these two keys (tower-retail's base_size_pt/scale_pt block).
+    # Either way, a missing KEY falls back to the fixed constant -- never to
+    # a guessed/inherited value -- so a byte-identical recompile of an
+    # unmodified tokens file never trips a phantom font-field conflict.
+    typo = tokens_doc.get("typography") or {}
+    title_font_pt = float(typo.get("title_font_pt", MIN_TITLE_FONT_PT))
+    label_font_pt = float(typo.get("label_font_pt", MIN_LABEL_FONT_PT))
     return ThemeSeed(
         name=name,
         mode=_mode_from_style(tokens_doc),
@@ -168,6 +229,9 @@ def seed_from_tokens(tokens_doc: dict, name_override: str | None) -> ThemeSeed:
         good=c["sentiment"]["success"],
         neutral=c["sentiment"]["warning"],
         bad=c["sentiment"]["danger"],
+        title_font_pt=title_font_pt,
+        label_font_pt=label_font_pt,
+        transparency=pal.get("transparency"),
     )
 
 
@@ -219,11 +283,18 @@ def _deferred_field_conflicts(existing: dict, rendered: dict) -> list[str]:
     decoded JSON values (not raw file text) means CRLF/whitespace differences
     in the committed file can never register as a conflict.
     """
-    return [
-        field
-        for field in _DL3_DEFERRED_FIELDS
-        if existing.get(field) != rendered.get(field)
-    ]
+    conflicts = []
+    for field in _DL3_DEFERRED_FIELDS:
+        existing_val = existing.get(field)
+        rendered_val = rendered.get(field)
+        if field == "visualStyles":
+            # Compare only the human-owned remainder -- token-driven font/overlay
+            # churn under the generator-owned *//* keys is not a hand-tuned conflict.
+            existing_val = _human_owned_visual_styles(existing_val)
+            rendered_val = _human_owned_visual_styles(rendered_val)
+        if existing_val != rendered_val:
+            conflicts.append(field)
+    return conflicts
 
 
 def _load_existing_theme(out: Path) -> dict:
@@ -248,6 +319,11 @@ def compile_theme(tokens_path: Path, out_path: Path | None, force: bool) -> Path
     seed = seed_from_tokens(tokens_doc, name_override=None)
     palette = palette_from_tokens(tokens_doc)
     check_contrast_or_raise(palette)  # refuse a theme CT1 would reject
+    try:
+        check_font_floor_or_raise(seed)  # refuse a committed sub-floor font
+        check_composite_contrast_or_raise(palette)  # refuse a failing overlay
+    except ThemeGenError as exc:
+        raise ThemeCompileError(str(exc)) from exc
     out = _resolve_out(tokens_doc, tokens_path, out_path)
     rendered_str = render_theme_json(palette, seed)
     if out.exists():

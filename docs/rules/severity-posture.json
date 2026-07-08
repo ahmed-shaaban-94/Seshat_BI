@@ -45,6 +45,12 @@
     "CT1": [
       "error"
     ],
+    "CT2": [
+      "<no-finding>"
+    ],
+    "CT3": [
+      "<no-finding>"
+    ],
     "D1": [
       "error"
     ],
@@ -101,6 +107,9 @@
     ],
     "DL7": [
       "<no-finding>"
+    ],
+    "DL8": [
+      "error"
     ],
     "DR1": [
       "error"

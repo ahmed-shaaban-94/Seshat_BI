@@ -444,9 +444,46 @@ def _build_parser() -> argparse.ArgumentParser:
     themegen.add_argument("--good", default=None, metavar="#RRGGBB")
     themegen.add_argument("--neutral", default=None, metavar="#RRGGBB")
     themegen.add_argument("--bad", default=None, metavar="#RRGGBB")
+    themegen.add_argument(
+        "--title-font-pt",
+        dest="title_font_pt",
+        type=float,
+        default=None,
+        metavar="PT",
+        help="title font size in points (default 12.0; floor enforced, not settable)",
+    )
+    themegen.add_argument(
+        "--label-font-pt",
+        dest="label_font_pt",
+        type=float,
+        default=None,
+        metavar="PT",
+        help="label font size in points (default 9.0; floor enforced, not settable)",
+    )
     themegen.add_argument("--repo", default=".", help="repo root to write into")
     themegen.add_argument(
         "--force", action="store_true", help="overwrite existing files"
+    )
+    themegen.add_argument(
+        "--pair",
+        action="store_true",
+        help="also derive and write a dark-mode pair from a light --mode seed",
+    )
+    themegen.add_argument(
+        "--overlay-fg",
+        dest="overlay_fg",
+        default=None,
+        metavar="#RRGGBB",
+        help="opt-in overlay-role foreground; composited over background and "
+        "AA-gated (needs --overlay-transparency-pct)",
+    )
+    themegen.add_argument(
+        "--overlay-transparency-pct",
+        dest="overlay_transparency_pct",
+        type=float,
+        default=None,
+        metavar="PCT",
+        help="overlay opacity in [0,100]; 0 = opaque (needs --overlay-fg)",
     )
 
     # Tokens -> theme compile (deterministic; reuses theme-gen's renderer). Reads a

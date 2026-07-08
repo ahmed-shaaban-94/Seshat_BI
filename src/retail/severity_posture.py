@@ -218,6 +218,13 @@ _YAML_DL3_TOKENS = (
 )
 _JSON_DL3_THEME = '{"dataColors": ["#999999"]}\n'
 
+# tokens declare a sentiment_map but the theme drifts on it -> DL8 ERRORs.
+_YAML_DL8_TOKENS = (
+    "meta: { compiles_to: demo.theme.json, sentiment_map: { success: good } }\n"
+    "colors:\n  sentiment:\n    success: '#2E7D5B'\n"
+)
+_JSON_DL8_THEME = '{"good": "#000000"}\n'
+
 # A design-review evidence record missing a required field -> DL4 ERRORs.
 _MD_DL4 = "## Record\n\n- **page_id:** `p01`\n"
 
@@ -253,6 +260,10 @@ _YAML_CT1 = (
     "  text:\n    primary: '#CCCCCC'\n"
     "accessibility:\n  min_text_contrast_ratio: '4.5:1'\n"
 )
+
+# data_colors declared without a min_categorical_deltae floor -> CT3 opt-in
+# absent -> silent skip, <no-finding> (Principle V: floor key IS the opt-in).
+_YAML_CT3 = "colors:\n  data_colors:\n    - '#2FB6C4'\n    - '#12263A'\n"
 
 # A tracked path longer than MAX_REL_PATH -> G5 ERROR. G5 reads ctx.tracked_files
 # only (the path string), never disk, so the file is NOT materialized (a >260-char
@@ -409,6 +420,12 @@ _RULE_FIXTURES: dict[str, _Fixture] = {
             ("demo.theme.json", _JSON_DL3_THEME),
         )
     ),
+    "DL8": _Fixture(
+        files=(
+            ("design/tokens/demo-design-tokens.yaml", _YAML_DL8_TOKENS),
+            ("demo.theme.json", _JSON_DL8_THEME),
+        )
+    ),
     "DL4": _Fixture(files=(("reports/demo/design-review-evidence.md", _MD_DL4),)),
     "DL5": _Fixture(files=(("design/grids/demo-grid.yaml", _YAML_DL5),)),
     "SF1": _Fixture(
@@ -419,6 +436,8 @@ _RULE_FIXTURES: dict[str, _Fixture] = {
         )
     ),
     "CT1": _Fixture(files=(("design/tokens/demo-design-tokens.yaml", _YAML_CT1),)),
+    "CT2": _Fixture(),
+    "CT3": _Fixture(files=(("design/tokens/demo-design-tokens.yaml", _YAML_CT3),)),
 }
 
 

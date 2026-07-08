@@ -52,6 +52,14 @@
     "title": "Token text/background color pairs meet the declared WCAG contrast floor"
   },
   {
+    "id": "CT2",
+    "title": "Adjacent data_colors/ramp entries clear the declared deltaE76 floor"
+  },
+  {
+    "id": "CT3",
+    "title": "Categorical data_colors entries meet the declared whole-set deltaE76 distinctness floor"
+  },
+  {
     "id": "D1",
     "title": "Measure names must be PascalCase"
   },
@@ -126,6 +134,10 @@
   {
     "id": "DL7",
     "title": "Formatting-plan ledger is well-formed (citations resolve, allow-list, no score)"
+  },
+  {
+    "id": "DL8",
+    "title": "Theme sentiment colors are faithful to a human-declared sentiment_map"
   },
   {
     "id": "DR1",

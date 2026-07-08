@@ -11,6 +11,7 @@
 ## 8. Accessibility checks
 
 - [x] **Contrast** -- CT1 (computed): text.primary 14.18:1, text.secondary 9.91:1, text.muted 6.15:1 vs background (all >= 4.5:1 AA). *Evidence: CT1 arithmetic on the committed tokens.*
+- [x] **Sentiment fidelity** -- DL8 (declared): the owner-ratified `meta.sentiment_map` (`success->good`, `warning->neutral`, `danger->bad`) reconciles against `themes/executive-dark.theme.json` with zero drift. *Evidence: DL8 reconcile on the committed pair; see Clarifications 2026-07-08.*
 - [ ] **CVD distinguishability** -- OPEN: the monochromatic ramp is less category-distinguishable; needs a named reviewer (Principle V).
 - [ ] **Small-size / adjacency legibility** -- OPEN: needs a named reviewer against a rendered page (F016 surface; not yet built).
 - [ ] **No pure-saturated background behind dense charts** -- OPEN: named-reviewer design note.
@@ -22,5 +23,16 @@
   - `themes/executive-dark.theme.json` generated; CT1 contrast clean (computed above)
 - **Blocking reasons (open; no `pass` was ever claimed):**
   - CVD / legibility / saturation have no named reviewer yet (cannot be `pass` on author alone -- rule #9 / Principle V)
+
+## Clarifications
+
+- **2026-07-08 -- sentiment 4->3 correspondence (owner-ratified, T19).** The
+  owner froze the sentiment map DL8 reconciles: tokens `colors.sentiment.success`
+  -> theme `good`, `colors.sentiment.warning` -> theme `neutral`,
+  `colors.sentiment.danger` -> theme `bad`. This is a clean 3->3 map for
+  executive-dark (no unmapped 4th key). The correspondence is a human ruling
+  (the "warning tokens key vs neutral theme key" naming ambiguity DL3 defers),
+  not a generator default; it lives in `design/tokens/executive-dark-design-tokens.yaml`
+  under `meta.sentiment_map`. DL8 verifies fidelity but never picks the map.
 
 (No `score:` / `confidence:` field exists here BY DESIGN -- rule 9.)
