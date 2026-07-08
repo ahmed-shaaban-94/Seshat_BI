@@ -181,8 +181,10 @@ def _matching_status_data(
 ) -> tuple[Path | None, dict[str, Any] | None, str | None]:
     for status_path in sorted(mappings_dir.glob("*/readiness-status.yaml")):
         data, error = _load_yaml_mapping(status_path)
-        if error is None and data is not None and table in _status_names(
-            status_path, data
+        if (
+            error is None
+            and data is not None
+            and table in _status_names(status_path, data)
         ):
             return status_path, data, None
     return None, None, None
@@ -325,8 +327,7 @@ def _approval_missing(
     stage_name: str, block: dict[str, Any], approved: set[str]
 ) -> bool:
     return (
-        _approval_required_for_stage(stage_name, block)
-        and stage_name not in approved
+        _approval_required_for_stage(stage_name, block) and stage_name not in approved
     )
 
 
