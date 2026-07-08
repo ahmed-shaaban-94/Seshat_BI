@@ -46,6 +46,7 @@ htmlcov/
 dist/
 build/
 .mypy_cache/
+tmp/
 
 # ── Vendored Power BI Modeling MCP (36MB binary tool, not source) ──
 # The Microsoft Power BI Modeling MCP server, kept locally to build/edit the

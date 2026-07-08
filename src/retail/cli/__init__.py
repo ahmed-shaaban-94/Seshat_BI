@@ -140,6 +140,10 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "init-project": _lazy(".commands.init_project", "init_project_main"),
     "kit-lint": _lazy(".commands.kit_lint", "run_kit_lint"),
     "status": _lazy(".commands.status", "status_main"),
+    "next": _lazy(".commands.next", "next_main"),
+    "approvals": _lazy(".commands.approvals", "approvals_main"),
+    "evidence-pack": _lazy(".commands.evidence_pack", "evidence_pack_main"),
+    "blockers": _lazy(".commands.blockers", "blockers_main"),
     "doctor": _run_doctor,
     "demo": _lazy("..demo", "run_demo"),
 }

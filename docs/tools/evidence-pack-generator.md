@@ -1,6 +1,8 @@
 # Tool -- Evidence Pack Generator
 
-- **Status:** Authored (docs/templates; no runtime code -- the agent is the runtime).
+- **Status:** Runtime preview slice shipped: `retail evidence-pack` emits a
+  read-only JSON/text 10-section evidence-pack preview. Markdown artifact-writing
+  remains the agent-led workflow described below.
 - **Roadmap feature:** F028  **On-disk spec:** `specs/022-evidence-pack-generator/`
   (dir 022 == F028; when the dir number and the F-number disagree, the roadmap
   F-number wins).
@@ -34,6 +36,19 @@ originate the evidence and it owns no truth. Every section points back at the ar
 it summarizes; any section whose source is missing or unfilled is recorded as a
 BLOCKER, never papered over. The pack surfaces the publish-ready decision; it never
 makes it.
+
+## CLI preview
+
+```bash
+retail evidence-pack --table retail_store_sales
+retail evidence-pack --table bronze.retail_store_sales --format json
+```
+
+The CLI preview reads committed artifacts and returns the 10-section shape as
+data. It writes no `evidence-pack-index.md`, writes no
+`evidence-pack-summary.md`, edits no source artifact, runs no validator, and
+records no approval. Use it as the agent-facing audit surface before deciding
+whether to produce the derived markdown pack.
 
 ## Authority posture (F024) -- the filled module contract
 
