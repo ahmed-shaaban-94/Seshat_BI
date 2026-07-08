@@ -22,6 +22,8 @@ def test_reads_template_conformant_profile():
     disc = next(c for c in p.columns if c.name == "discount_applied")
     assert disc.missing_pct == pytest.approx(33.39, abs=0.01)
     assert disc.distinct_cardinality == 3
+    # the "Type as landed" column is parsed into landed_type (all-TEXT bronze)
+    assert disc.landed_type == "TEXT"
     assert p.pk.is_unique is True
     assert p.pk.total == 12575
 

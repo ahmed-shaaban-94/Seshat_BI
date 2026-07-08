@@ -113,6 +113,44 @@ def _surviving_column_findings(base_cols: dict, obs_cols: dict) -> list[DriftFin
     return findings
 
 
+def _normalize_type(landed_type: str | None) -> str | None:
+    """Canonicalize a landed type for comparison. The baseline (human markdown)
+    writes `TEXT`; a live information_schema re-profile returns `text` -- the
+    SAME type. Lowercase + strip so a case/whitespace-only difference is NOT read
+    as a retype (otherwise every bronze-all-TEXT column would false-fire)."""
+    if landed_type is None:
+        return None
+    return landed_type.strip().lower()
+
+
+def _column_retyped_findings(base_cols: dict, obs_cols: dict) -> list[DriftFinding]:
+    """The landed type of a surviving column changed (NORMALIZED compare). A
+    mechanical `warning` -- NOT Principle-V. blocked-if-key/measure is a deferred
+    follow-on (that half needs a semantic 'measure' ruling + PK column names the
+    PkProof doesn't carry). Both types must be known: if either side has no
+    landed_type, we cannot prove a retype -> stay silent (honest-skip)."""
+    findings: list[DriftFinding] = []
+    for name in sorted(base_cols.keys() & obs_cols.keys()):
+        before = base_cols[name].landed_type
+        after = obs_cols[name].landed_type
+        if before is None or after is None:
+            continue
+        if _normalize_type(before) != _normalize_type(after):
+            findings.append(
+                DriftFinding(
+                    drift_class="column_retyped",
+                    column=name,
+                    before=before,
+                    after=after,
+                    severity="warning",
+                    principle_v=False,
+                    note="landed type changed; a silver cast may lose data or "
+                    "fail. blocked-escalation for a key/measure is deferred.",
+                )
+            )
+    return findings
+
+
 def _grain_pk_broke(baseline: ProfileResult, observed: ProfileResult) -> bool:
     """The baseline PK was unique but the observed re-profile no longer proves it."""
     return baseline.pk.is_unique and (
@@ -220,6 +258,7 @@ def classify_drift(
     return [
         *_column_set_findings(base_cols, obs_cols),
         *_surviving_column_findings(base_cols, obs_cols),
+        *_column_retyped_findings(base_cols, obs_cols),
         *_grain_pk_findings(baseline, observed),
         *_returns_rule_findings(base_cols, obs_cols, sem.returns_column),
         *_pii_surface_findings(base_cols, obs_cols, sem.dropped_pii_columns),

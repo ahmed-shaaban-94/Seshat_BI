@@ -26,9 +26,13 @@ _SCHEMA_PATH = (
 )
 
 
-def _col(name, missing_pct=0.0, card=10):
+def _col(name, missing_pct=0.0, card=10, landed_type=None):
     return ColumnProfile(
-        name=name, missing_count=0, missing_pct=missing_pct, distinct_cardinality=card
+        name=name,
+        missing_count=0,
+        missing_pct=missing_pct,
+        distinct_cardinality=card,
+        landed_type=landed_type,
     )
 
 
@@ -359,3 +363,47 @@ def test_dropped_pii_column_present_in_both_is_not_pii_surface_drift():
         base, obs, DriftSemantics(dropped_pii_columns=frozenset({"ssn"}))
     )
     assert not any(f.drift_class == "pii_surface_drift" for f in findings)
+
+
+# --- column_retyped (mechanical, warning; NOT Principle-V) --------------------
+# The landed type of a surviving column changed. blocked-if-key/measure is a
+# deferred follow-on (severity's semantic half); this ships the warning level.
+
+
+def test_column_retyped_is_warning_not_principle_v():
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", landed_type="text")])
+    obs = _profile([_col("a", landed_type="numeric")])
+    findings = classify_drift(base, obs)
+    rt = [f for f in findings if f.drift_class == "column_retyped"]
+    assert len(rt) == 1
+    assert rt[0].column == "a"
+    assert rt[0].before == "text"
+    assert rt[0].after == "numeric"
+    assert rt[0].severity == "warning"
+    assert rt[0].principle_v is False
+
+
+def test_case_only_type_difference_is_not_retyped(tmp_path=None):
+    # THE GATING GUARD: baseline markdown records uppercase "TEXT"; a live
+    # information_schema re-profile returns lowercase "text". These are the SAME
+    # type -- a naive != would fire column_retyped on every bronze-all-TEXT
+    # column (a false-drift storm). The compare must normalize (lowercase+strip).
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", landed_type="TEXT")])
+    obs = _profile([_col("a", landed_type="text")])
+    findings = classify_drift(base, obs)
+    assert not any(f.drift_class == "column_retyped" for f in findings)
+
+
+def test_no_retyped_when_landed_type_unknown_on_either_side():
+    # Both-known guard: if either side lacks a landed_type (None), we can't prove
+    # a retype -> stay silent (honest-skip), rather than fabricate one. This is
+    # also what keeps the older _col(landed_type=None) tests free of retype noise.
+    from retail.drift import classify_drift
+
+    base = _profile([_col("a", landed_type=None)])
+    obs = _profile([_col("a", landed_type="numeric")])
+    assert not any(f.drift_class == "column_retyped" for f in classify_drift(base, obs))
