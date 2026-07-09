@@ -515,26 +515,10 @@ def _add_demo_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    """Build the CLI argument parser.
-
-    Exposed (not inlined in ``main``) so flag->field mapping is unit-testable
-    without executing any rules. The two commit-aware flags live UNDER the
-    ``check`` subcommand alongside ``--repo``.
-    """
-    parser = argparse.ArgumentParser(
-        prog="retail",
-        description="Static governance checks for committed Power BI artifacts.",
-    )
-    sub = parser.add_subparsers(dest="command", required=True)
-    _add_check_parser(sub)
-    _add_validate_parser(sub)
-    _add_drift_parser(sub)
-    _add_semantic_and_value_check_parsers(sub)
-
-    # DAX generator (Task 7). Lazy imports inside _run_generate keep dax_gen/yaml
-    # out of the `retail check` import chain (mirrors the validate / semantic-check
-    # handlers). --out is fail-closed: refuses powerbi/ writes and overwrites.
+def _add_generate_parser(sub: argparse._SubParsersAction) -> None:
+    """DAX generator (Task 7). Lazy imports inside _run_generate keep dax_gen/yaml
+    out of the `retail check` import chain (mirrors the validate / semantic-check
+    handlers). --out is fail-closed: refuses powerbi/ writes and overwrites."""
     gen = sub.add_parser(
         "generate",
         help="generate a verified best-practice DAX measure from a metric contract",
@@ -562,11 +546,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="output format on success (tmdl or json)",
     )
 
-    # Theme generator (Slice 1, DEFINE-only). Assembles a caller-supplied palette
-    # into a gated surface-3 theme artifact set (tokens + theme JSON + spec).
-    # stdlib-only; self-checks CT1 before writing; readiness = warning (no self-
-    # pass). Writes NO PBIR / visual.json; no pbi-cli; adds NO new `retail check`
-    # rule (the emitted files are covered by DL1/DL3/CT1).
+
+def _add_theme_gen_parser(sub: argparse._SubParsersAction) -> None:
+    """Theme generator (Slice 1, DEFINE-only). Assembles a caller-supplied palette
+    into a gated surface-3 theme artifact set (tokens + theme JSON + spec).
+    stdlib-only; self-checks CT1 before writing; readiness = warning (no self-
+    pass). Writes NO PBIR / visual.json; no pbi-cli; adds NO new `retail check`
+    rule (the emitted files are covered by DL1/DL3/CT1)."""
     themegen = sub.add_parser(
         "theme-gen",
         help="generate a gated Power BI theme (tokens + theme JSON + spec)",
@@ -596,6 +582,14 @@ def _build_parser() -> argparse.ArgumentParser:
     themegen.add_argument("--good", default=None, metavar="#RRGGBB")
     themegen.add_argument("--neutral", default=None, metavar="#RRGGBB")
     themegen.add_argument("--bad", default=None, metavar="#RRGGBB")
+    _add_theme_gen_output_args(themegen)
+
+
+def _add_theme_gen_output_args(themegen: argparse.ArgumentParser) -> None:
+    """The `theme-gen` tail: font-size floors, write target (--repo/--force),
+    dark-mode pairing, and the opt-in overlay role. Split verbatim off
+    ``_add_theme_gen_parser`` (add-order preserved) to keep that helper under the
+    CodeScene 70-line Large-Method threshold; no flag/help text changes."""
     themegen.add_argument(
         "--title-font-pt",
         dest="title_font_pt",
@@ -638,9 +632,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overlay opacity in [0,100]; 0 = opaque (needs --overlay-fg)",
     )
 
-    # Tokens -> theme compile (deterministic; reuses theme-gen's renderer). Reads a
-    # committed design-tokens YAML and writes its matching theme.json. Repairs
-    # DL3-governed drift but refuses to overwrite hand-tuned DL3-deferred fields.
+
+def _add_theme_compile_parser(sub: argparse._SubParsersAction) -> None:
+    """Tokens -> theme compile (deterministic; reuses theme-gen's renderer). Reads a
+    committed design-tokens YAML and writes its matching theme.json. Repairs
+    DL3-governed drift but refuses to overwrite hand-tuned DL3-deferred fields."""
     themecompile = sub.add_parser(
         "theme-compile",
         help="compile a committed design-tokens YAML into its theme.json",
@@ -661,10 +657,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="overwrite an existing theme.json"
     )
 
-    # PBIR theme-application (adapter increment A). Applies a theme-gen theme to a
-    # committed PBIR report (BaseTheme resource + report.json themeCollection).
-    # Companion authoring adapter (ADR 0015): writes committed PBIR, allow-list-only,
-    # deterministic + validated; NO pbi-cli / live Power BI / external dependency.
+
+def _add_pbir_apply_theme_parser(sub: argparse._SubParsersAction) -> None:
+    """PBIR theme-application (adapter increment A). Applies a theme-gen theme to a
+    committed PBIR report (BaseTheme resource + report.json themeCollection).
+    Companion authoring adapter (ADR 0015): writes committed PBIR, allow-list-only,
+    deterministic + validated; NO pbi-cli / live Power BI / external dependency."""
     pbirtheme = sub.add_parser(
         "pbir-apply-theme",
         help="apply a generated theme to a committed PBIR report (adapter)",
@@ -684,10 +682,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overwrite an existing different base theme",
     )
 
-    # PBIR per-visual formatting (adapter increment B). Sets allow-listed formatting
-    # (objects / visualContainerObjects) on an existing data-bound visual.json; the
-    # data binding (query/visualType) is preserved byte-for-byte (FR-003). Same
-    # adapter boundary as increment A: local files only, no external dependency.
+
+def _add_pbir_format_visual_parser(sub: argparse._SubParsersAction) -> None:
+    """PBIR per-visual formatting (adapter increment B). Sets allow-listed formatting
+    (objects / visualContainerObjects) on an existing data-bound visual.json; the
+    data binding (query/visualType) is preserved byte-for-byte (FR-003). Same
+    adapter boundary as increment A: local files only, no external dependency."""
     pbirfmt = sub.add_parser(
         "pbir-format-visual",
         help="apply allow-listed formatting to an existing PBIR visual (adapter)",
@@ -710,11 +710,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overwrite a formatting property already set to a different value",
     )
 
-    # PBIR page background (adapter increment C). Sets a page's canvas background to a
-    # committed surface-2 image asset: copies the asset into RegisteredResources,
-    # registers it in report.json, references it from page.json objects.background via
-    # a ResourcePackageItem. Allow-list-only (touches only objects.background + the
-    # RegisteredResources package); no external dependency; surface-2 purity.
+
+def _add_pbir_page_background_parser(sub: argparse._SubParsersAction) -> None:
+    """PBIR page background (adapter increment C). Sets a page's canvas background to a
+    committed surface-2 image asset: copies the asset into RegisteredResources,
+    registers it in report.json, references it from page.json objects.background via
+    a ResourcePackageItem. Allow-list-only (touches only objects.background + the
+    RegisteredResources package); no external dependency; surface-2 purity."""
     pbirbg = sub.add_parser(
         "pbir-set-page-background",
         help="set a PBIR page's canvas background to a surface-2 image asset (adapter)",
@@ -738,10 +740,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="replace an existing page background"
     )
 
-    # PBIR visual geometry (adapter increment D). Sets a visual's position rectangle
-    # (x/y/width/height/z/tabOrder), preserving its data binding (FR-003) and refusing
-    # off-canvas rectangles read from the real page.json canvas. NEVER visualType /
-    # creation / unbound moves (ADR 0016). Allow-list-only; no external dependency.
+
+def _add_pbir_geometry_parser(sub: argparse._SubParsersAction) -> None:
+    """PBIR visual geometry (adapter increment D). Sets a visual's position rectangle
+    (x/y/width/height/z/tabOrder), preserving its data binding (FR-003) and refusing
+    off-canvas rectangles read from the real page.json canvas. NEVER visualType /
+    creation / unbound moves (ADR 0016). Allow-list-only; no external dependency."""
     pbirgeom = sub.add_parser(
         "pbir-set-geometry",
         help="set a PBIR visual's position rectangle (adapter increment D)",
@@ -759,9 +763,11 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    # Rule-registry snapshot manifest (feature 043). Writes the golden inventory
-    # docs/rules/rules-manifest.json from the live registry. Test-only consumer
-    # (the snapshot test); adds NO new `retail check` rule.
+
+def _add_manifest_parser(sub: argparse._SubParsersAction) -> None:
+    """Rule-registry snapshot manifest (feature 043). Writes the golden inventory
+    docs/rules/rules-manifest.json from the live registry. Test-only consumer
+    (the snapshot test); adds NO new `retail check` rule."""
     manifest = sub.add_parser(
         "manifest",
         help="regenerate docs/rules/rules-manifest.json from the live rule registry",
@@ -770,10 +776,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--repo", default=".", help="repo root to write the manifest into"
     )
 
-    # Severity-posture golden record (feature 044). Writes the observed severity
-    # posture of every registered rule + the L3 surface to
-    # docs/rules/severity-posture.json. Test-only consumer (the snapshot test);
-    # adds NO new `retail check` rule and NO new EXPECTED_RULE_ID.
+
+def _add_severity_posture_parser(sub: argparse._SubParsersAction) -> None:
+    """Severity-posture golden record (feature 044). Writes the observed severity
+    posture of every registered rule + the L3 surface to
+    docs/rules/severity-posture.json. Test-only consumer (the snapshot test);
+    adds NO new `retail check` rule and NO new EXPECTED_RULE_ID."""
     severity_posture = sub.add_parser(
         "severity-posture",
         help=(
@@ -785,11 +793,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--repo", default=".", help="repo root to write the record into"
     )
 
-    # Scaffold-rule authoring helper + doctor (feature 062). Static, stdlib-only.
-    # Author mode WRITES exactly three targets (stub module, failing test stub,
-    # EXPECTED_RULE_IDS insertion) and PRINTS the golden-regen commands + a
-    # suggested glossary row; doctor mode READS the five wiring places and reports
-    # drift. Adds NO new `retail check` rule (it is tooling).
+
+def _add_scaffold_parser(sub: argparse._SubParsersAction) -> None:
+    """Scaffold-rule authoring helper + doctor (feature 062). Static, stdlib-only.
+    Author mode WRITES exactly three targets (stub module, failing test stub,
+    EXPECTED_RULE_IDS insertion) and PRINTS the golden-regen commands + a
+    suggested glossary row; doctor mode READS the five wiring places and reports
+    drift. Adds NO new `retail check` rule (it is tooling)."""
     scaffold_p = sub.add_parser(
         "scaffold",
         help=(
@@ -817,10 +827,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="the one-line rule title (author mode)",
     )
 
-    # `init` (feature 070): SUBSTRATE-WRITING ONLY. Writes the compass projection +
-    # manifests + the fenced SESHAT-KIT regions of AGENTS.md/CLAUDE.md, then PRINTS
-    # the next agent step. It NEVER prompts, shows a menu, or emits a profile -- the
-    # delegate/route/profile flow is the agent performing the `retail-init` skill.
+
+def _add_init_parser(sub: argparse._SubParsersAction) -> None:
+    """`init` (feature 070): SUBSTRATE-WRITING ONLY. Writes the compass projection +
+    manifests + the fenced SESHAT-KIT regions of AGENTS.md/CLAUDE.md, then PRINTS
+    the next agent step. It NEVER prompts, shows a menu, or emits a profile -- the
+    delegate/route/profile flow is the agent performing the `retail-init` skill."""
     init_p = sub.add_parser(
         "init",
         help=(
@@ -830,20 +842,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     init_p.add_argument("--repo", default=".", help="repo root to bootstrap")
 
-    _add_init_project_parser(sub)
-    _add_status_parser(sub)
-    _add_next_parser(sub)
-    _add_approvals_parser(sub)
-    _add_evidence_pack_parser(sub)
-    _add_blockers_parser(sub)
-    _add_pii_notice_parser(sub)
-    _add_approver_view_parser(sub)
-    _add_dashboard_planner_parser(sub)
-    _add_gap_detector_parser(sub)
 
-    # `kit-lint` (feature 072): standalone Maintenance-Automation step (NOT a `retail
-    # check` rule -- it parses yaml). Fails loud (exit 1) when a compass PROJECTION
-    # drifts from the canonical kit source. Read-only; reads no constitution.
+def _add_kit_lint_parser(sub: argparse._SubParsersAction) -> None:
+    """`kit-lint` (feature 072): standalone Maintenance-Automation step (NOT a `retail
+    check` rule -- it parses yaml). Fails loud (exit 1) when a compass PROJECTION
+    drifts from the canonical kit source. Read-only; reads no constitution."""
     kit_lint_p = sub.add_parser(
         "kit-lint",
         help=(
@@ -853,6 +856,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     kit_lint_p.add_argument("--repo", default=".", help="repo root to lint")
 
+
+def _add_doctor_parser(sub: argparse._SubParsersAction) -> None:
+    """`doctor`: read-only repo-wide drift digest. Extracted (mirrors the other
+    `_add_*_parser` helpers) to keep `_build_parser` from growing (CodeScene
+    large-method guard)."""
     doctor_p = sub.add_parser(
         "doctor",
         help=(
@@ -867,6 +875,46 @@ def _build_parser() -> argparse.ArgumentParser:
         help="exit non-zero if any finding is present (default: advisory, exit 0)",
     )
 
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser.
+
+    Exposed (not inlined in ``main``) so flag->field mapping is unit-testable
+    without executing any rules. The two commit-aware flags live UNDER the
+    ``check`` subcommand alongside ``--repo``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="retail",
+        description="Static governance checks for committed Power BI artifacts.",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+    _add_check_parser(sub)
+    _add_validate_parser(sub)
+    _add_drift_parser(sub)
+    _add_semantic_and_value_check_parsers(sub)
+    _add_generate_parser(sub)
+    _add_theme_gen_parser(sub)
+    _add_theme_compile_parser(sub)
+    _add_pbir_apply_theme_parser(sub)
+    _add_pbir_format_visual_parser(sub)
+    _add_pbir_page_background_parser(sub)
+    _add_pbir_geometry_parser(sub)
+    _add_manifest_parser(sub)
+    _add_severity_posture_parser(sub)
+    _add_scaffold_parser(sub)
+    _add_init_parser(sub)
+    _add_init_project_parser(sub)
+    _add_status_parser(sub)
+    _add_next_parser(sub)
+    _add_approvals_parser(sub)
+    _add_evidence_pack_parser(sub)
+    _add_blockers_parser(sub)
+    _add_pii_notice_parser(sub)
+    _add_approver_view_parser(sub)
+    _add_dashboard_planner_parser(sub)
+    _add_gap_detector_parser(sub)
+    _add_kit_lint_parser(sub)
+    _add_doctor_parser(sub)
     _add_demo_parser(sub)
 
     return parser
