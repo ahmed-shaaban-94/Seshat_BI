@@ -5,6 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+# The category rank + keyword classifier were extracted to readiness_classify.py
+# (spec 115) so approver_view can share the SAME rank without co-locating. This
+# module's behavior is unchanged: _classify returns the identical
+# (category, explanation, next_surface); a regression-lock test asserts
+# byte-identical output.
+from .readiness_classify import classify as _classify
+
 _STAGE_ORDER: tuple[str, ...] = (
     "source_ready",
     "mapping_ready",
@@ -18,53 +25,6 @@ _APPROVAL_REQUIRED: frozenset[str] = frozenset(
     {"mapping_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
 )
 _FILE_SOURCE_KINDS: frozenset[str] = frozenset({"csv", "tsv", "excel"})
-
-_CATEGORY_RULES: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
-    (
-        "approval",
-        ("approval", "approved", "reviewed", "sign-off", "signoff"),
-        (
-            "A named human approval or review is missing or invalid; the agent "
-            "must not self-grant it."
-        ),
-        "approval inbox",
-    ),
-    (
-        "grain",
-        ("grain", "pk", "primary key", "unique"),
-        (
-            "The mapping gate is blocked on grain or key certainty; resolve "
-            "the named grain/PK question before silver work."
-        ),
-        "approval request or source-mapping review",
-    ),
-    (
-        "live_validation",
-        ("dsn", "db extra", "deferred", "validate", "orphan", "reconciliation"),
-        (
-            "The live validation boundary is not clear; configure the DB/live "
-            "validation path or resolve the recorded live finding."
-        ),
-        "retail validate setup",
-    ),
-    (
-        "artifact",
-        ("missing", "absent", "does not exist", "unfilled"),
-        (
-            "A required committed artifact is missing or unfilled; author the "
-            "artifact before proceeding."
-        ),
-        "readiness artifact authoring",
-    ),
-)
-_DEFAULT_CATEGORY = (
-    "readiness",
-    (
-        "A readiness blocker is recorded; resolve the cited fact before moving "
-        "to a later stage."
-    ),
-    "retail next",
-)
 
 
 def _load_yaml_mapping(path: Path) -> dict[str, Any] | None:
@@ -113,15 +73,6 @@ def _has_valid_approval(data: dict[str, Any], stage: str) -> bool:
         and _valid_owner(item.get("owner"))
         for item in approvals
     )
-
-
-def _classify(reason: str) -> tuple[str, str, str]:
-    lowered = reason.lower()
-    for category, markers, explanation, next_surface in _CATEGORY_RULES:
-        if any(marker in lowered for marker in markers):
-            return category, explanation, next_surface
-    category, explanation, next_surface = _DEFAULT_CATEGORY
-    return category, explanation, next_surface
 
 
 def _item(table: str, source_path: str, stage: str, reason: str) -> dict[str, str]:

@@ -146,6 +146,7 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "evidence-pack": _lazy(".commands.evidence_pack", "evidence_pack_main"),
     "blockers": _lazy(".commands.blockers", "blockers_main"),
     "pii-notice": _lazy(".commands.pii_notice", "pii_notice_main"),
+    "approver-view": _lazy(".commands.approver_view", "approver_view_main"),
     "doctor": _run_doctor,
     "demo": _lazy("..demo", "run_demo"),
 }

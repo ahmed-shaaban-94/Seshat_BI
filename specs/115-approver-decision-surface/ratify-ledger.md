@@ -73,8 +73,24 @@ after #114 lands) so they don't tangle. Neither is ratified yet.
 
 ## Ratification
 
-- [ ] **RATIFIED** by: __________________ (named owner or explicitly-delegated
-  authority) on ____-__-__.
+- [x] **RATIFIED** by: Ahmed Shaaban (repo owner) on 2026-07-09.
 - Ratifying means: spec/plan/tasks approved to proceed to `/speckit-implement`
   (or the equivalent build) on this branch.
 - Until this box is checked by a named human, no implementation begins.
+
+### Owner ruling (2026-07-09)
+
+- **OPEN-1 (structure): STANDALONE + extract classifier.** New
+  `src/retail/approver_view.py`; reuse `blocker_explainer`'s rank by EXTRACTING
+  `_CATEGORY_RULES`/`_classify` into a shared `readiness_classify.py`
+  (behavior-preserving, regression-locked so `blocker_explainer`'s output stays
+  byte-identical). Fold-into-`blocker_explainer` REJECTED: the clarify answers
+  (warning stages + `unresolved-questions.md` ingestion + a reassurance
+  grouping) make it a second responsibility, not a sort mode.
+
+### Branch note update (2026-07-09)
+
+Branch `115` was REBASED onto the implemented `114-pii-touch-notice` tip after
+#114 was ratified + built, so #114's ratification + implementation are now in
+#115's ancestry. When landing: #114 first, then #115 (rebase onto main after
+#114 merges).
