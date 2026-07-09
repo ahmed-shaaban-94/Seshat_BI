@@ -70,7 +70,12 @@ default (D5).
 
 - V1 (refusal completeness -- SAFETY): every refusal-eligible source item
   (blocked/warning reason, unmet approval, open question) appears exactly once in
-  `refusal_case[]`. NONE is dropped (FR-001, SC-001/SC-005).
+  `refusal_case[]`. NONE is dropped (FR-001, SC-001/SC-005). The completeness
+  ORACLE must be INDEPENDENT of the composer: the question-side expected open-row
+  set is hand-authored in the fixture-test, NOT the production markdown parser's
+  own output (else a parser bug drops the row from both sides and V1 passes
+  vacuously -- spec 114's join-defect class on the questions side). A
+  parser-under-test fixture (awkward table row) is required.
 - V2 (correct side): no refusal-eligible item appears in `reassurance[]`, and no
   `pass`/valid-approval/`answered` item appears in `refusal_case[]` (D3/D4).
 - V3 (fixed-rank order): `refusal_case[]` is ordered by the enum rank
