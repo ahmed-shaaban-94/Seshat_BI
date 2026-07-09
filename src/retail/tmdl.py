@@ -514,9 +514,7 @@ def _parse_relationship_block(
         if c:
             cfb = c.group("v").strip()
         j += 1
-    relationship = TmdlRelationship(
-        name=name, cross_filtering_behavior=cfb, line=i + 1
-    )
+    relationship = TmdlRelationship(name=name, cross_filtering_behavior=cfb, line=i + 1)
     return relationship, j
 
 
@@ -527,17 +525,15 @@ def parse_relationships(text: str) -> tuple[TmdlRelationship, ...]:
     ``crossFilteringBehavior`` property (or ``None`` if absent).
     """
     lines = _strip_bom(text).splitlines()
-    rels: list[TmdlRelationship] = []
     n = len(lines)
-    i = 0
-    while i < n:
-        rm = _is_relationship_header(lines[i])
-        if rm is not None:
-            relationship, j = _parse_relationship_block(lines, i, n, rm)
-            rels.append(relationship)
-            i = j
-            continue
-        i += 1
+    # A linear scan over every line is equivalent to skipping past each parsed
+    # block: block-continuation lines are deeper-indented (or blank), so
+    # _is_relationship_header can never match inside a block.
+    rels = [
+        _parse_relationship_block(lines, i, n, rm)[0]
+        for i, raw in enumerate(lines)
+        if (rm := _is_relationship_header(raw)) is not None
+    ]
     return tuple(rels)
 
 
