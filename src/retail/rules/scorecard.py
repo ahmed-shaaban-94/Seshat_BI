@@ -140,117 +140,109 @@ def _status_table_rows(text: str) -> tuple[list[re.Match], list[str]]:
     return out, malformed
 
 
+def _finding(rel: str, message: str) -> Finding:
+    # Every SL1 defect is the same ERROR shape (rule_id + severity + locator); only
+    # the message varies. One constructor keeps that shape in a single place.
+    return Finding(
+        rule_id="SL1", severity=Severity.ERROR, message=message, locator=rel
+    )
+
+
+def _contract_resolves(contract: str, tracked: set[str]) -> bool:
+    # C3 predicate: the scorecard cites the contract as `contracts/<file>.md` under its
+    # skill root (the F8 template's own convention), while the tracked file is e.g.
+    # skills/retail-kpi-knowledge/contracts/<file>.md. So resolve by SUFFIX: the
+    # citation is satisfied if any tracked file path ends with the cited
+    # `contracts/<file>.md` (exact-match remains a subset of this).
+    cm = _CONTRACT_RE.search(contract)
+    if cm is None:
+        return False
+    cited = cm.group(0)
+    return any(t == cited or t.endswith("/" + cited) for t in tracked)
+
+
+def _check_row(m: re.Match, rel: str, tracked: set[str]) -> list[Finding]:
+    # The four per-row structural checks, in fixed order C4 -> C1 -> C2 -> C3. An
+    # unknown status short-circuits: C2/C3 are status-conditional, do not apply to it.
+    kpi = m.group("kpi").strip()
+    contract = m.group("contract")
+    status_raw = m.group("status")
+    blocker = m.group("blocker")
+    status = _norm(status_raw)
+    found: list[Finding] = []
+
+    # C4: no <number>% token anywhere in the row.
+    if _PERCENT_RE.search(m.group(0)):
+        found.append(
+            _finding(
+                rel,
+                f"coverage scorecard row '{kpi}' contains a percentage/score token; "
+                "coverage is status + named blocker, never a number (rule #9)",
+            )
+        )
+
+    # C1: status must be in the closed enum.
+    if status not in _ENUM:
+        found.append(
+            _finding(
+                rel,
+                f"coverage scorecard row '{kpi}' has status '{status_raw.strip()}' "
+                "outside the allowed set (Covered / Blocked -- missing field / Blocked "
+                "-- needs business definition / Planned / Out of scope)",
+            )
+        )
+        # enum unknown -> the status-conditional checks below don't apply
+        return found
+
+    # C2: a Blocked -- ... row must name a specific blocker.
+    if status.startswith("blocked") and _is_dash(blocker):
+        found.append(
+            _finding(
+                rel,
+                f"coverage scorecard row '{kpi}' is Blocked but names no specific "
+                "blocker (missing field or undecided policy)",
+            )
+        )
+
+    # C3: a Covered row's contract path must resolve to a tracked file.
+    if status == "covered" and not _contract_resolves(contract, tracked):
+        found.append(
+            _finding(
+                rel,
+                f"coverage scorecard row '{kpi}' is Covered but its contract path "
+                "does not resolve to a tracked contracts/<file>.md",
+            )
+        )
+    return found
+
+
+def _read_scorecard(ctx: RuleContext, rel: str) -> str:
+    return (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
+
+
 @register("SL1", "Committed KPI coverage scorecard is structurally well-formed")
 def check_coverage_scorecard(ctx: RuleContext) -> Iterable[Finding]:
     findings: list[Finding] = []
     tracked = set(ctx.tracked_files)
     for rel in sorted(_iter_scorecards(ctx)):
         try:
-            text = (ctx.repo_root / rel).read_text(encoding="utf-8-sig")
+            text = _read_scorecard(ctx, rel)
         except (OSError, UnicodeDecodeError) as exc:
             # A tracked-but-unreadable/undecodable scorecard fails loud (an ERROR),
             # rather than crashing the gate (UnicodeDecodeError is not an OSError).
-            findings.append(
-                Finding(
-                    rule_id="SL1",
-                    severity=Severity.ERROR,
-                    message=f"could not read coverage scorecard: {exc}",
-                    locator=rel,
-                )
-            )
+            findings.append(_finding(rel, f"could not read coverage scorecard: {exc}"))
             continue
 
         rows, malformed = _status_table_rows(text)
         for bad in malformed:
             findings.append(
-                Finding(
-                    rule_id="SL1",
-                    severity=Severity.ERROR,
-                    message=(
-                        "coverage scorecard has a malformed status-table row "
-                        "(not the required 4 columns | KPI | Contract | Coverage "
-                        f"status | Blocker |): {bad}"
-                    ),
-                    locator=rel,
+                _finding(
+                    rel,
+                    "coverage scorecard has a malformed status-table row (not the "
+                    "required 4 columns | KPI | Contract | Coverage status | Blocker "
+                    f"|): {bad}",
                 )
             )
         for m in rows:
-            kpi = m.group("kpi").strip()
-            contract = m.group("contract")
-            status_raw = m.group("status")
-            blocker = m.group("blocker")
-            status = _norm(status_raw)
-
-            # C4: no <number>% token anywhere in the row.
-            if _PERCENT_RE.search(m.group(0)):
-                findings.append(
-                    Finding(
-                        rule_id="SL1",
-                        severity=Severity.ERROR,
-                        message=(
-                            f"coverage scorecard row '{kpi}' contains a percentage/"
-                            "score token; coverage is status + named blocker, never a "
-                            "number (rule #9)"
-                        ),
-                        locator=rel,
-                    )
-                )
-
-            # C1: status must be in the closed enum.
-            if status not in _ENUM:
-                findings.append(
-                    Finding(
-                        rule_id="SL1",
-                        severity=Severity.ERROR,
-                        message=(
-                            f"coverage scorecard row '{kpi}' has status "
-                            f"'{status_raw.strip()}' outside the allowed set "
-                            "(Covered / Blocked -- missing field / Blocked -- needs "
-                            "business definition / Planned / Out of scope)"
-                        ),
-                        locator=rel,
-                    )
-                )
-                # enum unknown -> the status-conditional checks below don't apply
-                continue
-
-            # C2: a Blocked -- ... row must name a specific blocker.
-            if status.startswith("blocked") and _is_dash(blocker):
-                findings.append(
-                    Finding(
-                        rule_id="SL1",
-                        severity=Severity.ERROR,
-                        message=(
-                            f"coverage scorecard row '{kpi}' is Blocked but names no "
-                            "specific blocker (missing field or undecided policy)"
-                        ),
-                        locator=rel,
-                    )
-                )
-
-            # C3: a Covered row's contract path must resolve to a tracked file. The
-            # scorecard cites the contract as `contracts/<file>.md` under its skill
-            # root (the F8 template's own convention), while the tracked file is e.g.
-            # skills/retail-kpi-knowledge/contracts/<file>.md. So resolve by SUFFIX: the
-            # citation is satisfied if any tracked file path ends with the cited
-            # `contracts/<file>.md` (exact-match remains a subset of this).
-            if status == "covered":
-                cm = _CONTRACT_RE.search(contract)
-                cited = cm.group(0) if cm else None
-                resolves = cited is not None and any(
-                    t == cited or t.endswith("/" + cited) for t in tracked
-                )
-                if not resolves:
-                    findings.append(
-                        Finding(
-                            rule_id="SL1",
-                            severity=Severity.ERROR,
-                            message=(
-                                f"coverage scorecard row '{kpi}' is Covered but its "
-                                "contract path does not resolve to a tracked "
-                                "contracts/<file>.md"
-                            ),
-                            locator=rel,
-                        )
-                    )
+            findings.extend(_check_row(m, rel, tracked))
     return findings
