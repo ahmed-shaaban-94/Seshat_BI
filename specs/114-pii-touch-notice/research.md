@@ -58,11 +58,19 @@ keeps the guarantee real without introducing a gate.
 ## D3 -- Disposition source and parsing (Clarification Q1, confirmed against fixture)
 
 **Decision**: Read only `mappings/<table>/source-map.yaml`. Per column: `pii`,
-`decision`, and the disposition. A KEPT PII column's disposition is typically in
-the `defaults.deviations[]` block (RC4) whose `reason` carries the governance
-string; join it to the column by the deviation `id`/reference. A DROPPED PII
-column's disposition is its own `reason`. `unresolved-questions.md` is NOT parsed
-(only cited via the RC4 `detail_in` pointer).
+`decision`, and the disposition. A KEPT PII column's disposition is in the
+`defaults.deviations[]` block (RC4-style) whose `reason` carries the governance
+string. A DROPPED PII column's disposition is its own `reason`.
+`unresolved-questions.md` is NOT parsed (only cited via the RC4 `detail_in`
+pointer).
+
+**OPEN (ratify OPEN-2, safety-critical -- do NOT resolve here):** the committed
+fixture has NO structured column->deviation link; the linkage is free text only.
+The exact JOIN RULE (explicit `deviation_ref` schema field vs a bidirectional
+text heuristic) and WHICH `reason` is authoritative (column vs deviation) are a
+Principle-V / schema ruling for the named human, recorded in the ratify ledger.
+Until ruled, an ambiguous kept-PII column is `undecided` (GAP), never a
+best-effort join -- a wrong join is a false clearance.
 
 **Rationale**: Grounded in the committed fixture -- `retail_store_sales/
 source-map.yaml` records `customer_id` as `pii: true`, `decision: keep`, with the

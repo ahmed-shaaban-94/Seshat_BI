@@ -39,10 +39,16 @@ One per `pii: true` column. The unit the notice renders.
 **Disposition resolution** (D3/D4):
 - DROPPED PII column (`decision: drop`) -> `disposition` = the column's own
   `reason`; `state` = `decided_dropped` (a `reason` is expected on a drop).
-- KEPT PII column (`decision: keep`) -> `disposition` = the joinable
-  `defaults.deviations[]` governance `reason` (RC4-style) IF one is reachable for
-  this column; `state` = `decided_kept`. If no disposition string is reachable ->
-  `disposition` = None, `state` = `undecided` (GAP).
+- KEPT PII column (`decision: keep`) -> `disposition` = the governing
+  `defaults.deviations[]` `reason` (RC4-style). **The column->deviation JOIN RULE
+  is a ratify OPEN item (ratify-ledger OPEN-2) -- it MUST be pinned before
+  implementation.** In the committed fixture there is no structured link field;
+  the linkage is free text ("customer_id" inside `RC4.reason`, "RC4" inside
+  `customer_id.reason`). Until OPEN-2 is ruled, the composer MUST NOT guess: a
+  kept-PII column whose governing deviation cannot be UNAMBIGUOUSLY identified is
+  `undecided` (GAP), never a best-effort match -- because a wrong join renders an
+  ungoverned column as cleared (the Principle-V hazard). If a disposition is
+  unambiguously joined -> `state` = `decided_kept`; else -> `state` = `undecided`.
 - Column both `pii: true`+`keep` AND appearing among drop signals, or other
   intra-file contradiction -> `state` = `inconsistent` (GAP naming both loci,
   FR-010).

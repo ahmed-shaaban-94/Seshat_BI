@@ -44,12 +44,52 @@ refuted=false). Fills F040 consumer-data-dictionary's own declared PII exclusion
 4. **Output: `mappings/<table>/pii-touch-notice.md`** (Clarification Q2),
    mirroring F040's co-located output.
 
-## Open item flagged for the ratifier (from the plan/advisor)
+## Open items flagged for the ratifier (from the plan/advisor)
+
+### OPEN-1 -- Vehicle (Python vs skill-only)
 
 - If the ratifier prefers to KEEP the feature skill-only (F040 posture), that
   consciously downgrades FR-011 from a mechanical guarantee to prose enforcement.
   The spec as written assumes the mechanical (Python) path. Confirm the Python
   vehicle, or direct the skill-only downgrade here.
+
+### OPEN-2 -- The column->disposition JOIN (SAFETY-CRITICAL; needs a ruling before implement)
+
+The kept-PII disposition string lives in the table-level `defaults.deviations[]`
+block, keyed by RC-id (`RC4`, `RC8`, ...), NOT by column. In the committed
+`retail_store_sales` fixture there is NO structured field linking `customer_id`
+to RC4 -- the only linkage is FREE TEXT: the string "customer_id" appears inside
+`RC4.reason`, and "RC4" appears inside `customer_id.reason`. Two consequences the
+ratifier must rule on:
+
+1. **How does a column claim its deviation?** Options:
+   - (a) **Explicit link** -- add a structured field (e.g. `deviation_ref: RC4`
+     on the column, or `applies_to: [customer_id]` on the deviation) to the
+     source-map schema + template. Deterministic, but TOUCHES the source-map
+     schema and Principle VII genericity (new generic field, back-fill the
+     fixture). Recommended for safety.
+   - (b) **Text heuristic** -- match the column name inside a deviation `reason`
+     (and/or the RC-id inside the column `reason`). No schema change, but carries
+     a real FALSE-POSITIVE risk: a wrong join makes an UNGOVERNED PII column read
+     as CLEARED -- the exact Principle-V hazard this feature exists to prevent.
+   The undecided->GAP trigger (US2, the safety half) IS "no disposition
+   reachable", so the join rule directly decides what renders as a safe GAP vs a
+   false clearance.
+
+2. **Which field is the disposition -- the column's `reason` or the deviation's
+   `reason`?** They differ: the promised verbatim quote "...(data owner): keep,
+   no raw PII" lives ONLY in `RC4.reason` (quickstart.md assumes this). "disposition
+   = column.reason" makes that promise unproducible; "disposition = deviation.reason"
+   requires resolving OPEN-2.1. Pin one.
+
+**Why this matters and why it's here, not resolved:** V1 (verbatim-substring)
+does NOT catch a mis-join -- a wrongly-attributed disposition is still a verbatim
+substring of *some* committed field. The chosen Python/verifier guarantee sits
+OUTSIDE the attribution logic. So the plan MUST, once OPEN-2 is ruled:
+(i) define the join rule in data-model.md/research D3, and (ii) add a join-
+CORRECTNESS assertion to the verifier (contracts/verifier.md V7 below), since
+V1 alone is insufficient. This is a Principle-V / schema question -- a named
+human's ruling, not an agent default.
 
 ## Analyze outcome
 
