@@ -24,10 +24,11 @@ so test tasks are first-class, written before the code they verify.
 
 **Purpose**: fixtures + module skeleton every story leans on.
 
-- [ ] T001 [P] Add PII-notice fixtures under `tests/unit/fixtures/pii_notice/`: `decided_kept/source-map.yaml` (a `pii:true, decision:keep` column + an RC4-style `defaults.deviations` disposition, modeled on retail_store_sales/customer_id), `decided_dropped/source-map.yaml` (a `pii:true, decision:drop` column with a drop `reason`), `undecided/source-map.yaml` (a `pii:true` column with NO reachable disposition), `no_pii/source-map.yaml` (all `pii:false`), `inconsistent/source-map.yaml` (a `pii:true, decision:keep` column also present in drop signals). ASCII, UTF-8 no BOM.
+- [ ] T000 (ratify OPEN-2) Add the `deviation_ref` field to the source-map schema: document it in `templates/source-map.yaml` as a generic OPTIONAL column field (a kept-PII column names its governing deviation by exact `id`; Principle VII -- no C086 value baked in), and back-fill the worked-example fixture `mappings/retail_store_sales/source-map.yaml` so `customer_id` carries `deviation_ref: "RC4"`. Confirm `retail check` still exits 0 after the fixture edit.
+- [ ] T001 [P] Add PII-notice fixtures under `tests/unit/fixtures/pii_notice/`: `decided_kept/source-map.yaml` (a `pii:true, decision:keep` column with `deviation_ref: RC4` + the matching `defaults.deviations` disposition, modeled on retail_store_sales/customer_id), `decided_dropped/source-map.yaml` (a `pii:true, decision:drop` column with a drop `reason`), `undecided/source-map.yaml` (a `pii:true, decision:keep` column with NO `deviation_ref`), `mis_ref/source-map.yaml` (a kept-PII column whose `deviation_ref` points at RC-id X while a DIFFERENT deviation's prose mentions the column name -- proves join-by-ref-not-text, V7), `no_pii/source-map.yaml` (all `pii:false`), `inconsistent/source-map.yaml` (a `pii:true, decision:keep` column also present in drop signals). ASCII, UTF-8 no BOM.
 - [ ] T002 Create the composer module skeleton `src/retail/pii_notice.py` with the public signatures `build_pii_notice(repo_root, table) -> dict` and `render_markdown(notice) -> str` (bodies raise `NotImplementedError`), plus a private `_load_yaml_mapping(path)` copied from the `blocker_explainer.py` idiom (utf-8-sig read; None on OSError/UnicodeDecodeError/YAMLError). No DB/driver import at module load.
 
-**Checkpoint**: fixtures exist and the module imports.
+**Checkpoint**: schema+fixture carry `deviation_ref`; fixtures exist; module imports; `retail check` exit 0.
 
 ---
 
@@ -37,8 +38,8 @@ so test tasks are first-class, written before the code they verify.
 
 CRITICAL: no user-story test can assert faithfulness until the verifier exists.
 
-- [ ] T003 [US-shared] Write the reusable verifier helper `assert_notice_is_faithful(notice_text, source_map)` in `tests/unit/test_pii_notice.py` implementing V1 verbatim-substring, V2 completeness/never-omit, V3 never-clear (closed clearance denylist), V4 no-score (per contracts/verifier.md). This is a TEST helper only -- NO `@register` retail check rule, NO manifest change (FR-007).
-- [ ] T004 Implement the disposition-resolution core in `src/retail/pii_notice.py`: enumerate `columns[]` where `pii is True`; for each, resolve `state` + `disposition` + `disposition_source` per data-model.md D3/D4 (drop -> own `reason`; keep -> joinable `defaults.deviations` governance `reason`, else `undecided`; contradiction -> `inconsistent`). Return the PiiNotice dict incl. `no_pii`, `document_gap`, `read_only_proof: True`. `render_markdown` still stubbed.
+- [ ] T003 [US-shared] Write the reusable verifier helper `assert_notice_is_faithful(notice_text, source_map)` in `tests/unit/test_pii_notice.py` implementing V1 verbatim-substring, V2 completeness/never-omit, V3 never-clear (closed clearance denylist), V4 no-score, and V7 join-correctness (rendered-disposition-deviation-id == the column's `deviation_ref`; the `mis_ref` fixture proves join-by-ref-not-text; a no-`deviation_ref` kept-PII column renders GAP) per contracts/verifier.md. TEST helper only -- NO `@register` rule, NO manifest change (FR-007).
+- [ ] T004 Implement the disposition-resolution core in `src/retail/pii_notice.py`: enumerate `columns[]` where `pii is True`; for each, resolve `state` + `disposition` + `disposition_source` per data-model.md (drop -> own `reason`; keep -> the `reason` of the deviation whose `id` EXACTLY matches the column's `deviation_ref`; no/unmatched `deviation_ref` -> `undecided`; intra-file contradiction -> `inconsistent`). NEVER text-match column names in deviation prose. Return the PiiNotice dict incl. `no_pii`, `document_gap`, `read_only_proof: True`. `render_markdown` still stubbed.
 
 **Checkpoint**: `build_pii_notice` returns a correct model for all fixtures; verifier helper importable.
 

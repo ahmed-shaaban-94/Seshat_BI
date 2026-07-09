@@ -99,8 +99,26 @@ verifier.md not spec.md) -- none blocking.
 
 ## Ratification
 
-- [ ] **RATIFIED** by: __________________ (named owner or explicitly-delegated
-  authority) on ____-__-__.
+- [x] **RATIFIED** by: Ahmed Shaaban (repo owner) on 2026-07-09.
 - Ratifying means: the spec/plan/tasks are approved to proceed to
   `/speckit-implement` (or the equivalent build) on this branch.
 - Until this box is checked by a named human, no implementation begins.
+
+### Owner rulings (2026-07-09)
+
+- **OPEN-1 (vehicle): Python composer + unit-test verifier.** As specced;
+  FR-011 stays a mechanical guarantee. Skill-only rejected.
+- **OPEN-2 (join, safety-critical): EXPLICIT `deviation_ref` field.** A kept-PII
+  column claims its governance disposition via a NEW structured
+  `deviation_ref: <id>` field on the column, joined by EXACT id-match to
+  `defaults.deviations[].id`. No text heuristic. Disposition text = the matched
+  deviation's `reason` (authoritative). A `pii: true` column with no
+  `deviation_ref` (or a `deviation_ref` matching no deviation) is `undecided`
+  (GAP), never a guess.
+  - **Scope consequence (owner-accepted):** implementation ADDS the
+    `deviation_ref` field to `templates/source-map.yaml` (generic, Principle VII)
+    and back-fills the `retail_store_sales` fixture
+    (`mappings/retail_store_sales/source-map.yaml`: `customer_id` gains
+    `deviation_ref: RC4`). So #114 now edits two committed source-map artifacts,
+    not only new files. V7 becomes: assert the rendered disposition's deviation
+    id == the column's `deviation_ref` (exact match).

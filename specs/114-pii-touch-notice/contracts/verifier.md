@@ -23,19 +23,19 @@ Given a rendered notice and the parsed source-map it was composed from, raises
   source, so it is an attributed echo, not an authored claim.)
 - **V4 no-score**: the notice contains no numeric score / risk-level / "N of M"
   count token (FR-006, SC-004).
-- **V7 join-correctness (SAFETY; pending ratify OPEN-2)**: for a kept-PII column
-  whose disposition is drawn from a `defaults.deviations[]` entry, assert the
-  disposition came from the deviation that ACTUALLY governs THIS column -- not
-  merely from some deviation whose `reason` happens to contain the column name.
-  V1 (verbatim-substring) is INSUFFICIENT here: a mis-joined disposition is still
-  a verbatim substring of a committed field and would pass V1-V4 while presenting
-  an ungoverned column as cleared. The concrete assertion depends on the ratifier's
-  OPEN-2 ruling: if an explicit link field is adopted (2.a), assert the rendered
-  disposition's deviation id == the column's `deviation_ref`; if the text
-  heuristic is adopted (2.b), assert the match is bidirectional (column name in
-  deviation.reason AND deviation id in column.reason) and add a fixture where a
-  DIFFERENT deviation (e.g. RC8) mentions no PII column, proving it is NOT
-  mis-attributed. This assertion MUST exist before US1/US2 implementation lands.
+- **V7 join-correctness (SAFETY; ratify OPEN-2 RULED -- explicit `deviation_ref`)**:
+  for a kept-PII column whose disposition is drawn from a `defaults.deviations[]`
+  entry, assert the disposition's deviation id EQUALS the column's `deviation_ref`
+  field (exact match). V1 (verbatim-substring) is INSUFFICIENT alone: a mis-joined
+  disposition is still a verbatim substring of a committed field and would pass
+  V1-V4 while presenting an ungoverned column as cleared. Concretely: (a) assert
+  the rendered disposition text == the `reason` of the deviation whose `id` ==
+  `deviation_ref`; (b) add a fixture where a kept-PII column's `deviation_ref`
+  points at a deviation that is NOT the one whose prose mentions the column
+  (e.g. two deviations RC4/RC8) -- proving the composer joins by `deviation_ref`,
+  NOT by text; (c) add a fixture where a kept-PII column has NO `deviation_ref` ->
+  assert it renders as a GAP, never a guessed match. This assertion MUST exist
+  before US1/US2 implementation lands.
 
 ## Fixtures the verifier runs against
 

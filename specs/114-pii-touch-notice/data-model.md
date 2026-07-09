@@ -12,6 +12,10 @@ instance at `mappings/retail_store_sales/source-map.yaml`):
   - `source_name` (str) -- the column identity.
   - `pii` (bool) -- the PII flag. The composer acts on `pii: true` columns.
   - `decision` (str: `keep` | `drop`) -- the mapping keep/drop decision.
+  - `deviation_ref` (str, optional) -- NEW field (ratify OPEN-2): a kept-PII
+    column names its governing deviation by exact `id` (e.g. `deviation_ref: RC4`).
+    Absent -> the kept-PII column is `undecided` (GAP). Added to
+    `templates/source-map.yaml` (generic) and back-filled on the fixture.
   - `reason` (str) -- the mapping rationale; for a DROPPED PII column this
     carries the drop disposition.
 - `defaults.deviations[]` -- each with:
@@ -39,16 +43,16 @@ One per `pii: true` column. The unit the notice renders.
 **Disposition resolution** (D3/D4):
 - DROPPED PII column (`decision: drop`) -> `disposition` = the column's own
   `reason`; `state` = `decided_dropped` (a `reason` is expected on a drop).
-- KEPT PII column (`decision: keep`) -> `disposition` = the governing
-  `defaults.deviations[]` `reason` (RC4-style). **The column->deviation JOIN RULE
-  is a ratify OPEN item (ratify-ledger OPEN-2) -- it MUST be pinned before
-  implementation.** In the committed fixture there is no structured link field;
-  the linkage is free text ("customer_id" inside `RC4.reason`, "RC4" inside
-  `customer_id.reason`). Until OPEN-2 is ruled, the composer MUST NOT guess: a
-  kept-PII column whose governing deviation cannot be UNAMBIGUOUSLY identified is
-  `undecided` (GAP), never a best-effort match -- because a wrong join renders an
-  ungoverned column as cleared (the Principle-V hazard). If a disposition is
-  unambiguously joined -> `state` = `decided_kept`; else -> `state` = `undecided`.
+- KEPT PII column (`decision: keep`) -> `disposition` = the `reason` of the
+  `defaults.deviations[]` entry whose `id` EXACTLY matches the column's
+  `deviation_ref` field (ratify OPEN-2 RULED 2026-07-09: explicit
+  `deviation_ref`, exact id-match, no text heuristic). `state` = `decided_kept`.
+  If the column has NO `deviation_ref`, or its `deviation_ref` matches no
+  deviation `id` -> `disposition` = None, `state` = `undecided` (GAP). The
+  composer NEVER text-matches column names inside deviation prose and NEVER
+  guesses -- an unlinked kept-PII column is a GAP, never a false clearance
+  (Principle-V hazard). The matched deviation's `reason` is the authoritative
+  disposition text (not the column's own `reason`).
 - Column both `pii: true`+`keep` AND appearing among drop signals, or other
   intra-file contradiction -> `state` = `inconsistent` (GAP naming both loci,
   FR-010).

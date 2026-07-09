@@ -64,13 +64,15 @@ string. A DROPPED PII column's disposition is its own `reason`.
 `unresolved-questions.md` is NOT parsed (only cited via the RC4 `detail_in`
 pointer).
 
-**OPEN (ratify OPEN-2, safety-critical -- do NOT resolve here):** the committed
-fixture has NO structured column->deviation link; the linkage is free text only.
-The exact JOIN RULE (explicit `deviation_ref` schema field vs a bidirectional
-text heuristic) and WHICH `reason` is authoritative (column vs deviation) are a
-Principle-V / schema ruling for the named human, recorded in the ratify ledger.
-Until ruled, an ambiguous kept-PII column is `undecided` (GAP), never a
-best-effort join -- a wrong join is a false clearance.
+**RULED (ratify OPEN-2, 2026-07-09 -- explicit `deviation_ref`):** a kept-PII
+column names its governing deviation via a NEW structured `deviation_ref: <id>`
+field, joined by EXACT id-match to `defaults.deviations[].id`. The matched
+deviation's `reason` is the authoritative disposition text. No text heuristic; a
+column with no (or an unmatched) `deviation_ref` is `undecided` (GAP), never a
+guess. Implementation ADDS `deviation_ref` to `templates/source-map.yaml`
+(generic, Principle VII) and back-fills the fixture (`customer_id` gains
+`deviation_ref: RC4`). V7 asserts rendered-disposition-deviation-id ==
+`deviation_ref`.
 
 **Rationale**: Grounded in the committed fixture -- `retail_store_sales/
 source-map.yaml` records `customer_id` as `pii: true`, `decision: keep`, with the
