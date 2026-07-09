@@ -71,13 +71,26 @@ QUESTIONS_CLEARED = """# Unresolved questions
 """
 
 
+# An UNFILLED template-style gate line (placeholder value, not a real CLEARED).
+QUESTIONS_TEMPLATE_PLACEHOLDER = """# Unresolved questions
+
+- **Gate status:** `<OPEN | CLEARED>` -- fill this in
+
+| ID | Question | Why | Who must answer | Default | Status | Resolution |
+|----|----------|-----|-----------------|---------|--------|------------|
+| D1 | Is the discount policy final? | bias | governance | keep | open | |
+"""
+
+
 def _write_table(
-    root: Path,
-    table: str,
-    metrics: dict[str, str] | None,
-    source_map: str | None = SOURCE_MAP,
-    questions: str | None = QUESTIONS_CLEARED,
+    root: Path, table: str, metrics: dict[str, str] | None, files: dict | None = None
 ) -> None:
+    """Write a table's committed evidence. ``files`` overrides the source-map /
+    questions defaults; a key set to None OMITS that file (the missing-input
+    fixtures). A key absent uses the default committed content."""
+    files = files or {}
+    source_map = files["source_map"] if "source_map" in files else SOURCE_MAP
+    questions = files["questions"] if "questions" in files else QUESTIONS_CLEARED
     d = root / "mappings" / table
     d.mkdir(parents=True, exist_ok=True)
     if metrics is not None:
@@ -130,30 +143,42 @@ def _strip_cited(text: str) -> str:
     return re.sub(r'"[^"]*"', "", re.sub(r"`[^`]*`", "", text))
 
 
-def assert_status_inventory_sound(view: dict, expected_status_by_item: dict) -> None:
-    got = {i["name"]: i for i in view["items"]}
-    # V1: every emitted status is a member of SL1's enum
-    for item in view["items"]:
+def _v1_all_in_enum(items: list[dict]) -> None:
+    for item in items:
         assert is_member(item["status"]), f"V1: {item['status']!r} not in SL1 enum"
-    # V2: the CRITICAL never-false-Covered check, against the HAND-DECLARED oracle
+
+
+def _v2_never_false_covered(got: dict, expected_status_by_item: dict) -> None:
+    """The CRITICAL check, against the HAND-DECLARED oracle: an item whose expected
+    status is not Covered must never be classified Covered."""
     for name, expected in expected_status_by_item.items():
         assert name in got, f"V2: required item {name!r} missing from inventory"
         assert got[name]["status"] == expected, (
             f"V2: {name} -> {got[name]['status']!r}, expected {expected!r}"
         )
-        if expected != "Covered":
-            assert got[name]["status"] != "Covered", f"V2: false Covered on {name}"
-    # V3: every non-Covered item carries a named blocker
-    for item in view["items"]:
+
+
+def _v3_blocker_present(items: list[dict]) -> None:
+    for item in items:
         if item["status"] != "Covered":
             assert item["blocker"], f"V3: {item['name']} non-Covered but no blocker"
-    # V4: no numeric-score TOKEN anywhere in the rendered view (hard rule #9). The
-    # header's own disclaimer ("emits no score") is prose, not a violation -- the
-    # check is for a numeric score/percentage/count, so it scans for digits and %
-    # in the non-cited residue, not for the word "score".
+
+
+def _v4_no_numeric_token(view: dict) -> None:
+    """No numeric-score TOKEN in the rendered view (hard rule #9). The header's own
+    disclaimer ("emits no score") is prose, not a violation -- the check scans for
+    digits and % in the non-cited residue, not for the word "score"."""
     residue = _strip_cited(render_view(view))
     assert "%" not in residue, "V4: percent token in output"
     assert not re.search(r"\b\d+(\.\d+)?\b", residue), "V4: stray number (score?)"
+
+
+def assert_status_inventory_sound(view: dict, expected_status_by_item: dict) -> None:
+    got = {i["name"]: i for i in view["items"]}
+    _v1_all_in_enum(view["items"])
+    _v2_never_false_covered(got, expected_status_by_item)
+    _v3_blocker_present(view["items"])
+    _v4_no_numeric_token(view)
 
 
 # --------------------------------------------------------------------------- #
@@ -213,7 +238,7 @@ def test_open_decision_blocks_dependent_metric(tmp_path):
         tmp_path,
         "widget",
         {"M": _metric_yaml("M", "pass", ["amount"])},
-        questions=QUESTIONS_OPEN,
+        {"questions": QUESTIONS_OPEN},
     )
     intent = _write_intent(
         tmp_path,
@@ -234,7 +259,7 @@ def test_answered_decision_not_a_gap(tmp_path):
         tmp_path,
         "widget",
         {"M": _metric_yaml("M", "pass", ["amount"])},
-        questions=QUESTIONS_CLEARED,
+        {"questions": QUESTIONS_CLEARED},
     )
     intent = _write_intent(
         tmp_path,
@@ -246,10 +271,50 @@ def test_answered_decision_not_a_gap(tmp_path):
     assert view["items"][0]["status"] == "Covered"  # answered/CLEARED -> not blocked
 
 
+def test_template_gate_placeholder_not_cleared(tmp_path):
+    # an unfilled `Gate status: <OPEN | CLEARED>` placeholder must NOT clear the
+    # gate (Codex P2): the open row stays open and blocks its dependent metric.
+    _write_table(
+        tmp_path,
+        "widget",
+        {"M": _metric_yaml("M", "pass", ["amount"])},
+        {"questions": QUESTIONS_TEMPLATE_PLACEHOLDER},
+    )
+    intent = _write_intent(
+        tmp_path,
+        "t.yaml",
+        "questions:\n  - question: Q\n    metrics:\n"
+        "      - name: M\n        depends_on: [D1]\n",
+    )
+    view = build_gap_inventory(tmp_path, "widget", intent)
+    assert view["items"][0]["status"] == "Blocked -- needs business definition"
+
+
+def test_metric_only_missing_source_map_fails_closed(tmp_path):
+    # Codex P2: a pass contract whose binds_to cannot be verified (source-map
+    # absent) must fail closed, never a silent Covered / "nothing blocks design".
+    _write_table(
+        tmp_path,
+        "widget",
+        {"M": _metric_yaml("M", "pass", ["amount"])},
+        {"source_map": None},
+    )
+    intent = _write_intent(
+        tmp_path, "mo.yaml", "questions:\n  - question: Q\n    metrics: [M]\n"
+    )
+    view = build_gap_inventory(tmp_path, "widget", intent)
+    assert view["items"][0]["status"] == "Blocked -- missing field"
+    assert "Nothing blocks design" not in render_view(view)
+    assert any("source-map.yaml" in g for g in view["document_gaps"])
+
+
 def test_unrecognized_owner_echoed_verbatim(tmp_path):
     q = QUESTIONS_OPEN.replace("governance", "wizard")
     _write_table(
-        tmp_path, "widget", {"M": _metric_yaml("M", "pass", ["amount"])}, questions=q
+        tmp_path,
+        "widget",
+        {"M": _metric_yaml("M", "pass", ["amount"])},
+        {"questions": q},
     )
     intent = _write_intent(
         tmp_path,
@@ -277,7 +342,7 @@ def test_missing_source_map_not_covered(tmp_path):
         tmp_path,
         "widget",
         {"A": _metric_yaml("A", "pass", ["amount"])},
-        source_map=None,
+        {"source_map": None},
     )
     intent = _write_intent(
         tmp_path, "s.yaml", "questions:\n  - question: Q\n    dimensions: [region]\n"
@@ -302,7 +367,7 @@ def test_missing_questions_file_not_no_decisions(tmp_path):
         tmp_path,
         "widget",
         {"M": _metric_yaml("M", "pass", ["amount"])},
-        questions=None,
+        {"questions": None},
     )
     intent = _write_intent(
         tmp_path,

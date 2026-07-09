@@ -29,6 +29,7 @@ Scope wall (load-bearing):
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -202,11 +203,21 @@ def _open_decisions(text: str) -> dict[str, dict[str, str]]:
     return rows
 
 
+_GATE_RE = re.compile(r"gate status\b[^A-Za-z<]*([A-Za-z<>|]+)", re.IGNORECASE)
+
+
 def _gate_cleared(text: str) -> bool:
+    """True only when the actual ``Gate status`` field VALUE is ``CLEARED``.
+
+    Parses the first ``Gate status`` line's value token rather than scanning for
+    the word anywhere -- so an unfilled template placeholder
+    (``Gate status: <OPEN | CLEARED>``) or instructional prose does NOT falsely
+    clear the gate (the value token there is ``<OPEN``, not ``cleared``).
+    """
     for line in text.splitlines():
-        low = line.lower()
-        if "gate status" in low and "cleared" in low:
-            return True
+        m = _GATE_RE.search(line)
+        if m:
+            return m.group(1).strip().lower() == "cleared"
     return False
 
 
@@ -239,12 +250,12 @@ def _open_dep(
     return None
 
 
-def _classify_metric(
-    item: dict[str, Any],
-    ctx: dict[str, Any],
-) -> dict[str, str]:
-    metrics_rel = f"mappings/{ctx['table']}/metrics/"
-    questions_rel = f"mappings/{ctx['table']}/unresolved-questions.md"
+def _metric_decision_block(
+    item: dict[str, Any], ctx: dict[str, Any], questions_rel: str
+) -> dict[str, str] | None:
+    """Preconditions that block a metric BEFORE its contract is consulted:
+    out-of-scope, an unverifiable decision dependency, or an OPEN owner decision.
+    Returns a verdict, or None to fall through to the contract check."""
     if item["out_of_scope"]:
         return _blocker(OUT_OF_SCOPE, "human-declared outside this table's domain", "")
     if item["depends_on"] and ctx["decisions"] is None:
@@ -254,13 +265,20 @@ def _classify_metric(
             questions_rel,
         )
     dep = _open_dep(item, ctx["decisions"])
-    if dep is not None:
-        return _blocker(
-            BLOCKED_NEEDS_DEFINITION,
-            f"open owner decision {dep['id']} -- {dep['owner']} must answer: "
-            f'"{dep["question"]}"',
-            questions_rel,
-        )
+    if dep is None:
+        return None
+    return _blocker(
+        BLOCKED_NEEDS_DEFINITION,
+        f"open owner decision {dep['id']} -- {dep['owner']} must answer: "
+        f'"{dep["question"]}"',
+        questions_rel,
+    )
+
+
+def _metric_contract_status(
+    item: dict[str, Any], ctx: dict[str, Any], metrics_rel: str
+) -> dict[str, str]:
+    """Classify a metric by its committed contract once no decision blocks it."""
     if ctx["contracts"] is None:
         return _blocker(
             BLOCKED_NEEDS_DEFINITION,
@@ -281,6 +299,16 @@ def _classify_metric(
             f"contract present but readiness.status='{contract['status']}' (not pass)",
             rel,
         )
+    # Fail closed: a pass contract whose binding cannot be verified because the
+    # gold star is absent must NOT read Covered (else a metric-only page-intent
+    # with a missing source-map.yaml would falsely report "nothing blocks design").
+    if ctx["gold_cols"] is None and contract["columns"]:
+        return _blocker(
+            BLOCKED_MISSING_FIELD,
+            "contract is pass but binds_to cannot be verified -- source-map.yaml "
+            "gold_star not found",
+            f"mappings/{ctx['table']}/source-map.yaml",
+        )
     missing = _missing_bound_columns(contract, ctx)
     if missing:
         return _blocker(
@@ -289,6 +317,15 @@ def _classify_metric(
             rel,
         )
     return _blocker(COVERED, "", rel)
+
+
+def _classify_metric(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str, str]:
+    metrics_rel = f"mappings/{ctx['table']}/metrics/"
+    questions_rel = f"mappings/{ctx['table']}/unresolved-questions.md"
+    blocked = _metric_decision_block(item, ctx, questions_rel)
+    if blocked is not None:
+        return blocked
+    return _metric_contract_status(item, ctx, metrics_rel)
 
 
 def _missing_bound_columns(contract: dict[str, Any], ctx: dict[str, Any]) -> list[str]:
@@ -336,25 +373,36 @@ def _classify(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
 # compose (read-only; writes nothing)
 # --------------------------------------------------------------------------- #
 def _document_gaps(
-    tdir: Path, table: str, items: list[dict[str, Any]], ctx: dict[str, Any]
+    table: str, items: list[dict[str, Any]], ctx: dict[str, Any]
 ) -> list[str]:
-    """Name each RELEVANT missing committed input (never presented as 'no gaps')."""
-    gaps: list[str] = []
-    has_metric = any(i["kind"] == "metric" for i in items)
-    has_dimension = any(i["kind"] == "dimension" for i in items)
-    has_dep = any(i["depends_on"] for i in items)
-    if has_metric and ctx["contracts"] is None:
-        gaps.append(f"mappings/{table}/metrics/ not found -- metric items unverifiable")
-    if has_dimension and ctx["dim_tokens"] is None:
-        gaps.append(
-            f"mappings/{table}/source-map.yaml not found -- dimensions unverifiable"
-        )
-    if has_dep and ctx["decisions"] is None:
-        gaps.append(
-            f"mappings/{table}/unresolved-questions.md not found -- "
-            "owner decisions unverifiable (NOT the same as 'no open decisions')"
-        )
-    return gaps
+    """Name each RELEVANT missing committed input (never presented as 'no gaps').
+
+    Each check is (is-this-input-relevant, is-it-missing, message); a gap is
+    emitted only when a relevant input is missing.
+    """
+    kinds = {i["kind"] for i in items}
+    checks = [
+        (
+            "metric" in kinds,
+            ctx["contracts"] is None,
+            f"mappings/{table}/metrics/ not found -- metric items unverifiable",
+        ),
+        (
+            # source-map is needed for dimensions AND for verifying a pass metric's
+            # binds_to against the gold star, so it is relevant to either kind.
+            ("dimension" in kinds) or ("metric" in kinds),
+            ctx["dim_tokens"] is None,
+            f"mappings/{table}/source-map.yaml not found -- dimensions / metric "
+            "bindings unverifiable",
+        ),
+        (
+            any(i["depends_on"] for i in items),
+            ctx["decisions"] is None,
+            f"mappings/{table}/unresolved-questions.md not found -- owner decisions "
+            "unverifiable (NOT the same as 'no open decisions')",
+        ),
+    ]
+    return [msg for relevant, missing, msg in checks if relevant and missing]
 
 
 def build_gap_inventory(
@@ -395,7 +443,7 @@ def build_gap_inventory(
         "table": table,
         "page_intent_path": intent_rel,
         "items": classified,
-        "document_gaps": _document_gaps(tdir, table, items, ctx),
+        "document_gaps": _document_gaps(table, items, ctx),
         "read_only": True,
     }
 
@@ -438,10 +486,11 @@ def _document_gap_section(gaps: list[str]) -> list[str]:
 
 
 def _closing(view: dict[str, Any]) -> list[str]:
-    blocked = [i for i in view["items"] if i["status"] != COVERED]
-    if view["items"] and not blocked and not view["document_gaps"]:
-        return ["", "Nothing blocks design: every required item is Covered."]
-    return []
+    if not view["items"] or view["document_gaps"]:
+        return []
+    if any(i["status"] != COVERED for i in view["items"]):
+        return []
+    return ["", "Nothing blocks design: every required item is Covered."]
 
 
 def render_view(view: dict[str, Any]) -> str:
