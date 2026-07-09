@@ -541,9 +541,7 @@ def test_c2_flags_odbc_uid_string() -> None:
 def test_c2_ignores_fstring_interpolated_pwd_uid() -> None:
     # dialect.py's own SqlServerDialect.resolve_config builds these lines --
     # the scanner must not self-trip on the source that CONSTRUCTS the string.
-    assert (
-        _secret_hit("parts.append(f\"PWD={env['ANALYTICS_DB_PASSWORD']}\")") is False
-    )
+    assert _secret_hit("parts.append(f\"PWD={env['ANALYTICS_DB_PASSWORD']}\")") is False
     assert _secret_hit("parts.append(f\"UID={env['ANALYTICS_DB_USER']}\")") is False
 
 

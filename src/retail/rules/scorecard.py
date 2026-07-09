@@ -143,9 +143,7 @@ def _status_table_rows(text: str) -> tuple[list[re.Match], list[str]]:
 def _finding(rel: str, message: str) -> Finding:
     # Every SL1 defect is the same ERROR shape (rule_id + severity + locator); only
     # the message varies. One constructor keeps that shape in a single place.
-    return Finding(
-        rule_id="SL1", severity=Severity.ERROR, message=message, locator=rel
-    )
+    return Finding(rule_id="SL1", severity=Severity.ERROR, message=message, locator=rel)
 
 
 def _contract_resolves(contract: str, tracked: set[str]) -> bool:

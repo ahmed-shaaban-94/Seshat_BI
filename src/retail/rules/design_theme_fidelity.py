@@ -258,9 +258,7 @@ def _run_fidelity_check(
     RULE_ID, "Theme styling values are faithful to the design tokens they compile from"
 )
 def check_theme_fidelity(ctx: RuleContext) -> Iterable[Finding]:
-    return _run_fidelity_check(
-        ctx, RULE_ID, "fidelity cannot be verified", _reconcile
-    )
+    return _run_fidelity_check(ctx, RULE_ID, "fidelity cannot be verified", _reconcile)
 
 
 # --- DL8: sentiment 4->3 fidelity (opt-in, human-declared correspondence) -----

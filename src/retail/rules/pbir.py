@@ -131,9 +131,7 @@ def _walk_forbidden(node: Any, pointer: str, rel: str) -> Iterable[Finding]:
             yield from _walk_forbidden(item, f"{pointer}/{i}", rel)
 
 
-def _check_base_theme_item(
-    item: Any, pkg_dir: Any, locator: str
-) -> Iterable[Finding]:
+def _check_base_theme_item(item: Any, pkg_dir: Any, locator: str) -> Iterable[Finding]:
     if not isinstance(item, dict) or item.get("type") != "BaseTheme":
         return
     sub = item.get("path")

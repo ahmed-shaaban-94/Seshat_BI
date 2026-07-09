@@ -111,9 +111,7 @@ def _malformed_finding(rel: str, raw: str) -> Finding:
     return Finding(
         rule_id=RULE_ID,
         severity=Severity.WARNING,
-        message=(
-            "malformed decision-question row" f" (expected 3 columns): {raw}"
-        ),
+        message=(f"malformed decision-question row (expected 3 columns): {raw}"),
         locator=rel,
     )
 
