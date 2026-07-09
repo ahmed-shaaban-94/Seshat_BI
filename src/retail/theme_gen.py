@@ -146,14 +146,38 @@ def _validate_name(name: str) -> None:
         )
 
 
-def _validate_transparency_role(role: str, spec: object) -> dict:
-    """Validate one transparency ``role``/``spec`` pair; return its clean spec.
+# Validate and return one spec's ``fg`` (T18 schema: #RRGGBB hex).
+def _validated_transparency_fg(role: str, spec: dict) -> object:
+    fg = spec.get("fg")
+    if not is_valid_hex(fg):
+        raise ThemeGenError(
+            f"transparency role {role!r} fg is not a #RRGGBB hex: {fg!r}"
+        )
+    return fg
 
-    Split out of ``_validate_transparency`` so the per-role guard clauses (the
-    ratified T18 schema: allowed role, dict spec, #RRGGBB fg, numeric pct in
-    [0, 100]) live in one low-complexity helper. Raises ThemeGenError (never a
-    bare ValueError/KeyError) on any violation.
-    """
+
+# Validate and return one spec's ``transparency_pct`` (T18: number in [0, 100]).
+def _validated_transparency_pct(role: str, spec: dict) -> float:
+    pct = spec.get("transparency_pct")
+    if not isinstance(pct, (int, float)) or isinstance(pct, bool):
+        raise ThemeGenError(
+            f"transparency role {role!r} transparency_pct must be a number, got {pct!r}"
+        )
+    if not (0.0 <= float(pct) <= 100.0):
+        raise ThemeGenError(
+            f"transparency role {role!r} transparency_pct {pct!r} is out of "
+            f"range -- must be in [0, 100]"
+        )
+    return float(pct)
+
+
+# Validate one transparency ``role``/``spec`` pair; return its clean spec.
+#
+# Split out of ``_validate_transparency`` so the per-role guard clauses (the
+# ratified T18 schema: allowed role, dict spec, #RRGGBB fg, numeric pct in
+# [0, 100]) live in low-complexity helpers; fg is still checked before pct.
+# Raises ThemeGenError (never a bare ValueError/KeyError) on any violation.
+def _validate_transparency_role(role: str, spec: object) -> dict:
     if role not in _ALLOWED_TRANSPARENCY_ROLES:
         raise ThemeGenError(
             f"transparency role {role!r} is not allowed -- the ratified "
@@ -161,23 +185,10 @@ def _validate_transparency_role(role: str, spec: object) -> dict:
         )
     if not isinstance(spec, dict):
         raise ThemeGenError(f"transparency role {role!r} spec must be a dict")
-    fg = spec.get("fg")
-    pct = spec.get("transparency_pct")
-    if not is_valid_hex(fg):
-        raise ThemeGenError(
-            f"transparency role {role!r} fg is not a #RRGGBB hex: {fg!r}"
-        )
-    if not isinstance(pct, (int, float)) or isinstance(pct, bool):
-        raise ThemeGenError(
-            f"transparency role {role!r} transparency_pct must be a number, "
-            f"got {pct!r}"
-        )
-    if not (0.0 <= float(pct) <= 100.0):
-        raise ThemeGenError(
-            f"transparency role {role!r} transparency_pct {pct!r} is out of "
-            f"range -- must be in [0, 100]"
-        )
-    return {"fg": fg, "transparency_pct": float(pct)}
+    return {
+        "fg": _validated_transparency_fg(role, spec),
+        "transparency_pct": _validated_transparency_pct(role, spec),
+    }
 
 
 def _validate_transparency(transparency: dict | None) -> dict | None:
