@@ -19,6 +19,34 @@ def _write_status(tmp_path: Path, table_dir: str, body: str) -> None:
     path.write_text(body, encoding="utf-8")
 
 
+def test_classifier_extraction_is_behavior_preserving() -> None:
+    """Regression lock (spec 115 T004/V9): the classifier moved to
+    readiness_classify.py must map each canonical reason to the SAME
+    (category, explanation, next_surface) the blocker explainer relied on. If a
+    future edit to the shared classifier drifts, this fails BEFORE it can silently
+    change blocker_explainer's shipped output."""
+    from retail.readiness_classify import CATEGORY_RANK, classify
+
+    # the five categories, in the fixed rank order, each via a marker word
+    assert classify("missing named approval")[0] == "approval"
+    assert classify("PK not unique on the data")[0] == "grain"
+    assert classify("live validation deferred, no dsn")[0] == "live_validation"
+    assert classify("a required artifact is missing")[0] == "artifact"
+    assert classify("some other readiness note")[0] == "readiness"
+    # 'missing' matches the 'artifact' rule before the default -- order preserved
+    assert CATEGORY_RANK == (
+        "approval",
+        "grain",
+        "live_validation",
+        "artifact",
+        "readiness",
+    )
+    # blocker_explainer imports THIS classify (not a private copy)
+    from retail import blocker_explainer
+
+    assert blocker_explainer._classify is classify
+
+
 def test_empty_repo_has_no_blockers(tmp_path: Path) -> None:
     assert build_blocker_explanations(tmp_path) == {
         "items": [],

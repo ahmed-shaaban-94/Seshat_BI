@@ -205,6 +205,34 @@ def _add_pii_notice_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_approver_view_parser(sub: argparse._SubParsersAction) -> None:
+    """`approver-view` (spec 115): read-only refutation-first reading view for a
+    human signer over one table's committed readiness-status.yaml +
+    unresolved-questions.md. Orders the refusal case (blocked/warning stages,
+    unmet approvals, open questions) by the shipped fixed category rank;
+    reassurance last. Writes nothing, grants no approval, emits no score."""
+    p = sub.add_parser(
+        "approver-view",
+        help=(
+            "read-only refutation-first signer view for one table: what would "
+            "make you refuse first, reassurance last; writes nothing, no score"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to read from")
+    p.add_argument(
+        "--table",
+        required=True,
+        help="table identity (the mappings/<table>/ directory name)",
+    )
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the view document.",
+    )
+
+
 def _add_check_parser(sub: argparse._SubParsersAction) -> None:
     """`check`: static governance checks. Extracted from ``_build_parser`` (with
     ``validate``/``semantic-check``/``value-check``/``demo``) to shrink the
@@ -721,6 +749,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_evidence_pack_parser(sub)
     _add_blockers_parser(sub)
     _add_pii_notice_parser(sub)
+    _add_approver_view_parser(sub)
 
     # `kit-lint` (feature 072): standalone Maintenance-Automation step (NOT a `retail
     # check` rule -- it parses yaml). Fails loud (exit 1) when a compass PROJECTION
