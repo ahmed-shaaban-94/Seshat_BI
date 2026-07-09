@@ -107,59 +107,69 @@ columns:
 
 
 # --------------------------------------------------------------------------- #
-# the verifier (T003) -- V1/V2/V3/V4/V7
+# the verifier (T003) -- V1/V2/V3/V4/V7, split into focused checks
 # --------------------------------------------------------------------------- #
-def assert_notice_is_faithful(notice_text: str, source_map: dict) -> None:
-    """Raise AssertionError unless the rendered notice is faithful to the
-    committed source-map (contracts/verifier.md)."""
-    columns = source_map.get("columns") or []
-    pii_cols = [c for c in columns if isinstance(c, dict) and c.get("pii") is True]
+def _committed_texts(source_map: dict) -> list[str]:
+    """Every committed reason string (column + deviation) -- the V1 corpus."""
+    texts = [
+        c["reason"]
+        for c in (source_map.get("columns") or [])
+        if isinstance(c, dict) and isinstance(c.get("reason"), str)
+    ]
+    texts += [
+        d["reason"]
+        for d in (source_map.get("defaults") or {}).get("deviations") or []
+        if isinstance(d, dict) and isinstance(d.get("reason"), str)
+    ]
+    return texts
 
-    # committed field texts, for the verbatim-substring check (V1)
-    committed_texts: list[str] = []
-    for c in columns:
-        if isinstance(c, dict) and isinstance(c.get("reason"), str):
-            committed_texts.append(c["reason"])
-    for dev in (source_map.get("defaults") or {}).get("deviations") or []:
-        if isinstance(dev, dict) and isinstance(dev.get("reason"), str):
-            committed_texts.append(dev["reason"])
 
-    # V2 completeness/never-omit: every pii:true column named in the notice
-    for c in pii_cols:
-        assert c["source_name"] in notice_text, (
-            f"V2: pii:true column {c['source_name']!r} missing from notice"
-        )
+def _check_v2_completeness(notice_text: str, source_map: dict) -> None:
+    for c in source_map.get("columns") or []:
+        if isinstance(c, dict) and c.get("pii") is True:
+            assert c["source_name"] in notice_text, (
+                f"V2: pii:true column {c['source_name']!r} missing from notice"
+            )
 
-    # V4 no-score: no numeric score/count/percentage token in COMPOSER-AUTHORED
-    # text. A committed disposition may itself contain "%" or a number (e.g. a
-    # date) -- that is an attributed echo, not an authored score -- so strip the
-    # double-quoted disposition spans before scanning (same authored-vs-echoed
-    # distinction V3 makes for clearance tokens).
+
+def _check_v4_no_score(notice_text: str) -> None:
+    # scan COMPOSER-AUTHORED text only: strip double-quoted disposition spans (a
+    # committed disposition may contain a % or number -- an echo, not an authored
+    # score), mirroring the authored-vs-echoed distinction V3 makes.
     authored = re.sub(r'"[^"]*"', "", notice_text)
     assert "%" not in authored, "V4: authored a percent token"
     assert "N of M" not in authored, "V4: authored an N-of-M count"
 
-    # V1 verbatim + V3 never-clear, per line.
+
+def _check_v3_gap_line(line: str) -> None:
+    low = line.lower()
+    assert "not cleared" in low, f"V3: GAP line lacks 'NOT cleared': {line}"
+    scanned = low.replace("not cleared", "")  # keep the legit framing out of scan
+    for tok in _CLEARANCE:
+        assert tok not in scanned, f"V3: GAP line authored a clearance token {tok!r}"
+
+
+def _check_v1_decided_line(line: str, committed: list[str]) -> None:
+    assert '"' in line, f"V1: decided line has no quoted disposition: {line}"
+    quoted = line.split('"')[1]
+    assert any(quoted in t for t in committed), (
+        f"V1: quoted disposition not a verbatim committed substring: {quoted!r}"
+    )
+
+
+def assert_notice_is_faithful(notice_text: str, source_map: dict) -> None:
+    """Raise AssertionError unless the rendered notice is faithful to the
+    committed source-map (contracts/verifier.md): V2 completeness, V4 no-score,
+    and per-line V3 never-clear / V1 verbatim."""
+    _check_v2_completeness(notice_text, source_map)
+    _check_v4_no_score(notice_text)
+    committed = _committed_texts(source_map)
     for raw in notice_text.splitlines():
         line = raw.strip()
-        if line.startswith("- GAP:") or line.startswith("GAP:"):
-            low = line.lower()
-            assert "not cleared" in low, f"V3: GAP line lacks 'NOT cleared': {line}"
-            # exclude the legitimate "NOT cleared" framing before scanning for an
-            # AUTHORED clearance token.
-            scanned = low.replace("not cleared", "")
-            for tok in _CLEARANCE:
-                assert tok not in scanned, (
-                    f"V3: GAP line authored a clearance token {tok!r}"
-                )
+        if line.startswith(("- GAP:", "GAP:")):
+            _check_v3_gap_line(line)
         elif line.startswith("- ") and "Recorded" in line:
-            # a decided disclosure line: the quoted disposition must be a verbatim
-            # substring of some committed field (V1).
-            assert '"' in line, f"V1: decided line has no quoted disposition: {line}"
-            quoted = line.split('"')[1]
-            assert any(quoted in t for t in committed_texts), (
-                f"V1: quoted disposition not a verbatim committed substring: {quoted!r}"
-            )
+            _check_v1_decided_line(line, committed)
 
 
 def _compose(tmp_path: Path, table: str, text: str):
