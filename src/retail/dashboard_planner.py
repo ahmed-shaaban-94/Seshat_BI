@@ -5,7 +5,10 @@ categorical verdict -- ``new`` / ``extends <page>`` / ``duplicate of <page>`` --
 by reducing both the proposal and each committed page to its set of
 ``(business_question, bound_contract, dimension)`` tuples and computing a
 DETERMINISTIC SET RELATIONSHIP over them. The match key is
-``(bound_contract, dimension)`` compared by EXACT committed value.
+``(bound_contract, dimension)`` compared by EXACT committed value; a dimension's
+table qualifier is PRESERVED (``dim_product[category]`` and
+``dim_customer[category]`` are distinct), while a bare free-text token
+(``category``) still matches a committed field by its inner column name.
 
 Comparison corpus: the target table's committed design directory
 ``mappings/<table>/design/`` -- ``dashboard-layout.md`` (page + business
@@ -55,21 +58,34 @@ def _read_text(path: Path) -> str | None:
         return None
 
 
-def _normalize_dimension(raw: str) -> str:
-    """Reduce a dimension reference to its committed field token.
+def _clean_dim(raw: str) -> str:
+    """Clean a dimension reference, PRESERVING any table qualifier.
 
-    ``dim_product_rss[category]`` -> ``category``; a bare ``category`` -> itself.
-    Exact committed VALUE (no lowercasing, no fuzzy equate -- Clarification Q2 /
-    the near-match edge case); only structural wrappers (brackets, backticks,
-    surrounding whitespace) and trailing sentence punctuation from a free-text
-    clause (e.g. ``category?`` -> ``category``) are stripped. Committed dimension
-    tokens are punctuation-free identifiers, so this never over-strips them.
+    ``dim_product_rss[category]`` -> ``dim_product_rss[category]`` (kept whole so
+    two distinct fields sharing an inner column name are NOT conflated); a bare
+    ``category`` -> ``category``. Only structural wrappers (backticks, surrounding
+    whitespace) and trailing sentence punctuation from a free-text clause (e.g.
+    ``category?`` -> ``category``) are stripped -- committed dimension tokens are
+    punctuation-free identifiers, so this never over-strips them.
     """
-    text = raw.strip().strip("`").strip().strip(".,;:!?\"'").strip()
-    bracket = re.findall(r"\[([^\]]+)\]", text)
-    if bracket:
-        return bracket[-1].strip()
-    return text
+    return raw.strip().strip("`").strip().strip(".,;:!?\"'").strip()
+
+
+def _dim_match_tokens(dim: str) -> set[str]:
+    """The forms a dimension matches on: its full qualified value ALWAYS, plus its
+    bare inner token when qualified (``dim_product_rss[category]`` ->
+    ``{dim_product_rss[category], category}``). This lets a bare free-text
+    ``category`` match a committed qualified field by inner name, while a QUALIFIED
+    proposal (e.g. ``dim_customer[category]``) matches only the exact committed
+    field -- so distinct same-named columns are never conflated. A bare token
+    cannot disambiguate two identically-named columns on the same contract; supply
+    the qualifier to distinguish them.
+    """
+    tokens = {dim}
+    inner = re.findall(r"\[([^\]]+)\]", dim)
+    if inner:
+        tokens.add(inner[-1].strip())
+    return tokens
 
 
 def _cells(line: str) -> list[str] | None:
@@ -103,7 +119,7 @@ def _dimension_from_field(field_cell: str) -> str:
     match = re.search(r"\bby\b\s+`?([^`(]+)`?", field_cell)
     if not match:
         return ""
-    return _normalize_dimension(match.group(1))
+    return _clean_dim(match.group(1))
 
 
 def _binding_rows(text: str) -> list[dict[str, str]]:
@@ -188,7 +204,11 @@ def _pages_from_rows(
     pages: list[dict[str, Any]] = []
     for name in sorted(grouped):
         page_rows = grouped[name]
-        keys = {(r["contract"], r["dimension"]) for r in page_rows}
+        keys = {
+            (r["contract"], tok)
+            for r in page_rows
+            for tok in _dim_match_tokens(r["dimension"])
+        }
         pages.append({"name": name, "keys": keys, "rows": page_rows})
     return pages
 
@@ -286,7 +306,7 @@ def _proposal_tuple(
         "question": question.strip(),
         "contract": contract.strip(),
         "dimension": dimension.strip(),
-        "dimension_key": _normalize_dimension(dimension),
+        "dimension_key": _clean_dim(dimension),
         "source": source,
     }
 
@@ -347,7 +367,10 @@ def _cited_rows(
             "source_file": source_file,
         }
         for row in page["rows"]
-        if (row["contract"], row["dimension"]) in shared
+        if any(
+            (row["contract"], tok) in shared
+            for tok in _dim_match_tokens(row["dimension"])
+        )
     ]
     return sorted(cites, key=lambda c: (c["row_id"], c["contract"], c["dimension"]))
 
@@ -561,7 +584,7 @@ def _matched_section(verdict: dict[str, Any]) -> list[str]:
     for row in rows:
         lines.append(
             f"- `{row['page']}` / `{row['row_id']}` -- "
-            f"{_tuple_label(row['contract'], _normalize_dimension(row['dimension']))} "
+            f"{_tuple_label(row['contract'], row['dimension'])} "
             f"(`{row['source_file']}`)"
         )
     return lines

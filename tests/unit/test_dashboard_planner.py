@@ -316,7 +316,11 @@ def test_every_citation_exists(tmp_path):
     )
     keys = _parse_fixture_keys(HAS_PAGE_BINDING)
     for row in verdict["matched_rows"]:
-        assert (row["contract"], row["dimension"]) in keys
+        # citations carry the full committed dimension (qualifier preserved); the
+        # fixture oracle keys on the inner token, so compare on that.
+        inner = re.findall(r"\[([^\]]+)\]", row["dimension"])
+        dim = inner[-1] if inner else row["dimension"]
+        assert (row["contract"], dim) in keys
 
 
 def test_case_mismatch_is_not_covered(tmp_path):
@@ -324,6 +328,28 @@ def test_case_mismatch_is_not_covered(tmp_path):
     _make_corpus(tmp_path, "widget_sales", HAS_PAGE_BINDING)
     verdict = classify_proposal(
         tmp_path, "widget_sales", {"tuples": [("Q", "totalrevenue", "region")]}
+    )
+    assert verdict["verdict"] == "new"
+
+
+def test_qualified_dimension_exact_match(tmp_path):
+    # a fully-qualified proposal that names the committed field exactly matches
+    _make_corpus(tmp_path, "widget_sales", HAS_PAGE_BINDING)
+    verdict = classify_proposal(
+        tmp_path, "widget_sales", {"tuples": [("Q", "TotalRevenue", "dim_geo[region]")]}
+    )
+    assert verdict["verdict"] == "duplicate"
+    assert any(r["row_id"] == "v02" for r in verdict["matched_rows"])
+
+
+def test_qualified_dimension_not_conflated(tmp_path):
+    # Codex P2: a qualified proposal for a DIFFERENT field sharing the inner
+    # column name (region) must NOT conflate with the committed dim_geo[region].
+    _make_corpus(tmp_path, "widget_sales", HAS_PAGE_BINDING)
+    verdict = classify_proposal(
+        tmp_path,
+        "widget_sales",
+        {"tuples": [("Q", "TotalRevenue", "dim_other[region]")]},
     )
     assert verdict["verdict"] == "new"
 
