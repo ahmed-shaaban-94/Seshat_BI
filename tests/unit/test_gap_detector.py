@@ -109,6 +109,23 @@ def _write_intent(root: Path, name: str, body: str) -> str:
     return str(p)
 
 
+# A pass metric M that depends on decision row D1 -- the shared setup for the
+# owner-decision tests (only the supplied questions file varies).
+_DEP_INTENT = (
+    "questions:\n  - question: Q\n    metrics:\n"
+    "      - name: M\n        depends_on: [D1]\n"
+)
+
+
+def _dep_metric_view(tmp_path: Path, files: dict) -> dict:
+    _write_table(
+        tmp_path, "widget", {"M": _metric_yaml("M", "pass", ["amount"])}, files
+    )
+    return build_gap_inventory(
+        tmp_path, "widget", _write_intent(tmp_path, "dep.yaml", _DEP_INTENT)
+    )
+
+
 # The MIXED fixture: one metric per SL1 status + two dimensions + an out-of-scope.
 MIXED_METRICS = {
     "CoveredMetric": _metric_yaml("CoveredMetric", "pass", ["amount"]),
@@ -234,19 +251,7 @@ def test_unmatched_metric_is_planned_not_dropped(tmp_path):
 # US2 -- open owner decisions block design; answered ones do not
 # --------------------------------------------------------------------------- #
 def test_open_decision_blocks_dependent_metric(tmp_path):
-    _write_table(
-        tmp_path,
-        "widget",
-        {"M": _metric_yaml("M", "pass", ["amount"])},
-        {"questions": QUESTIONS_OPEN},
-    )
-    intent = _write_intent(
-        tmp_path,
-        "d.yaml",
-        "questions:\n  - question: Q\n    metrics:\n"
-        "      - name: M\n        depends_on: [D1]\n",
-    )
-    view = build_gap_inventory(tmp_path, "widget", intent)
+    view = _dep_metric_view(tmp_path, {"questions": QUESTIONS_OPEN})
     item = view["items"][0]
     assert item["status"] == "Blocked -- needs business definition"
     assert "governance" in item["blocker"]  # Who must answer, verbatim
@@ -255,39 +260,50 @@ def test_open_decision_blocks_dependent_metric(tmp_path):
 
 
 def test_answered_decision_not_a_gap(tmp_path):
-    _write_table(
-        tmp_path,
-        "widget",
-        {"M": _metric_yaml("M", "pass", ["amount"])},
-        {"questions": QUESTIONS_CLEARED},
-    )
-    intent = _write_intent(
-        tmp_path,
-        "a.yaml",
-        "questions:\n  - question: Q\n    metrics:\n"
-        "      - name: M\n        depends_on: [D1]\n",
-    )
-    view = build_gap_inventory(tmp_path, "widget", intent)
+    view = _dep_metric_view(tmp_path, {"questions": QUESTIONS_CLEARED})
     assert view["items"][0]["status"] == "Covered"  # answered/CLEARED -> not blocked
 
 
 def test_template_gate_placeholder_not_cleared(tmp_path):
     # an unfilled `Gate status: <OPEN | CLEARED>` placeholder must NOT clear the
     # gate (Codex P2): the open row stays open and blocks its dependent metric.
+    view = _dep_metric_view(tmp_path, {"questions": QUESTIONS_TEMPLATE_PLACEHOLDER})
+    assert view["items"][0]["status"] == "Blocked -- needs business definition"
+
+
+def test_gate_prose_before_field_not_cleared(tmp_path):
+    # Codex P2: intro PROSE mentioning "Gate status: CLEARED" before the real
+    # `- **Gate status:** OPEN` field bullet must NOT clear the gate.
+    prose_then_open = (
+        "# Unresolved questions\n\n"
+        "> no silver SQL until every row is answered and `Gate status: CLEARED`.\n\n"
+        "- **Gate status:** `OPEN` -- decisions outstanding\n\n"
+        "| ID | Question | Why | Who must answer | Default | Status | Resolution |\n"
+        "|----|----------|-----|-----------------|---------|--------|------------|\n"
+        "| D1 | Is the discount policy final? | bias | governance | keep | open | |\n"
+    )
+    view = _dep_metric_view(tmp_path, {"questions": prose_then_open})
+    assert view["items"][0]["status"] == "Blocked -- needs business definition"
+
+
+def test_unknown_dependency_fails_closed(tmp_path):
+    # Codex P2: a depends_on referencing a row absent from unresolved-questions.md
+    # (typo / stale / deleted) is unverifiable -> Blocked, never a silent Covered.
     _write_table(
         tmp_path,
         "widget",
         {"M": _metric_yaml("M", "pass", ["amount"])},
-        {"questions": QUESTIONS_TEMPLATE_PLACEHOLDER},
+        {"questions": QUESTIONS_CLEARED},  # has only D1
     )
     intent = _write_intent(
         tmp_path,
-        "t.yaml",
+        "unk.yaml",
         "questions:\n  - question: Q\n    metrics:\n"
-        "      - name: M\n        depends_on: [D1]\n",
+        "      - name: M\n        depends_on: [D2]\n",  # D2 does not exist
     )
     view = build_gap_inventory(tmp_path, "widget", intent)
     assert view["items"][0]["status"] == "Blocked -- needs business definition"
+    assert "D2" in view["items"][0]["blocker"]
 
 
 def test_metric_only_missing_source_map_fails_closed(tmp_path):
@@ -310,19 +326,7 @@ def test_metric_only_missing_source_map_fails_closed(tmp_path):
 
 def test_unrecognized_owner_echoed_verbatim(tmp_path):
     q = QUESTIONS_OPEN.replace("governance", "wizard")
-    _write_table(
-        tmp_path,
-        "widget",
-        {"M": _metric_yaml("M", "pass", ["amount"])},
-        {"questions": q},
-    )
-    intent = _write_intent(
-        tmp_path,
-        "w.yaml",
-        "questions:\n  - question: Q\n    metrics:\n"
-        "      - name: M\n        depends_on: [D1]\n",
-    )
-    view = build_gap_inventory(tmp_path, "widget", intent)
+    view = _dep_metric_view(tmp_path, {"questions": q})
     assert "wizard" in view["items"][0]["blocker"]  # echoed, no invented owner class
 
 
@@ -363,19 +367,7 @@ def test_missing_metrics_dir_document_gap(tmp_path):
 
 
 def test_missing_questions_file_not_no_decisions(tmp_path):
-    _write_table(
-        tmp_path,
-        "widget",
-        {"M": _metric_yaml("M", "pass", ["amount"])},
-        {"questions": None},
-    )
-    intent = _write_intent(
-        tmp_path,
-        "q.yaml",
-        "questions:\n  - question: Q\n    metrics:\n"
-        "      - name: M\n        depends_on: [D1]\n",
-    )
-    view = build_gap_inventory(tmp_path, "widget", intent)
+    view = _dep_metric_view(tmp_path, {"questions": None})
     assert view["items"][0]["status"] != "Covered"
     assert any("unresolved-questions.md" in g for g in view["document_gaps"])
 

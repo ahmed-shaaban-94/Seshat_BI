@@ -203,19 +203,24 @@ def _open_decisions(text: str) -> dict[str, dict[str, str]]:
     return rows
 
 
-_GATE_RE = re.compile(r"gate status\b[^A-Za-z<]*([A-Za-z<>|]+)", re.IGNORECASE)
+# Anchored to the START of the status BULLET/heading (after optional quote `>`,
+# list `-`/`*`, and bold `**`), so PROSE that merely mentions "Gate status:
+# CLEARED" mid-sentence is NOT matched -- only the actual field line is.
+_GATE_RE = re.compile(
+    r"^[>\s]*[-*]*\s*\**\s*gate status\b[^A-Za-z<]*([A-Za-z<>|]+)", re.IGNORECASE
+)
 
 
 def _gate_cleared(text: str) -> bool:
-    """True only when the actual ``Gate status`` field VALUE is ``CLEARED``.
+    """True only when the actual ``Gate status`` FIELD value is ``CLEARED``.
 
-    Parses the first ``Gate status`` line's value token rather than scanning for
-    the word anywhere -- so an unfilled template placeholder
-    (``Gate status: <OPEN | CLEARED>``) or instructional prose does NOT falsely
-    clear the gate (the value token there is ``<OPEN``, not ``cleared``).
+    Parses the value token of the first line whose START is the ``Gate status``
+    field bullet -- so neither an unfilled template placeholder
+    (``Gate status: <OPEN | CLEARED>`` -> value ``<OPEN``) nor instructional prose
+    that mentions ``Gate status: CLEARED`` mid-sentence falsely clears the gate.
     """
     for line in text.splitlines():
-        m = _GATE_RE.search(line)
+        m = _GATE_RE.match(line)
         if m:
             return m.group(1).strip().lower() == "cleared"
     return False
@@ -237,16 +242,28 @@ def _blocker(status: str, blocker: str, path: str) -> dict[str, str]:
     return {"status": status, "blocker": blocker, "evidence_path": path}
 
 
-def _open_dep(
-    item: dict[str, Any], decisions: dict[str, dict[str, str]] | None
-) -> dict | None:
-    """The first depended-on decision row that is OPEN, if any."""
-    if decisions is None:
-        return None
+def _decision_dep_block(
+    item: dict[str, Any], decisions: dict[str, dict[str, str]], questions_rel: str
+) -> dict[str, str] | None:
+    """Block on the first declared decision dependency that is unverifiable or
+    OPEN. A referenced row that is MISSING (typo / stale intent / deleted row)
+    fails closed -- the declared owner decision cannot be verified, so it is
+    never silently treated as satisfied."""
     for dep in item["depends_on"]:
         row = decisions.get(dep)
-        if row and row["open"]:
-            return {"id": dep, **row}
+        if row is None:
+            return _blocker(
+                BLOCKED_NEEDS_DEFINITION,
+                f"declared owner decision {dep} not found in unresolved-questions.md",
+                questions_rel,
+            )
+        if row["open"]:
+            return _blocker(
+                BLOCKED_NEEDS_DEFINITION,
+                f"open owner decision {dep} -- {row['owner']} must answer: "
+                f'"{row["question"]}"',
+                questions_rel,
+            )
     return None
 
 
@@ -264,15 +281,9 @@ def _metric_decision_block(
             "cannot verify owner decision -- file not found",
             questions_rel,
         )
-    dep = _open_dep(item, ctx["decisions"])
-    if dep is None:
+    if ctx["decisions"] is None:
         return None
-    return _blocker(
-        BLOCKED_NEEDS_DEFINITION,
-        f"open owner decision {dep['id']} -- {dep['owner']} must answer: "
-        f'"{dep["question"]}"',
-        questions_rel,
-    )
+    return _decision_dep_block(item, ctx["decisions"], questions_rel)
 
 
 def _metric_contract_status(
