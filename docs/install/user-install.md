@@ -75,8 +75,8 @@ not treat the later rungs as available.
 | Rung | State |
 |------|-------|
 | **GitHub source / editable install** (this page) | **Current -- supported today.** |
-| **Claude Code local plugin skeleton** | Draft committed at `integrations/claude-code/seshat-bi/` -- a local skeleton; schema and install flow not yet verified. |
-| **Plugin marketplace repo** | Later. Draft manifest at `integrations/claude-code/marketplace/`; would likely move to a standalone repository before publication. |
+| **Claude Code local plugin skeleton** | Verified draft at `integrations/claude-code/seshat-bi/` -- manifest schema and local install flow verified with the Claude Code CLI (v2.1.206); not published. |
+| **Plugin marketplace repo** | Later. Verified draft manifest at `integrations/claude-code/.claude-plugin/`; would likely move to a standalone repository before publication. |
 | **PyPI / pipx / uv tool install** (`pipx install seshat-bi`) | Later (roadmap M2). Not published to any package index yet -- `pipx install seshat-bi` does not work today. |
 | **MCP server** | Later. Not designed in this slice. |
 
