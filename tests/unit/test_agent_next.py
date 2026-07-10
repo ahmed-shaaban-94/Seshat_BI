@@ -181,6 +181,42 @@ next_action: "done"
     assert len(first["tables"]) == 2
 
 
+def test_malformed_status_file_surfaces_as_input_defect(tmp_path: Path) -> None:
+    """A committed-but-unparseable readiness file must NOT read as a fresh
+    journey: the repo-level document surfaces it as input_defect."""
+    _write_status(tmp_path, "orders", "stages: [not: valid: yaml: {{{")
+    document = build_agent_next_document(tmp_path)
+    assert document["outcome"] == "input_defect"
+    assert document["readiness_state"] is None
+    assert "input defect" in document["next_allowed_action"]
+    assert document["tables"][0]["outcome"] == "input_defect"
+
+
+def test_malformed_file_outranks_healthy_tables_for_focus(tmp_path: Path) -> None:
+    _write_status(tmp_path, "orders", _MAPPING_NOT_STARTED)
+    _write_status(tmp_path, "broken", "- this is a list, not a mapping")
+    document = build_agent_next_document(tmp_path)
+    assert document["outcome"] == "input_defect"  # most urgent wins the focus
+    assert len(document["tables"]) == 2
+    outcomes = {t["source_path"]: t["outcome"] for t in document["tables"]}
+    assert outcomes["mappings/broken/readiness-status.yaml"] == "input_defect"
+    assert outcomes["mappings/orders/readiness-status.yaml"] == "next_action"
+
+
+def test_status_file_without_table_field_keeps_stage_and_evidence(
+    tmp_path: Path,
+) -> None:
+    """A readiness file identified only by its mappings/<dir>/ directory (no
+    string `table:` field) must not degrade to a missing-file Source Ready
+    answer -- its recorded stages and evidence still surface."""
+    body = _MAPPING_NOT_STARTED.replace('table: "silver.orders"\n', "")
+    _write_status(tmp_path, "orders", body)
+    document = build_agent_next_document(tmp_path)
+    assert document["current_stage"] == "mapping_ready"
+    assert document["evidence"][0]["stage"] == "source_ready"
+    assert document["evidence"][0]["items"] == ["mappings/orders/source-profile.md"]
+
+
 def test_table_argument_focuses_that_table(tmp_path: Path) -> None:
     _write_status(tmp_path, "orders", _MAPPING_NOT_STARTED)
     document = build_agent_next_document(tmp_path, "silver.orders")

@@ -253,15 +253,17 @@ def _evidence(entry: dict[str, Any] | None) -> list[dict[str, Any]]:
     ]
 
 
-def _summaries(pairs: list[tuple[dict[str, Any], dict[str, Any]]]) -> list[dict]:
+def _summaries(
+    triples: list[tuple[dict[str, Any] | None, dict[str, Any], str]],
+) -> list[dict]:
     return [
         {
             "table": response["table"],
-            "source_path": entry["source_path"],
+            "source_path": source_path,
             "outcome": response["outcome"],
             "stage": response["stage"],
         }
-        for entry, response in pairs
+        for _entry, response, source_path in triples
     ]
 
 
@@ -319,11 +321,62 @@ def _fresh_repo_document() -> dict[str, Any]:
     }
 
 
-def _entry_for(
-    entries: list[dict[str, Any]], response: dict[str, Any]
+def _dir_name(source_path: str) -> str:
+    """The ``mappings/<dir>/`` directory name -- the identity
+    ``build_run_next_response`` always resolves via its direct candidate path,
+    even when the file records no string ``table`` field."""
+    return source_path.rsplit("/", 2)[-2]
+
+
+def _unprojected_status_paths(root: Path, entries: list[dict[str, Any]]) -> list[str]:
+    """Committed readiness-status files the best-effort projection SKIPPED
+    (unreadable / unparseable / non-mapping). They must still surface -- as
+    ``input_defect``, never as an absent table -- or a broken committed file
+    would silently read as a fresh journey."""
+    projected = {entry["source_path"] for entry in entries}
+    mappings_dir = root / "mappings"
+    if not mappings_dir.is_dir():
+        return []
+    return [
+        path.relative_to(root).as_posix()
+        for path in sorted(mappings_dir.glob("*/readiness-status.yaml"))
+        if path.relative_to(root).as_posix() not in projected
+    ]
+
+
+def _all_triples(
+    root: Path, entries: list[dict[str, Any]]
+) -> list[tuple[dict[str, Any] | None, dict[str, Any], str]]:
+    """One ``(projection entry, run-next response, source path)`` triple per
+    committed readiness-status file, including files the projection skipped
+    (entry ``None``; their run-next outcome is ``input_defect``)."""
+    triples: list[tuple[dict[str, Any] | None, dict[str, Any], str]] = [
+        (
+            entry,
+            build_run_next_response(root, _dir_name(entry["source_path"])),
+            entry["source_path"],
+        )
+        for entry in entries
+    ]
+    for source_path in _unprojected_status_paths(root, entries):
+        triples.append(
+            (
+                None,
+                build_run_next_response(root, _dir_name(source_path)),
+                source_path,
+            )
+        )
+    return triples
+
+
+def _entry_matching(
+    entries: list[dict[str, Any]], table: str, response: dict[str, Any]
 ) -> dict[str, Any] | None:
+    """Find the projection entry behind a --table response: by the recorded
+    table name, or by the mappings/<dir>/ directory identity."""
     for entry in entries:
-        if entry.get("table") == response.get("table"):
+        names = {entry.get("table"), _dir_name(entry["source_path"])}
+        if names & {response.get("table"), table}:
             return entry
     return None
 
@@ -336,24 +389,25 @@ def build_agent_next_document(
     With ``table``, the document focuses that table (missing file degrades to
     the conservative Source Ready start, exactly as ``build_run_next_response``
     does). Without it, the focus is the table with the most urgent run-next
-    outcome (ties broken by source path, so the answer is deterministic); an
-    empty repo produces the conservative evidence-first document. Read-only in
-    every path.
+    outcome -- a malformed committed readiness file first, then the earliest
+    incomplete stage (ties broken by source path, so the answer is
+    deterministic); a repo with no readiness files at all produces the
+    conservative evidence-first document. Read-only in every path.
     """
     root = Path(repo_root)
     projection = build_status_projection(root)
     entries: list[dict[str, Any]] = projection["tables"]
+    triples = _all_triples(root, entries)
 
     if table is not None:
         response = build_run_next_response(root, table)
-        pairs = [(e, build_run_next_response(root, e["table"])) for e in entries]
-        return _compose(response, _entry_for(entries, response), _summaries(pairs))
+        entry = _entry_matching(entries, table, response)
+        return _compose(response, entry, _summaries(triples))
 
-    if not entries:
+    if not triples:
         return _fresh_repo_document()
 
-    pairs = [(e, build_run_next_response(root, e["table"])) for e in entries]
-    focus_entry, focus_response = min(
-        pairs, key=lambda pair: (_rank(pair[1]), pair[0]["source_path"])
+    focus_entry, focus_response, _ = min(
+        triples, key=lambda triple: (_rank(triple[1]), triple[2])
     )
-    return _compose(focus_response, focus_entry, _summaries(pairs))
+    return _compose(focus_response, focus_entry, _summaries(triples))
