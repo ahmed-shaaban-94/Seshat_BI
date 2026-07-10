@@ -369,29 +369,47 @@ def _all_triples(
     return triples
 
 
+def _resolved_source_path(root: Path, table: str) -> str | None:
+    """The repo-relative path of the readiness file run-next itself resolves
+    for ``table`` (its ``_find_status_data`` matches dir name / recorded
+    table / source_id -- reused, not re-derived)."""
+    from retail.run_next import _find_status_data
+
+    status_path, _data, _error = _find_status_data(root, table)
+    if status_path is None:
+        return None
+    return status_path.relative_to(root).as_posix()
+
+
+def _entry_by_source_path(
+    entries: list[dict[str, Any]], source_path: str | None
+) -> dict[str, Any] | None:
+    if source_path is None:
+        return None
+    return next((e for e in entries if e["source_path"] == source_path), None)
+
+
+def _entry_by_name(
+    entries: list[dict[str, Any]], names: set[str | None]
+) -> dict[str, Any] | None:
+    return next(
+        (e for e in entries if {e.get("table"), _dir_name(e["source_path"])} & names),
+        None,
+    )
+
+
 def _entry_matching(
     root: Path,
     entries: list[dict[str, Any]],
     table: str,
     response: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Find the projection entry behind a --table response. The authoritative
-    match is the FILE run-next itself resolved (its ``_find_status_data``
-    matches dir name / recorded table / source_id -- reused, not re-derived),
-    keyed by source path; the name comparison stays as a fallback."""
-    from retail.run_next import _find_status_data
-
-    status_path, _data, _error = _find_status_data(root, table)
-    if status_path is not None:
-        source_path = status_path.relative_to(root).as_posix()
-        for entry in entries:
-            if entry["source_path"] == source_path:
-                return entry
-    for entry in entries:
-        names = {entry.get("table"), _dir_name(entry["source_path"])}
-        if names & {response.get("table"), table}:
-            return entry
-    return None
+    """Find the projection entry behind a --table response: authoritatively by
+    the source path of the file run-next resolved, else by name."""
+    by_path = _entry_by_source_path(entries, _resolved_source_path(root, table))
+    if by_path is not None:
+        return by_path
+    return _entry_by_name(entries, {response.get("table"), table})
 
 
 def build_agent_next_document(
