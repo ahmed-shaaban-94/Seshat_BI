@@ -1,9 +1,10 @@
-# Seshat BI -- Claude Code plugin (DRAFT skeleton)
+# Seshat BI -- Claude Code plugin (verified draft, not released)
 
-> **Status: local draft, not a verified public release.** This is a
-> marketplace-ready *skeleton*: the plugin/marketplace schema and the install
-> flow must be verified against current Claude Code documentation before any
-> publication. Nothing here is published anywhere.
+> **Status: locally verified draft, not publicly released.** The plugin
+> manifest passes `claude plugin validate` and the local marketplace-add ->
+> install -> component-load flow succeeds (Claude Code CLI v2.1.206,
+> 2026-07; see [`../README.md`](../README.md) for the verified steps).
+> Nothing here is published anywhere.
 
 This plugin teaches Claude Code to drive the **Seshat BI** readiness system
 safely through its existing CLI. It contains **no BI logic of its own** -- the
@@ -53,8 +54,7 @@ or, without installing, every command also runs as
 
 ## Trying the draft locally
 
-The intended local flow (to be verified before release) is Claude Code's
-local plugin/marketplace mechanism -- see
-`../marketplace/README.md` for the draft marketplace entry that points at
-this directory. Until the schema is verified, treat both as documentation of
-intent, not as an installable artifact.
+The local flow is Claude Code's plugin/marketplace mechanism -- see
+[`../README.md`](../README.md) (the marketplace root) for the verified
+add/install/load steps. Publication is still pending the standalone-repo
+decision; do not point users at this directory as a released install path.
