@@ -99,10 +99,12 @@ seshat check                       # same command, product-brand alias
 > New user starting a fresh project? `seshat init-project my-retail-bi` scaffolds an
 > empty workspace. Install-path details: [`docs/install/user-install.md`](docs/install/user-install.md).
 
-Not installing the package? Run the checker straight from source:
+No console script? With the package installed, the checker also runs as a
+module -- and from a bare uninstalled clone, prefix with `PYTHONPATH=src`:
 
 ```bash
 python -m retail.cli check --repo .
+PYTHONPATH=src python -m retail.cli check --repo .   # bare clone, no install
 ```
 
 Tests:

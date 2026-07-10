@@ -76,8 +76,9 @@ evidence-first action (go profile, go record status) -- never an assumed
 | `seshat check` | Static governance gate over committed artifacts; the exit code is the authority. |
 | `seshat validate` | LIVE data checks -- only when a database is configured (`db` extra + DSN); otherwise it reports the deferred state honestly. |
 
-`retail` is the canonical dev alias of `seshat`; `python -m retail.cli <verb>`
-runs every verb straight from source without installing.
+`retail` is the canonical dev alias of `seshat`; with the package installed,
+`python -m retail.cli <verb>` runs every verb without the console script (from
+a bare uninstalled clone, prefix with `PYTHONPATH=src`).
 
 ## How Claude Code should use Seshat safely
 

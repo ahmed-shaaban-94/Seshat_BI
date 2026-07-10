@@ -31,14 +31,24 @@ Requirements:
   (`pip install -e ".[db]"`) -- see `docs/powerbi-connection.md`. Static
   `check` needs no database.
 
-## Supported today: direct source execution (no install)
+## Supported today: direct source execution (no console script)
 
-Every verb runs straight from the repo without a console script:
+With the package installed (the editable install above is enough), every verb
+also runs as a module, no `seshat`/`retail` script needed:
 
 ```bash
 python -m retail.cli check --repo .
 python -m retail.cli status --repo . --format json
 python -m retail.cli next --repo . --format agent
+```
+
+From a **bare clone with no install at all**, the package lives under `src/`
+and is not on Python's import path -- prefix the same commands with
+`PYTHONPATH=src` (PowerShell: `$env:PYTHONPATH="src"`) and have `pyyaml`
+available, or just use the editable install:
+
+```bash
+PYTHONPATH=src python -m retail.cli check --repo .
 ```
 
 ## Supported today: fresh project test
