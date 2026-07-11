@@ -46,7 +46,7 @@ from typing import TYPE_CHECKING
 import seshat.rules  # noqa: F401  (import for side effects: fires every @register)
 
 from ..registry import all_rules
-from ..runner import build_context, run, run_json
+from ..runner import build_context, run, run_json, run_review, run_sarif
 from .parser import _build_parser
 
 if TYPE_CHECKING:
@@ -91,6 +91,10 @@ def _run_check(args: object) -> int:
     # Default 'text' calls the unchanged run(); 'json' is the opt-in path.
     if args.output_format == "json":  # type: ignore[attr-defined]
         return run_json(all_rules(), ctx, bootstrapped=bootstrapped)
+    if args.output_format == "review":  # type: ignore[attr-defined]
+        return run_review(all_rules(), ctx, bootstrapped=bootstrapped)
+    if args.output_format == "sarif":  # type: ignore[attr-defined]
+        return run_sarif(all_rules(), ctx, bootstrapped=bootstrapped)
     return run(all_rules(), ctx, bootstrapped=bootstrapped)
 
 
@@ -287,5 +291,7 @@ __all__ = [
     "build_context",
     "run",
     "run_json",
+    "run_review",
+    "run_sarif",
     "all_rules",
 ]

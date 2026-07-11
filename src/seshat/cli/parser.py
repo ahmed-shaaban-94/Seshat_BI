@@ -353,12 +353,13 @@ def _add_check_parser(sub: argparse._SubParsersAction) -> None:
     check.add_argument(
         "--format",
         dest="output_format",
-        choices=("text", "json"),
+        choices=("text", "json", "review", "sarif"),
         default="text",
         help=(
             "findings output format. 'text' (default) is the human-readable "
             "[severity] id message (locator) lines, unchanged. 'json' emits one "
-            "structured document for tooling; the exit code is identical."
+            "structured document for tooling; 'review' adds changed-state and a "
+            "stable digest; 'sarif' emits SARIF 2.1.0. Exit policy is identical."
         ),
     )
 

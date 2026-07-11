@@ -69,17 +69,17 @@
 
 **Independent Test**: Run the integration against compliant and silver-before-mapping fixtures; verify exit codes, evidence boundary, job summary, JSON, SARIF, fingerprints, and read-only permissions.
 
-- [ ] T027 [P] [US2] Write Finding-to-SARIF 2.1.0 parity, location, severity, and fingerprint tests for FR-015 in `tests/unit/test_sarif.py`
-- [ ] T028 [P] [US2] Write review digest, changed-state, summary, and static-vs-live boundary tests for FR-014 through FR-017 in `tests/unit/test_review_integration.py`
-- [ ] T029 [P] [US2] Add clean checkout action tests for compliant, hard-stop, input-defect, and unavailable-SARIF cases in `tests/integration/test_github_action.py`
-- [ ] T030 [US2] Implement deterministic SARIF 2.1.0 formatting over existing `Finding` records in `src/seshat/sarif.py`
-- [ ] T031 [US2] Implement normalized review result, digest, stage delta, and compact summary composition in `src/seshat/review_integration.py`
-- [ ] T032 [US2] Add `sarif` output without changing existing text/JSON parity in `src/seshat/cli/parser.py`
-- [ ] T033 [US2] Wire review output and stable exit-code behavior in `src/seshat/cli/__init__.py`
-- [ ] T034 [US2] Define the read-only composite integration inputs, outputs, pinned package installation, and artifact steps in `integrations/github-action/action.yml`
-- [ ] T035 [US2] Implement the cross-platform action entrypoint and job-summary fallback in `integrations/github-action/entrypoint.ps1`
-- [ ] T036 [US2] Document immutable version pinning, permissions, SARIF availability, and sample usage in `integrations/github-action/README.md`
-- [ ] T037 [US2] Add a one-way export verification seam for a future Marketplace wrapper without publishing it in `scripts/export_github_action.py`
+- [x] T027 [P] [US2] Write Finding-to-SARIF 2.1.0 parity, location, severity, and fingerprint tests for FR-015 in `tests/unit/test_sarif.py`
+- [x] T028 [P] [US2] Write review digest, changed-state, summary, and static-vs-live boundary tests for FR-014 through FR-017 in `tests/unit/test_review_integration.py`
+- [x] T029 [P] [US2] Add clean checkout action tests for compliant, hard-stop, input-defect, and unavailable-SARIF cases in `tests/integration/test_github_action.py`
+- [x] T030 [US2] Implement deterministic SARIF 2.1.0 formatting over existing `Finding` records in `src/seshat/sarif.py`
+- [x] T031 [US2] Implement normalized review result, digest, stage delta, and compact summary composition in `src/seshat/review_integration.py`
+- [x] T032 [US2] Add `sarif` output without changing existing text/JSON parity in `src/seshat/cli/parser.py`
+- [x] T033 [US2] Wire review output and stable exit-code behavior in `src/seshat/cli/__init__.py`
+- [x] T034 [US2] Define the read-only composite integration inputs, outputs, pinned package installation, and artifact steps in `integrations/github-action/action.yml`
+- [x] T035 [US2] Implement the cross-platform action entrypoint and job-summary fallback in `integrations/github-action/entrypoint.ps1`
+- [x] T036 [US2] Document immutable version pinning, permissions, SARIF availability, and sample usage in `integrations/github-action/README.md`
+- [x] T037 [US2] Add a one-way export verification seam for a future Marketplace wrapper without publishing it in `scripts/export_github_action.py`
 
 **Checkpoint**: Teams can adopt review governance without MCP, packs, passports, or explorer work.
 
