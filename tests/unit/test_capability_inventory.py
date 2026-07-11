@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -247,6 +248,34 @@ def _find_unlisted(repo_root: Path) -> list[str]:
     return problems
 
 
+def _roadmap_row_is_shipped(f_number: str, repo_root: Path) -> bool:
+    """True iff the roadmap table row whose FIRST cell names exactly this
+    F-number has a status cell that reads SHIPPED (not PARTLY, not spec-only).
+
+    Structural, not a floating substring + char-window: we locate the pipe-table
+    row whose first cell is ``F0NN`` (optionally bold-wrapped) and read THAT
+    row's own last cell, so a SHIPPED neighbor row -- or a prose mention of the
+    F-number near an unrelated "SHIPPED" -- can never grant a false signal to a
+    spec-only feature (the exact O3 fail-closed guarantee)."""
+    row_start = re.compile(
+        r"^\|\s*\*{0,2}" + re.escape(f_number) + r"\*{0,2}\s*\|", re.IGNORECASE
+    )
+    for line in _roadmap_text(repo_root).splitlines():
+        if not row_start.match(line):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not cells:
+            return False
+        status_cell = cells[-1].upper()
+        # This row's OWN status must read SHIPPED and not be qualified as
+        # PARTLY/spec-only/deferred/planned in that same cell.
+        if "SHIPPED" not in status_cell:
+            return False
+        disqualifiers = ("PARTLY", "SPEC-ONLY", "SPEC ONLY", "DEFERRED", "PLANNED")
+        return not any(d in status_cell for d in disqualifiers)
+    return False
+
+
 def _has_positive_ship_signal(entry: dict, repo_root: Path) -> bool:
     refs = entry.get("references") or {}
     if _as_list(refs.get("dispatch")):
@@ -258,11 +287,8 @@ def _has_positive_ship_signal(entry: dict, repo_root: Path) -> bool:
         if any(s in skill_names for s in _as_list(refs.get("skill"))):
             return True
     roadmap_ref = refs.get("roadmap")
-    if roadmap_ref:
-        text = _roadmap_text(repo_root)
-        idx = text.find(roadmap_ref)
-        if idx != -1 and "SHIPPED" in text[max(0, idx - 200) : idx + 400]:
-            return True
+    if roadmap_ref and _roadmap_row_is_shipped(roadmap_ref, repo_root):
+        return True
     status_claims_ref = refs.get("status_claims")
     if status_claims_ref and status_claims_ref in _status_claims_built(repo_root):
         return True
@@ -332,18 +358,49 @@ def _find_axis_violations(repo_root: Path) -> list[str]:
         state = entry.get("state")
         if state not in _LIFECYCLE_STATES:
             problems.append(f"{entry['id']}: state {state!r} is not a LIFECYCLE token")
-        for key, value in entry.items():
+        # Recurse into nested lists/dicts: a numeric maturity/confidence/health
+        # value is forbidden ANYWHERE in a record (FR-009 / hard rule #9), not
+        # just at the top level -- a score smuggled into requirements: [0.9] or
+        # references: {confidence: 0.8} must still trip O6.
+        for path, value in _walk_scalars(entry):
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 problems.append(
-                    f"{entry['id']}: field {key!r} carries a numeric value {value!r}"
+                    f"{entry['id']}: {path} carries a numeric value {value!r}"
                 )
-            if isinstance(key, str) and any(
-                hint in key.lower() for hint in _NUMERIC_FIELD_HINTS
-            ):
+        for key in _walk_keys(entry):
+            if any(hint in key.lower() for hint in _NUMERIC_FIELD_HINTS):
                 problems.append(
                     f"{entry['id']}: field name {key!r} suggests a score/maturity value"
                 )
     return problems
+
+
+def _walk_scalars(node: object, path: str = "") -> list[tuple[str, object]]:
+    """Yield (dotted-path, scalar) for every leaf value in a nested dict/list."""
+    out: list[tuple[str, object]] = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            out.extend(_walk_scalars(v, f"{path}.{k}" if path else str(k)))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out.extend(_walk_scalars(v, f"{path}[{i}]"))
+    else:
+        out.append((path or "<root>", node))
+    return out
+
+
+def _walk_keys(node: object) -> list[str]:
+    """Yield every string key anywhere in a nested dict/list."""
+    keys: list[str] = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if isinstance(k, str):
+                keys.append(k)
+            keys.extend(_walk_keys(v))
+    elif isinstance(node, list):
+        for v in node:
+            keys.extend(_walk_keys(v))
+    return keys
 
 
 def _find_invalid_stage(repo_root: Path) -> list[str]:

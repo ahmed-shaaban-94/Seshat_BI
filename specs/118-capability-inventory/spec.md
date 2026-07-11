@@ -483,7 +483,7 @@ recorded by its committed feeder (US4 catches a manifest that disagrees).
 | Dagster advisory adapter | shipped (F030 SHIPPED in roadmap.md; `.claude/skills/dagster-orchestration-adapter/` present) | advisory skill | advisory (not connected) | Agent / companion |
 | Claude Code plugin & commands | per feeder (fail-closed) | plugin | agent-runnable | grouped by lifecycle `state`; **provenance shown verbatim** and fail-closed per FR-013(d): NOT `publicly-released` without committed release evidence -- if no plugin artifact is committed, provenance is `unrecorded`, never `publicly-released` |
 | F016 Power BI execution adapter | deferred / not shipped | execution adapter | execution-capable (deferred) | Deferred / not shipped |
-| F034 human-built Power BI page | human action (not automated) | human-built artifact | HUMAN | Human-gated |
+| F034 human-built Power BI page | deferred (human action, not automated) | human-built artifact | HUMAN | Deferred / not shipped (by precedence Deferred > Human-gated; `authority: human-gated` still shows in the record) |
 | spec-only / deferred roadmap items | spec-only / deferred | spec | n/a | Deferred / not shipped |
 
 "per feeder" means the manifest MUST NOT hardcode a state this appendix cannot itself

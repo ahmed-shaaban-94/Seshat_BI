@@ -1,9 +1,14 @@
 """Read-only capability inventory builder (spec 118).
 
-Joins the committed capability manifest (``docs/capabilities/capabilities.yaml``)
-against its feeders (see ``capability_feeders.py``) and renders two
-DETERMINISTIC forms: a grouped human read (default) and a stable JSON machine
-form (``--format json``). This is NOT a ``retail``/``seshat`` CLI verb (the
+Renders the committed capability manifest (``docs/capabilities/capabilities.yaml``)
+into two DETERMINISTIC forms: a grouped human read (default) and a stable JSON
+machine form (``--format json``). The manifest is SELF-CONTAINED for display --
+each entry carries its own name/summary/axes; the builder does not resolve feeder
+facts at render time. The feeders (``capability_feeders.py``) exist for the
+INDEPENDENT truthfulness oracle (``tests/unit/test_capability_inventory.py``),
+which reconciles the manifest against them via its OWN readers -- that separation
+is the anti-circularity guarantee (the builder never learns ground truth from the
+same path the oracle checks). This is NOT a ``retail``/``seshat`` CLI verb (the
 ratified Option-B decision) -- it is exposed ONLY as a ``python -m`` module
 entry point, wrapped by the ``capabilities`` skill.
 
@@ -26,8 +31,6 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-
-from . import capability_feeders as feeders
 
 _LIFECYCLE_STATES: frozenset[str] = frozenset({"shipped", "spec-only", "deferred"})
 _AUTHORITIES: frozenset[str] = frozenset({"agent-runnable", "advisory", "human-gated"})
@@ -85,21 +88,6 @@ _RECORD_FIELDS: tuple[str, ...] = (
 
 
 @dataclass(frozen=True)
-class Feeders:
-    """Bundle of resolved feeder facts for one build -- keeps every join
-    function to a single extra argument instead of five positional ones."""
-
-    rule_titles: dict[str, str]
-    skill_facts: dict[str, feeders.SkillFact]
-    kit_source_verbs: set[str]
-    dispatch_keys: set[str]
-    roadmap_text: str
-    status_claims_built: set[str]
-    parked_on_ids: set[str]
-    valid_stages: set[str]
-
-
-@dataclass(frozen=True)
 class InventoryRecord:
     """One rendered capability record (data-model.md derived entity)."""
 
@@ -131,20 +119,6 @@ class InventoryRecord:
             "documentation": self.documentation,
             "group": self.group,
         }
-
-
-def load_feeders(repo_root: Path) -> Feeders:
-    """Resolve every feeder fact once per build (read-only, driver-free)."""
-    return Feeders(
-        rule_titles=feeders.read_rule_titles(repo_root),
-        skill_facts=feeders.read_skill_facts(repo_root),
-        kit_source_verbs=feeders.read_kit_source_verbs(repo_root),
-        dispatch_keys=feeders.read_dispatch_keys(repo_root),
-        roadmap_text=feeders.read_roadmap_text(repo_root),
-        status_claims_built=feeders.read_status_claims_built(repo_root),
-        parked_on_ids=feeders.read_parked_on_ids(repo_root),
-        valid_stages=feeders.read_valid_readiness_stages(repo_root),
-    )
 
 
 def load_manifest(repo_root: Path) -> list[dict]:
@@ -216,11 +190,11 @@ def build_inventory(repo_root: Path | str = ".") -> list[dict]:
     """Build the sorted, deterministic list of capability records.
 
     Reads the committed manifest + feeders under ``repo_root``; resolves each
-    entry's referenced feeder facts are NOT copied into the record (the record
-    carries the manifest's own categorical fields plus the derived ``group``);
-    a rule/skill TITLE, if the maintainer wants to see it, is read live from
-    ``load_feeders`` for tooling built on top of this list. Sorted by ``id``
-    for determinism (FR-007).
+    record carries the manifest's own categorical fields plus the derived
+    ``group``. The manifest is self-contained for display; feeder facts are not
+    resolved here -- the truthfulness oracle reconciles the manifest against the
+    feeders independently (``capability_feeders.py``). Sorted by ``id`` for
+    determinism (FR-007).
     """
     root = Path(repo_root)
     manifest = load_manifest(root)
