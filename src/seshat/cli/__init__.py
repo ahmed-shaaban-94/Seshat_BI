@@ -107,6 +107,20 @@ def _run_doctor(args: object) -> int:
     return run_doctor(Path(args.repo), strict=args.strict)  # type: ignore[attr-defined]
 
 
+def _run_mcp(args: object) -> int:
+    try:
+        from ..governor.mcp_server import run_stdio
+    except ImportError:
+        print(
+            "error: MCP support is optional; install with "
+            "`pip install 'seshat-bi[mcp]'`.",
+            file=sys.stderr,
+        )
+        return 2
+    run_stdio(Path(args.repo))  # type: ignore[attr-defined]
+    return 0
+
+
 def _lazy(module_path: str, func_name: str):
     """Build a dispatch-table handler that imports ``func_name`` from
     ``module_path`` at CALL time, not at table-construction time. This is
@@ -155,6 +169,7 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "dashboard-gaps": _lazy(".commands.gap_detector", "gap_detector_main"),
     "doctor": _run_doctor,
     "demo": _lazy("..demo", "run_demo"),
+    "mcp": _run_mcp,
 }
 
 

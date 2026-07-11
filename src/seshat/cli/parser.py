@@ -537,6 +537,18 @@ def _add_demo_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_mcp_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "mcp",
+        help="run the optional read-only Seshat agent governor over local stdio",
+    )
+    p.add_argument(
+        "--repo",
+        default=".",
+        help="single local repository root exposed to governor reads",
+    )
+
+
 def _add_generate_parser(sub: argparse._SubParsersAction) -> None:
     """DAX generator (Task 7). Lazy imports inside _run_generate keep dax_gen/yaml
     out of the `retail check` import chain (mirrors the validate / semantic-check
@@ -938,5 +950,6 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_kit_lint_parser(sub)
     _add_doctor_parser(sub)
     _add_demo_parser(sub)
+    _add_mcp_parser(sub)
 
     return parser

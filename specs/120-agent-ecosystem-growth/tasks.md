@@ -91,15 +91,15 @@
 
 **Independent Test**: Call every tool against allowed, blocked, malformed, and unavailable fixtures; verify structured output schemas, refusal detail, sanitized errors, and zero writes across all probes.
 
-- [ ] T038 [P] [US3] Write transport-neutral operation and hard-stop tests for FR-018 through FR-022 in `tests/unit/test_governor_service.py`
-- [ ] T039 [P] [US3] Write MCP list/call, structured-output, error, and stdio purity contract tests from `contracts/agent-governor-tools.md` in `tests/contract/test_mcp_governor.py`
-- [ ] T040 [P] [US3] Add tracked-file, output-root, DB-writer, PBIP, approval, and readiness-state before/after probes for SC-004 in `tests/integration/test_governor_read_only.py`
-- [ ] T041 [US3] Implement six transport-neutral governor operations by composing existing status, next, blocker, approval, check, and evidence services in `src/seshat/governor/service.py`
-- [ ] T042 [US3] Implement local-root containment, request validation, error sanitization, and forbidden-scope responses in `src/seshat/governor/service.py`
-- [ ] T043 [US3] Implement the optional stable MCP v1 stdio adapter with structured output schemas and read-only annotations in `src/seshat/governor/mcp_server.py`
-- [ ] T044 [US3] Add the `seshat mcp --repo` parser without importing the optional SDK on other command paths in `src/seshat/cli/parser.py`
-- [ ] T045 [US3] Add the lazy MCP command handler and missing-extra guidance in `src/seshat/cli/__init__.py`
-- [ ] T046 [US3] Document host registration, tool boundaries, threat model, and companion relationship to execution MCPs in `docs/ecosystem/agent-governor.md`
+- [x] T038 [P] [US3] Write transport-neutral operation and hard-stop tests for FR-018 through FR-022 in `tests/unit/test_governor_service.py`
+- [x] T039 [P] [US3] Write MCP list/call, structured-output, error, and stdio purity contract tests from `contracts/agent-governor-tools.md` in `tests/contract/test_mcp_governor.py`
+- [x] T040 [P] [US3] Add tracked-file, output-root, DB-writer, PBIP, approval, and readiness-state before/after probes for SC-004 in `tests/integration/test_governor_read_only.py`
+- [x] T041 [US3] Implement six transport-neutral governor operations by composing existing status, next, blocker, approval, check, and evidence services in `src/seshat/governor/service.py`
+- [x] T042 [US3] Implement local-root containment, request validation, error sanitization, and forbidden-scope responses in `src/seshat/governor/service.py`
+- [x] T043 [US3] Implement the optional stable MCP v1 stdio adapter with structured output schemas and read-only annotations in `src/seshat/governor/mcp_server.py`
+- [x] T044 [US3] Add the `seshat mcp --repo` parser without importing the optional SDK on other command paths in `src/seshat/cli/parser.py`
+- [x] T045 [US3] Add the lazy MCP command handler and missing-extra guidance in `src/seshat/cli/__init__.py`
+- [x] T046 [US3] Document host registration, tool boundaries, threat model, and companion relationship to execution MCPs in `docs/ecosystem/agent-governor.md`
 
 **Checkpoint**: The governor is independently usable and cannot execute or approve work.
 

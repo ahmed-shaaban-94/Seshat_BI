@@ -124,6 +124,13 @@ def _collect(
     ]
 
 
+def collect_findings(
+    rules: tuple[RegisteredRule, ...], ctx: RuleContext, *, bootstrapped: bool = True
+) -> list[Finding]:
+    """Public in-memory finding seam for read-only protocol integrations."""
+    return _collect(rules, ctx, bootstrapped=bootstrapped)
+
+
 def _exit_code(findings: list[Finding]) -> int:
     """1 if any ERROR finding is present, else 0 (WARNING/INFO never fail)."""
     return 1 if any(f.severity is Severity.ERROR for f in findings) else 0
