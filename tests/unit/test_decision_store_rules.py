@@ -102,8 +102,12 @@ def _ds1(tmp_path: Path, *decisions: str) -> list:
 
 
 def test_ds1_clean_store_no_findings(tmp_path: Path) -> None:
-    clean = _decision(id="table_grain.fct_sales", scope="{tables: [fct_sales]}",
-                      status="proposed", confidence="high")
+    clean = _decision(
+        id="table_grain.fct_sales",
+        scope="{tables: [fct_sales]}",
+        status="proposed",
+        confidence="high",
+    )
     assert list(check_ds1(_ctx(tmp_path, {_SEMANTIC: _store(clean)}))) == []
 
 
@@ -247,8 +251,12 @@ def test_ds2_missing_evidence_identity_errors(tmp_path: Path) -> None:
 
 def test_ds2_approved_without_approval_block_errors(tmp_path: Path) -> None:
     body = _store(
-        _decision(id="kpi_definition.net", decision_type="kpi_definition",
-                  scope="{kpis: [k]}", status="approved")
+        _decision(
+            id="kpi_definition.net",
+            decision_type="kpi_definition",
+            scope="{kpis: [k]}",
+            status="approved",
+        )
     )
     fs = _ids(check_ds2(_repo_ctx(tmp_path, {_KPI: body})), "DS2")
     assert any("no approval block" in f.message for f in fs)
@@ -261,13 +269,23 @@ def _ds3(tmp_path: Path, decisions: str, batch: str) -> list:
     return _ids(check_ds3(_ctx(tmp_path, {_SEMANTIC: decisions + batch})), "DS3")
 
 
-_NAMING = _decision(id="naming.x", decision_type="naming", scope="{columns: [c]}",
-                    status="approved", confidence="high")
+_NAMING = _decision(
+    id="naming.x",
+    decision_type="naming",
+    scope="{columns: [c]}",
+    status="approved",
+    confidence="high",
+)
 
 
 def test_ds3_critical_type_in_batch_errors(tmp_path: Path) -> None:
-    critical = _decision(id="pii_handling.x", decision_type="pii_handling",
-                         scope="{columns: [c]}", status="approved", confidence="high")
+    critical = _decision(
+        id="pii_handling.x",
+        decision_type="pii_handling",
+        scope="{columns: [c]}",
+        status="approved",
+        confidence="high",
+    )
     fs = _ds3(tmp_path, _store(critical), _batch(members="[pii_handling.x]"))
     assert any("critical decision" in f.message for f in fs)
 
@@ -283,13 +301,28 @@ def test_ds3_invalid_confirmed_by_errors(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "overrides, expected",
     [
-        ({"id": "table_grain.x.2", "status": "proposed", "confidence": "high",
-          "supersedes": "table_grain.does_not_exist"}, "does not resolve"),
-        ({"status": "proposed", "confidence": "high",
-          "superseded_by": "table_grain.nope"}, "does not resolve"),
+        (
+            {
+                "id": "table_grain.x.2",
+                "status": "proposed",
+                "confidence": "high",
+                "supersedes": "table_grain.does_not_exist",
+            },
+            "does not resolve",
+        ),
+        (
+            {
+                "status": "proposed",
+                "confidence": "high",
+                "superseded_by": "table_grain.nope",
+            },
+            "does not resolve",
+        ),
         ({"status": "superseded"}, "no superseded_by"),
-        ({"status": "proposed", "confidence": "high", "supersedes": "[a, b]"},
-         "must be a string id"),
+        (
+            {"status": "proposed", "confidence": "high", "supersedes": "[a, b]"},
+            "must be a string id",
+        ),
     ],
 )
 def test_ds4_supersession_ref_errors(
