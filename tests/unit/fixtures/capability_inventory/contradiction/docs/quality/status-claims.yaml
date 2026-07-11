@@ -1,0 +1,6 @@
+claims:
+  - id: "fixture-claim-built"
+    doc: "docs/roadmap/roadmap.md"
+    anchor: "F901"
+    claimed-artifact: "docs/roadmap/roadmap.md"
+    claimed-status: "built"

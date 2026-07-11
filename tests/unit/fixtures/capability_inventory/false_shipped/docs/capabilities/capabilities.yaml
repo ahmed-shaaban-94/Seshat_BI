@@ -1,0 +1,15 @@
+version: 1
+capabilities:
+
+  - id: fixture-false-shipped
+    name: "Fixture falsely-shipped capability"
+    summary: "state: shipped with no references entry at all -- only a spec dir/doc pointer exists, which is NOT positive evidence."
+    state: shipped
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/capabilities/README.md"
+    references: {}

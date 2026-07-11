@@ -1,0 +1,16 @@
+version: 1
+capabilities:
+
+  - id: fixture-listed-capability
+    name: "Fixture listed capability"
+    summary: "Covers the 'check' dispatch key; leaves 'unlisted-command' uncovered."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "check"

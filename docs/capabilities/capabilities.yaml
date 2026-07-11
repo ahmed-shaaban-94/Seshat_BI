@@ -1,0 +1,923 @@
+# Capability manifest -- the single committed, hand-authored authority for the
+# categorical CLASSIFICATION of every Seshat BI capability (docs/capabilities/README.md
+# explains the fail-closed contract). Owns ONLY the fields no feeder records
+# (state/authority/requirements/provenance's finer buckets); REFERENCES -- never
+# copies -- facts already owned by their feeder (rule ids/titles in
+# docs/rules/rules-manifest.json; skill name+description in .claude/skills/*/SKILL.md
+# frontmatter; verbs in .seshat/kit-source.yaml; F-numbered ship status in
+# docs/roadmap/roadmap.md; doc-anchored claims in docs/quality/status-claims.yaml;
+# parked-on edges in docs/quality/parked-on.yaml; wired commands in
+# src/retail/cli/__init__.py _DISPATCH).
+#
+# Scope of "covered skill" (O2): a REPO skill is a `.claude/skills/*/SKILL.md` file
+# tracked by git at the repo top level (verified via `git ls-files`), regardless of
+# family (retail-*, speckit-*, pbip-workflow, the companion-module skills, ...) --
+# this repo currently vendors no plugin skills under `.claude/plugins/`, so there is
+# nothing to exclude today; if a vendored plugin skill cache ever appears under
+# `.claude/plugins/...`, it is OUT of this scope (not a Seshat-authored capability).
+#
+# Completeness is REFERENCE-COVERAGE, not entry-per-representation (data-model.md
+# validation rule 6): one capability with a command + a same-named skill + a
+# kit-source verb is ONE entry whose `references` covers all three.
+#
+# UTF-8, no BOM, ASCII only.
+version: 1
+capabilities:
+
+  # ---------------------------------------------------------------------------
+  # Available now -- CLI, shipped, agent-runnable, no requirement
+  # ---------------------------------------------------------------------------
+
+  - id: retail-check
+    name: "retail check"
+    summary: "Static governance gate over committed SQL/TMDL/PBIR/docs/git text."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/glossary.md"
+    references:
+      dispatch: "check"
+      skill: "retail-govern"
+      verb: "retail-govern"
+
+  - id: retail-semantic-check
+    name: "retail semantic-check"
+    summary: "Detects when a committed measure's denominator drifts from its metric contract (Stage 5 readiness verdict)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: semantic_model_ready
+    command: "semantic-check"
+    documentation: "specs/011-semantic-model-readiness/spec.md"
+    references:
+      dispatch: "semantic-check"
+      skill: "retail-semantic-check"
+
+  - id: retail-value-check
+    name: "retail value-check"
+    summary: "Recomputes a measure's live aggregate and compares it to an owner-approved expected value within tolerance (L4 value proxy)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "value-check"
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      dispatch: "value-check"
+      roadmap: "L4 value proxy"
+
+  - id: retail-generate
+    name: "retail generate"
+    summary: "Generates a verified best-practice DAX measure from an approved metric contract, with a self-proving loop."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: semantic_model_ready
+    command: "generate"
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      dispatch: "generate"
+
+  - id: retail-status
+    name: "retail / seshat status"
+    summary: "Read-only JSON projection of committed per-table readiness state (current_stage, evidence, blocking_reasons, next_action)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "status"
+    documentation: "specs/109-agent-control-status-surface/spec.md"
+    references:
+      dispatch: "status"
+
+  - id: retail-next
+    name: "retail / seshat next"
+    summary: "Computes the ONE next allowed action for a single table from its readiness-status.yaml."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "next"
+    documentation: "specs/080-run-next-readiness-state-machine/spec.md"
+    references:
+      dispatch: "next"
+      skill: "run-next-readiness"
+
+  - id: retail-doctor
+    name: "retail / seshat doctor"
+    summary: "Diagnoses repository drift from what the kit expects."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "doctor"
+    documentation: "specs/072-kit-drift-linter/spec.md"
+    references:
+      dispatch: "doctor"
+
+  - id: init-project
+    name: "seshat init-project"
+    summary: "Scaffolds a fresh, empty Seshat BI project workspace for a new user."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "init-project"
+    documentation: "specs/107-user-workspace-init/spec.md"
+    references:
+      dispatch: "init-project"
+
+  - id: retail-init
+    name: "retail init"
+    summary: "Bootstraps the Compass-driven kit substrate (compass router + fenced AGENTS.md/CLAUDE.md regions + manifests)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "init"
+    documentation: "specs/070-retail-init-bootstrap/spec.md"
+    references:
+      dispatch: "init"
+      skill: "retail-init"
+
+  - id: retail-scaffold
+    name: "retail scaffold"
+    summary: "Authors a new static governance rule's boilerplate, or verifies an existing rule's wiring for drift."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "scaffold"
+    documentation: "specs/062-scaffold-rule-generator/spec.md"
+    references:
+      dispatch: "scaffold"
+      skill: "retail-scaffold"
+
+  - id: retail-kit-lint
+    name: "retail kit-lint"
+    summary: "Lints the kit's own drop-in substrate (compass router, fenced regions, manifests) for drift."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "kit-lint"
+    documentation: "specs/072-kit-drift-linter/spec.md"
+    references:
+      dispatch: "kit-lint"
+
+  - id: retail-manifest
+    name: "retail manifest"
+    summary: "Emits the rule-registry snapshot manifest (golden rule ids/titles) `retail check` and this inventory's oracle reconcile against."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "manifest"
+    documentation: "specs/043-rule-registry-snapshot-manifest-golden/spec.md"
+    references:
+      dispatch: "manifest"
+
+  - id: retail-severity-posture
+    name: "retail severity-posture"
+    summary: "Emits the severity-posture golden lock (per-rule severity snapshot) `retail check` reconciles against."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "severity-posture"
+    documentation: "specs/046-severity-posture-lock/spec.md"
+    references:
+      dispatch: "severity-posture"
+
+  - id: retail-theme-gen
+    name: "retail theme-gen"
+    summary: "Generates a starter Power BI theme JSON from the Visual Foundation design tokens."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "theme-gen"
+    documentation: "specs/017-powerbi-visual-foundation/spec.md"
+    references:
+      dispatch: "theme-gen"
+      roadmap: "F011A"
+
+  - id: retail-theme-compile
+    name: "retail theme-compile"
+    summary: "Compiles/validates theme JSON for purity (no business meaning encoded in a theme file)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "theme-compile"
+    documentation: "specs/060-theme-json-purity-linter/spec.md"
+    references:
+      dispatch: "theme-compile"
+
+  - id: pbir-apply-theme
+    name: "retail pbir-apply-theme"
+    summary: "Applies a generated theme to a committed PBIR report deterministically."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "pbir-apply-theme"
+    documentation: "specs/106-pbir-authoring-adapter/spec.md"
+    references:
+      dispatch: "pbir-apply-theme"
+      skill: "pbir-authoring-adapter"
+
+  - id: pbir-format-visual
+    name: "retail pbir-format-visual"
+    summary: "Sets visual formatting (style/layout) directly in a committed PBIR report's JSON, within a tight allow-list."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "pbir-format-visual"
+    documentation: "specs/106-pbir-authoring-adapter/spec.md"
+    references:
+      dispatch: "pbir-format-visual"
+      skill: "pbir-authoring-adapter"
+
+  - id: pbir-set-page-background
+    name: "retail pbir-set-page-background"
+    summary: "Sets a page background/canvas asset directly in a committed PBIR report's JSON."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "pbir-set-page-background"
+    documentation: "specs/106-pbir-authoring-adapter/spec.md"
+    references:
+      dispatch: "pbir-set-page-background"
+      skill: "pbir-authoring-adapter"
+
+  - id: pbir-set-geometry
+    name: "retail pbir-set-geometry"
+    summary: "Sets a visual's geometry (position/size) directly in a committed PBIR report's JSON."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "pbir-set-geometry"
+    documentation: "specs/106-pbir-authoring-adapter/spec.md"
+    references:
+      dispatch: "pbir-set-geometry"
+      skill: "pbir-authoring-adapter"
+
+  - id: retail-blockers
+    name: "retail blockers"
+    summary: "Explains committed readiness blockers across tables: category, plain-language explanation, and next surface to use."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "blockers"
+    documentation: "docs/tools/blocker-explainer.md"
+    references:
+      dispatch: "blockers"
+
+  - id: retail-evidence-pack
+    name: "retail evidence-pack"
+    summary: "Read-only preview of the 10-section pre-publish evidence pack for one table."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: publish_ready
+    command: "evidence-pack"
+    documentation: "docs/tools/evidence-pack-generator.md"
+    references:
+      dispatch: "evidence-pack"
+      skill: "evidence-pack-generator"
+      roadmap: "F028"
+
+  - id: retail-approvals
+    name: "retail approvals"
+    summary: "Read-only approval inbox: open approval issues across committed readiness statuses."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "approvals"
+    documentation: "docs/tools/approver-decision-surface.md"
+    references:
+      dispatch: "approvals"
+
+  - id: retail-pii-notice
+    name: "retail pii-notice"
+    summary: "Composes a read-only per-column PII disclosure notice for one table."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "pii-notice"
+    documentation: "docs/tools/pii-touch-notice.md"
+    references:
+      dispatch: "pii-notice"
+
+  - id: retail-approver-view
+    name: "retail approver-view"
+    summary: "Re-sequences one table's committed readiness evidence into a refutation-first reading view for the human signer."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "approver-view"
+    documentation: "docs/tools/approver-decision-surface.md"
+    references:
+      dispatch: "approver-view"
+
+  - id: capabilities
+    name: "capabilities (this inventory)"
+    summary: "Read-only 'what can this kit do' capability inventory, grouped and machine-readable, over committed metadata."
+    state: shipped
+    authority: agent-runnable
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/capabilities/SKILL.md"
+    references:
+      skill: "capabilities"
+
+  # ---------------------------------------------------------------------------
+  # Requires database or optional dependency
+  # ---------------------------------------------------------------------------
+
+  - id: retail-validate
+    name: "retail validate"
+    summary: "Live data checks against a materialized table: PK uniqueness, date coverage, orphan FKs, reconciliation."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: [database, optional-dependency]
+    provenance: locally-verified
+    readiness_stage: gold_ready
+    command: "validate"
+    documentation: ".claude/skills/retail-validate/SKILL.md"
+    references:
+      dispatch: "validate"
+      skill: "retail-validate"
+      verb: "retail-validate"
+
+  - id: retail-drift
+    name: "retail drift"
+    summary: "Detects when a source's live shape/semantics drift from its committed profile (needs a live connection to compare)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: [database, optional-dependency]
+    provenance: locally-verified
+    readiness_stage: source_ready
+    command: "drift"
+    documentation: "specs/015-source-drift-detector/spec.md"
+    references:
+      dispatch: "drift"
+      roadmap: "F014"
+
+  - id: retail-demo
+    name: "retail demo"
+    summary: "Local demo harness that proves the medallion pipeline on a generic sample dataset."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: [database, optional-dependency]
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "demo"
+    documentation: "specs/083-demo-harness/spec.md"
+    references:
+      dispatch: "demo"
+
+  # ---------------------------------------------------------------------------
+  # Agent / companion (advisory skills, execution adapters not DB-execution-gated
+  # here, and read-only/artifact-writing product modules)
+  # ---------------------------------------------------------------------------
+
+  - id: retail-orchestrate
+    name: "retail-orchestrate"
+    summary: "Conductor -- sequences the medallion verbs end to end, self-healing against the governance gate."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/retail-orchestrate/SKILL.md"
+    references:
+      skill: "retail-orchestrate"
+      verb: "retail-orchestrate"
+
+  - id: first-hour-compass
+    name: "first-hour-compass"
+    summary: "First-arrival worked-example offer + single-source seam list + single-table orientation card."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/first-hour-compass/SKILL.md"
+    references:
+      skill: "first-hour-compass"
+      verb: "first-hour-compass"
+      status_claims: "first-hour-compass-worked-example-store-sales"
+
+  - id: retail-onboard-table
+    name: "retail-onboard-table"
+    summary: "Source -> Mapping front door; owns the Stage-1 read-only DB-backed profile (grain candidates, column types)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: [database]
+    provenance: locally-verified
+    readiness_stage: mapping_ready
+    command: null
+    documentation: ".claude/skills/retail-onboard-table/SKILL.md"
+    references:
+      skill: "retail-onboard-table"
+      verb: "retail-onboard-table"
+
+  - id: source-mapping
+    name: "source-mapping"
+    summary: "The mapping gate -- profiles a source, decides grain/PK, and fills the five mapping artifacts; produces source-map.yaml."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: mapping_ready
+    command: null
+    documentation: ".claude/skills/source-mapping/SKILL.md"
+    references:
+      skill: "source-mapping"
+      verb: "source-mapping"
+
+  - id: retail-build-warehouse
+    name: "retail-build-warehouse"
+    summary: "Authors silver/gold migration SQL from an approved source-map, then stops before executing."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: silver_ready
+    command: null
+    documentation: ".claude/skills/retail-build-warehouse/SKILL.md"
+    references:
+      skill: "retail-build-warehouse"
+      verb: "retail-build-warehouse"
+
+  - id: retail-govern-skill
+    name: "retail-govern (skill)"
+    summary: "Invoke-and-interpret wrapper over `retail check`: maps a reported rule id to its fix."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/retail-govern/SKILL.md"
+    references:
+      skill: "retail-govern"
+      verb: "retail-govern"
+
+  - id: dbt-transformation-adapter
+    name: "dbt advisory adapter"
+    summary: "Runs dbt as the build engine for silver/gold behind the Mapping Ready gate; records run/test/parity output as derived evidence."
+    state: shipped
+    authority: advisory
+    surface: execution-adapter
+    requirements: [optional-dependency]
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/dbt-transformation-adapter/SKILL.md"
+    references:
+      roadmap: "F029"
+      skill: "dbt-transformation-adapter"
+
+  - id: dagster-orchestration-adapter
+    name: "Dagster advisory adapter"
+    summary: "Runs the medallion sequence unattended/in CI as a Dagster asset graph, running only already-approved steps behind every gate."
+    state: shipped
+    authority: advisory
+    surface: execution-adapter
+    requirements: [optional-dependency]
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/dagster-orchestration-adapter/SKILL.md"
+    references:
+      roadmap: "F030"
+      skill: "dagster-orchestration-adapter"
+
+  - id: pbir-authoring-adapter-skill
+    name: "pbir-authoring-adapter (skill)"
+    summary: "Invoke-and-compose wrapper over the pbir-* CLI commands (F034 completion): apply theme, format visual, set background, set geometry."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: null
+    documentation: ".claude/skills/pbir-authoring-adapter/SKILL.md"
+    references:
+      skill: "pbir-authoring-adapter"
+
+  - id: pr-readiness-reviewer
+    name: "PR readiness reviewer"
+    summary: "Renders one structured 'is this PR safe to merge' verdict: merge_ready + blockers + warnings + required human decisions + evidence + next_action."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/pr-readiness-reviewer/SKILL.md"
+    references:
+      roadmap: "F025"
+      skill: "pr-readiness-reviewer"
+
+  - id: readiness-viewer
+    name: "readiness viewer"
+    summary: "Stage-centric readiness lens: a per-stage status matrix across the kit's sources/tables/reports plus an approvals timeline."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/readiness-viewer/SKILL.md"
+    references:
+      roadmap: "F026"
+      skill: "readiness-viewer"
+
+  - id: run-next-readiness-skill
+    name: "run-next-readiness (skill)"
+    summary: "Computes the one next allowed action for a table from its readiness-status.yaml (the skill wrapper over `retail next`)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/run-next-readiness/SKILL.md"
+    references:
+      skill: "run-next-readiness"
+
+  - id: grain-confidence-reviewer
+    name: "grain confidence reviewer"
+    summary: "Surfaces grain-uniqueness confidence as status + evidence (never a numeric score) and diffs two source-map.yaml versions."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: mapping_ready
+    command: null
+    documentation: ".claude/skills/grain-confidence-reviewer/SKILL.md"
+    references:
+      roadmap: "F008"
+      skill: "grain-confidence-reviewer"
+
+  - id: retail-control-room
+    name: "retail control room"
+    summary: "Consolidated cross-table data-quality control room: a worst-first roll-up of every table's stage/status/blockers/next action."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/retail-control-room/SKILL.md"
+    references:
+      roadmap: "F012"
+      skill: "retail-control-room"
+
+  - id: dashboard-design
+    name: "dashboard design"
+    summary: "Designs a Power BI dashboard from approved metric contracts; hard-gated on semantic_model_ready: pass."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: null
+    documentation: ".claude/skills/dashboard-design/SKILL.md"
+    references:
+      roadmap: "F011"
+      skill: "dashboard-design"
+
+  - id: powerbi-dashboard-design
+    name: "powerbi-dashboard-design (router)"
+    summary: "Routes a design request into exactly one of four Visual Foundation surfaces (report visuals, background/canvas, theme JSON, implementation handoff)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: null
+    documentation: ".claude/skills/powerbi-dashboard-design/SKILL.md"
+    references:
+      roadmap: "F011A"
+      skill: "powerbi-dashboard-design"
+
+  - id: cross-table-lineage
+    name: "cross-table lineage / impact analysis"
+    summary: "Read-only aggregator that derives a column-level lineage trace across source-map, migration SQL, metric contract, TMDL measure, and dashboard visual."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/cross-table-lineage/SKILL.md"
+    references:
+      roadmap: "F036"
+      skill: "cross-table-lineage"
+
+  - id: consumer-data-dictionary
+    name: "consumer data dictionary"
+    summary: "Composes a per-table analyst-facing dictionary (gold columns + approved metric contracts -> plain meaning) from committed artifacts."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/consumer-data-dictionary/SKILL.md"
+    references:
+      roadmap: "F037"
+      skill: "consumer-data-dictionary"
+
+  - id: release-notes-generator
+    name: "release notes generator"
+    summary: "Drafts an evidence-backed per-release note and assesses the kit's honest maturity ladder for a shipped roadmap slice (Maintenance Automation)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/release-notes-generator/SKILL.md"
+    references:
+      skill: "release-notes-generator"
+
+  - id: pbip-workflow
+    name: "pbip-workflow"
+    summary: "The git-based workflow reference for Power BI Project (PBIP) files -- what to commit vs ignore, TMDL/PBIR text editing, Windows gotchas."
+    state: shipped
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/pbip-workflow/SKILL.md"
+    references:
+      skill: "pbip-workflow"
+
+  - id: speckit-workflow-skills
+    name: "Spec-Kit workflow skills"
+    summary: "The Spec-Kit authoring chain (specify/clarify/plan/tasks/analyze/checklist/constitution/git-*) used to draft and ratify every feature spec in this repo, including this one."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/speckit-specify/SKILL.md"
+    references:
+      skill:
+        - "speckit-specify"
+        - "speckit-clarify"
+        - "speckit-plan"
+        - "speckit-tasks"
+        - "speckit-analyze"
+        - "speckit-checklist"
+        - "speckit-constitution"
+        - "speckit-implement"
+        - "speckit-taskstoissues"
+        - "speckit-git-feature"
+        - "speckit-git-initialize"
+        - "speckit-git-remote"
+        - "speckit-git-validate"
+        - "speckit-git-commit"
+
+  # ---------------------------------------------------------------------------
+  # Human-gated
+  # ---------------------------------------------------------------------------
+
+  - id: approval-console
+    name: "approval console"
+    summary: "Packages a raised judgment call into a reviewable decision package, then records the named human's answer back into committed artifacts."
+    state: shipped
+    authority: human-gated
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/approval-console/SKILL.md"
+    references:
+      roadmap: "F027"
+      skill: "approval-console"
+
+  - id: approval-evidence-pack
+    name: "approval evidence pack"
+    summary: "Composes one pre-approval evidence pack for one (table, stage) so a named human signer reads one traceable document before deciding."
+    state: shipped
+    authority: human-gated
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/approval-evidence-pack/SKILL.md"
+    references:
+      roadmap: "F035"
+      skill: "approval-evidence-pack"
+
+  # ---------------------------------------------------------------------------
+  # Deferred / not shipped
+  # ---------------------------------------------------------------------------
+
+  - id: f034-built-dashboard-page
+    name: "F034 human-built Power BI dashboard page"
+    summary: "The approved dashboard design built into an actual PBIR report page -- a human Power BI Desktop action the gate already permits but that has not happened yet (the committed report page is still empty)."
+    state: deferred
+    authority: human-gated
+    surface: human-artifact
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: dashboard_ready
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      roadmap: "F034"
+
+  - id: f016-powerbi-execution-adapter
+    name: "F016 Power BI execution adapter"
+    summary: "Materializes/publishes an approved model via the official Power BI MCP/connection; execution-only, gated on Semantic Model Ready."
+    state: deferred
+    authority: agent-runnable
+    surface: execution-adapter
+    requirements: [optional-dependency]
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      roadmap: "F016"
+
+  - id: f024-companion-tools-architecture-spec
+    name: "F024 Companion Tools Architecture (spec)"
+    summary: "The spec document formalizing the five companion authority categories; the decision itself already ships as docs/decisions/0008."
+    state: spec-only
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "specs/018-companion-tools-architecture/spec.md"
+    references:
+      roadmap: "F024"
+
+  - id: f031-adapter-maintenance-policy
+    name: "F031 Adapter Maintenance & Auto-Update Policy"
+    summary: "Maintenance Automation for the dbt/Dagster adapters; deferred for want of a runtime consumer."
+    state: deferred
+    authority: agent-runnable
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "specs/025-adapter-maintenance-policy/spec.md"
+    references:
+      roadmap: "F031"
+      parked_on: "f031-maintenance-policy-parked-on-f016"
+
+  - id: f032-adapter-compatibility-matrix
+    name: "F032 Adapter Compatibility Matrix"
+    summary: "Maintenance Automation compatibility matrix for companion adapters; deferred for want of a runtime consumer."
+    state: deferred
+    authority: agent-runnable
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "specs/026-adapter-compatibility-matrix/spec.md"
+    references:
+      roadmap: "F032"
+      parked_on: "f032-compatibility-matrix-parked-on-f016"
+
+  - id: f033-release-maturity-management
+    name: "F033 Release & Maturity Management"
+    summary: "Maintenance Automation release/maturity ladder for companion adapters; deferred for want of a runtime consumer."
+    state: deferred
+    authority: agent-runnable
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "specs/027-release-maturity-management/spec.md"
+    references:
+      roadmap: "F033"
+      parked_on: "f033-release-maturity-parked-on-f016"
+
+  - id: kpi-derivation-lineage
+    name: "KPI Derivation-Lineage Contract"
+    summary: "Base-vs-derived KPI dependency graph; a ratified spec with no roadmap F-number, no status-claims entry, and no SKILL.md -- fail-closed to spec-only."
+    state: spec-only
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "specs/044-kpi-derivation-lineage/spec.md"
+    references: {}
+
+  - id: claude-code-plugin
+    name: "Claude Code plugin & commands"
+    summary: "A packaged Claude Code plugin distribution of this kit's skills/commands. No plugin manifest is committed on this branch, so it cannot be recorded shipped or released."
+    state: spec-only
+    authority: advisory
+    surface: plugin
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/seshat-bi-agent-controlled-user-tool-roadmap.md"
+    references: {}

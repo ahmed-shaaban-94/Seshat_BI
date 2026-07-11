@@ -1,0 +1,130 @@
+version: 1
+capabilities:
+
+  - id: fixture-available-now
+    name: "Fixture available-now capability"
+    summary: "A shipped, agent-runnable CLI capability with no requirement."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "check"
+
+  - id: fixture-requires-db
+    name: "Fixture DB-requiring capability"
+    summary: "A shipped, agent-runnable CLI capability that needs a database."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: [database]
+    provenance: locally-verified
+    readiness_stage: gold_ready
+    command: "validate"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "validate"
+
+  - id: fixture-companion-skill
+    name: "Fixture advisory companion"
+    summary: "A shipped advisory skill (roadmap-backed)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/fake-skill/SKILL.md"
+    references:
+      skill: "fake-skill"
+      verb: "fixture-verb"
+      roadmap: "F900"
+
+  - id: fixture-human-gated
+    name: "Fixture human-gated capability"
+    summary: "A shipped capability that is a human's decision, not automated."
+    state: shipped
+    authority: human-gated
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/fake-skill/SKILL.md"
+    references:
+      skill: "fake-skill"
+
+  - id: fixture-human-gated-and-db
+    name: "Fixture human-gated capability that also needs a database"
+    summary: "Demonstrates the fixed precedence: human-gated outranks requires-db."
+    state: shipped
+    authority: human-gated
+    surface: skill
+    requirements: [database]
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/fake-skill/SKILL.md"
+    references:
+      skill: "fake-skill"
+
+  - id: fixture-deferred
+    name: "Fixture deferred capability"
+    summary: "A not-yet-shipped roadmap item."
+    state: deferred
+    authority: agent-runnable
+    surface: execution-adapter
+    requirements: [optional-dependency]
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      roadmap: "F901"
+
+  - id: fixture-deferred-and-db
+    name: "Fixture deferred capability that also needs a database"
+    summary: "Demonstrates the fixed precedence: deferred outranks requires-db."
+    state: deferred
+    authority: agent-runnable
+    surface: execution-adapter
+    requirements: [database]
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      roadmap: "F901"
+
+  - id: fixture-status-claims-built
+    name: "Fixture status-claims-backed capability"
+    summary: "Shipped via a status-claims built entry rather than dispatch/skill/roadmap."
+    state: shipped
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      status_claims: "fixture-claim-built"
+
+  - id: fixture-unrecorded-provenance
+    name: "Fixture capability with unrecorded provenance"
+    summary: "Demonstrates the GAP marker: provenance is genuinely unrecorded, never rounded up."
+    state: shipped
+    authority: advisory
+    surface: docs
+    requirements: []
+    provenance: unrecorded
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/roadmap/roadmap.md"
+    references:
+      status_claims: "fixture-claim-built"
