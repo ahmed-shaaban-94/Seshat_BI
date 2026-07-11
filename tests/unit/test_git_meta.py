@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from retail import gitutil
-from retail.core import RuleContext, Severity
-from retail.rules.git_meta import (
+from seshat import gitutil
+from seshat.core import RuleContext, Severity
+from seshat.rules.git_meta import (
     _read_leading_bytes,
     _scan_contents,
     _scan_line_for_secret,
@@ -599,7 +599,7 @@ def test_c2_sentinel_real_repo_source_does_not_self_trip() -> None:
     (which runs main's ruleset, per the editable install) cannot provide.
     """
     repo_root = Path(__file__).resolve().parents[2]
-    src_root = repo_root / "src" / "retail"
+    src_root = repo_root / "src" / "seshat"
     targets = [
         src_root / "dialect.py",
         *sorted((src_root / "cli").rglob("*.py")),

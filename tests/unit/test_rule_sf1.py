@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from retail.core import RuleContext, Severity
-from retail.rules.rule_sf1 import check_sf1
+from seshat.core import RuleContext, Severity
+from seshat.rules.rule_sf1 import check_sf1
 
 pytestmark = pytest.mark.unit
 
@@ -127,7 +127,7 @@ def test_nested_skill_path_collision_is_detected() -> None:
 
 def test_rule_source_has_no_write() -> None:
     src = (
-        Path(__file__).parent.parent.parent / "src" / "retail" / "rules" / "rule_sf1.py"
+        Path(__file__).parent.parent.parent / "src" / "seshat" / "rules" / "rule_sf1.py"
     ).read_text(encoding="utf-8")
     assert "write_text" not in src
     assert "write_bytes" not in src

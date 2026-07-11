@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from retail.core import RuleContext, Severity
-from retail.rules.currency_unit import check_unit_currency_agreement
+from seshat.core import RuleContext, Severity
+from seshat.rules.currency_unit import check_unit_currency_agreement
 
 pytestmark = pytest.mark.unit
 
@@ -368,7 +368,7 @@ def test_unit_and_currency_clash_are_independent_findings(tmp_path: Path) -> Non
 
 
 def test_hr11_module_imports_no_database_driver() -> None:
-    src = (_REPO / "src" / "retail" / "rules" / "currency_unit.py").read_text(
+    src = (_REPO / "src" / "seshat" / "rules" / "currency_unit.py").read_text(
         encoding="utf-8"
     )
     for forbidden in ("import psycopg", "import sqlalchemy", ".connect(", "DSN"):
