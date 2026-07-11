@@ -1,0 +1,17 @@
+version: 1
+capabilities:
+
+  - id: fixture-contradicting-rule-title
+    name: "A DIFFERENT title than the rule actually has"
+    summary: "references.rules_manifest points at AP1, but this entry's name disagrees with rules-manifest.json's title for AP1 (FR-014 contradiction)."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "check"
+      rules_manifest: "AP1"

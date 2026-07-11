@@ -1,0 +1,29 @@
+version: 1
+capabilities:
+
+  - id: fixture-state-holds-authority-token
+    name: "Fixture capability with state holding an authority value"
+    summary: "state is 'advisory' (an AUTHORITY value), which must never appear on the LIFECYCLE axis (FR-005)."
+    state: advisory
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/capabilities/README.md"
+    references: {}
+
+  - id: fixture-numeric-score-field
+    name: "Fixture capability carrying a numeric maturity value"
+    summary: "Carries a maturity_score field with a numeric value -- forbidden by FR-009."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/capabilities/README.md"
+    maturity_score: 87
+    references: {}

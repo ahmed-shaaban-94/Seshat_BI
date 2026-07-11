@@ -1,0 +1,31 @@
+version: 1
+capabilities:
+
+  - id: fixture-orphan-rule
+    name: "Fixture capability referencing a non-existent rule"
+    summary: "references.rules_manifest points at a rule id absent from rules-manifest.json."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "check"
+      rules_manifest: "ZZ-does-not-exist"
+
+  - id: fixture-orphan-skill
+    name: "Fixture capability referencing a bare, frontmatter-less skill dir"
+    summary: "references.skill points at a skill name with no frontmatter'd SKILL.md (a bare dir is not evidence)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/capabilities/README.md"
+    references:
+      skill: "bare-skill-no-frontmatter"
