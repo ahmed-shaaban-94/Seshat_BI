@@ -1,0 +1,6 @@
+kit: fixture-kit
+version: "0.0.0"
+verbs:
+  - id: fixture-verb
+    purpose: "a fixture verb"
+hard_stops: []

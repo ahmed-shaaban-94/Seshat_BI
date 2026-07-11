@@ -1,0 +1,16 @@
+version: 1
+capabilities:
+
+  - id: fixture-false-released
+    name: "Fixture falsely publicly-released capability"
+    summary: "state: shipped is validly backed by a dispatch signal, but provenance: publicly-released has no committed release evidence."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: publicly-released
+    readiness_stage: not-stage-scoped
+    command: "check"
+    documentation: "docs/capabilities/README.md"
+    references:
+      dispatch: "check"
