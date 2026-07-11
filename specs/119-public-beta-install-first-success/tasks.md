@@ -3,11 +3,12 @@
 **Feature dir**: `specs/119-public-beta-install-first-success/`
 **Inputs**: spec.md, plan.md, research.md, data-model.md, contracts/first-success-cli.md, quickstart.md
 
-> **⛔ RATIFICATION GATE — READ FIRST.** This task list is **NOT a build green light.**
-> The spec is a ratifiable draft; ratification is a **named-human Principle-V seam** that
-> "go / do recommended" does not clear. **No task below may be started, no file renamed,
-> no commit made, and nothing published until the spec is ratified by the owner.** Tasks
-> are sequenced here so that, once ratified, work is unambiguous — that is all.
+> **✅ RATIFIED by Ahmed Shaaban (owner), 2026-07-11 — build is cleared.** The Principle-V
+> ratify seam is passed; these tasks may now be implemented. Implementation is still a
+> deliberately-kicked-off piece of work (not auto-started on ratification). **MVP = User
+> Story 1** (first success on the distribution name `seshat-bi`); the `retail`→`seshat`
+> module rename is **Phase 5, post-MVP**. Publication (PyPI / public marketplace) remains
+> a SEPARATE unmade owner act — ratifying the spec did not authorize publishing.
 >
 > **Independence to preserve**: **User Story 1 (first success) is shippable on its own and
 > does NOT depend on the `retail`→`seshat` import-module rename.** The distribution rename
