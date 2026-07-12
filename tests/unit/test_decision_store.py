@@ -10,6 +10,7 @@ from seshat.decision_store import (
     CRITICAL_DECISION_TYPES,
     STATUS_VALUES,
     STORE_PATHS,
+    approval_is_valid,
     is_critical,
     is_open_status,
     load_store,
@@ -148,10 +149,12 @@ def test_status_vocabulary_is_the_nine_lifecycle_values() -> None:
     }
 
 
-def test_critical_types_are_the_ten_named() -> None:
-    assert len(CRITICAL_DECISION_TYPES) == 10
+def test_critical_types_are_the_eleven_named() -> None:
+    assert len(CRITICAL_DECISION_TYPES) == 11
     assert "policy_ruling" in CRITICAL_DECISION_TYPES
+    assert "report_intent_approval" in CRITICAL_DECISION_TYPES
     assert is_critical("kpi_definition")
+    assert is_critical("report_intent_approval")
     assert not is_critical("naming")
 
 
@@ -167,3 +170,54 @@ def test_store_paths_are_the_three_seshat_files() -> None:
         ".seshat/kpi-contracts.yaml",
         ".seshat/cleaning-rules.yaml",
     )
+
+
+# --- report_intent_approval validity (spec 123, T007) ----------------------
+#
+# report_intent_approval is now a critical decision type. A report_owner-authored
+# record must pass approval_is_valid; an agent identity must never satisfy it
+# (Principle V -- no self-grant).
+
+_REPORT_INTENT_AUTHORITY: dict[str, frozenset[str]] = {
+    "report_intent_approval": frozenset({"report_owner"}),
+}
+
+
+def _report_intent_decision(approved_by: str) -> dict:
+    return {
+        "id": "report_intent_approval.branch_perf",
+        "decision_type": "report_intent_approval",
+        "status": "approved",
+        "approval": {
+            "approved_by": approved_by,
+            "approved_at": "2026-01-02",
+            "source": "interview",
+            "evidence": ["ev.md"],
+            "evidence_identity": {"ev.md": "abc123"},
+            "reviewed_scope": {"artifacts": ["report_intent.branch_perf"]},
+        },
+    }
+
+
+def test_report_owner_approval_is_valid_for_report_intent_approval() -> None:
+    decision = _report_intent_decision("R. Owner (report_owner)")
+    valid, reason = approval_is_valid(decision, _REPORT_INTENT_AUTHORITY)
+    assert valid, reason
+
+
+def test_agent_identity_is_rejected_for_report_intent_approval() -> None:
+    # An agent identity is not a "Name (class)" shape at all -- and even if it
+    # were shaped as an agent role, no self-grant is permitted (Principle V).
+    decision = _report_intent_decision("agent")
+    valid, reason = approval_is_valid(decision, _REPORT_INTENT_AUTHORITY)
+    assert not valid
+    assert "invalid approved_by" in reason
+
+
+def test_ineligible_class_is_rejected_for_report_intent_approval() -> None:
+    # A shape-valid owner whose class is not eligible for report_intent_approval
+    # (e.g. metric_owner, not report_owner) must also fail closed.
+    decision = _report_intent_decision("A. Owner (metric_owner)")
+    valid, reason = approval_is_valid(decision, _REPORT_INTENT_AUTHORITY)
+    assert not valid
+    assert "ineligible" in reason

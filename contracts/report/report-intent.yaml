@@ -1,0 +1,40 @@
+# =============================================================================
+# report-intent.yaml  --  the report_intent stage contract (spec 123, US1)
+# =============================================================================
+# Capture what business report is needed, as a committed, reviewable Report
+# Intent artifact, before any dashboard design begins. This contract REFERENCES
+# the `report_intent` route already declared in
+# `contracts/knowledge/database-to-pbip-flow.yaml`; it never duplicates it (same
+# convention `dashboard-blueprint.yaml`'s header states).
+#
+# Shape: specs/121-business-knowledge-interview/contracts/knowledge-contract.schema.json
+# Precedent mirrored: contracts/report/dashboard-blueprint.yaml
+# =============================================================================
+
+version: 1
+
+stages:
+  - stage: report_intent
+    allowed_routes: [dashboard_design, retail_kpi, readiness]
+    required_inputs:
+      - "approved metric contracts for the subject area (readiness: pass)"
+      - "a ready semantic model (semantic_model_ready: pass)"
+    required_outputs:
+      - "a committed report-intent.yaml under mappings/<subject-area>/design/"
+      - "a report_intent_approval decision (report_owner)"
+    stop_rules:
+      - condition: "a required metric has no approved contract"
+        unblocked_by: "an approved metric contract for that metric (record a gap, route upstream)"
+      - condition: "audience/purpose/>=1 business question unresolved"
+        unblocked_by: "resolving audience, purpose, and at least one primary business question"
+      - condition: "the intent is not owner-approved"
+        unblocked_by: "an approved report_intent_approval decision by the report owner"
+    blocking_decision_categories: [report_intent_approval, kpi_definition, pii_handling]
+    handoff: dashboard_blueprint
+    non_goals:
+      - "defining metric meaning (owned by metric contracts)"
+      - "authoring page blueprints or visuals (downstream)"
+      - "publishing/exporting (F016, deferred)"
+    evidence_requirements:
+      - "the approved metric contract each *_metrics[] entry references"
+      - "the report_owner approval receipt for the intent"

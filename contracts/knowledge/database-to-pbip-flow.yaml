@@ -130,7 +130,7 @@ stages:
     stop_rules:
       - condition: "a metric the report intends to show has no approved contract"
         unblocked_by: "an approved contract for that metric"
-    blocking_decision_categories: [kpi_definition, pii_handling]
+    blocking_decision_categories: [kpi_definition, pii_handling, report_intent_approval]
     handoff: dashboard_blueprint
     non_goals: ["laying out visuals before intent is agreed", "defining KPI meaning"]
     evidence_requirements: ["the approved contracts the intent references"]
@@ -142,7 +142,9 @@ stages:
     stop_rules:
       - condition: "a visual binds to a metric with no approved contract"
         unblocked_by: "an approved contract for that metric (no contract = no visual)"
-    blocking_decision_categories: [dashboard_blueprint_approval, kpi_definition, pii_handling]
+      - condition: "the report intent is not approved"
+        unblocked_by: "an approved report_intent_approval decision"
+    blocking_decision_categories: [dashboard_blueprint_approval, kpi_definition, pii_handling, report_intent_approval]
     handoff: pbip_prototype_readiness
     non_goals: ["building the PBIP prototype", "publishing"]
     evidence_requirements: ["the approved contracts each visual binds to"]

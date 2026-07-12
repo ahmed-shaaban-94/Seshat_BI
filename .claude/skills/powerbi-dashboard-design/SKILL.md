@@ -56,6 +56,9 @@ Classify the request, then open the single matching workflow under `workflows/`.
 | Colors / fonts / default formatting | 3 | `workflows/theme-json-design.md` |
 | Propose a formatting plan for an approved page | 1/3 | `workflows/formatting-plan.md` |
 | Chart / card / slicer arrangement | 1 | `workflows/visual-design-system.md` + `workflows/page-blueprint.md` |
+| Recommend a dashboard pattern for an approved Report Intent | 1 | `workflows/pattern-recommendation.md` |
+| Preview an approved blueprint before any PBIR build | 1 | `workflows/blueprint-preview.md` |
+| Audit a composed report against its committed Report Intent | 1 | `workflows/dashboard-semantic-audit.md` |
 | Final review | 1 | `workflows/dashboard-qa.md` |
 | Mobile-specific layout | 1 | `workflows/mobile-layout.md` |
 | Build / implement in Power BI | 4 | `workflows/powerbi-handoff.md` |

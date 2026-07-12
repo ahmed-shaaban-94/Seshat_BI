@@ -2,11 +2,17 @@
 
 Surface 4 of the four-surface router (`../SKILL.md`), ALONGSIDE `powerbi-handoff.md`.
 Where the handoff produces the build NOTES a human follows, this workflow VERIFIES
-the result: it reads the committed plain-text PBIR a human built in Power BI Desktop
-and produces the implementation TRACE proving the page realizes the approved
-visual -> contract binding map 1:1 -- and nothing more. It is the review, not the
-build. (On-disk spec: `specs/039-visual-implementation-mvp`; roadmap feature: F034 --
-the roadmap F-number is authoritative when it disagrees with the spec-dir number.)
+the result: it reads the committed plain-text PBIR -- built either by a HUMAN in
+Power BI Desktop, or (spec 123, US7) by the bounded, ADR-0017-ratified blueprint
+compiler (`seshat.pbir_compile`) -- and produces the implementation TRACE proving
+the page realizes the approved visual -> contract binding map 1:1 -- and nothing
+more. It is the review, not the build, regardless of which of those two paths
+produced the committed page. (On-disk spec: `specs/039-visual-implementation-mvp`;
+roadmap feature: F034 -- the roadmap F-number is authoritative when it disagrees
+with the spec-dir number. Spec 123 US8 extends this workflow's scope to also
+compare against the approved page BLUEPRINT, not just the binding map -- see
+`../../../../specs/123-governed-dashboard-intelligence/spec.md` FR-030/FR-031 and
+the companion read-only `retail pbir-validate-blueprint` CLI verb.)
 
 ## Scope (read first)
 
@@ -14,15 +20,19 @@ This workflow READS a committed page and WRITES a derived trace; it authors noth
 in Power BI. It edits no PBIP/PBIR file, generates no PBIR, writes no DAX, changes no
 SQL, edits no semantic-model file, hand-edits no Desktop-owned file
 (`report.json` / `diagramLayout.json`), hand-authors no visual-container JSON, runs
-no pbi-cli / Power BI MCP command, and publishes nothing. Execution (PBIR authoring,
-pbi-cli, workspace publish) is F016's job; this workflow stops at the review boundary
-and names F016 as that owner. F034 is INDEPENDENT of F016 -- rule 6 gates the
-automation, not the manual build (see the boundary section below).
+no pbi-cli / Power BI MCP command, and publishes nothing -- this holds identically
+whether the page under review was a human's Desktop save or the US7 compiler's
+output. Execution against the **Power BI Service** (publish / refresh / export /
+schedule) is F016's job and remains forbidden and deferred regardless of which
+authoring path produced the committed PBIR; this workflow stops at the review
+boundary and names F016 as that owner. F034 is INDEPENDENT of F016 -- rule 6 gates
+Service-publish automation, not on-disk PBIR authoring (human OR compiler; see the
+boundary section below).
 
 It defines no metric (that is F009) and designs/re-binds no dashboard (that is the
-F011/012 `dashboard-design` verb). It only verifies that the page a human built
-matches what those upstream artifacts already approved -- referencing each by name,
-never re-deriving it.
+F011/012 `dashboard-design` verb). It only verifies that the committed page --
+however it was authored -- matches what those upstream artifacts already
+approved -- referencing each by name, never re-deriving it.
 
 ## What this workflow consumes
 
@@ -31,7 +41,7 @@ the review is `blocked` until it exists (do not invent it):
 
 | Input | What it provides | Where it comes from |
 |-------|------------------|---------------------|
-| The committed PBIR page | the BUILT visuals to verify -- one visual container per built visual, in plain text | a human's Desktop save under `<report>/definition/pages/<id>/` |
+| The committed PBIR page | the BUILT visuals to verify -- one visual container per built visual, in plain text | a human's Desktop save, OR the US7 compiler's committed output, under `<report>/definition/pages/<id>/` |
 | Approved visual -> contract binding map | the 1:1 source of truth: each measure-bearing visual -> exactly one approved contract by name + mapped field | F011/012 (`mappings/<subject>/design/visual-contract-binding-map.md`) |
 | The design-review sign-off | the recorded approval the build realizes | `approvals[]` in `mappings/<subject>/readiness-status.yaml` |
 | The trace template | the copy-me blank this workflow fills | `../../../../templates/visual-implementation-trace.md` |
@@ -102,9 +112,12 @@ selected measure to an existing approved contract, not authoring a definition he
 The page is reviewed in git like code -- the reviewer reads plain text, never an opaque
 `.pbix`. Confirm, on the committed diff:
 
-- [ ] The change is a real Power BI Desktop SAVE (committed `definition/` text), not
-      hand-authored visual-container JSON and not an edit to `report.json` /
-      `diagramLayout.json` (FR-009; Desktop owns those files).
+- [ ] The change is EITHER a real Power BI Desktop SAVE, OR the ADR-0017-ratified
+      US7 compiler's committed output (`seshat.pbir_compile.compile_page_shell` /
+      `compile_line_chart`) -- never ad-hoc hand-authored visual-container JSON
+      from any other source, and never a hand-edit to `report.json` /
+      `diagramLayout.json` (FR-009; those stay Desktop- or adapter-owned files,
+      never freehand-edited).
 - [ ] No opaque `.pbix` is committed -- the page is plain-text PBIR (FR-002).
 - [ ] The PBIR references the governed semantic model by a RELATIVE path -- never an
       absolute/remote ref, never a real host (FR-007; the same constraint `retail check`
@@ -131,21 +144,30 @@ those forces the trace `blocked`, never `pass`.
 
 This workflow READS a committed page and WRITES a derived trace; it authors no PBIR.
 It edits no PBIP/PBIR/semantic-model file, generates no PBIR, writes no DAX, changes no SQL,
-runs no pbi-cli / Power BI MCP command, and publishes nothing. The build itself is a HUMAN
-action in Power BI Desktop; this workflow's role is to VERIFY the committed result and
-produce the reviewable trace.
+runs no pbi-cli / Power BI MCP command, and publishes nothing. The committed page it reads
+was built by ONE of two authorized paths -- a HUMAN action in Power BI Desktop, or the
+bounded, ADR-0017-ratified US7 compiler (`seshat.pbir_compile`) -- and this workflow's role
+is identical either way: VERIFY the committed result and produce the reviewable trace. It
+never authors, never re-derives, and never favors one authorized path's output over the
+other's when comparing against the approved design.
 
-- **F016 is EXECUTION AUTOMATION** (a future adapter that would generate the PBIR and publish
-  it without a human in Desktop) -- deferred, gated (rule 6), and named here as the owner of
-  any generation/publish step.
-- **F034 is a HUMAN MANUAL BUILD reviewed in git** -- a person builds in Desktop and commits
-  plain-text PBIR; the only "tooling" is git diff + this read-only trace. It is INDEPENDENT
-  of F016: rule 6 gates the automation, not the manual build, and no readiness stage depends
-  on F016.
+- **F016 is EXECUTION AUTOMATION AGAINST THE POWER BI SERVICE** (a future adapter that would
+  publish/refresh/export/schedule a report without a human) -- deferred, gated (rule 6), and
+  named here as the owner of any Service-facing step. F016 is NOT about who authors the
+  on-disk PBIR (human or compiler); it is about the still-forbidden step of putting that PBIR
+  in front of the Service.
+- **F034 is the REVIEW of on-disk PBIR reviewed in git**, authored by EITHER a human building
+  in Desktop and committing plain-text PBIR, OR the US7 compiler staging + committing its
+  bounded, allow-listed output; the only "tooling" this workflow itself runs is git diff +
+  this read-only trace (extended, per US8, by the companion read-only `retail
+  pbir-validate-blueprint` CLI verb). It is INDEPENDENT of F016: rule 6 gates Service-publish
+  automation, not on-disk authoring (by either path), and no readiness stage depends on F016.
 
 If a user asks to "just generate the report", "run pbi-cli", or "publish to the workspace",
-STOP at the review boundary, produce or verify only the committed PBIR a human built, and
-name F016 as the owner of any generation or publish step.
+STOP at the review boundary, produce or verify only the committed PBIR (however it was
+authored), and name F016 as the owner of any generation-against-the-Service or publish step.
+The US7 compiler itself already stops before publish (FR-036) -- this workflow does not
+relax that boundary, it verifies against it.
 
 ## Readiness (recorded, not granted)
 
@@ -181,3 +203,10 @@ STOP and surface to a human rather than self-answering when:
 - The gate to inherit + the four statuses: `docs/readiness/dashboard-ready.md`,
   `docs/readiness/readiness-model.md`.
 - The deferred execution/publish owner (named, never invoked): F016.
+- The bounded, ADR-0017-ratified authoring path this workflow may ALSO be reviewing
+  the output of: `src/seshat/pbir_compile.py` (US7).
+- The blueprint-conformance extension of this workflow (US8): the companion
+  read-only `retail pbir-validate-blueprint` CLI verb
+  (`src/seshat/pbir_validate_blueprint.py`), which additionally compares committed
+  PBIR against the approved page blueprint -- see
+  `../../../../specs/123-governed-dashboard-intelligence/spec.md` FR-030/FR-031.

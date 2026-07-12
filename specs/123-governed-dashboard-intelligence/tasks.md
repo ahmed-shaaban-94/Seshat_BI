@@ -59,9 +59,9 @@
 
 **Goal**: named-human `dashboard_blueprint_approval` via the shipped Decision Store; supersession on change.
 
-- [ ] T021 [P] [US6] Test: extend RS1 to recognize `report_owner` (FR-022a) — a `report_owner`-authored `dashboard_blueprint_approval` is accepted by RS1; assert this is the ONLY class added (one-class, not a spine refactor); `tests/unit/test_readiness_status.py`
-- [ ] T022 [US6] Add `report_owner` to `_AUTHORITY_CLASSES` in `src/seshat/rules/readiness_status.py` (single-class additive; FR-022a/FR-037)
-- [ ] T023 [US6] Integration test: post-approval blueprint change marks prior approval `superseded` (DS4, with `superseded_by`), preserves history, requires renewed approval before compilation; unchanged blueprint needs no re-approval (FR-023/FR-024)
+- [x] T021 [P] [US6] Test: extend RS1 to recognize `report_owner` (FR-022a) — a `report_owner`-authored `dashboard_blueprint_approval` is accepted by RS1; assert this is the ONLY class added (one-class, not a spine refactor); `tests/unit/test_readiness_status.py`
+- [x] T022 [US6] Add `report_owner` to `_AUTHORITY_CLASSES` in `src/seshat/rules/readiness_status.py` (single-class additive; FR-022a/FR-037)
+- [x] T023 [US6] Integration test: post-approval blueprint change marks prior approval `superseded` (DS4, with `superseded_by`), preserves history, requires renewed approval before compilation; unchanged blueprint needs no re-approval (FR-023/FR-024)
 
 ## Phase 6: User Story 4 — Blueprint preview (P2)
 
@@ -76,42 +76,42 @@
 
 **Goal**: report-level categorical audit distinct from per-visual QA; no score.
 
-- [ ] T028 [US5] Author skill/workflow `.claude/skills/powerbi-dashboard-design/workflows/dashboard-semantic-audit.md` — emits the spec-fixed closed enum (`covered/incomplete/missing/conflicting/warning/blocked/not_applicable_with_reason`); each finding cites committed evidence + names owner; reuses shipped tool OUTPUTS (FR-020), recomputes nothing
-- [ ] T029 [US5] Test: audit emits categorical findings for the FR-018 checks against fixtures (intent question with no page → `missing`; diagnostic w/o drivers → `incomplete`; monitoring+diagnostic on one page → `conflicting`); assert NO numeric score anywhere (FR-020/FR-035); `tests/integration/test_semantic_audit.py`
-- [ ] T030 [US5] Test: audit reuses the recorded `dashboard-planner` verdict + filled `a11y-rtl-readiness-checklist.md` (cites, never re-derives CT1 contrast)
+- [x] T028 [US5] Author skill/workflow `.claude/skills/powerbi-dashboard-design/workflows/dashboard-semantic-audit.md` — emits the spec-fixed closed enum (`covered/incomplete/missing/conflicting/warning/blocked/not_applicable_with_reason`); each finding cites committed evidence + names owner; reuses shipped tool OUTPUTS (FR-020), recomputes nothing
+- [x] T029 [US5] Test: audit emits categorical findings for the FR-018 checks against fixtures (intent question with no page → `missing`; diagnostic w/o drivers → `incomplete`; monitoring+diagnostic on one page → `conflicting`); assert NO numeric score anywhere (FR-020/FR-035); `tests/integration/test_semantic_audit.py`
+- [x] T030 [US5] Test: audit reuses the recorded `dashboard-planner` verdict + filled `a11y-rtl-readiness-checklist.md` (cites, never re-derives CT1 contrast)
 
 ## Phase 8: User Story 3 — Dashboard pattern library (P2)
 
 **Goal**: generic, named patterns as design guidance; no KPI meaning.
 
-- [ ] T031 [P] [US3] Author generic pattern docs under `docs/patterns/dashboard/` (Executive Performance, Sales Diagnosis, Branch Performance, Inventory Health, Product Performance, Promotion Effectiveness, Returns & Refunds, Customer Behavior, Data Quality Control Room, Action & Exceptions) — guidance only, no named KPIs
-- [ ] T032 [US3] Author a pattern-recommendation skill entry that maps intent `purpose` → candidate pattern(s); presents multiple/partial fits for human choice (FR-014); unavailable requirements surface as gaps via `retail dashboard-gaps` (FR-013)
-- [ ] T033 [US3] Test: a pattern assuming an unavailable metric/dimension surfaces a gap, never fabricates (FR-013)
+- [x] T031 [P] [US3] Author generic pattern docs under `docs/patterns/dashboard/` (Executive Performance, Sales Diagnosis, Branch Performance, Inventory Health, Product Performance, Promotion Effectiveness, Returns & Refunds, Customer Behavior, Data Quality Control Room, Action & Exceptions) — guidance only, no named KPIs
+- [x] T032 [US3] Author a pattern-recommendation skill entry that maps intent `purpose` → candidate pattern(s); presents multiple/partial fits for human choice (FR-014); unavailable requirements surface as gaps via `retail dashboard-gaps` (FR-013)
+- [x] T033 [US3] Test: a pattern assuming an unavailable metric/dimension surfaces a gap, never fabricates (FR-013)
 
 ## Phase 9: User Story 7 — PBIR compiler (P3, SAMPLE- + ADR-GATED)
 
 **Goal**: compile supported elements from an approved blueprint into committed PBIR, bounded/deterministic/reversible.
 
-- [ ] T034 [US7] **HUMAN SEAM (D11)**: draft the PBIR-creation ADR under `docs/decisions/00NN-pbir-creation-*.md` (per-increment creation allow-list, bind-only-to-approved-map, deterministic ID minting, verified-sample-per-type). Owner ratifies by name — the agent drafts, never self-grants. All tasks below are BLOCKED until ratified.
-- [ ] T035 [US7] Test (RED): `create_page`/`create_visual_container` determinism + no-partial-write + deterministic ID minting (hash of `report_id`+element slug, never random/time-based — FR-027/US7#4); staged-tree-then-commit; `tests/unit/test_pbir_compile.py`
-- [ ] T036 [US7] Implement `src/seshat/pbir_compile.py` orchestration reusing the four shipped adapters + the single new create primitive (inherit allow-list/stage-validate-commit/path-guard/FR-003 snapshot)
-- [ ] T037 [US7] **Increment 1 (page shells) — UNBLOCKED**: copy the live report's real empty `page.json` into `tests/fixtures/pbir/page_shell.Report/`; compile a page shell against it; test byte-determinism + FR-003
-- [ ] T037a [US7] Test: preconditions gate — compile attempted without a valid `dashboard_blueprint_approval` yields `blocked` naming the missing approval (FR-025/US7#5); compile requesting a shape with no verified sample yields `blocked` naming the missing sample, writes nothing (FR-029/US7#2); `tests/unit/test_pbir_compile.py`
-- [ ] T038 [US7] **Increment 3 (lineChart) — UNBLOCKED**: compile a lineChart visual using the verified data-goblin `visual_fmt.Report` sample; bind only to approved-map fields
-- [ ] T039 [US7] **BLOCKED — owner sample required**: Increment 2 (KPI cards) — do NOT ship until a real Desktop-authored `card` sample is supplied; log the gap, do not use the `geometry.Report` placeholder
-- [ ] T040 [US7] **BLOCKED — owner sample required**: Increment 3 column/bar charts — same hold as Increment C precedent; owner sample required
-- [ ] T041 [US7] **BLOCKED — owner sample required**: Increment 4 (slicers + navigation) — no fixture exists
-- [ ] T042 [US7] **BLOCKED — owner sample required**: Increment 5 (supported interactions) — no fixture exists
+- [x] T034 [US7] **HUMAN SEAM (D11)**: draft the PBIR-creation ADR under `docs/decisions/00NN-pbir-creation-*.md` (per-increment creation allow-list, bind-only-to-approved-map, deterministic ID minting, verified-sample-per-type). Owner ratifies by name — the agent drafts, never self-grants. All tasks below are BLOCKED until ratified. **DONE**: `docs/decisions/0017-pbir-creation-primitive.md`, ratified by Ahmed Shaaban 2026-07-12 (commit 5982990).
+- [x] T035 [US7] Test (RED): `create_page`/`create_visual_container` determinism + no-partial-write + deterministic ID minting (hash of `report_id`+element slug, never random/time-based — FR-027/US7#4); staged-tree-then-commit; `tests/unit/test_pbir_compile.py`
+- [x] T036 [US7] Implement `src/seshat/pbir_compile.py` orchestration reusing the four shipped adapters + the single new create primitive (inherit allow-list/stage-validate-commit/path-guard/FR-003 snapshot)
+- [x] T037 [US7] **Increment 1 (page shells) — UNBLOCKED**: copy the live report's real empty `page.json` into `tests/fixtures/pbir/page_shell.Report/`; compile a page shell against it; test byte-determinism + FR-003
+- [x] T037a [US7] Test: preconditions gate — compile attempted without a valid `dashboard_blueprint_approval` yields `blocked` naming the missing approval (FR-025/US7#5); compile requesting a shape with no verified sample yields `blocked` naming the missing sample, writes nothing (FR-029/US7#2); `tests/unit/test_pbir_compile.py`
+- [x] T038 [US7] **Increment 3 (lineChart) — UNBLOCKED**: compile a lineChart visual using the verified data-goblin `visual_fmt.Report` sample; bind only to approved-map fields
+- [ ] T039 [US7] **BLOCKED — owner sample required**: Increment 2 (KPI cards) — do NOT ship until a real Desktop-authored `card` sample is supplied; log the gap, do not use the `geometry.Report` placeholder. Needed: a real Power BI Desktop-authored `visual.json` for a `card` visual (KPI-style single-measure card), saved from an actual Desktop session — not the self-invented `tests/fixtures/pbir/geometry.Report` placeholder.
+- [ ] T040 [US7] **BLOCKED — owner sample required**: Increment 3 column/bar charts — same hold as Increment C precedent; owner sample required. Needed: a real Power BI Desktop-authored `visual.json` for a `columnChart` and/or `barChart` visual (the lineChart sample's projection shape cannot be assumed to generalize per the Increment-C "hold until real sample" precedent).
+- [ ] T041 [US7] **BLOCKED — owner sample required**: Increment 4 (slicers + navigation) — no fixture exists. Needed: a real Power BI Desktop-authored slicer `visual.json` plus a bookmark/navigation-button `page.json`/`report.json` fragment (no slicer or bookmark fixture exists anywhere in the repo today).
+- [ ] T042 [US7] **BLOCKED — owner sample required**: Increment 5 (supported interactions) — no fixture exists. Needed: a real Power BI Desktop-authored sample showing cross-filter/highlight/drill-through interaction wiring (`filterConfig`/`visualInteractions`/drillthrough page config) — no interaction-wiring fixture exists anywhere in the repo today.
 
 ## Phase 10: User Story 8 — PBIR validation (P3)
 
 **Goal**: verify committed PBIR (compiler- or human-built) matches the approved design; grants no approval.
 
-- [ ] T043 [US8] Reconcile the boundary text in `.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`: the page may be built by a human in Desktop OR by the US7 compiler; F016 remains the owner of the still-forbidden live publish (FR-030)
-- [ ] T044 [US8] Extend `templates/visual-implementation-trace.md` with page-level + blueprint-conformance rows (keep four-status vocab; grants no approval — FR-031)
-- [ ] T045 [US8] Implement read-only `retail pbir-validate-blueprint` (justify the one CLI verb vs Option-B via the R1/R2 check-surface precedent); reports expected-vs-actual for pages/visuals/types/bindings/fields/titles/geometry/theme/nav/interactions/relative-refs/trace; flags unapproved additions + missing elements
-- [ ] T046 [US8] Test: a manually-added unapproved visual is flagged; preview↔PBIR divergence flagged; validator records evidence/deviations only, grants no `dashboard_ready: pass` (FR-031); `tests/integration/test_pbir_validate.py`
-- [ ] T046a [US8] Test: no-publish boundary (FR-036/SC-011) — assert no publish/refresh/export/schedule path is reachable from the compiler or validator (F016 remains the only, deferred, publish owner); `tests/integration/test_no_service_publish.py`
+- [x] T043 [US8] Reconcile the boundary text in `.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`: the page may be built by a human in Desktop OR by the US7 compiler; F016 remains the owner of the still-forbidden live publish (FR-030)
+- [x] T044 [US8] Extend `templates/visual-implementation-trace.md` with page-level + blueprint-conformance rows (keep four-status vocab; grants no approval — FR-031)
+- [x] T045 [US8] Implement read-only `retail pbir-validate-blueprint` (justify the one CLI verb vs Option-B via the R1/R2 check-surface precedent); reports expected-vs-actual for pages/visuals/types/bindings/relative-refs/trace (titles/geometry/theme/nav/interactions/field-level bindings deliberately deferred — no expected-value source yet; named in the module docstring, not silently omitted)
+- [x] T046 [US8] Test: a manually-added unapproved visual is flagged; a blueprint↔PBIR type divergence is flagged; validator records evidence/deviations only, grants no `dashboard_ready: pass` (FR-031); `tests/integration/test_pbir_validate.py`
+- [x] T046a [US8] Test: no-publish boundary (FR-036/SC-011) — assert no publish/refresh/export/schedule path is reachable from the compiler or validator (F016 remains the only, deferred, publish owner); `tests/integration/test_no_service_publish.py`
 
 ## Phase 11: Polish & cross-cutting
 

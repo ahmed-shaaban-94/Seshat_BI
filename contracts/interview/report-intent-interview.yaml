@@ -1,0 +1,74 @@
+# =============================================================================
+# report-intent-interview.yaml  --  the interview stage behavior contract (spec 123)
+# =============================================================================
+# The Report Intent Interview is conducted CONVERSATIONALLY by the agent
+# (agent-first, Principle I), mirroring the shipped business-knowledge-interview
+# + Decision Store pattern (spec 121). It STRUCTURALLY MIRRORS
+# `contracts/interview/business-knowledge-interview.yaml` -- same question-
+# grouping, masking, and hard-stop discipline -- but does NOT extend it: its
+# `required_inputs` and `focus` differ (it needs approved contracts + a ready
+# model, not a discovery profile; it asks intent fields, not kpi/grain/keys).
+#
+# Delivery: a NEW skill `.claude/skills/report-intent-interview/SKILL.md`
+# (Option-B: skill, not a CLI verb).
+#
+# Shape: specs/121-business-knowledge-interview/contracts/knowledge-contract.schema.json
+# =============================================================================
+
+version: 1
+
+stages:
+  - stage: report_intent
+    allowed_routes: [dashboard_design, retail_kpi, readiness]
+    required_inputs:
+      - "approved metric contracts (readiness: pass)"
+      - "a ready semantic model (semantic_model_ready: pass)"
+    required_outputs:
+      - "a committed mappings/<subject-area>/design/report-intent.yaml"
+      - "a report_intent_approval decision (report_owner)"
+    stop_rules:
+      - condition: "no approved metric contracts exist for the subject area"
+        unblocked_by: "at least one approved metric contract"
+      - condition: "the semantic model is not ready"
+        unblocked_by: "semantic_model_ready: pass"
+      - condition: "a critical decision is unresolved but the agent would proceed"
+        unblocked_by: "an explicit named-human approval for that decision"
+    blocking_decision_categories: []  # the interview PRODUCES the decision; it does not gate on it
+    handoff: dashboard_blueprint
+    non_goals:
+      - "defining metric meaning (route to retail_kpi)"
+      - "authoring page blueprints or visuals (downstream)"
+      - "self-granting any approval"
+      - "emitting a numeric confidence score"
+    evidence_requirements:
+      - "each *_metrics[] entry cites its approved metric contract by name + store_ref"
+
+# --- interview behavior (read by the agent, beyond the generic stage shape) ---
+behavior:
+  focus:                                # DIFFERS from business-knowledge-interview:
+    - audience                          # intent fields, not kpi/grain/keys
+    - purpose
+    - supported_decision
+    - review_cadence
+    - business_questions
+    - metric_roles_by_name              # outcome/driver/guardrail, referenced not defined
+    - comparisons
+    - dimensions_and_filters
+    - actions_and_exceptions
+    - mobile_accessibility_language_rtl
+    - exclusions
+  load_existing_first: true             # REUSED verbatim: present for confirm/supersede, never overwrite
+  question_grouping:                    # REUSED verbatim from business-knowledge-interview
+    batch_low_risk: true
+    critical_types_forbidden_in_batch: true
+    item_level_exclusion: true
+    requires_named_human_approval: true
+  masking:                              # REUSED verbatim (SEC-003)
+    pii_masked_by_default: true
+    unmask_requires: "explicit owner instruction, recorded as a pii_handling decision"
+  critical_decision_type: report_intent_approval    # NEW type, authority class report_owner
+  hard_stops:                           # REUSED verbatim from business-knowledge-interview
+    - never_self_grant_approval
+    - never_advance_a_readiness_stage
+    - never_emit_a_confidence_score
+    - stop_and_record_then_report_gate_verdict

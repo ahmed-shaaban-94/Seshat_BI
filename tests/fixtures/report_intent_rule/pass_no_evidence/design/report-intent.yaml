@@ -1,0 +1,18 @@
+report_id: "demo_report"
+subject_area: "mappings/demo_table"
+audience: "branch_manager"
+purpose: "monitoring"
+supported_decision: "which branches need attention this week"
+review_cadence: "weekly"
+business_questions:
+  - question_id: "q1"
+    text: "Which branches are underperforming this period?"
+outcome_metrics: []
+driver_metrics: []
+guardrail_metrics: []
+owner: "A. Owner (report_owner)"
+readiness:
+  status: "pass"
+  evidence: []
+  blocking_reasons: []
+open_questions: []
