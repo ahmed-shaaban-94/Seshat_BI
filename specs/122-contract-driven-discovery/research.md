@@ -53,37 +53,40 @@ Format per decision: **Decision / Rationale / Alternatives considered**.
 
 ## R-2a: Layer-A table enumeration -- agent-issued read-only metadata (no existing schema-lister)
 
-- **Decision**: The reachable-table list for Layer A is produced by an **agent-issued
-  read-only metadata read** -- for a DB schema, an `information_schema.tables` query
-  over the existing read-only DB access seam (`QueryRunner`/`Dialect`); for a file
-  folder, a stdlib directory listing. The agent then records each table's metadata
-  (reusing the per-table `information_schema.columns` read that `profile.py`/`dialect.py`
-  already expose). If a thin read-only enumeration helper is preferred over an inline
-  agent query at implementation time, it targets Python 3.13 and MUST mirror
-  `run_validate`'s config-resolve + `_ensure_driver` gate + `dialect.redact(exc, config)`
-  so a connection failure never leaks the DSN.
+- **Decision (revised after Codex #5 on `7988dd0`)**: The reachable-table list for Layer A
+  is produced per branch: the **DB branch MUST route through a mandatory read-only
+  enumeration helper** (`enumerate_tables(schema)` in `src/seshat/`, Python 3.13) that
+  issues the `information_schema.tables` query over the existing `QueryRunner`/`Dialect`
+  seam and returns the table list OR a **redacted** error, mirroring `run_validate`'s
+  config-resolve + `_ensure_driver` gate + `dialect.redact(exc, config)`; the agent MUST
+  NOT issue its own raw DB query or catch a raw connection/driver/config exception. The
+  **file-folder branch** is an inline stdlib directory listing (no DSN, no leak vector).
+  The agent then records each table's metadata (reusing the per-table
+  `information_schema.columns` read that `profile.py`/`dialect.py` already expose).
 - **Rationale**: A grep of `src/seshat/` confirms the shipped profilers are **per-table**
   -- `profile.py._discover_columns` reads `information_schema.columns` for one given
   `schema.table`, and `dialect.py`'s catalog queries are all `WHERE table_schema = %s AND
   table_name = %s`. There is **no schema-level "list every table" enumerator**. Layer A
-  (the MVP) needs exactly that enumeration, so it is a genuinely new operation. Framing
-  it as agent-issued metadata reads keeps Principle I (agent-first, the same way
-  `retail-onboard-table` *calls* `profile.py` rather than being an engine) without a new
-  connector or engine.
-- **FR-011 / redaction guarantee**: because Layer A may touch a live DB for metadata,
-  the survey MUST NOT contain any DSN, credential, or connection string, and any driver/
-  connection error surfaced during enumeration MUST be redacted via the existing
-  `dialect.redact()` path -- the same three monkeypatch-testable failure modes the
-  validate/profile legs already cover (repo lesson: db-cli-must-mirror-validate-redact).
-- **Correcting the earlier "no new source" framing**: an initial draft asserted "no new
-  Python source at the MVP." That is not safely true -- schema enumeration does not exist
-  today. The plan now states the mechanism explicitly (agent-issued query, or a thin
-  redaction-mirroring helper) rather than asserting zero code.
+  (the MVP) needs exactly that enumeration, so it is a genuinely new operation. A small
+  helper keeps Principle I intact (the same way `retail-onboard-table` *calls* `profile.py`
+  rather than being an engine) without a new connector or engine.
+- **FR-011 / redaction guarantee (why the DB branch helper is MANDATORY, Codex #5)**:
+  because DB Layer-A enumeration resolves a DSN and can hit config/driver/connection
+  exceptions that embed it, an **inline** agent query would have NO unit-testable surface
+  for redaction -- a failed metadata read could leak `DATABASE_URL`/`ANALYTICS_DB_*` into
+  the skill transcript or a boundary note despite FR-011. Routing the DB branch through
+  the helper gives redaction a single tested code path (the three monkeypatch-testable
+  failure modes the validate/profile legs already cover: config-resolve, driver gate,
+  `dialect.redact`). The file-folder branch resolves no DSN, so an inline listing is safe.
+- **Correcting the earlier framing**: an initial draft asserted "no new Python source at
+  the MVP" (false -- schema enumeration does not exist today), and a follow-up made the
+  helper *optional/inline*. Codex #5 correctly noted the inline DB path has zero redaction
+  coverage; the helper is now **mandatory for the DB branch**.
 - **Alternatives considered**: (a) reuse `profile.py` to also list tables -- rejected:
-  it takes a table as input and profiles values; it is not an enumerator and using it
-  would drag in value-backed measurement (violates Layer A metadata-only); (b) a new
-  general catalog/inspection engine -- rejected: out of scope; a single read-only
-  `information_schema.tables` read (or folder listing) is sufficient.
+  it takes a table as input and profiles values; not an enumerator and would drag in
+  value-backed measurement (violates Layer A metadata-only); (b) a new general
+  catalog/inspection engine -- rejected: out of scope; (c) allow an inline DB query --
+  rejected (Codex #5): no testable redaction surface, credential-leak risk.
 
 ## R-3: Survey coverage -- inventory every reachable table; never an agent-chosen cap
 

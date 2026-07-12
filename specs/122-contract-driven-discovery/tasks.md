@@ -8,7 +8,7 @@
 seeded conformance fixtures, and the repo's workflow is TDD (write failing tests first).
 Because most enforcement is REUSED (existing DS1-DS5 + gate), most "tests" here are
 fixture/oracle tests over the new survey artifact shape and the bounded-flow stops,
-plus DSN-redaction monkeypatch tests IF a Layer-A enumeration helper is added.
+plus DSN-redaction monkeypatch tests for the mandatory DB enumeration helper.
 
 **Organization**: Grouped by user story in spec priority order. **MVP = US1** (the
 Layer-A portfolio survey); no deep profiling occurs at MVP. Implementation is
@@ -71,12 +71,12 @@ contains no value-backed measurement and no raw PII/credentials/DSN.
 
 - [ ] T006 [P] [US1] Seed fixtures under `tests/fixtures/portfolio-survey/`: a DB-schema metadata fixture (>=5 tables: declared PKs/FKs, mixed types, a date column, a PII-suspect column name, one table with unreachable row-count) and a file-folder fixture (CSV + Excel), plus the expected committed survey for each (golden files)
 - [ ] T007 [US1] Write failing tests in `tests/unit/test_portfolio_survey.py` asserting the **golden survey fixtures** (T006) satisfy the T005 oracle (every reachable table present; hints not rulings; unreachable metadata stated with reason; no value-backed measurement; no raw PII/DSN). The golden files are the skill's REFERENCE target shape -- this is a recorded-artifact oracle over the fixtures, NOT a mechanical assertion that a function produced them (the survey is agent-conducted; mirrors 121's "rules verify the recorded outcome, not the conversation")
-- [ ] T008 [P] [US1] IF a Layer-A enumeration helper is added (R-2a): write failing monkeypatch tests for the three DSN-leak failure modes (config-resolve, driver gate, `dialect.redact`) in `tests/unit/test_portfolio_enumerate.py` -- no real DB; a connection error MUST be redacted, never leak the DSN (FR-011, db-cli-must-mirror-validate-redact)
+- [ ] T008 [US1] Write failing monkeypatch tests for the mandatory DB enumeration helper's three DSN-leak failure modes (config-resolve, driver gate, `dialect.redact`) in `tests/unit/test_portfolio_enumerate.py` -- no real DB; a config/driver/connection error MUST surface only a **redacted** message, never leak `DATABASE_URL`/`ANALYTICS_DB_*` (FR-011, Codex #5, db-cli-must-mirror-validate-redact). (Unconditional: the DB branch always routes through the helper -- there is no inline-query alternative for DB.)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Author `.claude/skills/retail-discover-portfolio/SKILL.md` (working name): the agent-conducted Layer-A survey procedure -- enumerate every reachable table via a read-only `information_schema.tables` query (DB) or a directory listing (file folder), read each table's `information_schema.columns` metadata, and author the survey from `templates/portfolio-survey.md`; NEVER sample values, NEVER measure, NEVER write raw PII/DSN; state unreachable metadata as `[PENDING LIVE PROFILE]`/`needs_sample`; STOP if no source metadata is readable (name the enabling step). Cite the two-layer boundary and the no-2nd-profiler rule explicitly
-- [ ] T010 [US1] IF an enumeration helper is preferred over an inline agent query: implement a thin read-only `enumerate_tables(schema)` in `src/seshat/` reusing the existing `QueryRunner`/`Dialect` seam for `information_schema.tables`, mirroring `run_validate`'s config-resolve + `_ensure_driver` gate + `dialect.redact(exc, config)` so a failure never leaks the DSN; green T008. (Skip if the skill issues the query inline; record the choice in the skill.)
+- [ ] T009 [US1] Author `.claude/skills/retail-discover-portfolio/SKILL.md` (working name): the agent-conducted Layer-A survey procedure -- enumerate every reachable table by **calling the mandatory `enumerate_tables` helper for a DB source** (the agent MUST NOT issue its own raw `information_schema.tables` query and MUST NOT catch a raw connection/driver/config exception -- the helper returns rows or a redacted error, FR-011/Codex #5) or by an inline directory listing for a file folder; read each table's `information_schema.columns` metadata; author the survey from `templates/portfolio-survey.md`; NEVER sample values, NEVER measure, NEVER write raw PII/DSN; state unreachable metadata as `[PENDING LIVE PROFILE]`/`needs_sample`; STOP if no source metadata is readable (name the enabling step). Cite the two-layer boundary and the no-2nd-profiler rule explicitly
+- [ ] T010 [US1] Implement the mandatory read-only `enumerate_tables(schema)` in `src/seshat/` (the DB branch's only path) reusing the existing `QueryRunner`/`Dialect` seam for `information_schema.tables`, mirroring `run_validate`'s config-resolve + `_ensure_driver` gate + `dialect.redact(exc, config)` so a config/driver/connection failure returns a **redacted** error and never leaks the DSN; green T008. (No inline-DB-query alternative exists -- Codex #5.)
 - [ ] T011 [US1] Add the `retail-discover-portfolio` verb entry to `.seshat/kit-source.yaml` and REGENERATE the router block (do not hand-append); verify the generated `CLAUDE.md`/router banner echoes the new verb
 - [ ] T011a [US1] NOW that the skill + router entry exist, add the discovery/domain/scope producer row to `docs/capabilities/capabilities.yaml` (id, summary, the `SKILL.md` reference, and gap fields), and confirm the capability-inventory truthfulness oracle passes -- the row is truthful because the producer is built (deferred from Setup so the inventory never claims an unbuilt producer)
 - [ ] T012 [US1] Confirm the authored skill's SKILL.md cites the golden surveys (T006) as its target shape and that the golden fixtures pass the T005 oracle (recorded-artifact verification, not a mechanical "function produced X" assertion); run the T004/T005 oracle over the fixtures; confirm `retail check` stays exit 0 on the repo
@@ -270,8 +270,8 @@ Each story adds value without breaking the previous, and each keeps `retail chec
 
 - [P] = different files, no dependencies. [Story] label maps each task to its user story.
 - This feature is deliberately anti-code: the only genuinely new code is the skill, the
-  survey template, and (optionally) a thin read-only enumeration helper. Everything else
-  is reuse.
+  survey template, and a thin read-only DB enumeration helper (mandatory for the DB
+  branch, so DSN redaction has one tested path). Everything else is reuse.
 - Tests fail before implementation; commit after each task or logical group.
 - Ratify seam is a human action ahead of implementation -- these tasks are the plan for
   implementation, not authorization to merge.

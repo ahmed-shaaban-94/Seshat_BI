@@ -18,11 +18,12 @@ Business Knowledge Interview. Delivery follows the repo's governance-slice shape
 121's precedent: **one new dedicated skill** (`retail-discover-portfolio`, working name)
 + **one new template** (the Layer-A survey blank) + a feature-local survey schema + a
 kit-router verb entry + a `capabilities.yaml` row. Layer-A table enumeration is
-agent-issued read-only metadata (an `information_schema.tables` read for a DB schema, or
-a directory listing for a file folder), reusing the existing read-only DB access seam;
-if a thin enumeration helper is preferred at implementation time it MUST mirror the
-existing validate/profile config-resolve + driver-gate + `dialect.redact()` so a DSN
-never leaks (see Technical Context / R-2a). No new CLI verb, no runtime engine, no
+agent-issued read-only metadata; the **DB branch MUST route through a mandatory
+redaction-mirroring helper** (an `information_schema.tables` read over the existing DB
+access seam, returning rows or a redacted error via `dialect.redact()`), while the
+**file-folder branch** is an inline directory listing (no DSN, no leak vector). This
+closes the credential-leak hole a raw inline DB query would carry (FR-011; see Technical
+Context / R-2a). No new CLI verb, no runtime engine, no
 second Decision Store, no second per-table profiler, no new `retail check` rule at MVP,
 no change to the existing flow contracts, no PBIP/publish/warehouse execution. The
 load-bearing engineering here is codifying what NOT to build.
@@ -30,25 +31,23 @@ load-bearing engineering here is codifying what NOT to build.
 ## Technical Context
 
 **Language/Version**: The feature is delivered primarily as an agent-conducted skill
-plus YAML/Markdown artifacts (survey template, feature-local schema, kit-router block).
-**Layer-A table enumeration is agent-issued read-only metadata reads** (see R-2a): the
-existing `src/seshat/profile.py`/`dialect.py` expose per-table `information_schema`
-column reads but NO schema-level "list all tables" enumerator, so the agent lists the
-reachable tables itself (a read-only `information_schema.tables` query for a DB schema,
-or a directory listing for a file folder) and then records their metadata -- no new
-engine, but this is NOT "zero code touched": if a thin read-only enumeration helper is
-preferred over an inline agent query at implementation time, it targets Python 3.13 to
-match the package contract and MUST mirror `run_validate`'s config-resolve + driver
-gate + `dialect.redact()` so a failure never leaks the DSN (repo lesson:
-db-cli-must-mirror-validate-redact). That is a task-time choice; either way Layer A adds
-no value-backed measurement.
+plus YAML/Markdown artifacts (survey template, feature-local schema, kit-router block),
+**plus one small new Python helper** for DB table enumeration (Python 3.13, matching the
+package contract). Rationale (R-2a): `src/seshat/profile.py`/`dialect.py` expose per-table
+`information_schema` column reads but NO schema-level "list all tables" enumerator, so
+the reachable-table list is genuinely new work. The **DB branch MUST use this helper**
+(no raw inline agent query) so DSN redaction has a single tested code path; it mirrors
+`run_validate`'s config-resolve + `_ensure_driver` gate + `dialect.redact(exc, config)`
+(repo lesson: db-cli-must-mirror-validate-redact). The **file-folder branch** is an
+inline stdlib directory listing (no DSN, no leak vector). Either way Layer A adds no
+value-backed measurement.
 
-**Primary Dependencies**: No new third-party dependency. Layer-A enumeration reuses the
-existing read-only DB access path (`QueryRunner`/`Dialect`, the same driver-optional
-seam `profile.py`/`validate.py` use) for the `information_schema.tables` read, and the
-stdlib for a file-folder listing. Layer-B profiling reuses the existing per-table
-profilers (`src/seshat/profile.py` for DB, `src/seshat/file_profile.py` for files) via
-`retail-onboard-table`; domain/scope records reuse the existing Decision Store
+**Primary Dependencies**: No new third-party dependency. The DB enumeration helper
+reuses the existing read-only DB access path (`QueryRunner`/`Dialect`, the same
+driver-optional seam `profile.py`/`validate.py` use) for the `information_schema.tables`
+read; the file-folder branch uses the stdlib. Layer-B profiling reuses the existing
+per-table profilers (`src/seshat/profile.py` for DB, `src/seshat/file_profile.py` for
+files) via `retail-onboard-table`; domain/scope records reuse the existing Decision Store
 (`src/seshat/decision_store.py`) and its DS1-DS5 static rules; verdicts reuse the
 existing gate. No new connector, reader, or engine.
 
@@ -64,11 +63,11 @@ value-backed measurement present; no raw PII/credentials); Decision Store fixtur
 proving domain/scope records validate under the existing DS1-DS5 and never enter a
 `blocking_decision_categories` set; a fail-closed test that a missing local input
 (no survey / no domain proposal) yields a truthful local stop; a boundary test that
-the survey never re-authors `mappings/<table>/source-profile.md`; and -- if a Layer-A
-enumeration helper is added (R-2a) -- monkeypatch tests for the three DSN-leak failure
-modes (config-resolve, driver gate, `dialect.redact`), no real DB required. `retail check`
-self-run stays exit 0 on the repo. No new rule family at MVP, so no manifest
-regeneration is required for US1.
+the survey never re-authors `mappings/<table>/source-profile.md`; and -- for the
+mandatory DB enumeration helper (R-2a) -- monkeypatch tests for the three DSN-leak
+failure modes (config-resolve, driver gate, `dialect.redact`), no real DB required.
+`retail check` self-run stays exit 0 on the repo. No new rule family at MVP, so no
+manifest regeneration is required for US1.
 
 **Target Platform**: Windows-first (release gate), macOS/Linux best effort; CI on
 Linux. Fully offline-capable -- Layer A reads metadata only; a live connection or an
