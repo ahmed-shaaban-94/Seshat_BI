@@ -62,41 +62,12 @@ def validate_portfolio_survey(text: str) -> list[str]:
     return violations
 
 
-_VALID_SURVEY = """# Portfolio Survey: synthetic
-
-**Status**: warning
-**Source kind**: db-schema
-**Source identity**: analytics
-**Reachable tables total**: 1
-**Surveyed tables total**: 1
-
-## Coverage limits
-- none
-
-## Candidate domain evidence
-- order-shaped column names suggest sales; hint only
-
-## Candidate first-scope tables
-- analytics.orders because metadata declares an order identifier
-
-## Table: analytics.orders
-**Columns**:
-| Column | Declared type |
-|--------|---------------|
-| order_id | bigint |
-**Declared PK**: order_id (declared metadata; candidate only)
-**Declared FKs**: none declared
-**Candidate grain hint**: one row per order_id (unverified metadata hint)
-**Approx row count**: [PENDING LIVE PROFILE] estimate unavailable: permission denied
-**Date hints**: order_date name/type hint only
-**PII suspicion hints**: customer_email name hint; no values inspected
-**Structural role hint**: candidate fact
-**Unavailable**: approximate row count: permission denied; grant metadata permission
-"""
+def _valid_survey() -> str:
+    return (FIXTURES / "db-schema" / "survey.md").read_text(encoding="utf-8")
 
 
 def test_valid_survey_parses() -> None:
-    assert validate_portfolio_survey(_VALID_SURVEY) == []
+    assert validate_portfolio_survey(_valid_survey()) == []
 
 
 @pytest.mark.parametrize(
@@ -113,12 +84,12 @@ def test_valid_survey_parses() -> None:
     ],
 )
 def test_value_measurement_or_secret_fails_closed(forbidden: str) -> None:
-    assert validate_portfolio_survey(_VALID_SURVEY + "\n" + forbidden)
+    assert validate_portfolio_survey(_valid_survey() + "\n" + forbidden)
 
 
 def test_silently_omitted_reachable_table_fails_closed() -> None:
-    text = _VALID_SURVEY.replace(
-        "**Reachable tables total**: 1", "**Reachable tables total**: 2"
+    text = _valid_survey().replace(
+        "**Reachable tables total**: 5", "**Reachable tables total**: 6"
     )
     assert validate_portfolio_survey(text)
 
