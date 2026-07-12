@@ -45,6 +45,7 @@ Generic (Principle VII): no tenant/table literal anywhere in this module.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -467,24 +468,32 @@ def _check_accessibility_mobile_rtl_addressed(
 # --------------------------------------------------------------------------- #
 # compose (read-only; writes nothing, grants no approval, moves no stage)
 # --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class AuditSubject:
+    """The in-memory report shapes the audit reasons over (FR-018's coherence
+    checks), bundled so ``run_semantic_audit`` takes a single subject rather than
+    three parallel arguments: the Report Intent, the Report Composition, and the
+    per-page structural facts. Mirrors the caller-supplied shapes the shipped
+    read-only surfaces (``gap_detector`` / ``dashboard_planner``) accept."""
+
+    intent: dict[str, Any]
+    composition: dict[str, Any]
+    pages: list[dict[str, Any]]
+
+
 def run_semantic_audit(
     *,
     repo_root: Path | str,
-    intent: dict[str, Any],
-    composition: dict[str, Any],
-    pages: list[dict[str, Any]],
+    subject: AuditSubject,
     planner_verdicts_path: str | None = None,
     a11y_checklist_path: str | None = None,
 ) -> tuple[Finding, ...]:
     """Run the Dashboard Semantic Audit over one committed report.
 
-    Parameters mirror the shipped read-only surfaces (``gap_detector``,
-    ``dashboard_planner``): caller-supplied in-memory shapes for the Report
-    Intent / Report Composition / per-page structural facts the audit reasons
-    over (FR-018's coherence checks), plus explicit repo-relative paths for
-    the TWO checks that must cite (never recompute, FR-020) an already-shipped
-    tool's recorded output: the dashboard-planner verdict and the filled
-    a11y/RTL checklist's roll-up.
+    ``subject`` bundles the in-memory Report Intent / Report Composition / per-page
+    facts; the two explicit repo-relative paths are for the checks that must cite
+    (never recompute, FR-020) an already-shipped tool's recorded output: the
+    dashboard-planner verdict and the filled a11y/RTL checklist's roll-up.
 
     Returns an immutable tuple of :class:`Finding`. Grants no approval, moves
     no readiness stage, writes nothing, and never emits a numeric score
@@ -492,6 +501,8 @@ def run_semantic_audit(
     :data:`CATEGORIES`.
     """
     root = Path(repo_root)
+    intent = subject.intent
+    pages = subject.pages
     owner = _owner(intent)
 
     findings: list[Finding] = []

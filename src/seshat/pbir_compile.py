@@ -59,6 +59,7 @@ import hashlib
 import json
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -312,27 +313,26 @@ def _split_table_field(dotted: str) -> tuple[str, str]:
     return table, field
 
 
-def create_visual_container(
-    batch: _StagedBatch,
-    *,
-    report_id: str,
-    page_name: str,
-    visual_slug: str,
-    visual_type: str,
-    binding: dict[str, Any],
-    position: dict[str, Any],
-) -> tuple[str, list[Path]]:
-    """Stage a new ``visual.json`` bound ONLY to the approved ``binding`` fields.
+@dataclass(frozen=True)
+class VisualBuildSpec:
+    """The per-visual inputs ``create_visual_container`` needs, bundled into one
+    value so the creation primitive takes a single spec rather than a long
+    keyword-argument list. ``binding`` is one entry from the approved binding-map:
+    ``{bound_contract, measures: ["table.field", ...], dimensions: [...]}``."""
 
-    ``binding`` is one entry from the approved binding-map: ``{bound_contract,
-    measures: ["table.field", ...], dimensions: ["table.field", ...]}``. The
-    projection SHAPE (Column/Measure wrapper, queryState Category/Y layout) is
-    grounded in the verified ``visual_fmt.Report`` lineChart sample -- but only the
-    shape; the sample's own bound entity ("On-Time Delivery"), title, and filters
-    are never copied (that would bind an orphan/unapproved field, FR-027). Returns
-    ``(visual_name, written_rel_paths)``."""
-    visual_name = mint_element_id(report_id, visual_slug)
+    report_id: str
+    page_name: str
+    visual_slug: str
+    visual_type: str
+    binding: dict[str, Any]
+    position: dict[str, Any]
 
+
+def _query_state(binding: dict[str, Any]) -> dict[str, Any]:
+    """The PBIR ``query.queryState`` (Category/Y projections) for a binding.
+
+    Binds ONLY the approved binding's fields; raises if there is no measure to
+    bind (refusing to create a data-less visual, FR-027)."""
     dimensions = binding.get("dimensions") or []
     measures = binding.get("measures") or []
     if not measures:
@@ -340,7 +340,6 @@ def create_visual_container(
             f"binding {binding.get('bound_contract')!r} has no measures to bind -- "
             f"refusing to create a visual with no data (FR-027)"
         )
-
     query_state: dict[str, Any] = {}
     if dimensions:
         table, field = _split_table_field(dimensions[0])
@@ -353,7 +352,21 @@ def create_visual_container(
             for measure in measures
         ]
     }
+    return query_state
 
+
+def create_visual_container(
+    batch: _StagedBatch, spec: VisualBuildSpec
+) -> tuple[str, list[Path]]:
+    """Stage a new ``visual.json`` bound ONLY to the approved ``spec.binding``.
+
+    The projection SHAPE (Column/Measure wrapper, queryState Category/Y layout) is
+    grounded in the verified ``visual_fmt.Report`` lineChart sample -- but only the
+    shape; the sample's own bound entity ("On-Time Delivery"), title, and filters
+    are never copied (that would bind an orphan/unapproved field, FR-027). Returns
+    ``(visual_name, written_rel_paths)``."""
+    visual_name = mint_element_id(spec.report_id, spec.visual_slug)
+    position = spec.position
     visual_doc = {
         "$schema": _VISUAL_SCHEMA,
         "name": visual_name,
@@ -366,14 +379,14 @@ def create_visual_container(
             "tabOrder": position.get("tabOrder", position.get("z", 0)),
         },
         "visual": {
-            "visualType": visual_type,
-            "query": {"queryState": query_state},
+            "visualType": spec.visual_type,
+            "query": {"queryState": _query_state(spec.binding)},
         },
     }
     visual_rel = (
         Path("definition")
         / "pages"
-        / page_name
+        / spec.page_name
         / "visuals"
         / visual_name
         / "visual.json"
@@ -444,8 +457,7 @@ def compile_line_chart(
 
     batch = _StagedBatch(report_dir)
     try:
-        _visual_name, written = create_visual_container(
-            batch,
+        spec = VisualBuildSpec(
             report_id=report_id,
             page_name=page_name,
             visual_slug=visual_slug,
@@ -453,6 +465,7 @@ def compile_line_chart(
             binding=binding,
             position=position,
         )
+        _visual_name, written = create_visual_container(batch, spec)
         return batch.commit(written)
     finally:
         batch.cleanup()

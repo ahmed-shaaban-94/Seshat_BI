@@ -43,7 +43,7 @@ from pathlib import Path
 
 import pytest
 
-from seshat.semantic_audit import CATEGORIES, run_semantic_audit
+from seshat.semantic_audit import CATEGORIES, AuditSubject, run_semantic_audit
 
 pytestmark = pytest.mark.unit
 
@@ -95,6 +95,23 @@ def _composition(pages: list[dict]) -> dict:
     }
 
 
+def _run(
+    intent: dict, pages: list[dict], *, repo_root: Path = _REPO_ROOT, **cite_paths
+):
+    """Run the audit over an in-memory intent/pages, bundling them (plus the
+    derived composition) into an AuditSubject -- the one call convention every
+    test below shares, so the per-test bodies stay about the assertion.
+    ``cite_paths`` forwards the optional planner_verdicts_path / a11y_checklist_path
+    citations verbatim to :func:`run_semantic_audit`."""
+    return run_semantic_audit(
+        repo_root=repo_root,
+        subject=AuditSubject(
+            intent=intent, composition=_composition(pages), pages=pages
+        ),
+        **cite_paths,
+    )
+
+
 def _all_findings_well_formed(findings) -> None:
     """FR-017/019/020/035 invariants that must hold for EVERY finding emitted,
     not only the ones a specific test asserts a category for."""
@@ -117,14 +134,7 @@ def _all_findings_well_formed(findings) -> None:
 def test_intent_question_with_no_page_is_missing() -> None:
     intent = _base_intent()
     pages = [_page("overview", ["q1"])]  # q2 is never covered by any page
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     coverage_findings = [
@@ -139,14 +149,7 @@ def test_intent_question_with_no_page_is_missing() -> None:
 def test_all_intent_questions_covered_is_covered() -> None:
     intent = _base_intent()
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     coverage_findings = [
@@ -172,14 +175,7 @@ def test_diagnostic_report_with_no_driver_visual_is_incomplete() -> None:
             visuals=[{"visual_id": "v1", "visual_type": "bar_chart"}],
         )
     ]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     driver_findings = [f for f in findings if f.check == "diagnostic_has_drivers"]
@@ -196,14 +192,7 @@ def test_diagnostic_report_with_driver_visual_is_covered() -> None:
             visuals=[{"visual_id": "v1", "visual_type": "key_influencers"}],
         )
     ]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     driver_findings = [f for f in findings if f.check == "diagnostic_has_drivers"]
@@ -214,14 +203,7 @@ def test_diagnostic_report_with_driver_visual_is_covered() -> None:
 def test_non_diagnostic_report_driver_check_is_not_applicable() -> None:
     intent = _base_intent(purpose="monitoring")
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     driver_findings = [f for f in findings if f.check == "diagnostic_has_drivers"]
@@ -238,14 +220,7 @@ def test_page_with_multiple_business_questions_is_conflicting() -> None:
     # mechanical, pinned-down trigger: >1 distinct intent business_question on
     # a single page).
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     purpose_findings = [
@@ -260,14 +235,7 @@ def test_page_with_multiple_business_questions_is_conflicting() -> None:
 def test_page_with_one_business_question_is_covered() -> None:
     intent = _base_intent()
     pages = [_page("overview", ["q1"]), _page("trend", ["q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     purpose_findings = [
@@ -297,14 +265,13 @@ def test_reuses_recorded_planner_verdict_never_reruns_planner(tmp_path: Path) ->
 
     intent = _base_intent()
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
+    findings = _run(
+        intent,
+        pages,
         repo_root=tmp_path,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-        planner_verdicts_path="mappings/demo_table/design/dashboard-planner-verdicts.yaml",
+        planner_verdicts_path=(
+            "mappings/demo_table/design/dashboard-planner-verdicts.yaml"
+        ),
     )
 
     _all_findings_well_formed(findings)
@@ -332,14 +299,13 @@ def test_recorded_duplicate_planner_verdict_surfaces_as_conflicting(
 
     intent = _base_intent()
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
+    findings = _run(
+        intent,
+        pages,
         repo_root=tmp_path,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-        planner_verdicts_path="mappings/demo_table/design/dashboard-planner-verdicts.yaml",
+        planner_verdicts_path=(
+            "mappings/demo_table/design/dashboard-planner-verdicts.yaml"
+        ),
     )
 
     _all_findings_well_formed(findings)
@@ -377,14 +343,13 @@ def test_a11y_finding_cites_real_checklist_and_never_reads_design_tokens(
 
     intent = _base_intent()
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
+    findings = _run(
+        intent,
+        pages,
         repo_root=tmp_path,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-        a11y_checklist_path="mappings/retail_store_sales/design/a11y-rtl-readiness-checklist.md",
+        a11y_checklist_path=(
+            "mappings/retail_store_sales/design/a11y-rtl-readiness-checklist.md"
+        ),
     )
 
     _all_findings_well_formed(findings)
@@ -405,14 +370,13 @@ def test_a11y_finding_cites_real_checklist_and_never_reads_design_tokens(
 def test_missing_a11y_checklist_is_missing_not_fabricated(tmp_path: Path) -> None:
     intent = _base_intent()
     pages = [_page("overview", ["q1", "q2"])]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
+    findings = _run(
+        intent,
+        pages,
         repo_root=tmp_path,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-        a11y_checklist_path="mappings/retail_store_sales/design/a11y-rtl-readiness-checklist.md",
+        a11y_checklist_path=(
+            "mappings/retail_store_sales/design/a11y-rtl-readiness-checklist.md"
+        ),
     )
 
     _all_findings_well_formed(findings)
@@ -435,14 +399,7 @@ def test_no_numeric_score_anywhere_across_a_full_run() -> None:
             visuals=[{"visual_id": "v1", "visual_type": "card"}],
         )
     ]
-    composition = _composition(pages)
-
-    findings = run_semantic_audit(
-        repo_root=_REPO_ROOT,
-        intent=intent,
-        composition=composition,
-        pages=pages,
-    )
+    findings = _run(intent, pages)
 
     _all_findings_well_formed(findings)
     for f in findings:

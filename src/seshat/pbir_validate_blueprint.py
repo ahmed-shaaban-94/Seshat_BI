@@ -270,18 +270,26 @@ def _missing_deviation(visual_id: str, binding: "_BindingRow") -> Deviation:
     )
 
 
+def _types_conflict(expected: str | None, actual: str | None) -> bool:
+    """True only when BOTH a declared and an actual visual type are present and
+    they differ; an absent expectation or actual type is never a conflict."""
+    if not expected or not actual:
+        return False
+    return expected != actual
+
+
 def _type_deviation(
     visual_id: str,
     binding: "_BindingRow",
-    path: Path,
-    doc: dict[str, Any],
+    committed_entry: tuple[Path, dict[str, Any]],
     report_dir: Path,
 ) -> Deviation | None:
     """A `visual_type` mismatch between the approved binding map and committed
     PBIR, or ``None`` when both types are present and agree (or either is absent)."""
+    path, doc = committed_entry
     expected_type = binding.visual_type
     actual_type = _visual_type(doc)
-    if not (expected_type and actual_type and expected_type != actual_type):
+    if not _types_conflict(expected_type, actual_type):
         return None
     return Deviation(
         dimension="visual_type",
@@ -311,8 +319,7 @@ def _compare_visuals(
             continue
         # Visual type conformance: blueprint declares the section only; the
         # binding map's `visual_type` column is the type-of-record when present.
-        path, doc = committed[visual_id]
-        dev = _type_deviation(visual_id, binding, path, doc, report_dir)
+        dev = _type_deviation(visual_id, binding, committed[visual_id], report_dir)
         if dev is not None:
             deviations.append(dev)
 
@@ -412,18 +419,12 @@ def _build_bindings(binding_text: str) -> dict[str, "_BindingRow"]:
     }
 
 
-def _rollup_status(
-    deviations: list[Deviation],
-    unapproved: list[Deviation],
-    missing: list[Deviation],
-    blueprint_visuals: dict[str, dict[str, Any]],
-    bindings: dict[str, "_BindingRow"],
-) -> str:
-    """Worst-first roll-up: any unapproved/missing/deviation blocks; an empty
-    expected design is `not_started`; a clean conformity is `pass`."""
-    if unapproved or missing or deviations:
+def _rollup_status(has_findings: bool, empty_design: bool) -> str:
+    """Worst-first roll-up: any finding blocks; an empty expected design is
+    `not_started`; a clean conformity is `pass`."""
+    if has_findings:
         return "blocked"
-    if not blueprint_visuals and not bindings:
+    if empty_design:
         return "not_started"
     return "pass"
 
@@ -478,9 +479,9 @@ def validate_blueprint(
     )
     deviations.extend(_relative_ref_deviations(report_dir))
 
-    status = _rollup_status(
-        deviations, unapproved, missing, blueprint_visuals, bindings
-    )
+    all_findings = [*deviations, *unapproved, *missing]
+    empty_design = not blueprint_visuals and not bindings
+    status = _rollup_status(bool(all_findings), empty_design)
 
     return BlueprintValidationResult(
         status=status,
