@@ -76,17 +76,17 @@
 
 **Goal**: report-level categorical audit distinct from per-visual QA; no score.
 
-- [ ] T028 [US5] Author skill/workflow `.claude/skills/powerbi-dashboard-design/workflows/dashboard-semantic-audit.md` — emits the spec-fixed closed enum (`covered/incomplete/missing/conflicting/warning/blocked/not_applicable_with_reason`); each finding cites committed evidence + names owner; reuses shipped tool OUTPUTS (FR-020), recomputes nothing
-- [ ] T029 [US5] Test: audit emits categorical findings for the FR-018 checks against fixtures (intent question with no page → `missing`; diagnostic w/o drivers → `incomplete`; monitoring+diagnostic on one page → `conflicting`); assert NO numeric score anywhere (FR-020/FR-035); `tests/integration/test_semantic_audit.py`
-- [ ] T030 [US5] Test: audit reuses the recorded `dashboard-planner` verdict + filled `a11y-rtl-readiness-checklist.md` (cites, never re-derives CT1 contrast)
+- [x] T028 [US5] Author skill/workflow `.claude/skills/powerbi-dashboard-design/workflows/dashboard-semantic-audit.md` — emits the spec-fixed closed enum (`covered/incomplete/missing/conflicting/warning/blocked/not_applicable_with_reason`); each finding cites committed evidence + names owner; reuses shipped tool OUTPUTS (FR-020), recomputes nothing
+- [x] T029 [US5] Test: audit emits categorical findings for the FR-018 checks against fixtures (intent question with no page → `missing`; diagnostic w/o drivers → `incomplete`; monitoring+diagnostic on one page → `conflicting`); assert NO numeric score anywhere (FR-020/FR-035); `tests/integration/test_semantic_audit.py`
+- [x] T030 [US5] Test: audit reuses the recorded `dashboard-planner` verdict + filled `a11y-rtl-readiness-checklist.md` (cites, never re-derives CT1 contrast)
 
 ## Phase 8: User Story 3 — Dashboard pattern library (P2)
 
 **Goal**: generic, named patterns as design guidance; no KPI meaning.
 
-- [ ] T031 [P] [US3] Author generic pattern docs under `docs/patterns/dashboard/` (Executive Performance, Sales Diagnosis, Branch Performance, Inventory Health, Product Performance, Promotion Effectiveness, Returns & Refunds, Customer Behavior, Data Quality Control Room, Action & Exceptions) — guidance only, no named KPIs
-- [ ] T032 [US3] Author a pattern-recommendation skill entry that maps intent `purpose` → candidate pattern(s); presents multiple/partial fits for human choice (FR-014); unavailable requirements surface as gaps via `retail dashboard-gaps` (FR-013)
-- [ ] T033 [US3] Test: a pattern assuming an unavailable metric/dimension surfaces a gap, never fabricates (FR-013)
+- [x] T031 [P] [US3] Author generic pattern docs under `docs/patterns/dashboard/` (Executive Performance, Sales Diagnosis, Branch Performance, Inventory Health, Product Performance, Promotion Effectiveness, Returns & Refunds, Customer Behavior, Data Quality Control Room, Action & Exceptions) — guidance only, no named KPIs
+- [x] T032 [US3] Author a pattern-recommendation skill entry that maps intent `purpose` → candidate pattern(s); presents multiple/partial fits for human choice (FR-014); unavailable requirements surface as gaps via `retail dashboard-gaps` (FR-013)
+- [x] T033 [US3] Test: a pattern assuming an unavailable metric/dimension surfaces a gap, never fabricates (FR-013)
 
 ## Phase 9: User Story 7 — PBIR compiler (P3, SAMPLE- + ADR-GATED)
 
