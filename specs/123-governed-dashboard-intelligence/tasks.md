@@ -59,9 +59,9 @@
 
 **Goal**: named-human `dashboard_blueprint_approval` via the shipped Decision Store; supersession on change.
 
-- [ ] T021 [P] [US6] Test: extend RS1 to recognize `report_owner` (FR-022a) — a `report_owner`-authored `dashboard_blueprint_approval` is accepted by RS1; assert this is the ONLY class added (one-class, not a spine refactor); `tests/unit/test_readiness_status.py`
-- [ ] T022 [US6] Add `report_owner` to `_AUTHORITY_CLASSES` in `src/seshat/rules/readiness_status.py` (single-class additive; FR-022a/FR-037)
-- [ ] T023 [US6] Integration test: post-approval blueprint change marks prior approval `superseded` (DS4, with `superseded_by`), preserves history, requires renewed approval before compilation; unchanged blueprint needs no re-approval (FR-023/FR-024)
+- [x] T021 [P] [US6] Test: extend RS1 to recognize `report_owner` (FR-022a) — a `report_owner`-authored `dashboard_blueprint_approval` is accepted by RS1; assert this is the ONLY class added (one-class, not a spine refactor); `tests/unit/test_readiness_status.py`
+- [x] T022 [US6] Add `report_owner` to `_AUTHORITY_CLASSES` in `src/seshat/rules/readiness_status.py` (single-class additive; FR-022a/FR-037)
+- [x] T023 [US6] Integration test: post-approval blueprint change marks prior approval `superseded` (DS4, with `superseded_by`), preserves history, requires renewed approval before compilation; unchanged blueprint needs no re-approval (FR-023/FR-024)
 
 ## Phase 6: User Story 4 — Blueprint preview (P2)
 

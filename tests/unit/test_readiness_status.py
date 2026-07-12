@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 
 from seshat.core import RuleContext, Severity
-from seshat.rules.readiness_status import check_readiness_status_consistency
+from seshat.rules.readiness_status import (
+    _AUTHORITY_CLASSES,
+    check_readiness_status_consistency,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -354,3 +357,36 @@ def test_db_source_kind_explicit_needs_no_source_approval(tmp_path: Path) -> Non
     ctx = _ctx(tmp_path, _file_source_yaml(kind="db-table", with_source_approval=False))
     messages = [m for m in _messages_or_empty(ctx) if "source_ready" in m]
     assert messages == []
+
+
+# --- spec 123 US6 / T021: RS1 recognizes report_owner (FR-022a) --------------
+#
+# contracts/knowledge/approval-authority.yaml requires `report_owner` for
+# `dashboard_blueprint_approval`, but the corresponding readiness-spine sign-off
+# is the `dashboard_ready` stage approval in readiness-status.yaml (RS1 reads
+# THIS file's approvals[], never a Decision Store record directly -- the
+# authority contract's own follow-up note maps report_owner to the future
+# Dashboard Ready sign-off). This proves RS1 accepts a report_owner-authored
+# `dashboard_ready` approval, and that the reconciliation is a SINGLE additive
+# class -- not a broader readiness-spine refactor (FR-037).
+
+
+def test_report_owner_authored_dashboard_ready_approval_is_accepted(
+    tmp_path: Path,
+) -> None:
+    approvals = (
+        _appr("mapping_ready")
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready", owner="R. Owner (report_owner)")
+        + _appr("publish_ready")
+    )
+    ctx = _ctx(tmp_path, _status_yaml(approvals=approvals))
+    assert list(check_readiness_status_consistency(ctx)) == []
+
+
+def test_report_owner_is_the_only_class_added(tmp_path: Path) -> None:
+    # Pins the ONE-CLASS-ADDITIVE guarantee: the four legacy classes are all
+    # still present, report_owner is now present, and nothing else was added.
+    assert _AUTHORITY_CLASSES == frozenset(
+        {"analyst", "governance", "data_owner", "metric_owner", "report_owner"}
+    )

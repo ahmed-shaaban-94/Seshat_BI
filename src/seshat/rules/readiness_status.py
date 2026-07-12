@@ -59,6 +59,11 @@ _AUTHORITY_CLASSES: frozenset[str] = frozenset(
         "governance",
         "data_owner",
         "metric_owner",
+        # FR-022a (spec 123, US6): single-class, additive reconciliation with
+        # contracts/knowledge/approval-authority.yaml, which already requires
+        # report_owner for dashboard_blueprint_approval / report_intent_approval.
+        # Not a readiness-spine refactor (FR-037) -- every other class is unchanged.
+        "report_owner",
     }
 )
 # Tokens that cannot stand as the person NAME: the classes themselves plus the
