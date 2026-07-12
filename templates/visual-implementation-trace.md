@@ -3,11 +3,16 @@
 <!--
   GENERIC TEMPLATE (roadmap rule 7). Copy this blank into a per-subject-area
   working set (mappings/<subject>/design/) and fill the placeholders. This is the
-  reviewable evidence artifact that proves a HUMAN-built PBIR page realizes the
-  approved visual -> contract binding map 1:1 -- and nothing more.
+  reviewable evidence artifact that proves a committed PBIR page -- built EITHER by
+  a HUMAN in Power BI Desktop OR by the bounded, ADR-0017-ratified US7 compiler
+  (`seshat.pbir_compile`, spec 123) -- realizes the approved visual -> contract
+  binding map 1:1 -- and nothing more. Spec 123 US8 EXTENDS this same trace with
+  page-level + blueprint-conformance rows (below); it does not fork a second
+  reviewable artifact.
 
   On-disk spec: specs/039-visual-implementation-mvp  |  Roadmap feature: F034
   (when the spec-dir number and the F-number disagree, the roadmap F-number wins).
+  Extended by: specs/123-governed-dashboard-intelligence (US8, FR-030/FR-031).
 
   Authority category: Product Module / artifact-writing.
 
@@ -21,11 +26,15 @@
     service or publish, it is an Execution Adapter, not a Module -- use
     templates/adapter-contract.md instead (see the module-vs-adapter seam).
 
-  This trace pins `artifact-writing`, NOT `execution-capable`: a human builds the page in
-  Power BI Desktop; the agent only VERIFIES the committed page and WRITES this trace
-  (it derives a committed artifact from committed evidence -- it executes nothing,
-  connects to nothing, publishes nothing). Materialize/publish is the deferred,
-  gated F016 Execution Adapter -- not this slice.
+  This trace pins `artifact-writing`, NOT `execution-capable`: the page is built by
+  EITHER a human in Power BI Desktop OR the US7 compiler (itself bounded,
+  allow-listed, and gated on a valid `dashboard_blueprint_approval` -- ADR 0017);
+  the agent (or the companion read-only `retail pbir-validate-blueprint` CLI verb)
+  only VERIFIES the committed page and WRITES this trace (it derives a committed
+  artifact from committed evidence -- it executes nothing, connects to nothing,
+  publishes nothing). Materialize-to-the-Power-BI-SERVICE (publish/refresh/export/
+  schedule) is the deferred, gated F016 Execution Adapter -- not this slice, and
+  not reachable from either authoring path.
 
   C086 IS AN EXAMPLE, NEVER INLINED HERE. Do NOT copy any C086/pharmacy or
   retail_store_sales specifics (real measure names, real rates, segment rollups,
@@ -37,15 +46,19 @@
 
 ## What this trace is (and is not)
 
-This trace records, one row per built measure-bearing visual, that a HUMAN-built PBIR
-page realizes the approved visual -> contract binding map. It VERIFIES a committed page;
-it does not author one, does not generate PBIR, writes no DAX, edits no semantic-model
-file, runs no pbi-cli / Power BI MCP command, and publishes nothing. The page is built by
-a person in Power BI Desktop and saved as plain-text PBIR; the agent reads the committed
-`<report>/definition/` and fills this trace as derived evidence.
+This trace records, one row per built measure-bearing visual, that a committed PBIR page
+realizes the approved visual -> contract binding map. It VERIFIES a committed page; it does
+not author one, does not generate PBIR, writes no DAX, edits no semantic-model file, runs no
+pbi-cli / Power BI MCP command, and publishes nothing. The page is built by EITHER a person
+in Power BI Desktop and saved as plain-text PBIR, OR the bounded, ADR-0017-ratified US7
+compiler (`seshat.pbir_compile`, spec 123) staging + committing its allow-listed output; the
+agent (or the companion read-only `retail pbir-validate-blueprint` CLI verb, US8) reads the
+committed `<report>/definition/` and fills this trace as derived evidence -- identically,
+whichever of the two authorized paths produced the page.
 
 It is NOT a design, a re-bind, or a metric definition: design + binding is F011/012's job,
-metric definition is F009's. This trace consumes the approved binding map; it never
+metric definition is F009's. This trace consumes the approved binding map (and, per the
+page-level + blueprint-conformance rows below, the approved page blueprint); it never
 re-designs, re-binds, or invents a metric.
 
 Use the four readiness statuses, never a number, for every row and for the overall roll-up.
@@ -74,11 +87,13 @@ overall status to `blocked`, and STOP -- point upstream:
 | Field | Value |
 |-------|-------|
 | Subject area | `<schema.table or model name>` |
-| Built PBIR page | `<report>/definition/pages/<id>/` (a HUMAN Desktop save -- not agent-authored) |
+| Built PBIR page | `<report>/definition/pages/<id>/` (built by `<human Desktop save \| US7 compiler (seshat.pbir_compile)>` -- never agent-freehand-authored) |
 | Governed model | `<relative path -- e.g. ../<Model>.SemanticModel; R1: relative, never absolute/remote>` |
 | Approved binding map | `mappings/<subject>/design/visual-contract-binding-map.md` |
+| Approved page blueprint | `mappings/<subject>/design/dashboard-page-blueprint.<page_name>.yaml` (US8; the page-level + blueprint-conformance rows below trace against this) |
 | `semantic_model_ready` | `pass` |
 | design-review sign-off | `{stage: dashboard_ready, owner: <bi-report-owner>, at: <YYYY-MM-DD>}` |
+| `dashboard_blueprint_approval` (if the page was compiler-built) | `<valid \| stale \| not_applicable_with_reason: "human Desktop build">` |
 | Traced by | `<analyst_or_agent>` |
 | Trace date | `<YYYY-MM-DD>` |
 
@@ -120,6 +135,39 @@ re-approved map.
 |----------------------------|--------------------|-------------|
 | `<approved-contract-name / visual_id>` | `<yes \| no>` | `<traced as v0N (pass) \| not_started: no built visual yet \| warning: map re-approved upstream, page diverges>` |
 
+## Page-level + blueprint-conformance rows (spec 123 US8 -- EXTENDS this trace, FR-030/FR-031)
+
+This section is the US8 extension: it compares committed PBIR against the approved PAGE
+BLUEPRINT (`templates/dashboard-page-blueprint.yaml`'s filled instance), not just the binding
+map above. It is filled by the SAME workflow (`visual-implementation-review.md`) or the
+companion read-only `retail pbir-validate-blueprint` CLI verb -- never a second reviewer.
+Same four-status vocabulary; same "grants no approval" rule (FR-031); never a numeric score.
+
+| dimension | expected (approved blueprint / binding map) | actual (committed PBIR) | status | evidence / deviation |
+|-----------|----------------------------------------------|--------------------------|--------|------------------------|
+| page presence | `<page_name from the blueprint>` | `<page found under definition/pages/<id>/page.json, or "missing">` | `<not_started \| blocked \| warning \| pass>` | `<...>` |
+| visual inventory (unapproved additions) | `<visual_ids on the approved blueprint + binding map>` | `<visual_ids committed in PBIR>` | `<...>` | `<any committed visual_id absent from BOTH the blueprint and the binding map -> blocked: "unapproved addition">` |
+| visual inventory (missing elements) | `<approved visual_ids>` | `<built visual_ids>` | `<...>` | `<any approved visual_id with no built visual -> not_started or blocked, never silently pass>` |
+| visual types | `<binding map's declared visual_type per visual_id>` | `<PBIR visual.visualType>` | `<...>` | `<a divergence (e.g. approved lineChart, committed barChart) -> blocked: "type divergence">` |
+| contract bindings | `<binding map's bound_contract per visual_id>` | `<visual's queryState Measure/Column bindings>` | `<...>` | `<...>` |
+| semantic fields | `<binding map's mapped field(s)>` | `<visual's queryState field Entity/Property>` | `<...>` | `<an unmapped field -> blocked: "unmapped field">` |
+| titles / formats | `<blueprint / visual-spec intent, where declared>` | `<visualContainerObjects.title / formatting on the committed visual>` | `<...>` | `<not_applicable_with_reason if the approved design declares no expectation>` |
+| geometry | `<visual-spec.yaml position, where declared>` | `<visual.position rectangle>` | `<...>` | `<not_applicable_with_reason if the approved design declares no expectation>` |
+| theme / background | `<theme_json / background_asset refs on the blueprint>` | `<report.json themeCollection / page.json objects.background>` | `<...>` | `<...>` |
+| navigation | `<report-composition.yaml page order / drillthrough intent>` | `<pages.json pageOrder / bookmark or drillthrough wiring, where statically inspectable>` | `<...>` | `<...>` |
+| statically-inspectable interactions | `<blueprint-declared interaction intent, where present>` | `<visual filterConfig / interaction wiring found in the committed JSON>` | `<...>` | `<...>` |
+| relative model references | `R1: byPath, relative` | `<definition.pbir datasetReference>` (reuses R1, `rules/pbir.py`, not re-derived) | `<...>` | `<absolute/byConnection ref -> blocked, same as retail check R1>` |
+| implementation trace | `this document's 1:1 trace + coverage check (above)` | `<...>` | `<...>` | `<cites the 1:1 trace rows above; never recomputed here>` |
+
+> Any row whose "actual" cannot be determined from committed, statically-inspectable PBIR (no
+> live render, no Power BI Desktop/Service call) is `not_applicable_with_reason`, citing the
+> specific reason (e.g. "the approved blueprint declares no geometry expectation for this
+> visual") -- never fabricated, never silently skipped.
+>
+> **Grants no approval (FR-031).** Filling every row `pass` records CONFORMITY evidence; it
+> does NOT grant `dashboard_ready: pass` and does NOT constitute a `dashboard_blueprint_approval`
+> renewal. Those remain the named-human, Decision-Store-recorded actions this trace only cites.
+
 ## Caveat carried to the page (generic -- placeholders only)
 
 When an approved contract carries a caveat the visual MUST surface (e.g. an excluded
@@ -157,11 +205,16 @@ says NO -- Product Module / artifact-writing):
 - MUST NOT connect to a DB or external service, and MUST NOT publish a Power BI artifact
   (those are Execution Adapter capabilities -- the deferred, gated F016).
 - MUST NOT generate PBIR, write DAX, change SQL, edit any semantic-model file, run any
-  pbi-cli / Power BI MCP command, or publish. The ONLY PBIR change is the human's Desktop
-  save of the built page; any generation/publish request STOPS and names F016 as the owner
-  (rule 6). F034 is INDEPENDENT of F016 (rule 6 gates the automation, not the manual build).
+  pbi-cli / Power BI MCP command, or publish. This TRACE's only two authorized PBIR-change
+  sources, EITHER of which it may verify, are (a) the human's Desktop save of the built page,
+  or (b) the bounded, ADR-0017-ratified US7 compiler's (`seshat.pbir_compile`) committed,
+  allow-listed output -- this trace itself authors neither. Any freehand-generation or
+  publish request STOPS and names F016 as the owner of any Service-facing step (rule 6). F034
+  is INDEPENDENT of F016 (rule 6 gates Service-publish automation, not on-disk PBIR authoring
+  by either authorized path).
 - MUST NOT hand-edit Desktop-owned files (`report.json`, `diagramLayout.json`) or hand-author
-  visual-container JSON -- the committed diff comes from a real Desktop save (FR-009).
+  visual-container JSON outside the two authorized paths above -- the committed diff comes
+  from a real Desktop save OR the US7 compiler's staged-and-committed output (FR-009).
 - MUST NOT invent, define, re-bind, or re-design a metric (F009 defines; F011/012 designs).
 - MUST NOT emit a numeric / maturity / confidence score (rule 9).
 - MUST NOT commit a real connection host, DSN, or secret (Principle IX).
@@ -189,3 +242,10 @@ THE PAGE, not a retraction of the design approval.
 - Metric definitions live upstream (referenced, never redefined here): F009.
 - The deferred execution/publish adapter (named, never invoked): F016.
 - The worked instance (CITED, never inlined): a filled worked example under `docs/worked-examples/`.
+- The approved page blueprint the new page-level rows verify against (US8):
+  `templates/dashboard-page-blueprint.yaml`.
+- The bounded, ADR-0017-ratified compiler that MAY have authored the committed page
+  (US7): `src/seshat/pbir_compile.py`.
+- The read-only CLI verb that can fill the US8 rows without a human running this
+  workflow by hand: `retail pbir-validate-blueprint`
+  (`src/seshat/pbir_validate_blueprint.py`).

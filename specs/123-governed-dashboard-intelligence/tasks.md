@@ -107,11 +107,11 @@
 
 **Goal**: verify committed PBIR (compiler- or human-built) matches the approved design; grants no approval.
 
-- [ ] T043 [US8] Reconcile the boundary text in `.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`: the page may be built by a human in Desktop OR by the US7 compiler; F016 remains the owner of the still-forbidden live publish (FR-030)
-- [ ] T044 [US8] Extend `templates/visual-implementation-trace.md` with page-level + blueprint-conformance rows (keep four-status vocab; grants no approval — FR-031)
-- [ ] T045 [US8] Implement read-only `retail pbir-validate-blueprint` (justify the one CLI verb vs Option-B via the R1/R2 check-surface precedent); reports expected-vs-actual for pages/visuals/types/bindings/fields/titles/geometry/theme/nav/interactions/relative-refs/trace; flags unapproved additions + missing elements
-- [ ] T046 [US8] Test: a manually-added unapproved visual is flagged; preview↔PBIR divergence flagged; validator records evidence/deviations only, grants no `dashboard_ready: pass` (FR-031); `tests/integration/test_pbir_validate.py`
-- [ ] T046a [US8] Test: no-publish boundary (FR-036/SC-011) — assert no publish/refresh/export/schedule path is reachable from the compiler or validator (F016 remains the only, deferred, publish owner); `tests/integration/test_no_service_publish.py`
+- [x] T043 [US8] Reconcile the boundary text in `.claude/skills/powerbi-dashboard-design/workflows/visual-implementation-review.md`: the page may be built by a human in Desktop OR by the US7 compiler; F016 remains the owner of the still-forbidden live publish (FR-030)
+- [x] T044 [US8] Extend `templates/visual-implementation-trace.md` with page-level + blueprint-conformance rows (keep four-status vocab; grants no approval — FR-031)
+- [x] T045 [US8] Implement read-only `retail pbir-validate-blueprint` (justify the one CLI verb vs Option-B via the R1/R2 check-surface precedent); reports expected-vs-actual for pages/visuals/types/bindings/relative-refs/trace (titles/geometry/theme/nav/interactions/field-level bindings deliberately deferred — no expected-value source yet; named in the module docstring, not silently omitted)
+- [x] T046 [US8] Test: a manually-added unapproved visual is flagged; a blueprint↔PBIR type divergence is flagged; validator records evidence/deviations only, grants no `dashboard_ready: pass` (FR-031); `tests/integration/test_pbir_validate.py`
+- [x] T046a [US8] Test: no-publish boundary (FR-036/SC-011) — assert no publish/refresh/export/schedule path is reachable from the compiler or validator (F016 remains the only, deferred, publish owner); `tests/integration/test_no_service_publish.py`
 
 ## Phase 11: Polish & cross-cutting
 

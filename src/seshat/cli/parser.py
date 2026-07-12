@@ -808,6 +808,39 @@ def _add_pbir_geometry_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_pbir_validate_blueprint_parser(sub: argparse._SubParsersAction) -> None:
+    """PBIR-vs-approved-design validator (US8, spec 123). Extends the shipped
+    Visual Implementation Review (FR-031) -- the ONE new read-only CLI verb this
+    slice adds, justified by the same check-surface precedent as R1/R2 (rules/
+    pbir.py): it POLICES what a writer (the US7 compiler OR a human Desktop
+    build) already produced, distinct from an authoring skill. Opens nothing for
+    write; reports expected-vs-actual and exits non-zero on any deviation,
+    unapproved addition, or missing element. Grants NO approval -- never sets
+    `dashboard_ready: pass` (FR-031/FR-036)."""
+    pbirvalidate = sub.add_parser(
+        "pbir-validate-blueprint",
+        help=(
+            "validate committed PBIR against the approved page blueprint + "
+            "binding map (read-only; grants no approval)"
+        ),
+    )
+    pbirvalidate.add_argument(
+        "--report", required=True, metavar="DIR", help="the *.Report/ dir to validate"
+    )
+    pbirvalidate.add_argument(
+        "--blueprint",
+        required=True,
+        metavar="PATH",
+        help="the approved page-blueprint YAML (filled dashboard-page-blueprint.yaml)",
+    )
+    pbirvalidate.add_argument(
+        "--binding-map",
+        required=True,
+        metavar="PATH",
+        help="the approved visual-contract-binding-map.md",
+    )
+
+
 def _add_manifest_parser(sub: argparse._SubParsersAction) -> None:
     """Rule-registry snapshot manifest (feature 043). Writes the golden inventory
     docs/rules/rules-manifest.json from the live registry. Test-only consumer
@@ -943,6 +976,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_pbir_format_visual_parser(sub)
     _add_pbir_page_background_parser(sub)
     _add_pbir_geometry_parser(sub)
+    _add_pbir_validate_blueprint_parser(sub)
     _add_manifest_parser(sub)
     _add_severity_posture_parser(sub)
     _add_scaffold_parser(sub)

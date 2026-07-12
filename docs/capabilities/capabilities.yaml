@@ -306,6 +306,21 @@ capabilities:
       dispatch: "pbir-set-geometry"
       skill: "pbir-authoring-adapter"
 
+  - id: pbir-validate-blueprint
+    name: "retail pbir-validate-blueprint"
+    summary: "Read-only: reports expected-vs-actual conformity of committed PBIR (compiler- or human-produced) against the approved page blueprint and binding map; flags unapproved additions and missing elements; grants no approval."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: dashboard_ready
+    command: "pbir-validate-blueprint"
+    documentation: "specs/123-governed-dashboard-intelligence/spec.md"
+    references:
+      dispatch: "pbir-validate-blueprint"
+      skill: "powerbi-dashboard-design"
+
   - id: retail-blockers
     name: "retail blockers"
     summary: "Explains committed readiness blockers across tables: category, plain-language explanation, and next surface to use."
