@@ -160,10 +160,21 @@ Format per decision: **Decision / Rationale / Alternatives considered**.
   entries already declare their `required_inputs`/`stop_rules`/`blocking_decision_categories`
   in `contracts/knowledge/database-to-pbip-flow.yaml`; FR-026 forbids modifying the
   contract or schema. The feature consumes them unchanged.
-- **What is relied on unchanged**: PR #257 already fails closed for an absent/empty/
-  malformed store, invalid approvals, conflicts, and missing evidence. The narrow gap a
-  future spec may close is "detect one *specific* missing critical decision inside a
-  non-empty store" -- not created here.
+- **What is relied on unchanged (corrected after Codex review of `72ab8e4`)**: PR #257
+  fails closed for a **malformed/unreadable** store, **invalid approvals**, and
+  **conflicting records** (via `_failclosed_verdict` + DS2/DS4). It does **NOT** block an
+  **absent or empty** store for the bounded stages: verified in
+  `src/seshat/decision_gate.py` -- `_failclosed_verdict` returns None for an absent/empty
+  store (no `store.problems`), and `_final_verdict` only emits the not-started blocker
+  when the stage declares non-empty `blocking_decision_categories`; `discovery`,
+  `domain_guess`, `scope_proposal`, and `business_knowledge_interview` all declare `[]`,
+  so the gate returns `pass`. Therefore the feature owns its OWN local stop for an
+  absent/empty store / missing local input (FR-024/FR-025); it does NOT rely on the
+  inherited gate to block those. An earlier draft (and earlier advisor guidance)
+  wrongly claimed the inherited gate blocks an absent/empty store -- corrected here.
+  Two out-of-scope future concerns remain: (a) detect one *specific* missing critical
+  decision inside a non-empty store; (b) whether the general gate should block
+  empty-category stages on an absent store at all.
 
 ## R-7: Supported source kinds -- exactly what the reused read-only mechanics handle
 
