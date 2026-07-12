@@ -1,0 +1,98 @@
+# Report Intent -- retail_store_sales (spec 123, US1 worked instance)
+#
+# Filled instance authored via the report-intent-interview skill against the 5
+# APPROVED metric contracts (mappings/retail_store_sales/metrics/) once
+# semantic_model_ready reached pass (mappings/retail_store_sales/readiness-status.yaml).
+# retail_store_sales is an EXAMPLE, never the universal schema (Principle VII) --
+# see templates/report-intent.yaml for the generic, copy-me shape.
+#
+# HONEST STATE: this artifact's own readiness stays `blocked` until a named
+# report_owner records the report_intent_approval decision in the project
+# Decision Store (spec 123 T003-T007). The agent never self-grants that
+# approval -- this file does NOT claim `pass` (never_self_grant_approval).
+
+report_id: "branch_performance_weekly"
+subject_area: "mappings/retail_store_sales"
+
+audience: "branch_manager"
+purpose: "monitoring"
+supported_decision: "which branches/categories/channels need attention this period"
+review_cadence: "weekly"
+
+business_questions:
+  - question_id: "q1"
+    text: "How are we doing overall right now? (headline volume + basket value + discount share)"
+  - question_id: "q2"
+    text: "How do sales move over time -- trend / seasonality?"
+  - question_id: "q3"
+    text: "Which product categories drive sales and units?"
+  - question_id: "q4"
+    text: "How do sales split by channel (location: in-store vs online) and payment method?"
+  - question_id: "q5"
+    text: "What is the basket value (avg transaction value) and how does it vary by channel?"
+  - question_id: "q6"
+    text: "Who are the highest-activity customers (transaction count)?"
+
+# metric roles -- REFERENCE BY NAME ONLY, the 5 approved contracts already on
+# the shipped binding map (mappings/retail_store_sales/design/visual-contract-binding-map.md).
+outcome_metrics:
+  - name: "TotalSales"
+    store_ref: "mappings/retail_store_sales/metrics/TotalSales.yaml"
+    status_required: "pass"
+  - name: "TransactionCount"
+    store_ref: "mappings/retail_store_sales/metrics/TransactionCount.yaml"
+    status_required: "pass"
+  - name: "AvgTransactionValue"
+    store_ref: "mappings/retail_store_sales/metrics/AvgTransactionValue.yaml"
+    status_required: "pass"
+driver_metrics:
+  - name: "TotalQuantity"
+    store_ref: "mappings/retail_store_sales/metrics/TotalQuantity.yaml"
+    status_required: "pass"
+guardrail_metrics:
+  - name: "DiscountedTransactionRate"
+    store_ref: "mappings/retail_store_sales/metrics/DiscountedTransactionRate.yaml"
+    status_required: "pass"
+
+comparisons:
+  - "vs prior period"
+  - "trend over time (month)"
+
+dimensions_and_filters:
+  - field: "dim_date_rss.full_date"
+  - field: "dim_product_rss.category"
+  - field: "dim_location_rss.location"
+  - field: "dim_payment_method_rss.payment_method"
+  - field: "dim_customer_rss.customer_id"
+
+expected_actions_and_exceptions:
+  - "flag branches/categories below prior-period sales"
+  - "surface the discount-rate caveat: 33.39% of transactions have unknown discount status (floor 33.55% if treated as not-discounted)"
+
+pages_and_drill_paths:
+  - "executive_overview (single page; KPI strip -> trend -> category/channel breakdowns -> top-customer detail table)"
+
+mobile_accessibility_language_rtl:
+  mobile_needs: "none"
+  accessibility_needs: "none"
+  language: "en"
+  rtl_required: "false"
+
+exclusions_and_non_goals:
+  - "margin/profit (no cost data in this source)"
+  - "returns (none in this source)"
+
+owner: "Ahmed Shaaban (report_owner)"
+
+# HONEST readiness: every referenced metric resolves to a real `pass` contract
+# (verifiable via the T016 resolver), but this intent's OWN report_intent_approval
+# decision has not yet been recorded by the named owner -- so this artifact
+# stays `blocked`, never a fabricated `pass` (no self-grant of approval).
+readiness:
+  status: "blocked"
+  evidence:
+    - "all 6 business_questions resolved; all 5 referenced metrics resolve to approved (pass) contracts (mappings/retail_store_sales/metrics/)"
+  blocking_reasons:
+    - "no report_intent_approval decision recorded yet for branch_performance_weekly -- awaiting named report_owner approval (Principle V; never self-granted)"
+
+open_questions: []

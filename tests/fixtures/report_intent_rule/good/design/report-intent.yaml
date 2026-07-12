@@ -1,0 +1,36 @@
+report_id: "demo_report"
+subject_area: "mappings/demo_table"
+audience: "branch_manager"
+purpose: "monitoring"
+supported_decision: "which branches need attention this week"
+review_cadence: "weekly"
+business_questions:
+  - question_id: "q1"
+    text: "Which branches are underperforming this period?"
+outcome_metrics:
+  - name: "DemoMetric"
+    store_ref: "mappings/demo_table/metrics/DemoMetric.yaml"
+    status_required: "pass"
+driver_metrics: []
+guardrail_metrics: []
+comparisons:
+  - "vs prior period"
+dimensions_and_filters:
+  - field: "dim_date.month"
+expected_actions_and_exceptions:
+  - "flag branches below target"
+pages_and_drill_paths:
+  - "branch_summary"
+mobile_accessibility_language_rtl:
+  mobile_needs: "none"
+  accessibility_needs: "none"
+  language: "en"
+  rtl_required: "false"
+exclusions_and_non_goals:
+  - "no forecasting"
+owner: "A. Owner (report_owner)"
+readiness:
+  status: "not_started"
+  evidence: []
+  blocking_reasons: []
+open_questions: []

@@ -140,6 +140,10 @@
     "title": "Theme sentiment colors are faithful to a human-declared sentiment_map"
   },
   {
+    "id": "DL9",
+    "title": "A filled Report Intent record carries every required field"
+  },
+  {
     "id": "DR1",
     "title": "Design-layer route path foot-gun + stale-phrase guard"
   },

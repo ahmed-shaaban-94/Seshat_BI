@@ -1,0 +1,15 @@
+report_id: "demo_report"
+subject_area: "mappings/demo_table"
+audience: "branch_manager"
+supported_decision: "which branches need attention this week"
+review_cadence: "weekly"
+business_questions: []
+outcome_metrics: []
+driver_metrics: []
+guardrail_metrics: []
+owner: "A. Owner (report_owner)"
+readiness:
+  status: "not_started"
+  evidence: []
+  blocking_reasons: []
+open_questions: []

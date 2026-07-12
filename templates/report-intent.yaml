@@ -1,0 +1,176 @@
+# =============================================================================
+# report-intent.yaml  --  the committed record of WHAT a report is FOR (spec 123)
+# =============================================================================
+# Governed Dashboard Intelligence, User Story 1. Captures the report's purpose,
+# audience, supported decision, and primary business questions BEFORE any page
+# blueprint, visual spec, or report composition is authored. Every downstream
+# design artifact depends on a clear, committed Report Intent (FR-001/FR-002).
+#
+# WHAT THIS IS
+#   A GENERIC, copy-me template. It records ONE report's intent: who reads it,
+#   why, what decision it supports, the primary business questions it must
+#   answer, and which approved metrics play the outcome/driver/guardrail role.
+#   It is the UPSTREAM OWNER of audience/purpose/decisions/questions (FR-038); a
+#   page blueprint's `business_question` field is retained but MUST trace to a
+#   question declared here (no duplicate truth, FR-002a).
+#
+# THE DEFINE / REFERENCE BOUNDARY (do not drift)
+#   This template NEVER defines metric meaning. Every `*_metrics[].name` entry is
+#   a REFERENCE to an approved metric contract (F009) by name + store_ref -- the
+#   same triple shape as `dashboard-page-blueprint.yaml`'s
+#   `required_metric_contracts`. There is NO `formula:` / `dax:` / `expression:`
+#   field anywhere in this file, by design (FR-003). A metric with no approved
+#   contract is a GAP: record it, route it upstream to metric-contract
+#   definition, and leave this intent BLOCKED on that metric (FR-004) -- never
+#   invent the metric here.
+#
+# WHO FILLS THIS
+#   The `report-intent-interview` skill (mirrors the shipped
+#   business-knowledge-interview + Decision Store pattern): conversational
+#   interview -> recorded, reviewable artifact -> a NAMED HUMAN owns approval via
+#   a `report_intent_approval` Decision Store record. The agent never
+#   self-grants that approval (Principle V).
+#
+# NO FAKE CONFIDENCE (roadmap rule #9 / readiness-model.md)
+#   Readiness is recorded with EXACTLY the four explicit statuses
+#   (not_started | blocked | warning | pass) + evidence[] + blocking_reasons[].
+#   There is NO numeric score/confidence field anywhere in this template.
+#
+# retail_store_sales IS A FILLED EXAMPLE, NEVER THE UNIVERSAL SCHEMA
+#   See `mappings/retail_store_sales/design/report-intent.yaml` for a worked
+#   instance. Do not copy its subject-area specifics into this template -- the
+#   values below are deliberately obvious placeholders (Principle VII).
+#
+# AUTHORING NOTES
+#   - Keep this YAML valid: it is read as a spec (by the coordinator, the
+#     semantic audit, and the DL9 shape rule), not just prose. Quote any value
+#     containing ':' or quotes.
+#   - `report_id` is a short, stable id: it is the deterministic handle
+#     downstream artifacts (blueprint, composition, preview) key off of.
+#   - `business_questions` REQUIRES at least one entry to commit (US1 AC#4); a
+#     vague request ("build an executive dashboard") stays uncommitted until
+#     audience, purpose, and >=1 question are resolved.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# identity -- the stable id this intent is referenced by, and the subject area
+# (mapping) it targets. report_id feeds deterministic downstream ids (e.g. a
+# future PBIR page/visual name mint) -- keep it short and stable.
+# -----------------------------------------------------------------------------
+report_id: "<short_stable_id>"          # e.g. branch_performance_weekly
+subject_area: "<mappings/<table> this intent targets>"   # e.g. mappings/retail_store_sales
+
+# -----------------------------------------------------------------------------
+# audience / purpose / decision / cadence -- the WHO, WHAT KIND, WHY, and HOW
+# OFTEN of this report. All four are Principle-V judgment calls: the agent
+# proposes, a named human decides (never auto-filled from a vague request).
+# -----------------------------------------------------------------------------
+audience: "<who reads it>"              # e.g. branch_manager | executive | analyst
+purpose: "<executive|monitoring|diagnostic|action_oriented|analytical_exploration>"
+supported_decision: "<the decision this report supports>"
+review_cadence: "<weekly|daily|ad_hoc|...>"
+
+# -----------------------------------------------------------------------------
+# business_questions -- REQUIRED, >=1 entry to commit this intent (US1 AC#4).
+# Each question gets a stable question_id; a page blueprint's business_question
+# MUST trace to one of these ids (FR-002a) -- blueprints reference intent
+# questions, they never independently re-declare them.
+# -----------------------------------------------------------------------------
+business_questions:
+  - question_id: "<q1>"                 # stable id; a blueprint traces to this
+    text: "<primary business question, plain language>"
+  # - question_id: "<q2>"
+  #   text: "<...>"
+
+# -----------------------------------------------------------------------------
+# metric roles -- REFERENCE BY NAME ONLY. Same triple shape as
+# dashboard-page-blueprint.yaml's required_metric_contracts: name + store_ref +
+# status_required. NO formula/DAX field exists here BY DESIGN (FR-003). A named
+# metric with no approved contract is a GAP (FR-004): route it upstream, leave
+# this intent blocked on that metric, never define it here.
+# -----------------------------------------------------------------------------
+outcome_metrics:                        # the primary result(s) this report shows
+  - name: "<approved_metric_contract_name>"
+    store_ref: "mappings/<table>/metrics/<Name>.yaml"
+    status_required: "pass"
+  # - name: "<approved_metric_contract_name_2>"
+  #   store_ref: "mappings/<table>/metrics/<Name2>.yaml"
+  #   status_required: "pass"
+driver_metrics: []                      # same shape; the "why" behind the outcome
+guardrail_metrics: []                   # same shape; the metric(s) that must not slip
+
+# -----------------------------------------------------------------------------
+# comparisons / dimensions_and_filters -- how the reader contextualizes a value
+# and what slices/filters the report needs. dimensions_and_filters entries MUST
+# be MAPPED fields (F010); an unmapped field is a gap, not a guess.
+# -----------------------------------------------------------------------------
+comparisons:
+  - "<e.g. vs prior period | vs target | vs peer branch>"
+dimensions_and_filters:
+  - field: "<dim_table>.<attribute>"    # a MAPPED field (F010)
+
+# -----------------------------------------------------------------------------
+# expected_actions_and_exceptions -- what the report should prompt the reader to
+# DO, and which exception conditions it should surface. Plain language; the
+# agent recommends, a named human supplies the final wording (Principle V).
+# -----------------------------------------------------------------------------
+expected_actions_and_exceptions:
+  - "<action/exception the report should surface>"
+
+# -----------------------------------------------------------------------------
+# pages_and_drill_paths -- the pages/drill intents this report is expected to
+# need. Later referenced by a page blueprint's page_name (this template does not
+# author blueprints; it only records the intent that blueprints will trace to).
+# -----------------------------------------------------------------------------
+pages_and_drill_paths:
+  - "<page/drill intent, later referenced by blueprint.page_name>"
+
+# -----------------------------------------------------------------------------
+# mobile_accessibility_language_rtl -- non-functional needs this report must
+# satisfy, recorded as intent (design/build compliance is checked downstream by
+# the shipped a11y/RTL evidence and mobile-layout guidance).
+# -----------------------------------------------------------------------------
+mobile_accessibility_language_rtl:
+  mobile_needs: "<free text | none>"
+  accessibility_needs: "<free text | none>"
+  language: "<en|ar|...>"
+  rtl_required: "<true|false>"
+
+# -----------------------------------------------------------------------------
+# exclusions_and_non_goals -- explicitly OUT of scope for this report, so a
+# reviewer (and the semantic audit) does not mistake an intentional omission for
+# a gap.
+# -----------------------------------------------------------------------------
+exclusions_and_non_goals:
+  - "<explicitly out of scope>"
+
+# -----------------------------------------------------------------------------
+# owner -- the named human who owns this Report Intent. Shape: "Person Name
+# (report_owner)" (decision_store.owner_shape_ok). The agent never fills this
+# with itself and never self-grants the report_intent_approval decision this
+# owner records separately in the Decision Store.
+# -----------------------------------------------------------------------------
+owner: "<Person Name> (report_owner)"
+
+# -----------------------------------------------------------------------------
+# readiness -- record this INTENT's own readiness with the FOUR statuses only
+# (not_started | blocked | warning | pass); NO numeric score (rule #9). A
+# `pass` here is a claim about the intent's own well-formedness/resolution --
+# it is NOT the same thing as the separate report_intent_approval Decision
+# Store record (that is the named-human approval; this is the artifact's own
+# state). `pass` MUST NOT be recorded with an empty evidence[].
+# -----------------------------------------------------------------------------
+readiness:
+  status: "<not_started|blocked|warning|pass>"
+  evidence: []                          # e.g. ["approved by <owner> on <YYYY-MM-DD>"]
+  blocking_reasons: []                  # e.g. ["metric X has no approved contract (FR-004)"]
+
+# -----------------------------------------------------------------------------
+# open_questions -- the ambiguity ledger (mirrors metric-contract.ambiguities).
+# Records each unresolved interview item so it is never silently dropped.
+# -----------------------------------------------------------------------------
+open_questions: []
+  # - id: "<slug>"
+  #   decision_status: "decided|undecided"
+  #   ruling: ""
+  #   evidence: []
