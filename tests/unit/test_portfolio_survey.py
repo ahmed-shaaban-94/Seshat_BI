@@ -62,8 +62,7 @@ def validate_portfolio_survey(text: str) -> list[str]:
     return violations
 
 
-def _valid_survey() -> str:
-    return """# Portfolio Survey: synthetic
+_VALID_SURVEY = """# Portfolio Survey: synthetic
 
 **Status**: warning
 **Source kind**: db-schema
@@ -97,7 +96,7 @@ def _valid_survey() -> str:
 
 
 def test_valid_survey_parses() -> None:
-    assert validate_portfolio_survey(_valid_survey()) == []
+    assert validate_portfolio_survey(_VALID_SURVEY) == []
 
 
 @pytest.mark.parametrize(
@@ -114,11 +113,11 @@ def test_valid_survey_parses() -> None:
     ],
 )
 def test_value_measurement_or_secret_fails_closed(forbidden: str) -> None:
-    assert validate_portfolio_survey(_valid_survey() + "\n" + forbidden)
+    assert validate_portfolio_survey(_VALID_SURVEY + "\n" + forbidden)
 
 
 def test_silently_omitted_reachable_table_fails_closed() -> None:
-    text = _valid_survey().replace(
+    text = _VALID_SURVEY.replace(
         "**Reachable tables total**: 1", "**Reachable tables total**: 2"
     )
     assert validate_portfolio_survey(text)

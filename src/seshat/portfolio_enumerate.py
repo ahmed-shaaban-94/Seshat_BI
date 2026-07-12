@@ -26,24 +26,34 @@ def _safe_boundary_error(
     env: Mapping[str, str],
 ) -> str:
     """Redact through the dialect and fail closed if the redactor itself fails."""
-    if config is not None:
-        try:
-            redacted = dialect.redact(error, config)
-        except Exception:
-            redacted = "database metadata boundary failed (details redacted)"
-    else:
-        redacted = str(error) or error.__class__.__name__
+    redacted = _redact_error(error, dialect=dialect, config=config)
+    return _scrub_environment_secrets(redacted, env)
 
+
+def _redact_error(error: Exception, *, dialect: Dialect, config: object | None) -> str:
+    if config is None:
+        return str(error) or error.__class__.__name__
+    try:
+        return dialect.redact(error, config)
+    except Exception:
+        return "database metadata boundary failed (details redacted)"
+
+
+def _scrub_environment_secrets(redacted: str, env: Mapping[str, str]) -> str:
+    for secret in _database_secret_values(env):
+        redacted = redacted.replace(secret, "<redacted>")
+    if "@" in redacted or "://" in redacted:
+        return "database metadata boundary failed (details redacted)"
+    return redacted
+
+
+def _database_secret_values(env: Mapping[str, str]) -> list[str]:
     secrets = {
         value
         for key, value in env.items()
         if value and (key == "DATABASE_URL" or key.startswith("ANALYTICS_DB_"))
     }
-    for secret in sorted(secrets, key=len, reverse=True):
-        redacted = redacted.replace(secret, "<redacted>")
-    if any(part in redacted for part in ("@", "://")):
-        return "database metadata boundary failed (details redacted)"
-    return redacted
+    return sorted(secrets, key=len, reverse=True)
 
 
 def enumerate_tables(
