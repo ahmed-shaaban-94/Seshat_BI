@@ -125,12 +125,12 @@ rather than deep-profiled in the survey.
 ### Tests for User Story 3 (write first, must fail)
 
 - [ ] T017 [P] [US3] Seed fixtures under `tests/fixtures/portfolio-survey/scope/`: a coherent-scope case, a cross-boundary case (multiple processes/grains) expecting `needs_user_input` or narrower options, an explicit-user-limit case, and a partial-acceptance case expecting a bounded superseding record with the original `superseded`
-- [ ] T018 [US3] Write failing tests in `tests/unit/test_discovery_flow_stops.py` (scope section): the scope record is non-critical `proposed`, sits in no `blocking_decision_categories`, carries NO numeric score/threshold/rank; deterministic bounding behaves per FR-018; partial acceptance yields a bounded superseding record and marks the original `superseded` so DS4 sees no two active records on one scope key; and a boundary test that the SURVEY never gains value-backed per-table measurement (Layer B stays in `retail-onboard-table`)
+- [ ] T018 [US3] Write failing tests in `tests/unit/test_discovery_flow_stops.py` (scope section): the scope record is non-critical `proposed`, sits in no `blocking_decision_categories`, carries NO numeric score/threshold/rank; deterministic bounding behaves per FR-018; partial acceptance yields a bounded superseding record and marks the original `superseded` so DS4 sees no two active records on one scope key (FR-019B); and a boundary test that the SURVEY never gains value-backed per-table measurement (Layer B stays in `retail-onboard-table`, FR-013)
 
 ### Implementation for User Story 3
 
 - [ ] T019 [US3] Extend the skill with the scope-proposal step: record a non-critical `proposed` scope decision citing survey + domain evidence; deterministic bounding (honor explicit limit; else one coherent process / one primary fact grain / KPIs sharing a model boundary); describe categorically only (coherent/cross-boundary/unresolved/needs-user-input -- prose, not a stored scale); no numeric score/threshold/rank; partial acceptance -> bounded superseding proposal (original -> superseded)
-- [ ] T020 [US3] Add the scope->Layer-B delegation step: for each in-scope table, hand it to the EXISTING `retail-onboard-table` / Source Ready profiler (do NOT profile in the survey, do NOT author `mappings/<table>/source-profile.md`); add the `scope_proposal`-stage local stop (no domain proposal -> halt naming the missing domain-guess decision); green T018; `retail check` stays exit 0
+- [ ] T020 [US3] Add the scope->Layer-B delegation step (FR-009B): for each in-scope table, hand it to the EXISTING `retail-onboard-table` / Source Ready profiler (do NOT profile in the survey, do NOT author `mappings/<table>/source-profile.md`); add the `scope_proposal`-stage local stop (no domain proposal -> halt naming the missing domain-guess decision); green T018; `retail check` stays exit 0
 
 **Checkpoint**: US1 + US2 + US3 work; scope is deterministic and Layer-B is delegated, not duplicated.
 
@@ -190,9 +190,9 @@ the flow contracts or the general Decision Gate.
 **Purpose**: Docs, glossary, and the final whole-feature validation.
 
 - [ ] T027 [P] Update `docs/glossary.md` with: Layer A (portfolio metadata survey), Layer B (deep per-table profile), portfolio survey, and the domain/scope non-critical-proposal lifecycle terms
-- [ ] T028 [P] Update `docs/knowledge-map.md` with the portfolio-discovery route note (if a route is cited by the skill), consistent with the existing readiness route
-- [ ] T029 Run `specs/122-contract-driven-discovery/quickstart.md` end-to-end against the fixtures; confirm SC-001/003/004/005/007/008/009 observably hold; confirm the four anti-scope-creep boundary tests pass (no 2nd profiler; no new status/vocab/authority-row; no gate repair; no flow-contract change)
-- [ ] T030 Final `retail check` exit 0 on the repo; `ruff format --check src tests` + `ruff check src tests` + `pytest -m unit -x -q` green; confirm no forbidden change (no new `retail check` rule at MVP, no `mappings/<table>/source-profile.md` authored by this feature, no top-level contract edited)
+- [ ] T028 [P] Update `docs/knowledge-map.md` with the portfolio-survey discovery route note (if a route is cited by the skill), consistent with the existing readiness route
+- [ ] T029 Run `specs/122-contract-driven-discovery/quickstart.md` end-to-end against the fixtures; confirm SC-001/002/003/004/005/006/007/008/009 observably hold (SC-002 = the US1 survey + in-scope US4 Layer-B profiles support an interview with fewer question rounds than the in-scope column count; SC-006 = finalized decisions preserved, any change via supersession only -- the T018 partial-acceptance logic); confirm the four anti-scope-creep boundary tests pass (no 2nd profiler; no new status/vocab/authority-row; no gate repair; no flow-contract change)
+- [ ] T030 Final `retail check` exit 0 on the repo; `ruff format --check src tests` + `ruff check src tests` + `pytest -m unit -x -q` green; confirm no forbidden change (no new `retail check` rule at MVP, no `mappings/<table>/source-profile.md` authored by this feature, no top-level contract edited); and confirm the inherited scale-out invariant holds (FR-030): the discovery flow never selects a scale-out/big-data route -- it records scale evidence into the survey/scope but never chooses the route, which stays with the existing `silver_gold_model_planning` boundary (else python)
 
 ---
 
