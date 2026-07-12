@@ -81,6 +81,18 @@ Surface-2 purity: references a static image, bakes no data into it. The wire for
 Desktop-authored sample -- it was NOT guessed (increment C was held until that sample
 existed).
 
+## Increment D -- visual geometry / layout (SHIPPED)
+
+`retail pbir-set-geometry --visual <visual.json> --geometry <json>` writes ONLY a
+visual's layout rectangle -- `x`, `y`, `width`, `height`, `z` (stack/tab order) -- for
+a visual that already exists and is already on the approved binding-map. It repositions
+existing truth; it NEVER changes `visualType`, creates/deletes a visual, or adds/removes
+a page (creation is authoring truth, out of scope here). Off-canvas positions are
+rejected; overlap is allowed (a design judgment). Authorized separately by ADR 0016
+(the formatting-only ADR 0015 deliberately refuses geometry). No `--force`: position
+keys always pre-exist, so a differs-then-refuse gate would block every real move;
+overwrite safety is the reviewable git diff + human ratification.
+
 ## Hard stops
 
 - STOP before writing anything outside the current increment's allow-list.
@@ -89,7 +101,10 @@ existed).
 
 ## See also
 
-- Authorization: `docs/decisions/0015-pbir-authoring-adapter-lifts-fr008-fr009.md`.
+- Authorization: `docs/decisions/0015-pbir-authoring-adapter-lifts-fr008-fr009.md`
+  (A/B/C), `docs/decisions/0016-pbir-adapter-geometry-increment-d.md` (D geometry),
+  and `docs/decisions/0017-pbir-creation-primitive.md` (the spec-123 blueprint->PBIR
+  compiler, which CREATES pages/visuals -- a separate capability beyond this adapter).
 - Spec / plan / tasks: `specs/106-pbir-authoring-adapter/{spec,plan,tasks}.md`.
 - The contract: `templates/pbir-adapter-contract.md`.
 - The enumerated shape + allow-list: `docs/integrations/pbir-adapter.md`.
