@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pytest
-
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "portfolio-survey"
 
@@ -40,7 +39,8 @@ def validate_portfolio_survey(text: str) -> list[str]:
             continue
         if declared_count != table_count:
             violations.append(
-                f"{field} declares {declared_count}, but {table_count} table sections exist"
+                f"{field} declares {declared_count}, but {table_count} "
+                "table sections exist"
             )
 
     forbidden_patterns = {
@@ -51,7 +51,9 @@ def validate_portfolio_survey(text: str) -> list[str]:
         "returns population": r"\breturns(?:-column)?\s+population\s*:",
         "raw suspected PII": r"\braw\s+suspected\s+pii\s+value\s*:",
         "database URL": r"\b(?:postgres(?:ql)?|mysql|mssql|sqlserver|snowflake)://",
-        "database environment variable": r"\b(?:DATABASE_URL|ANALYTICS_DB_[A-Z0-9_]+)\s*=",
+        "database environment variable": (
+            r"\b(?:DATABASE_URL|ANALYTICS_DB_[A-Z0-9_]+)\s*="
+        ),
     }
     for label, pattern in forbidden_patterns.items():
         if re.search(pattern, text, re.IGNORECASE):
