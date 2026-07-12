@@ -59,6 +59,7 @@ CRITICAL_DECISION_TYPES: frozenset[str] = frozenset(
         "data_exclusion",
         "policy_ruling",
         "dashboard_blueprint_approval",
+        "report_intent_approval",
         "publish_export",
     }
 )

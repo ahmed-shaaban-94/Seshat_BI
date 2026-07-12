@@ -434,3 +434,71 @@ def test_spine_projection_warn_maps_to_warning(tmp_path: Path) -> None:
     proj = project_to_spine(v)
     assert proj["spine_stage"] == "dashboard_ready"
     assert proj["status"] == "warning"
+
+
+# ---- spec 123 T006: report_intent_approval must actually gate ------------
+#
+# The spec-122 review found that a stage with an EMPTY blocking_decision_categories
+# set returns a false `pass` on an absent store (see test_absent_store_passes_when_
+# stage_has_no_blockers above). report_intent now carries a NON-empty category
+# (report_intent_approval); this test proves the stage does NOT inherit that
+# empty-category "pass" shortcut once the category is populated -- an absent/
+# unapproved report_intent_approval must yield `blocked`, never a false `pass`.
+
+
+def test_unapproved_report_intent_blocks_report_intent_stage(tmp_path: Path) -> None:
+    # No store at all -- report_intent must now BLOCK (it has a real blocking
+    # category), not silently pass the way an empty-category stage used to.
+    root, tracked = _repo(tmp_path, {})
+    v = verdict_for(root, tracked, "report_intent")
+    assert v.verdict == "blocked"
+    assert v.blocking
+
+
+def test_pending_report_intent_approval_blocks_report_intent_and_blueprint(
+    tmp_path: Path,
+) -> None:
+    body = (
+        "decisions:\n"
+        "  - id: report_intent_approval.branch_perf\n"
+        "    decision_type: report_intent_approval\n"
+        "    statement: s\n"
+        "    scope: {artifacts: [report_intent.branch_perf]}\n"
+        "    status: pending\n"
+        "    evidence: [ev.md]\n"
+        "    proposed_by: agent\n"
+        '    proposed_at: "2026-01-01"\n'
+    )
+    root, tracked = _repo(tmp_path, {_SEMANTIC: body})
+    for stage in ("report_intent", "dashboard_blueprint"):
+        v = verdict_for(root, tracked, stage)
+        assert v.verdict == "blocked", stage
+        assert any("report_intent_approval" in b.decision_id for b in v.blocking), stage
+
+
+def test_approved_report_intent_passes_report_intent_stage(tmp_path: Path) -> None:
+    ev = tmp_path / "ev.md"
+    ev.parent.mkdir(parents=True, exist_ok=True)
+    ev.write_text("intent evidence\n", encoding="utf-8")
+    sha = _sha(ev)
+    body = (
+        "decisions:\n"
+        "  - id: report_intent_approval.branch_perf\n"
+        "    decision_type: report_intent_approval\n"
+        "    statement: s\n"
+        "    scope: {artifacts: [report_intent.branch_perf]}\n"
+        "    status: approved\n"
+        "    evidence: [ev.md]\n"
+        "    proposed_by: agent\n"
+        '    proposed_at: "2026-01-01"\n'
+        "    approval:\n"
+        '      approved_by: "R. Owner (report_owner)"\n'
+        '      approved_at: "2026-01-02"\n'
+        "      source: interview\n"
+        "      evidence: [ev.md]\n"
+        f"      evidence_identity: {{ev.md: {sha}}}\n"
+        "      reviewed_scope: {artifacts: [report_intent.branch_perf]}\n"
+    )
+    root, tracked = _repo(tmp_path, {_SEMANTIC: body})
+    v = verdict_for(root, tracked, "report_intent")
+    assert v.verdict == "pass", v

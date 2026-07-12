@@ -34,6 +34,7 @@ eligibility:
   data_exclusion: [data_owner, governance]
   publish_export: [data_owner, governance]
   dashboard_blueprint_approval: [report_owner]
+  report_intent_approval: [report_owner]
 
 # FOLLOW-UP (flagged, not fixed in this slice): the readiness owner-shape rule (RS1)
 # recognizes only {analyst, governance, data_owner, metric_owner}. `report_owner`
