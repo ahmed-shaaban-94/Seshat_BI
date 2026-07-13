@@ -70,16 +70,24 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _safe_archive_path(name: str) -> PurePosixPath:
+def _reject_non_posix_archive_path(name: str) -> None:
     if "\\" in name:
         raise ArtifactInspectionError(f"archive path is not POSIX: {name}")
-    path = PurePosixPath(name)
+
+
+def _reject_archive_escape(path: PurePosixPath, name: str) -> None:
     if path.is_absolute():
         raise ArtifactInspectionError(f"archive path escapes its root: {name}")
     if ".." in path.parts:
         raise ArtifactInspectionError(f"archive path escapes its root: {name}")
     if "." in path.parts:
         raise ArtifactInspectionError(f"archive path escapes its root: {name}")
+
+
+def _safe_archive_path(name: str) -> PurePosixPath:
+    _reject_non_posix_archive_path(name)
+    path = PurePosixPath(name)
+    _reject_archive_escape(path, name)
     return path
 
 
@@ -296,22 +304,34 @@ def _read_wheel(path: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
     return files, metadata
 
 
-def _sdist_member(
-    archive: tarfile.TarFile, member: tarfile.TarInfo
-) -> tuple[str, bytes] | None:
-    _safe_archive_path(member.name)
+def _reject_sdist_links(member: tarfile.TarInfo) -> None:
     if member.issym():
         raise ArtifactInspectionError(f"sdist contains a link: {member.name}")
     if member.islnk():
         raise ArtifactInspectionError(f"sdist contains a link: {member.name}")
-    if member.isdir():
-        return None
+
+
+def _require_regular_sdist_file(member: tarfile.TarInfo) -> None:
     if not member.isfile():
         raise ArtifactInspectionError(f"sdist contains a special file: {member.name}")
+
+
+def _read_sdist_member(archive: tarfile.TarFile, member: tarfile.TarInfo) -> bytes:
     extracted = archive.extractfile(member)
     if extracted is None:
         raise ArtifactInspectionError(f"cannot read sdist member: {member.name}")
-    data = extracted.read()
+    return extracted.read()
+
+
+def _sdist_member(
+    archive: tarfile.TarFile, member: tarfile.TarInfo
+) -> tuple[str, bytes] | None:
+    _safe_archive_path(member.name)
+    _reject_sdist_links(member)
+    if member.isdir():
+        return None
+    _require_regular_sdist_file(member)
+    data = _read_sdist_member(archive, member)
     scan_content(member.name, data)
     return member.name, data
 

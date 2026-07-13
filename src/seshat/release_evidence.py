@@ -103,13 +103,16 @@ def _require_fields(record: Mapping[str, Any], fields: set[str]) -> None:
         raise EvidenceValidationError(f"missing required fields: {', '.join(missing)}")
 
 
-def _require_text(record: Mapping[str, Any], field: str) -> str:
-    value = record.get(field)
+def _non_empty_text(value: object, error: str) -> str:
     if not isinstance(value, str):
-        raise EvidenceValidationError(f"{field} must be non-empty text")
+        raise EvidenceValidationError(error)
     if not value.strip():
-        raise EvidenceValidationError(f"{field} must be non-empty text")
+        raise EvidenceValidationError(error)
     return value
+
+
+def _require_text(record: Mapping[str, Any], field: str) -> str:
+    return _non_empty_text(record.get(field), f"{field} must be non-empty text")
 
 
 def _require_timestamp(record: Mapping[str, Any], field: str) -> datetime:
@@ -141,22 +144,17 @@ def _require_artifact_digests(
 
 
 def _validate_artifact_digest(name: object, digest: object, field: str) -> None:
-    if not isinstance(name, str):
-        raise EvidenceValidationError(f"{field} contains an invalid entry")
-    if not name.strip():
-        raise EvidenceValidationError(f"{field} contains an invalid entry")
-    if not isinstance(digest, str):
-        raise EvidenceValidationError(f"{field} contains an invalid entry")
-    if _SHA256.fullmatch(digest) is None:
-        raise EvidenceValidationError(f"artifact digest for {name} must be SHA-256")
+    error = f"{field} contains an invalid entry"
+    validated_name = _non_empty_text(name, error)
+    validated_digest = _non_empty_text(digest, error)
+    if _SHA256.fullmatch(validated_digest) is None:
+        raise EvidenceValidationError(
+            f"artifact digest for {validated_name} must be SHA-256"
+        )
 
 
 def _concrete_text(value: object, field: str) -> str:
-    if not isinstance(value, str):
-        raise EvidenceValidationError(f"{field} must be a list of concrete strings")
-    if not value.strip():
-        raise EvidenceValidationError(f"{field} must be a list of concrete strings")
-    return value
+    return _non_empty_text(value, f"{field} must be a list of concrete strings")
 
 
 def _require_text_list(
@@ -271,15 +269,38 @@ def _require_acceptance_booleans(item: Mapping[str, Any]) -> None:
             raise EvidenceValidationError(f"{field} must be boolean")
 
 
+def _require_acceptance_state(
+    item: Mapping[str, Any], field: str, expected: bool, error: str
+) -> None:
+    if item.get(field) is not expected:
+        raise EvidenceValidationError(error)
+
+
 def _validate_acceptance_safety(item: Mapping[str, Any]) -> None:
-    if item.get("fresh_workspace") is not True:
-        raise EvidenceValidationError("acceptance must use a fresh workspace")
-    if item.get("development_repo_available") is not False:
-        raise EvidenceValidationError("acceptance must hide the development repository")
-    if item.get("secrets_or_pii_exposed") is not False:
-        raise EvidenceValidationError("acceptance exposed secrets or PII")
-    if item.get("fabricated_score") is not False:
-        raise EvidenceValidationError("acceptance fabricated a readiness score")
+    _require_acceptance_state(
+        item,
+        "fresh_workspace",
+        True,
+        "acceptance must use a fresh workspace",
+    )
+    _require_acceptance_state(
+        item,
+        "development_repo_available",
+        False,
+        "acceptance must hide the development repository",
+    )
+    _require_acceptance_state(
+        item,
+        "secrets_or_pii_exposed",
+        False,
+        "acceptance exposed secrets or PII",
+    )
+    _require_acceptance_state(
+        item,
+        "fabricated_score",
+        False,
+        "acceptance fabricated a readiness score",
+    )
 
 
 def _require_acceptance_text(item: Mapping[str, Any]) -> None:

@@ -194,17 +194,28 @@ def _all_entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     )
 
 
-def _validate_allowlist_header(document: Mapping[str, Any]) -> set[str]:
+def _validate_allowlist_identity(document: Mapping[str, Any]) -> None:
     if document.get("schema_version") != 1:
         raise ExportError("allowlist schema_version must be 1")
     if document.get("canonical_repository") != "ahmed-shaaban-94/Seshat_BI":
         raise ExportError("allowlist canonical_repository is not Seshat_BI")
+
+
+def _canonical_root_values(document: Mapping[str, Any]) -> list[object]:
     roots = document.get("canonical_roots")
     if not isinstance(roots, list):
         raise ExportError("allowlist must declare the five canonical entrypoints")
     if len(roots) != 5:
         raise ExportError("allowlist must declare the five canonical entrypoints")
-    root_set = {_safe_relative_path(item, label="canonical root") for item in roots}
+    return roots
+
+
+def _validate_allowlist_header(document: Mapping[str, Any]) -> set[str]:
+    _validate_allowlist_identity(document)
+    root_set = {
+        _safe_relative_path(item, label="canonical root")
+        for item in _canonical_root_values(document)
+    }
     if root_set != CANONICAL_ROOTS:
         raise ExportError("allowlist canonical_roots must match the five Seshat skills")
     return root_set
@@ -257,25 +268,47 @@ def _validate_source(
     return source
 
 
-def _validate_entry_policy(entry_id: str, entry: Mapping[str, Any]) -> None:
-    allowed_classifications = {
-        "generated_wrapper",
-        "public_knowledge",
-        "public_license",
-    }
-    if entry.get("classification") not in allowed_classifications:
-        raise ExportError(f"{entry_id} has an unreviewed classification")
-    if entry.get("media_type") not in ALLOWED_MEDIA_TYPES:
-        raise ExportError(f"{entry_id} has a prohibited media type")
-    if entry.get("transform") not in ALLOWED_TRANSFORMS:
-        raise ExportError(f"{entry_id} has an unknown transform")
+def _require_allowed_entry_value(
+    entry: Mapping[str, Any], field: str, allowed: set[str], error: str
+) -> None:
+    if entry.get(field) not in allowed:
+        raise ExportError(error)
+
+
+def _require_entry_is_required(entry_id: str, entry: Mapping[str, Any]) -> None:
     if entry.get("required") is not True:
         raise ExportError(f"{entry_id} must explicitly be required")
+
+
+def _require_review_reason(entry_id: str, entry: Mapping[str, Any]) -> None:
     review_reason = entry.get("review_reason")
     if not isinstance(review_reason, str):
         raise ExportError(f"{entry_id} requires a public review reason")
     if not review_reason.strip():
         raise ExportError(f"{entry_id} requires a public review reason")
+
+
+def _validate_entry_policy(entry_id: str, entry: Mapping[str, Any]) -> None:
+    _require_allowed_entry_value(
+        entry,
+        "classification",
+        {"generated_wrapper", "public_knowledge", "public_license"},
+        f"{entry_id} has an unreviewed classification",
+    )
+    _require_allowed_entry_value(
+        entry,
+        "media_type",
+        ALLOWED_MEDIA_TYPES,
+        f"{entry_id} has a prohibited media type",
+    )
+    _require_allowed_entry_value(
+        entry,
+        "transform",
+        ALLOWED_TRANSFORMS,
+        f"{entry_id} has an unknown transform",
+    )
+    _require_entry_is_required(entry_id, entry)
+    _require_review_reason(entry_id, entry)
 
 
 def _record_destination(
@@ -365,11 +398,14 @@ def _is_external_reference(reference: str) -> bool:
     return reference.startswith(("#", "http://", "https://", "mailto:"))
 
 
-def _validate_reference(bundle_root: Path, path: Path, reference: str) -> None:
+def _reject_unsafe_reference(path: Path, reference: str) -> None:
     if reference.startswith("/"):
         raise ExportError(f"unsafe Markdown reference in {path}: {reference}")
     if "\\" in reference:
         raise ExportError(f"unsafe Markdown reference in {path}: {reference}")
+
+
+def _resolve_bundle_reference(bundle_root: Path, path: Path, reference: str) -> Path:
     resolved = (path.parent / reference).resolve()
     try:
         resolved.relative_to(bundle_root.resolve())
@@ -377,10 +413,20 @@ def _validate_reference(bundle_root: Path, path: Path, reference: str) -> None:
         raise ExportError(
             f"Markdown reference escapes generated bundle in {path}: {reference}"
         ) from exc
+    return resolved
+
+
+def _require_reference_exists(resolved: Path, path: Path, reference: str) -> None:
     if not resolved.exists():
         raise ExportError(
             f"unlisted or missing transitive reference in {path}: {reference}"
         )
+
+
+def _validate_reference(bundle_root: Path, path: Path, reference: str) -> None:
+    _reject_unsafe_reference(path, reference)
+    resolved = _resolve_bundle_reference(bundle_root, path, reference)
+    _require_reference_exists(resolved, path, reference)
 
 
 def _validate_markdown_links(bundle_root: Path, path: Path) -> None:
