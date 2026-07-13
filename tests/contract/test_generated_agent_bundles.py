@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -96,6 +97,22 @@ def test_committed_bundles_match_clean_regeneration() -> None:
         check_all(ROOT, allow_untracked_inputs=True)
     except ExportError as exc:
         pytest.fail(str(exc))
+
+
+def test_generated_bundle_git_attributes_force_lf() -> None:
+    paths = [
+        "distribution/bundle-templates/claude/.claude-plugin/plugin.json",
+        "integrations/claude-code/seshat-bi/.claude-plugin/plugin.json",
+        "integrations/codex/seshat-bi/.codex-plugin/plugin.json",
+    ]
+    result = subprocess.run(
+        ["git", "check-attr", "eol", "--", *paths],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.splitlines() == [f"{path}: eol: lf" for path in paths]
 
 
 def test_all_five_canonical_entrypoints_and_reviewed_closure_have_provenance() -> None:
