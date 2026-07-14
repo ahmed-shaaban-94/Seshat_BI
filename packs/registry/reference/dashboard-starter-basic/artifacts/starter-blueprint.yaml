@@ -1,0 +1,9 @@
+# Dashboard blueprint: a layout suggestion bound to metric-contract slots.
+# Every visual slot must bind to an APPROVED contract at design time.
+pages:
+  - title: "Example headline + trend page"
+    visual_slots:
+      - purpose: "Headline KPI"
+        binds: "an approved metric contract (filled at design time)"
+      - purpose: "Trend over time"
+        binds: "an approved metric contract (filled at design time)"

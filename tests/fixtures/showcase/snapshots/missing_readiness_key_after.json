@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "source_revision": "2222222222222222222222222222222222222222",
+  "scope": [
+    "orders"
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "evidence:mappings/orders/source-profile.md",
+      "kind": "evidence",
+      "path": "mappings/orders/source-profile.md",
+      "sha256": "aaaa000000000000000000000000000000000000000000000000000000aa",
+      "verification": "verified"
+    },
+    {
+      "artifact_id": "status:mappings/orders/readiness-status.yaml",
+      "kind": "status",
+      "path": "mappings/orders/readiness-status.yaml",
+      "sha256": "cccc000000000000000000000000000000000000000000000000000000cc",
+      "verification": "verified"
+    },
+    {
+      "artifact_id": "evidence:mappings/orders/source-map.yaml",
+      "kind": "evidence",
+      "path": "mappings/orders/source-map.yaml",
+      "sha256": "dddd000000000000000000000000000000000000000000000000000000dd",
+      "verification": "verified"
+    }
+  ],
+  "approvals": [],
+  "validation_boundary": {
+    "static": "readiness statuses read from committed workspace files",
+    "live": "unavailable",
+    "unavailable_checks": [
+      "live_database_validation",
+      "powerbi_semantic_validation"
+    ]
+  },
+  "authority_disclaimer": "This is a test fixture passport; it grants no approval.",
+  "passport_id": "passport-fixture-after",
+  "generated_at": "2026-07-10T00:00:00+00:00"
+}

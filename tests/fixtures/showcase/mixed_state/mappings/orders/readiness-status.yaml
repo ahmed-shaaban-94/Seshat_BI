@@ -1,0 +1,28 @@
+table: orders
+current_stage: gold_ready
+stages:
+  source_ready:
+    status: pass
+    evidence: [mappings/orders/source-profile.md]
+    blocking_reasons: []
+  mapping_ready:
+    status: pass
+    evidence: [mappings/orders/source-map.yaml]
+    blocking_reasons: []
+  silver_ready:
+    status: warning
+    evidence: ["[PENDING LIVE PROFILE]"]
+    blocking_reasons: []
+  gold_ready:
+    status: blocked
+    evidence: [mappings/orders/reconciliation-report.md]
+    blocking_reasons: [reconciliation report not yet produced]
+  semantic_model_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  dashboard_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  publish_ready: {status: not_started, evidence: [], blocking_reasons: []}
+blocking_reasons: [reconciliation report not yet produced]
+approvals:
+  - stage: mapping_ready
+    owner: data_owner
+    at: "2026-07-01"
+next_action: Produce the reconciliation report before advancing to Gold Ready.

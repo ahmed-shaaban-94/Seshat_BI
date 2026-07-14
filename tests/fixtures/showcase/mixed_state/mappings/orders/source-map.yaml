@@ -1,0 +1,5 @@
+# Source map: orders (test fixture, committed for the showcase mixed-state test)
+grain: order_id
+columns: []
+defaults:
+  deviations: []

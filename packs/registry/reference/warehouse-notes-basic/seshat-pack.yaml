@@ -1,0 +1,28 @@
+schema_version: "1.0"
+pack_id: seshat.registry.warehouse-notes-basic
+version: "1.0.0"
+category: warehouse_compatibility
+owner: "Seshat BI maintainers"
+description: >-
+  Generic Postgres-dialect notes for the silver/gold migration conventions:
+  identifier casing, upsert idioms, and generated-column caveats. Notes
+  inform migration authors; they never change the medallion contract or the
+  gold-only Power BI read boundary.
+core_compatibility: "1.x"
+provides:
+  - postgres-dialect-notes
+requires: []
+conflicts: []
+artifacts:
+  - path: artifacts/dialect-notes.md
+    purpose: "Postgres dialect notes for silver/gold migration authors."
+human_decisions:
+  - "The migration author decides whether a noted idiom applies to a given table; notes are guidance, not a rewritten contract."
+fixtures:
+  - fixtures/synthetic-dialect-sample.csv
+verification:
+  - "retail pack validate --repo . --pack packs/registry/reference/warehouse-notes-basic/seshat-pack.yaml"
+non_goals:
+  - "Does not change the medallion contract or the gold-only Power BI read boundary."
+  - "Does not execute code, change stage order, or grant any approval."
+  - "Does not claim to fit every client schema."

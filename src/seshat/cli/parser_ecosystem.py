@@ -137,6 +137,9 @@ def _add_pack_parser(sub: argparse._SubParsersAction) -> None:
         help="target directory (default: packs/local/<name>); must be new",
     )
     _add_pack_validate_args(pack_sub)
+    _add_pack_search_args(pack_sub)
+    _add_pack_inspect_args(pack_sub)
+    _add_pack_add_args(pack_sub)
 
 
 def _add_pack_validate_args(pack_sub: argparse._SubParsersAction) -> None:
@@ -161,6 +164,104 @@ def _add_pack_validate_args(pack_sub: argparse._SubParsersAction) -> None:
         choices=("text", "json"),
         default="text",
         help="'text' (default) is human-readable; 'json' emits the findings.",
+    )
+
+
+_DEFAULT_REGISTRY = "packs/registry/index.yaml"
+
+
+def _add_registry_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--registry",
+        default=_DEFAULT_REGISTRY,
+        metavar="PATH",
+        help=f"registry index path (default: {_DEFAULT_REGISTRY})",
+    )
+
+
+def _add_pack_search_args(pack_sub: argparse._SubParsersAction) -> None:
+    """`pack search` (spec 128, US1): keyword + category discovery over the
+    reviewed static registry. Read-only: fetches and executes nothing."""
+    search_p = pack_sub.add_parser(
+        "search",
+        help="search the reviewed pack registry by keyword and/or category",
+    )
+    search_p.add_argument("--repo", default=".", help="repo root to read from")
+    _add_registry_arg(search_p)
+    search_p.add_argument(
+        "--query",
+        default=None,
+        metavar="KEYWORD",
+        help="keyword to match against id, category, author, compatibility",
+    )
+    search_p.add_argument(
+        "--category",
+        default=None,
+        choices=(
+            "kpi",
+            "source_vocabulary",
+            "warehouse_compatibility",
+            "regional_policy",
+            "accessibility",
+            "dashboard_blueprint",
+        ),
+        help="restrict results to one pack category",
+    )
+    search_p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the matches.",
+    )
+
+
+def _add_pack_inspect_args(pack_sub: argparse._SubParsersAction) -> None:
+    """`pack inspect` (spec 128, US2): the complete metadata record for one
+    pack id, including declared dependencies/conflicts. Read-only: fetches
+    nothing."""
+    inspect_p = pack_sub.add_parser(
+        "inspect",
+        help="show the complete registry record for one pack id",
+    )
+    inspect_p.add_argument("--repo", default=".", help="repo root to read from")
+    _add_registry_arg(inspect_p)
+    inspect_p.add_argument("id", metavar="PACK_ID", help="registry pack id")
+    inspect_p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the record.",
+    )
+
+
+def _add_pack_add_args(pack_sub: argparse._SubParsersAction) -> None:
+    """`pack add` (spec 128, US3): fetch -> verify hash -> verify schema ->
+    existing pack validation -> explicit, reviewable workspace addition. The
+    highest-risk subcommand; every step fails closed (FR-010)."""
+    add_p = pack_sub.add_parser(
+        "add",
+        help=(
+            "fetch, verify, and explicitly add one registry pack as a "
+            "reviewable workspace change (fails closed on any finding)"
+        ),
+    )
+    add_p.add_argument("--repo", default=".", help="repo root to read from/write into")
+    _add_registry_arg(add_p)
+    add_p.add_argument("id", metavar="PACK_ID", help="registry pack id to add")
+    add_p.add_argument(
+        "--dest",
+        default=None,
+        metavar="PATH",
+        help="destination directory (default: packs/added/<short-name>)",
+    )
+    add_p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the outcome.",
     )
 
 
@@ -223,6 +324,88 @@ def _add_benchmark_parser(sub: argparse._SubParsersAction) -> None:
         choices=("text", "json"),
         default="text",
         help="'text' (default) is human-readable; 'json' emits the matrix.",
+    )
+
+
+def _add_agent_parser(sub: argparse._SubParsersAction) -> None:
+    """`agent` verb group (spec 129): categorical PASS/BLOCKED/UNAVAILABLE
+    evidence that a shipped agent integration (`claude`/`codex`) installs
+    correctly and ships the governance contract intact. Static-first: never
+    launches a live agent, never opens a database, never emits a score,
+    rank, pass-rate, grade, or rolled-up "certified" verdict."""
+    agent_p = sub.add_parser(
+        "agent",
+        help=(
+            "agent integration compatibility evidence: verify install/version/"
+            "governance-contract/update/uninstall checks (no scores, no rank)"
+        ),
+    )
+    agent_sub = agent_p.add_subparsers(dest="agent_command", required=True)
+
+    verify_p = agent_sub.add_parser(
+        "verify",
+        help="run the required checks for one shipped agent integration",
+    )
+    verify_p.add_argument("--repo", default=".", help="repo root to read from")
+    verify_p.add_argument(
+        "--target",
+        required=True,
+        choices=("claude", "codex"),
+        help="the shipped agent integration to verify",
+    )
+    verify_p.add_argument(
+        "--output",
+        default=".seshat-output/agent-verify/record.json",
+        metavar="PATH",
+        help=(
+            "evidence record output under .seshat-output/ "
+            "(default: .seshat-output/agent-verify/record.json)"
+        ),
+    )
+    verify_p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help="'text' (default) is human-readable; 'json' emits the evidence record.",
+    )
+    verify_p.add_argument(
+        "--publish",
+        action="store_true",
+        help=(
+            "explicit publication intent, gated on a clean disclosure scan; "
+            "omit to keep the evidence record local-only (the default)"
+        ),
+    )
+
+
+def _add_watch_parser(sub: argparse._SubParsersAction) -> None:
+    """`watch` (spec 131): the ONE deliberate read-only CLI addition for
+    Portfolio Watch, mirroring the ratified ``status --format json``
+    precedent (FR-023, research D7) -- NOT a broad new verb family. Runs the
+    recurring, read-only, baseline-diffable portfolio summary: per governed
+    scope, the covered-dimension findings, open blockers, human-attention
+    flag, one prioritized next action, and new/resolved/unchanged change
+    labels against the local baseline snapshot. No DB, no gate, no score."""
+    p = sub.add_parser(
+        "watch",
+        help=(
+            "recurring read-only portfolio summary + baseline diff across "
+            "governed scopes (source drift, contract/metric drift, dashboard-"
+            "intent divergence, readiness, approvals, review) -- never a score"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to summarize")
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help=(
+            "'text' (default) is human-readable. 'json' emits the machine-"
+            "readable Portfolio Watch summary (schema_version 1.0) -- no "
+            "numeric health/confidence/priority score, ever."
+        ),
     )
 
 

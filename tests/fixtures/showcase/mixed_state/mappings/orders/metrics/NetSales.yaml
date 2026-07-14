@@ -1,0 +1,3 @@
+name: "NetSales"
+binds_to:
+  gold_table: "gold.fct_orders"

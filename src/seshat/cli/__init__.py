@@ -177,6 +177,8 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "pack": _lazy(".commands.pack", "pack_main"),
     "benchmark": _lazy(".commands.benchmark", "benchmark_main"),
     "explorer": _lazy(".commands.explorer", "explorer_main"),
+    "agent": _lazy(".commands.agent_verify", "agent_verify_main"),
+    "watch": _lazy(".commands.watch", "watch_main"),
     "mcp": _run_mcp,
 }
 

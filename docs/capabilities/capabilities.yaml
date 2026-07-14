@@ -554,6 +554,20 @@ capabilities:
     references:
       dispatch: "explorer"
 
+  - id: seshat-agent-verify
+    name: "seshat agent verify"
+    summary: "Categorical PASS/BLOCKED/UNAVAILABLE evidence that a shipped agent integration (claude/codex) installs correctly and ships the governance contract intact; static-first, never a score, rank, or certification."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "agent"
+    documentation: "docs/ecosystem/agent-verify.md"
+    references:
+      dispatch: "agent"
+
   # ---------------------------------------------------------------------------
   # Agent / companion (advisory skills, execution adapters not DB-execution-gated
   # here, and read-only/artifact-writing product modules)
@@ -739,6 +753,20 @@ capabilities:
       roadmap: "F025"
       skill: "pr-readiness-reviewer"
 
+  - id: friendly-pr-reviewer
+    name: "friendly PR reviewer"
+    summary: "Renders a plain-language narrative of one PR's already-produced review envelope: what changed, per-stage pass/warning/blocked status (verbatim), new/resolved/pre-existing findings, required approval authority, and exactly one next action. A presentation layer over shipped truth, distinct from the pr-readiness-reviewer merge verdict; no roadmap F-number self-assigned yet."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/friendly-pr-reviewer/SKILL.md"
+    references:
+      skill: "friendly-pr-reviewer"
+
   - id: readiness-viewer
     name: "readiness viewer"
     summary: "Stage-centric readiness lens: a per-stage status matrix across the kit's sources/tables/reports plus an approvals timeline."
@@ -797,6 +825,21 @@ capabilities:
     references:
       roadmap: "F012"
       skill: "retail-control-room"
+
+  - id: portfolio-watch
+    name: "portfolio watch"
+    summary: "Recurring, read-only portfolio summary joining source drift, contract/metric drift, dashboard-intent divergence, readiness, approvals, and review across every governed scope, with a persisted local baseline so new/resolved/unchanged conditions are diffable across runs; one prioritized next action per scope, never a score."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "watch"
+    documentation: ".claude/skills/portfolio-watch/SKILL.md"
+    references:
+      dispatch: "watch"
+      skill: "portfolio-watch"
 
   - id: report-intent-interview
     name: "report-intent-interview"
@@ -1107,3 +1150,17 @@ capabilities:
     command: null
     documentation: "docs/roadmap/seshat-bi-agent-controlled-user-tool-roadmap.md"
     references: {}
+
+  - id: showcase-build
+    name: "showcase build (Shareable Seshat Proof)"
+    summary: "Read-only composer over the shipped Explorer projection, Passport, and disclosure scanner: renders one offline, disclosure-scanned showcase bundle (per-table readiness detail, a truthful badge/card, a four-category disclosure manifest, and an optional before/after) -- no new CLI verb (ratified Option B)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/showcase-build/SKILL.md"
+    references:
+      skill: "showcase-build"

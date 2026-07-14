@@ -94,3 +94,10 @@ specs/038-tabular-editor-bpa-adapter/evidence/smoke-*.md
 # Generated ecosystem output (passports, benchmark runs, demo HTML, explorer).
 # Durable reference fixtures live in tracked source directories, never here.
 .seshat-output/
+
+# Portfolio Watch (spec 131): the local run summary + baseline-diff snapshot
+# (`retail watch`). Machine-local run output, regenerated every run; not a
+# gate, not a source of truth. Git-ignored by default (research D2) -- a team
+# that wants a reviewable committed baseline may deliberately un-ignore/commit
+# their own .seshat/watch/snapshot.json.
+.seshat/watch/

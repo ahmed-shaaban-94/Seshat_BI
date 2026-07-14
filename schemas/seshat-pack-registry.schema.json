@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seshat-bi.dev/schemas/pack-registry-1.0.json",
+  "title": "Seshat BI Pack Registry Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "records"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "category", "author", "source", "compatibility", "hash", "dependencies", "conflicts", "verification_state"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$"},
+          "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+          "category": {"enum": ["kpi", "source_vocabulary", "warehouse_compatibility", "regional_policy", "accessibility", "dashboard_blueprint"]},
+          "author": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "compatibility": {"type": "string", "pattern": "^[0-9]+\\.(x|[0-9]+)$"},
+          "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "dependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+          "conflicts": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+          "verification_state": {"enum": ["reviewed", "unreviewed", "deprecated"]},
+          "verification_evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

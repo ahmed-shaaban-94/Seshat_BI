@@ -1,0 +1,92 @@
+# Seshat BI public extension-pack registry (spec 128).
+#
+# A reviewed, version-controlled STATIC registry: tracked repository text,
+# no hosted marketplace, no dynamic index endpoint (Principle VIII). Every
+# record describes METADATA ABOUT a pack -- id, version, category, author,
+# source, compatibility, content hash, dependencies, conflicts, and a
+# categorical verification_state -- distinct from the pack's own manifest
+# (seshat-pack.yaml), which stays governed by the unchanged extension-pack
+# schema and validator.
+#
+# `verification_state: reviewed` is set ONLY by a named human reviewer
+# committing an edit to this file (never by the catalog tool at runtime;
+# hard-stop never_self_grant_approval). It is never a score, rank, or
+# percentage (hard-stop never_fabricate_a_confidence_score).
+#
+# Recorded `hash` values are the SHA-256 digest `seshat.packs.catalog
+# .content_digest` computes over the full pack directory (every file's
+# relative path + bytes, sorted). Recompute with:
+#   python -c "from seshat.packs.catalog import content_digest; \
+#     print(content_digest('<pack-directory>'))"
+schema_version: "1.0"
+records:
+  - id: seshat.reference.kpi-basic
+    version: "1.0.0"
+    category: kpi
+    author: "Seshat BI maintainers"
+    source: packs/reference/kpi-basic
+    compatibility: "1.x"
+    hash: 1d29121861da63cc3758e258ca31b740cead5562f323633f6b70fbe319cc89d6
+    dependencies: []
+    conflicts: []
+    verification_state: reviewed
+    verification_evidence:
+      - "Seshat BI maintainers reviewed this generic KPI-template pack (net
+         sales, average order value) before recording `reviewed`."
+
+  - id: seshat.reference.source-vocabulary-basic
+    version: "1.0.0"
+    category: source_vocabulary
+    author: "Seshat BI maintainers"
+    source: packs/reference/source-vocabulary-basic
+    compatibility: "1.x"
+    hash: ac62ff79d878275f8e533fc5d5537f9401e786ef66ce0a837b6355ae3c86d8e0
+    dependencies: []
+    conflicts: []
+    verification_state: reviewed
+    verification_evidence:
+      - "Seshat BI maintainers reviewed this generic retail source-vocabulary
+         pack before recording `reviewed`."
+
+  - id: seshat.reference.accessibility-basic
+    version: "1.0.0"
+    category: accessibility
+    author: "Seshat BI maintainers"
+    source: packs/reference/accessibility-basic
+    compatibility: "1.x"
+    hash: fc47170495577c48ed05eeae1f8d97ab241ccff19dc5ef81da9936a1c66a8b43
+    dependencies: []
+    conflicts: []
+    verification_state: reviewed
+    verification_evidence:
+      - "Seshat BI maintainers reviewed this baseline accessibility-checklist
+         pack before recording `reviewed`."
+
+  - id: seshat.registry.warehouse-notes-basic
+    version: "1.0.0"
+    category: warehouse_compatibility
+    author: "Seshat BI maintainers"
+    source: packs/registry/reference/warehouse-notes-basic
+    compatibility: "1.x"
+    hash: 1cb915c082ed2d2ca0567e727db818fe58a844e6d1fbe1e4a7ff4ede4032dc5e
+    dependencies: []
+    conflicts: []
+    verification_state: reviewed
+    verification_evidence:
+      - "Seshat BI maintainers reviewed this generic Postgres-dialect notes
+         pack before recording `reviewed`."
+
+  - id: seshat.registry.dashboard-starter-basic
+    version: "1.0.0"
+    category: dashboard_blueprint
+    author: "Seshat BI maintainers"
+    source: packs/registry/reference/dashboard-starter-basic
+    compatibility: "1.x"
+    hash: 6fbde2751c5831229d09d2793b84287fa8efcfa7c8a9bd639128fc01be1d9f63
+    dependencies: []
+    conflicts: []
+    # Unreviewed on purpose: seeded as a worked example of an unreviewed
+    # record so search/inspect can demonstrate FR-016 (absence of review is
+    # never presented as reviewed) without any live human sign-off needed.
+    verification_state: unreviewed
+    verification_evidence: []
