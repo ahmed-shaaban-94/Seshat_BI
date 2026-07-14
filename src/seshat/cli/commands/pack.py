@@ -262,12 +262,20 @@ def _run_add(args: argparse.Namespace) -> int:
                     "verification_state": outcome.verification_state,
                     "written": list(outcome.written),
                     "findings": list(outcome.findings),
+                    # A requested id can be "unknown" either because it was
+                    # never registered OR because a matching record was
+                    # excluded as a registry defect (schema-invalid,
+                    # duplicate) -- surfaced here so the highest-risk
+                    # operation never reports a defective registry as a
+                    # simple missing pack (RR-005/FR-020).
+                    "registry_findings": list(registry.findings),
                 },
                 indent=2,
             )
         )
     else:
         _print_add_text(outcome)
+        _print_registry_findings_text(registry.findings)
     return 0 if outcome.added else 1
 
 

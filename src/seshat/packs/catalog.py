@@ -249,16 +249,21 @@ def _selection_findings_for(
 def _dest_dir(
     root: Path, record: RegistryRecord, dest: Path | str | None
 ) -> Path | None:
-    if dest is not None:
-        try:
-            return resolve_within(root, dest)
-        except ValueError:
-            return None
+    """Resolve the add destination -- ALWAYS nested under DEFAULT_ADDED_ROOT,
+    never an arbitrary workspace path, even when ``--dest`` customizes the
+    subdirectory name. ``_existing_manifests`` only ever scans
+    DEFAULT_ADDED_ROOT for later dependency/conflict checks; a pack added
+    outside that tree would be invisible to every later add's selection
+    validation, silently defeating dependency/conflict detection."""
     short = record.id.rsplit(".", 1)[-1]
     try:
-        return resolve_within(root, Path(DEFAULT_ADDED_ROOT) / short)
+        added_root = resolve_within(root, DEFAULT_ADDED_ROOT)
+        target = resolve_within(root, dest) if dest is not None else added_root / short
     except ValueError:
         return None
+    if not target.is_relative_to(added_root):
+        return None
+    return target
 
 
 def _write_pack(pack_dir: Path, dest_dir: Path) -> list[str]:

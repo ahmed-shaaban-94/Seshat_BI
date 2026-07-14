@@ -252,3 +252,60 @@ def test_dest_is_existing_file_is_refused_as_collision(tmp_path: Path) -> None:
     assert outcome.status == "refused"
     assert {f["rule"] for f in outcome.findings} == {"pack_catalog_collision"}
     assert dest.read_text(encoding="utf-8") == "i am a file, not a directory"
+
+
+def test_custom_dest_outside_added_root_is_refused(tmp_path: Path) -> None:
+    """A custom --dest outside packs/added/ must be refused, not silently
+    allowed -- _existing_manifests only ever scans packs/added for later
+    dependency/conflict checks, so a pack added elsewhere would become
+    invisible to every subsequent add's selection validation."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/kpi", pack_id="acme.kpi")
+    registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.kpi",
+            source="packs/reference/kpi",
+            content_hash=content_digest(pack_dir),
+        )
+    )
+    outside_dest = repo / "somewhere-else" / "kpi"
+    outcome = add_pack(repo, registry, "acme.kpi", dest=str(outside_dest))
+    assert outcome.status == "refused"
+    assert {f["rule"] for f in outcome.findings} == {"pack_catalog_containment"}
+    assert not outside_dest.exists()
+
+
+def test_custom_dest_name_under_added_root_is_discoverable_later(
+    tmp_path: Path,
+) -> None:
+    """A custom --dest that DOES stay nested under packs/added/ must still
+    be discovered by a later add's dependency/conflict check."""
+    repo = build_test_repo(tmp_path)
+    base_dir = write_pack(repo, "packs/reference/base", pack_id="acme.base")
+    base_registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.base",
+            source="packs/reference/base",
+            content_hash=content_digest(base_dir),
+        )
+    )
+    custom_dest = repo / "packs/added/custom-name"
+    outcome = add_pack(repo, base_registry, "acme.base", dest=str(custom_dest))
+    assert outcome.status == "added"
+    assert (custom_dest / "seshat-pack.yaml").is_file()
+
+    dependent_dir = write_pack(
+        repo,
+        "packs/reference/dependent",
+        pack_id="acme.dependent",
+        requires=("acme.base",),
+    )
+    dependent_registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.dependent",
+            source="packs/reference/dependent",
+            content_hash=content_digest(dependent_dir),
+        )
+    )
+    outcome2 = add_pack(repo, dependent_registry, "acme.dependent")
+    assert outcome2.status == "added"

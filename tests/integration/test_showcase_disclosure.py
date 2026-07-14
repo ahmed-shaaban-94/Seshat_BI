@@ -7,6 +7,7 @@ INV-4, SC-005). Also exercises the documented write-path guard
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
@@ -240,6 +241,30 @@ def test_clean_brand_asset_is_embedded_from_the_scanned_bundle(
     assert bundle["brand_asset_svg"].startswith("<svg")
     html = render_showcase_html(bundle, repo=tmp_path)
     assert "data:image/svg+xml;base64," in html
+
+
+def test_private_url_in_brand_asset_is_stripped_not_embedded(tmp_path: Path) -> None:
+    """A private/internal URL embedded in the brand asset (scan_disclosure
+    itself has no private-URL rule) must be stripped by the same
+    normalize_portability pass every other composed field goes through --
+    never silently embedded verbatim into the rendered HTML just because the
+    brand asset was normalized separately (or not at all)."""
+    _base_table(tmp_path)
+    brand_dir = tmp_path / "assets" / "brand"
+    brand_dir.mkdir(parents=True)
+    (brand_dir / "seshat-seven-star.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg">'
+        "<!-- see http://admin.internal/logo.svg --></svg>",
+        encoding="utf-8",
+    )
+    bundle = build_showcase_bundle(tmp_path)
+    assert bundle["disclosure"]["status"] == "pass"
+    assert "admin.internal" not in bundle["brand_asset_svg"]
+    assert "[private URL removed]" in bundle["brand_asset_svg"]
+    html = render_showcase_html(bundle, repo=tmp_path)
+    encoded = html.split("base64,", 1)[1].split('"', 1)[0]
+    decoded = base64.b64decode(encoded).decode("utf-8")
+    assert "admin.internal" not in decoded
 
 
 def test_pass_without_evidence_invariant_is_carried_and_blocks(tmp_path: Path) -> None:

@@ -106,3 +106,33 @@ def test_add_result_carries_contributor_attribution(tmp_path: Path, capsys) -> N
     text_output = capsys.readouterr().out
     assert "author: Test Author" in text_output
     assert "verification_state: reviewed" in text_output
+
+
+def test_add_surfaces_registry_defects_for_a_duplicated_id(
+    tmp_path: Path, capsys
+) -> None:
+    """When the requested id only exists as records excluded by a registry
+    defect (duplicate id+version), add must report the registry defect
+    rather than letting a defective registry look like a simple missing
+    pack (pack_catalog_unknown_id with no explanation)."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/kpi", pack_id="acme.kpi")
+    dup = record_dict(
+        pack_id="acme.kpi",
+        source="packs/reference/kpi",
+        content_hash=content_digest(pack_dir),
+    )
+    write_registry(repo, [dup, dict(dup)])
+
+    assert (
+        main(
+            ["pack", "add", "--repo", str(repo), "acme.kpi", "--format", "json"],
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "refused"
+    assert any(
+        f["rule"] == "pack_registry_duplicate_record"
+        for f in payload["registry_findings"]
+    )

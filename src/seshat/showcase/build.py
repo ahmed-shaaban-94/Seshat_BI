@@ -82,11 +82,19 @@ def build_showcase_bundle(
             "tables": projection["tables"],
             "lineage": projection["lineage"],
             "comparison": comparison_raw,
+            # Routed through the SAME normalize_portability pass as
+            # everything else (not scanned separately) so a private/
+            # internal URL embedded in the brand SVG is stripped exactly
+            # like one anywhere else in the composed body -- scan_disclosure
+            # itself has no private-URL rule; that coverage lives only in
+            # this normalization step.
+            "brand_asset_svg": brand_asset_svg or "",
         },
     )
     tables = normalized["tables"]
     lineage = normalized["lineage"]
     comparison = normalized["comparison"]
+    brand_asset_svg = normalized["brand_asset_svg"]
 
     badge = build_badge(tables)
     manifest = build_manifest(tables, lineage, redactions)
@@ -103,7 +111,7 @@ def build_showcase_bundle(
         # rendered HTML embeds are the exact bytes the fail-closed scan
         # inspected -- render_showcase_html reads this field, never the
         # workspace file directly (closes the brand-asset disclosure gap).
-        "brand_asset_svg": brand_asset_svg or "",
+        "brand_asset_svg": brand_asset_svg,
     }
 
     disclosure = scan_disclosure(composed_body)
