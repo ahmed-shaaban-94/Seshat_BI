@@ -26,6 +26,14 @@ _CREDENTIAL_LITERAL = re.compile(
 _CONNECTION_LITERAL = re.compile(
     r"(?i)\b(?:server|host|data[ _]?source|initial[ _]?catalog)\s*=\s*['\"]"
 )
+# Power Query M data-source calls with a literal string argument, e.g.
+# ``Sql.Database("prod.internal", "DW")`` or ``PostgreSQL.Database("host", ...)``.
+# A parameterized call over identifiers -- ``PostgreSQL.Database(Server, Database)``
+# -- is the safe form and is deliberately NOT matched (no quote after the paren).
+_CONNECTION_M_SOURCE = re.compile(
+    r"(?i)\b[A-Za-z][A-Za-z0-9]*\.(?:databases?|datasource|contents|query|tables?)"
+    r"\s*\(\s*['\"][^'\"]+['\"]"
+)
 # Redaction patterns: these also consume the assigned value (quoted or bare) so
 # ``_safe_detail`` removes the secret itself, not just its key.
 _CREDENTIAL_REDACT = re.compile(
