@@ -189,6 +189,14 @@ unit-tested against a live API.
 - **A very large finding set**: the summary groups by stage/kind and caps the
   per-group detail predictably (a stable, documented cap), never truncates
   silently in a way that hides a blocker.
+- **Line-shift churn (fingerprint identity limitation)**: because
+  `finding_fingerprint` includes the locator (`path:line:col`), a finding that
+  merely SHIFTS LINES between base and head (unchanged rule/severity/message, moved
+  by an edit above it) gets a new fingerprint and would be reported as one RESOLVED
+  + one NEW rather than carried-over. v1 accepts this as a known limitation
+  (see Assumptions) and MUST NOT claim the diff is line-shift-tolerant; the summary
+  states the diff is keyed on the exact shipped fingerprint so a reader is not
+  misled about its precision.
 
 ## Requirements *(mandatory)*
 
@@ -378,5 +386,19 @@ unit-tested against a live API.
   `readiness_evidence._scrub`); no new redaction engine is authored.
 - The feature is per-PR (a portfolio / multi-PR roll-up is out of scope for v1),
   matching the F025 per-PR scope.
+- **Fingerprint diff is line-position-sensitive (known v1 limitation)**: the
+  temporal diff keys on the shipped `finding_fingerprint`, which includes the
+  locator line/column. A pure line SHIFT (an unrelated edit above a finding) can
+  therefore surface a stable finding as one RESOLVED + one NEW (a false-new). v1
+  accepts this rather than inventing a location-tolerant identity that would
+  diverge from the shipped fingerprint (the reuse-not-rebuild rule, FR-001). A
+  future spec may adopt a more location-tolerant identity (closer to GitHub's
+  `partialFingerprints` semantics) if the false-new noise proves material; the
+  summary is honest about the diff's precision in the meantime (see Edge Cases).
+- The lineage surfaces (`cross-table-lineage`, kpi-derivation-lineage) are an
+  OPTIONAL enrichment for the affected-artifact narrative in v1 (FR-004 works from
+  the envelope alone); deeper lineage-driven "which measures/dashboards changed
+  downstream" is not required for the MVP and is not claimed beyond what the design
+  specifies.
 - Depends on the already-shipped review/SARIF/readiness/lineage surfaces
   remaining on `main`; it adds the presentation seam, not the underlying truth.
