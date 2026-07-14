@@ -83,6 +83,16 @@ def _stage_transition(
     }
 
 
+def _table_transitions(
+    table_id: Any, before_stages: dict[str, Any], after_stages: dict[str, Any]
+) -> list[dict[str, Any]]:
+    candidates = (
+        _stage_transition(table_id, stage, before_stages.get(stage), after_block)
+        for stage, after_block in after_stages.items()
+    )
+    return [transition for transition in candidates if transition is not None]
+
+
 def _stage_transitions(
     before_stages_by_table: dict[Any, dict[str, Any]],
     after_stages_by_table: dict[Any, dict[str, Any]],
@@ -92,19 +102,23 @@ def _stage_transitions(
         before_stages = before_stages_by_table.get(table_id)
         if not isinstance(before_stages, dict):
             continue
-        for stage, after_block in after_stages.items():
-            transition = _stage_transition(
-                table_id, stage, before_stages.get(stage), after_block
-            )
-            if transition is not None:
-                transitions.append(transition)
+        transitions.extend(_table_transitions(table_id, before_stages, after_stages))
     return transitions
+
+
+def _has_two_snapshots(snapshots: tuple[Any, Any]) -> bool:
+    if len(snapshots) != 2:
+        return False
+    before_ref, after_ref = snapshots
+    if before_ref is None:
+        return False
+    return after_ref is not None
 
 
 def _absence_reason(snapshots: tuple[Any, Any] | None) -> str | None:
     if not snapshots:
         return "no snapshots were supplied"
-    if len(snapshots) != 2 or snapshots[0] is None or snapshots[1] is None:
+    if not _has_two_snapshots(snapshots):
         return "only one snapshot was supplied"
     return None
 
