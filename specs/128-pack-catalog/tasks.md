@@ -79,7 +79,7 @@
 - [ ] T019 [P] [US3] Write hashing unit tests: SHA-256 over declarative content matches recorded hash; any byte change flips the verdict in `tests/unit/test_pack_catalog_hash.py` (FR-008).
 - [ ] T020 [P] [US3] Write catalog fail-closed unit tests, one refusal class each: unknown id, hash mismatch (tamper), schema-invalid record, schema-invalid content, incompatible core, missing/dangling source, containment escape, disclosure hit, existing-validation finding, workspace collision -- each adds NOTHING and returns a disclosure-safe finding in `tests/unit/test_pack_catalog_fail_closed.py` (FR-008, FR-009, FR-010, FR-014, FR-019, FR-022).
 - [ ] T021 [P] [US3] Write reuse-boundary tests asserting the catalog calls the SHIPPED `validate_pack` / `validate_selection` for content verdicts and the SHIPPED `scan_disclosure` / `resolve_within` for secrets/containment (no re-implementation) in `tests/unit/test_pack_catalog_reuse.py` (RR-001..RR-004, SC-005).
-- [ ] T022 [P] [US3] Write no-side-effect tests: after a successful add no readiness stage advanced, no approval granted, no activation/toggle file written; added content is inert until explicitly selected in `tests/unit/test_pack_catalog_no_activation.py` (FR-011, FR-012, FR-013, SC-006).
+- [ ] T022 [P] [US3] Write no-side-effect tests: after a successful add no readiness stage advanced, no approval granted, no activation/toggle file written, and no database write / Power BI modification / publish occurred; the only write is local workspace content; added content is inert until explicitly selected in `tests/unit/test_pack_catalog_no_activation.py` (FR-011, FR-012, FR-013, FR-018, SC-006).
 
 ### Implementation
 
@@ -106,6 +106,7 @@
 - [ ] T034 [P] Add an attribution invariant test: `author` is present and unaltered through search/inspect/add and never conflated with the manifest `owner` in `tests/unit/test_pack_catalog_attribution.py` (FR-017, SC-007).
 - [ ] T035 Author `specs/128-pack-catalog/quickstart.md` acceptance walkthrough (clean search -> inspect -> add + tamper refusal + incompatible refusal) and confirm it matches the shipped behavior.
 - [ ] T036 Run and record green `retail check`, `retail semantic-check`, `retail kit-lint`, `ruff format --check`, `ruff check`, and `pytest -m unit`; confirm the shipped `pack scaffold`/`validate` behavior is unchanged (RR-006).
+- [ ] T037 [P] Add an offline-guarantee test asserting the entire search/inspect/add flow runs against a checked-out static registry with NO network access and NO database (no socket, no driver import) in `tests/integration/test_pack_catalog_offline.py` (FR-001, FR-018, SC-009).
 
 ---
 
