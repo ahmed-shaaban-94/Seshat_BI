@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.3.1] -- 2026-07-14
+
 ### Fixed
 - **`prepare-coordinated-release` commit-subject P2 mismatch**: the workflow's
   auto-generated release-branch commit used the subject `release: prepare
