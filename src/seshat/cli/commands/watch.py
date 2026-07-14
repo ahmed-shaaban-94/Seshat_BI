@@ -11,6 +11,55 @@ import argparse
 import json
 
 
+def _dimension_line(dim: dict) -> str:
+    cls = f" [{dim['class']}]" if dim.get("class") else ""
+    return f"  {dim['dimension']}: {dim['state']}{cls}"
+
+
+def _change_line(change: dict) -> str:
+    return (
+        f"  change: {change['dimension']}/{change['subject_locator']} "
+        f"-> {change['label']}"
+    )
+
+
+def _attention_lines(scope: dict) -> list[str]:
+    attention = scope.get("requires_human_attention")
+    lines = [f"  requires_human_attention: {attention}"]
+    if attention:
+        lines.append(f"    owner: {scope.get('owner')}")
+    return lines
+
+
+def _scope_lines(scope: dict) -> list[str]:
+    lines = [
+        f"{scope['scope_id']} ({scope['source_path']})",
+        f"  current_stage: {scope['current_stage']}",
+    ]
+    lines.extend(_dimension_line(dim) for dim in scope.get("dimensions", []))
+    lines.extend(
+        f"  open_blocker: {reason}" for reason in scope.get("open_blockers", [])
+    )
+    lines.extend(_attention_lines(scope))
+    action = scope["prioritized_next_action"]
+    lines.append(f"  next_action [{action['category']}]: {action['action']}")
+    lines.extend(_change_line(change) for change in scope.get("change_labels", []))
+    lines.append("")
+    return lines
+
+
+def _portfolio_lines(summary: dict) -> list[str]:
+    portfolio = summary.get("portfolio", {})
+    lines = [
+        f"portfolio: {portfolio.get('scope_count', 0)} scope(s), "
+        f"{portfolio.get('scopes_requiring_attention_count', 0)} requiring attention"
+    ]
+    baseline = summary.get("baseline")
+    if baseline is not None and not baseline.get("used", True):
+        lines.append(f"baseline: {baseline.get('note', 'no prior snapshot available')}")
+    return lines
+
+
 def _render_text(summary: dict) -> str:
     """Human-readable rendering: stage/blockers/attention/next-action per
     scope, plus the change labels -- never a score. Mirrors ``status``'s
@@ -19,36 +68,8 @@ def _render_text(summary: dict) -> str:
     if not scopes:
         lines = ["retail watch: no governed scopes found under mappings/."]
     else:
-        lines = []
-        for scope in scopes:
-            lines.append(f"{scope['scope_id']} ({scope['source_path']})")
-            lines.append(f"  current_stage: {scope['current_stage']}")
-            for dim in scope.get("dimensions", []):
-                state = dim["state"]
-                cls = f" [{dim['class']}]" if dim.get("class") else ""
-                lines.append(f"  {dim['dimension']}: {state}{cls}")
-            for reason in scope.get("open_blockers", []):
-                lines.append(f"  open_blocker: {reason}")
-            attention = scope.get("requires_human_attention")
-            lines.append(f"  requires_human_attention: {attention}")
-            if attention:
-                lines.append(f"    owner: {scope.get('owner')}")
-            action = scope["prioritized_next_action"]
-            lines.append(f"  next_action [{action['category']}]: {action['action']}")
-            for change in scope.get("change_labels", []):
-                lines.append(
-                    f"  change: {change['dimension']}/{change['subject_locator']} "
-                    f"-> {change['label']}"
-                )
-            lines.append("")
-    portfolio = summary.get("portfolio", {})
-    lines.append(
-        f"portfolio: {portfolio.get('scope_count', 0)} scope(s), "
-        f"{portfolio.get('scopes_requiring_attention_count', 0)} requiring attention"
-    )
-    baseline = summary.get("baseline")
-    if baseline is not None and not baseline.get("used", True):
-        lines.append(f"baseline: {baseline.get('note', 'no prior snapshot available')}")
+        lines = [line for scope in scopes for line in _scope_lines(scope)]
+    lines.extend(_portfolio_lines(summary))
     return "\n".join(lines).rstrip("\n")
 
 

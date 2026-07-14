@@ -70,54 +70,65 @@ def commit_all(root: Path, message: str = "update") -> None:
     )
 
 
-def write_readiness_status(
-    root: Path,
-    scope_dir: str,
-    *,
-    table: str | None = None,
-    current_stage: str = "mapping_ready",
-    stage_status: dict[str, str] | None = None,
-    stage_blocking_reasons: dict[str, list[str]] | None = None,
-    top_blocking_reasons: list[str] | None = None,
-    next_action: str = "do the next thing",
-    approvals: list[dict[str, str]] | None = None,
-) -> Path:
-    """Write a minimal, valid ``readiness-status.yaml`` for one scope. Every
-    stage defaults to ``not_started`` with no evidence/blockers; override via
-    ``stage_status`` / ``stage_blocking_reasons``."""
-    stage_status = stage_status or {}
-    stage_blocking_reasons = stage_blocking_reasons or {}
-    top_blocking_reasons = top_blocking_reasons or []
-    table_name = table or scope_dir
+def _blocking_reasons_lines(reasons: list[str], *, indent: str) -> list[str]:
+    if not reasons:
+        return [f"{indent}blocking_reasons: []"]
+    return [f"{indent}blocking_reasons:"] + [
+        f'{indent}  - "{reason}"' for reason in reasons
+    ]
 
-    lines = [f'table: "{table_name}"', f'current_stage: "{current_stage}"', "stages:"]
+
+def _stage_lines(
+    stage_status: dict[str, str], stage_blocking_reasons: dict[str, list[str]]
+) -> list[str]:
+    lines: list[str] = []
     for stage in DEFAULT_STAGES:
         status = stage_status.get(stage, "not_started")
         reasons = stage_blocking_reasons.get(stage, [])
         lines.append(f"  {stage}:")
         lines.append(f'    status: "{status}"')
         lines.append("    evidence: []")
-        if reasons:
-            lines.append("    blocking_reasons:")
-            for reason in reasons:
-                lines.append(f'      - "{reason}"')
-        else:
-            lines.append("    blocking_reasons: []")
+        lines.extend(_blocking_reasons_lines(reasons, indent="    "))
+    return lines
+
+
+def _approval_lines(approvals: list[dict[str, str]] | None) -> list[str]:
+    if not approvals:
+        return ["approvals: []"]
+    lines = ["approvals:"]
+    for entry in approvals:
+        lines.append(f'  - stage: "{entry["stage"]}"')
+        lines.append(f'    owner: "{entry["owner"]}"')
+        lines.append(f'    at: "{entry.get("at", "2026-01-01")}"')
+    return lines
+
+
+def write_readiness_status(root: Path, scope_dir: str, **overrides: object) -> Path:
+    """Write a minimal, valid ``readiness-status.yaml`` for one scope. Every
+    stage defaults to ``not_started`` with no evidence/blockers; override via
+    ``stage_status`` / ``stage_blocking_reasons``. Collapsed to ``**overrides``
+    purely to keep the declared parameter count low -- every existing call
+    site is unaffected since Python resolves keyword arguments into
+    ``overrides`` transparently.
+
+    Recognized overrides: ``table``, ``current_stage`` (default
+    ``"mapping_ready"``), ``stage_status``, ``stage_blocking_reasons``,
+    ``top_blocking_reasons``, ``next_action`` (default
+    ``"do the next thing"``), ``approvals``.
+    """
+    current_stage = overrides.get("current_stage", "mapping_ready")
+    stage_status = overrides.get("stage_status") or {}
+    stage_blocking_reasons = overrides.get("stage_blocking_reasons") or {}
+    top_blocking_reasons = overrides.get("top_blocking_reasons") or []
+    next_action = overrides.get("next_action", "do the next thing")
+    approvals = overrides.get("approvals")
+    table_name = overrides.get("table") or scope_dir
+
+    lines = [f'table: "{table_name}"', f'current_stage: "{current_stage}"', "stages:"]
+    lines.extend(_stage_lines(stage_status, stage_blocking_reasons))
     lines.append("evidence: []")
-    if top_blocking_reasons:
-        lines.append("blocking_reasons:")
-        for reason in top_blocking_reasons:
-            lines.append(f'  - "{reason}"')
-    else:
-        lines.append("blocking_reasons: []")
-    if approvals:
-        lines.append("approvals:")
-        for entry in approvals:
-            lines.append(f'  - stage: "{entry["stage"]}"')
-            lines.append(f'    owner: "{entry["owner"]}"')
-            lines.append(f'    at: "{entry.get("at", "2026-01-01")}"')
-    else:
-        lines.append("approvals: []")
+    lines.extend(_blocking_reasons_lines(top_blocking_reasons, indent=""))
+    lines.extend(_approval_lines(approvals))
     lines.append(f'next_action: "{next_action}"')
 
     path = root / "mappings" / scope_dir / "readiness-status.yaml"
@@ -140,47 +151,48 @@ def write_source_profile(root: Path, scope_dir: str) -> Path:
     return path
 
 
-def drift_artifact(
-    *,
-    schema_version: str = "1.0",
-    captured_at_revision: str | None = None,
-    live_leg_available: bool = True,
-    class_: str = "no_drift",
-    measured: str = "0 findings",
-    owner: str | None = None,
-    items: list[dict] | None = None,
-) -> dict:
+def _artifact_doc(defaults: dict, overrides: dict) -> dict:
+    """Shared builder behind ``drift_artifact``/``generic_artifact``: merge
+    ``overrides`` onto ``defaults``, then include ``live_leg_available`` /
+    ``owner`` / ``items`` only when the merged value is not ``None`` (so
+    ``generic_artifact``, whose defaults never declare ``live_leg_available``,
+    never gets that key at all)."""
+    merged = {**defaults, **overrides}
     doc: dict = {
-        "schema_version": schema_version,
-        "captured_at_revision": captured_at_revision,
-        "live_leg_available": live_leg_available,
-        "class": class_,
-        "measured": measured,
+        "schema_version": merged["schema_version"],
+        "captured_at_revision": merged["captured_at_revision"],
+        "class": merged["class_"],
+        "measured": merged["measured"],
     }
-    if owner is not None:
-        doc["owner"] = owner
-    if items is not None:
-        doc["items"] = items
+    if merged.get("live_leg_available") is not None:
+        doc["live_leg_available"] = merged["live_leg_available"]
+    if merged.get("owner") is not None:
+        doc["owner"] = merged["owner"]
+    if merged.get("items") is not None:
+        doc["items"] = merged["items"]
     return doc
 
 
-def generic_artifact(
-    *,
-    schema_version: str = "1.0",
-    captured_at_revision: str | None = None,
-    class_: str = "pass",
-    measured: str = "1 item checked",
-    owner: str | None = None,
-    items: list[dict] | None = None,
-) -> dict:
-    doc: dict = {
-        "schema_version": schema_version,
-        "captured_at_revision": captured_at_revision,
-        "class": class_,
-        "measured": measured,
+def drift_artifact(**overrides: object) -> dict:
+    defaults = {
+        "schema_version": "1.0",
+        "captured_at_revision": None,
+        "live_leg_available": True,
+        "class_": "no_drift",
+        "measured": "0 findings",
+        "owner": None,
+        "items": None,
     }
-    if owner is not None:
-        doc["owner"] = owner
-    if items is not None:
-        doc["items"] = items
-    return doc
+    return _artifact_doc(defaults, overrides)
+
+
+def generic_artifact(**overrides: object) -> dict:
+    defaults = {
+        "schema_version": "1.0",
+        "captured_at_revision": None,
+        "class_": "pass",
+        "measured": "1 item checked",
+        "owner": None,
+        "items": None,
+    }
+    return _artifact_doc(defaults, overrides)

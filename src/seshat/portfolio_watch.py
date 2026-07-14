@@ -306,6 +306,135 @@ def _parse_items(raw: object) -> tuple[DimensionItem, ...]:
     return tuple(items)
 
 
+def _missing_artifact_finding(
+    dimension: str, scope_dir: Path, surface: str
+) -> CoveredDimensionFinding:
+    if dimension != "source_drift":
+        return CoveredDimensionFinding(
+            dimension=dimension,
+            state=STATE_NOT_APPLICABLE,
+            measured="no evidence produced yet for this scope",
+            source_surface=surface,
+        )
+    baseline = scope_dir / "source-profile.md"
+    if baseline.is_file():
+        return CoveredDimensionFinding(
+            dimension=dimension,
+            state=STATE_PENDING_LIVE,
+            measured=(
+                "a baseline source-profile.md is recorded but no "
+                "live re-profile has been captured yet"
+            ),
+            source_surface=surface,
+        )
+    return CoveredDimensionFinding(
+        dimension=dimension,
+        state=STATE_NOT_APPLICABLE,
+        measured="no baseline source-profile.md recorded for this scope",
+        source_surface=surface,
+    )
+
+
+def _is_stale_captured_at(captured_at: object, source_revision: str | None) -> bool:
+    return (
+        source_revision is not None
+        and isinstance(captured_at, str)
+        and bool(captured_at)
+        and captured_at != source_revision
+    )
+
+
+def _stale_artifact_finding(
+    dimension: str,
+    data: dict[str, Any],
+    rel_artifact: str,
+    surface: str,
+    source_revision: str | None,
+) -> CoveredDimensionFinding | None:
+    captured_at = data.get("captured_at_revision")
+    if not _is_stale_captured_at(captured_at, source_revision):
+        return None
+    return CoveredDimensionFinding(
+        dimension=dimension,
+        state=STATE_STALE,
+        class_=data.get("class") if isinstance(data.get("class"), str) else None,
+        measured=f"captured_at_revision={captured_at} vs current={source_revision}",
+        evidence=rel_artifact,
+        owner=data.get("owner") if isinstance(data.get("owner"), str) else None,
+        source_surface=surface,
+    )
+
+
+def _pending_live_artifact_finding(
+    dimension: str, data: dict[str, Any], rel_artifact: str, surface: str
+) -> CoveredDimensionFinding | None:
+    if dimension != "source_drift" or data.get("live_leg_available") is not False:
+        return None
+    return CoveredDimensionFinding(
+        dimension=dimension,
+        state=STATE_PENDING_LIVE,
+        class_=data.get("class") if isinstance(data.get("class"), str) else None,
+        measured=data.get("measured")
+        if isinstance(data.get("measured"), str)
+        else "live re-profile not available",
+        evidence=rel_artifact,
+        source_surface=surface,
+    )
+
+
+def _covered_artifact_finding(
+    dimension: str, data: dict[str, Any], rel_artifact: str, surface: str
+) -> CoveredDimensionFinding:
+    cls = data.get("class")
+    if not isinstance(cls, str) or not cls:
+        return CoveredDimensionFinding(
+            dimension=dimension,
+            state=STATE_UNREADABLE,
+            measured="artifact is missing a required 'class' field",
+            evidence=rel_artifact,
+            source_surface=surface,
+        )
+    return CoveredDimensionFinding(
+        dimension=dimension,
+        state=STATE_COVERED,
+        class_=cls,
+        measured=data.get("measured")
+        if isinstance(data.get("measured"), str)
+        else None,
+        evidence=rel_artifact,
+        owner=data.get("owner") if isinstance(data.get("owner"), str) else None,
+        source_surface=surface,
+        items=_parse_items(data.get("items")),
+    )
+
+
+def _parsed_artifact_finding(
+    dimension: str,
+    data: dict[str, Any],
+    rel_artifact: str,
+    surface: str,
+    source_revision: str | None,
+) -> CoveredDimensionFinding:
+    schema_version = data.get("schema_version")
+    if schema_version != _ARTIFACT_SCHEMA_VERSION:
+        return CoveredDimensionFinding(
+            dimension=dimension,
+            state=STATE_UNREADABLE,
+            measured=f"unknown schema_version {schema_version!r}",
+            evidence=rel_artifact,
+            source_surface=surface,
+        )
+    stale = _stale_artifact_finding(
+        dimension, data, rel_artifact, surface, source_revision
+    )
+    if stale is not None:
+        return stale
+    pending = _pending_live_artifact_finding(dimension, data, rel_artifact, surface)
+    if pending is not None:
+        return pending
+    return _covered_artifact_finding(dimension, data, rel_artifact, surface)
+
+
 def _artifact_dimension_finding(
     dimension: str,
     root: Path,
@@ -327,30 +456,7 @@ def _artifact_dimension_finding(
 
     try:
         if not artifact_path.is_file():
-            if dimension == "source_drift":
-                baseline = scope_dir / "source-profile.md"
-                if baseline.is_file():
-                    return CoveredDimensionFinding(
-                        dimension=dimension,
-                        state=STATE_PENDING_LIVE,
-                        measured=(
-                            "a baseline source-profile.md is recorded but no "
-                            "live re-profile has been captured yet"
-                        ),
-                        source_surface=surface,
-                    )
-                return CoveredDimensionFinding(
-                    dimension=dimension,
-                    state=STATE_NOT_APPLICABLE,
-                    measured="no baseline source-profile.md recorded for this scope",
-                    source_surface=surface,
-                )
-            return CoveredDimensionFinding(
-                dimension=dimension,
-                state=STATE_NOT_APPLICABLE,
-                measured="no evidence produced yet for this scope",
-                source_surface=surface,
-            )
+            return _missing_artifact_finding(dimension, scope_dir, surface)
 
         rel_artifact = artifact_path.relative_to(root).as_posix()
         data, err = _read_json(artifact_path)
@@ -362,73 +468,8 @@ def _artifact_dimension_finding(
                 evidence=rel_artifact,
                 source_surface=surface,
             )
-
-        schema_version = data.get("schema_version")
-        if schema_version != _ARTIFACT_SCHEMA_VERSION:
-            return CoveredDimensionFinding(
-                dimension=dimension,
-                state=STATE_UNREADABLE,
-                measured=f"unknown schema_version {schema_version!r}",
-                evidence=rel_artifact,
-                source_surface=surface,
-            )
-
-        captured_at = data.get("captured_at_revision")
-        if (
-            source_revision is not None
-            and isinstance(captured_at, str)
-            and captured_at
-            and captured_at != source_revision
-        ):
-            return CoveredDimensionFinding(
-                dimension=dimension,
-                state=STATE_STALE,
-                class_=data.get("class")
-                if isinstance(data.get("class"), str)
-                else None,
-                measured=(
-                    f"captured_at_revision={captured_at} vs current={source_revision}"
-                ),
-                evidence=rel_artifact,
-                owner=data.get("owner") if isinstance(data.get("owner"), str) else None,
-                source_surface=surface,
-            )
-
-        if dimension == "source_drift" and data.get("live_leg_available") is False:
-            return CoveredDimensionFinding(
-                dimension=dimension,
-                state=STATE_PENDING_LIVE,
-                class_=data.get("class")
-                if isinstance(data.get("class"), str)
-                else None,
-                measured=data.get("measured")
-                if isinstance(data.get("measured"), str)
-                else "live re-profile not available",
-                evidence=rel_artifact,
-                source_surface=surface,
-            )
-
-        cls = data.get("class")
-        if not isinstance(cls, str) or not cls:
-            return CoveredDimensionFinding(
-                dimension=dimension,
-                state=STATE_UNREADABLE,
-                measured="artifact is missing a required 'class' field",
-                evidence=rel_artifact,
-                source_surface=surface,
-            )
-
-        return CoveredDimensionFinding(
-            dimension=dimension,
-            state=STATE_COVERED,
-            class_=cls,
-            measured=data.get("measured")
-            if isinstance(data.get("measured"), str)
-            else None,
-            evidence=rel_artifact,
-            owner=data.get("owner") if isinstance(data.get("owner"), str) else None,
-            source_surface=surface,
-            items=_parse_items(data.get("items")),
+        return _parsed_artifact_finding(
+            dimension, data, rel_artifact, surface, source_revision
         )
     except OSError as exc:  # pragma: no cover - defensive, mirrors FR-022
         return CoveredDimensionFinding(
@@ -592,6 +633,69 @@ def _finding_to_dict(finding: CoveredDimensionFinding) -> dict[str, Any]:
     }
 
 
+_ARTIFACT_DIMENSION_NAMES: tuple[str, ...] = (
+    "source_drift",
+    "contract_metric_drift",
+    "dashboard_intent_divergence",
+    "review",
+)
+
+
+def _scope_dimensions(
+    scope: GovernedScope,
+    entry: dict[str, Any] | None,
+    inbox_items: list[dict[str, Any]],
+    root: Path,
+    revision: str | None,
+) -> dict[str, CoveredDimensionFinding]:
+    dims: dict[str, CoveredDimensionFinding] = {
+        "readiness": _readiness_dimension_finding(scope, entry),
+        "approvals": _approvals_dimension_finding(scope, inbox_items),
+    }
+    for dimension in _ARTIFACT_DIMENSION_NAMES:
+        dims[dimension] = _artifact_dimension_finding(dimension, root, scope, revision)
+    return dims
+
+
+def _dimension_keys(
+    scope_id: str, dims: dict[str, CoveredDimensionFinding]
+) -> set[tuple[str, str, str, str]]:
+    return {
+        (scope_id, dim_name, item.class_, item.subject_locator)
+        for dim_name, finding in dims.items()
+        for item in finding.items
+    }
+
+
+def _artifact_dims_evidenced(dims: dict[str, CoveredDimensionFinding]) -> bool:
+    return any(
+        dims[name].state != STATE_NOT_APPLICABLE for name in _ARTIFACT_DIMENSION_NAMES
+    )
+
+
+def _scope_document(
+    scope: GovernedScope,
+    entry: dict[str, Any] | None,
+    dims: dict[str, CoveredDimensionFinding],
+) -> dict[str, Any]:
+    next_action = select_next_action(entry)
+    attention, owner = _requires_attention(dims)
+    open_blockers = list(entry.get("blocking_reasons", [])) if entry else []
+    return {
+        "scope_id": scope.scope_id,
+        "source_path": scope.source_path,
+        "current_stage": scope.current_stage,
+        "dimensions": [_finding_to_dict(dims[d]) for d in DIMENSIONS],
+        "open_blockers": open_blockers,
+        "requires_human_attention": attention,
+        "owner": owner,
+        "prioritized_next_action": {
+            "category": next_action.category,
+            "action": next_action.action,
+        },
+    }
+
+
 def _assemble(
     root: Path,
 ) -> tuple[dict[str, Any], frozenset[tuple[str, str, str, str]]]:
@@ -606,64 +710,17 @@ def _assemble(
 
     scope_docs: list[dict[str, Any]] = []
     scopes_with_no_evidence: list[str] = []
-    attention_count = 0
     all_keys: set[tuple[str, str, str, str]] = set()
 
     for scope in scopes:
         entry = by_path.get(scope.source_path)
-        dims: dict[str, CoveredDimensionFinding] = {
-            "readiness": _readiness_dimension_finding(scope, entry),
-            "approvals": _approvals_dimension_finding(scope, inbox_items),
-        }
-        for dimension in (
-            "source_drift",
-            "contract_metric_drift",
-            "dashboard_intent_divergence",
-            "review",
-        ):
-            dims[dimension] = _artifact_dimension_finding(
-                dimension, root, scope, revision
-            )
-
-        for dim_name, finding in dims.items():
-            for item in finding.items:
-                all_keys.add(
-                    (scope.scope_id, dim_name, item.class_, item.subject_locator)
-                )
-
-        next_action = select_next_action(entry)
-        attention, owner = _requires_attention(dims)
-        if attention:
-            attention_count += 1
-
-        artifact_dims_evidenced = any(
-            dims[name].state != STATE_NOT_APPLICABLE
-            for name in (
-                "source_drift",
-                "contract_metric_drift",
-                "dashboard_intent_divergence",
-                "review",
-            )
-        )
-        if not artifact_dims_evidenced:
+        dims = _scope_dimensions(scope, entry, inbox_items, root, revision)
+        all_keys |= _dimension_keys(scope.scope_id, dims)
+        if not _artifact_dims_evidenced(dims):
             scopes_with_no_evidence.append(scope.scope_id)
+        scope_docs.append(_scope_document(scope, entry, dims))
 
-        open_blockers = list(entry.get("blocking_reasons", [])) if entry else []
-        scope_docs.append(
-            {
-                "scope_id": scope.scope_id,
-                "source_path": scope.source_path,
-                "current_stage": scope.current_stage,
-                "dimensions": [_finding_to_dict(dims[d]) for d in DIMENSIONS],
-                "open_blockers": open_blockers,
-                "requires_human_attention": attention,
-                "owner": owner,
-                "prioritized_next_action": {
-                    "category": next_action.category,
-                    "action": next_action.action,
-                },
-            }
-        )
+    attention_count = sum(1 for doc in scope_docs if doc["requires_human_attention"])
 
     body: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -713,6 +770,35 @@ def _snapshot_path(root: Path) -> Path:
     return root / ".seshat" / "watch" / _SNAPSHOT_FILENAME
 
 
+def _read_snapshot_document(path: Path) -> dict[str, Any] | None:
+    try:
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    if data.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
+        return None
+    return data
+
+
+def _valid_condition_key(entry: object) -> bool:
+    return (
+        isinstance(entry, list)
+        and len(entry) == 4
+        and all(isinstance(x, str) for x in entry)
+    )
+
+
+def _condition_keys_from_snapshot(
+    conditions: list[Any],
+) -> frozenset[tuple[str, str, str, str]] | None:
+    if not all(_valid_condition_key(entry) for entry in conditions):
+        return None
+    return frozenset(tuple(entry) for entry in conditions)
+
+
 def read_prior_snapshot(repo_root: Path | str = ".") -> dict[str, Any] | None:
     """Read the prior-run snapshot. Returns ``None`` (no usable baseline) on
     any absence/read/parse/shape failure -- fail-closed, never a fabricated
@@ -721,33 +807,23 @@ def read_prior_snapshot(repo_root: Path | str = ".") -> dict[str, Any] | None:
     path = _snapshot_path(root)
     if not path.is_file():
         return None
-    try:
-        raw = path.read_text(encoding="utf-8")
-        data = json.loads(raw)
-    except (OSError, json.JSONDecodeError):
+    data = _read_snapshot_document(path)
+    if data is None:
         return None
-    if (
-        not isinstance(data, dict)
-        or data.get("schema_version") != SNAPSHOT_SCHEMA_VERSION
-    ):
-        return None
+
     conditions = data.get("conditions")
     scope_set = data.get("scope_set")
     if not isinstance(conditions, list) or not isinstance(scope_set, list):
         return None
-    keys: set[tuple[str, str, str, str]] = set()
-    for entry in conditions:
-        if not (
-            isinstance(entry, list)
-            and len(entry) == 4
-            and all(isinstance(x, str) for x in entry)
-        ):
-            return None
-        keys.add(tuple(entry))  # type: ignore[arg-type]
     if not all(isinstance(s, str) for s in scope_set):
         return None
+
+    keys = _condition_keys_from_snapshot(conditions)
+    if keys is None:
+        return None
+
     return {
-        "conditions": frozenset(keys),
+        "conditions": keys,
         "scopes": frozenset(scope_set),
         "captured_at_revision": data.get("captured_at_revision"),
     }
@@ -774,6 +850,44 @@ def write_snapshot(
     return path
 
 
+def _no_baseline_changes(
+    current_keys: frozenset[tuple[str, str, str, str]],
+) -> tuple[list[ConditionChange], list[dict[str, str]]]:
+    conditions = [
+        ConditionChange(key=key, label=LABEL_NO_BASELINE)
+        for key in sorted(current_keys)
+    ]
+    return conditions, []
+
+
+def _scope_level_changes(
+    added_scopes: set[str], removed_scopes: set[str]
+) -> list[dict[str, str]]:
+    return [{"scope_id": s, "change": "scope_added"} for s in sorted(added_scopes)] + [
+        {"scope_id": s, "change": "scope_removed"} for s in sorted(removed_scopes)
+    ]
+
+
+def _condition_level_changes(
+    current_keys: frozenset[tuple[str, str, str, str]],
+    prior_keys: frozenset[tuple[str, str, str, str]],
+    added_scopes: set[str],
+    removed_scopes: set[str],
+) -> list[ConditionChange]:
+    filtered_current = {k for k in current_keys if k[0] not in added_scopes}
+    filtered_prior = {k for k in prior_keys if k[0] not in removed_scopes}
+
+    new = sorted(filtered_current - filtered_prior)
+    resolved = sorted(filtered_prior - filtered_current)
+    unchanged = sorted(filtered_current & filtered_prior)
+
+    return (
+        [ConditionChange(key=k, label=LABEL_NEW) for k in new]
+        + [ConditionChange(key=k, label=LABEL_RESOLVED) for k in resolved]
+        + [ConditionChange(key=k, label=LABEL_UNCHANGED) for k in unchanged]
+    )
+
+
 def classify_changes(
     current_keys: frozenset[tuple[str, str, str, str]],
     current_scopes: frozenset[str],
@@ -788,32 +902,17 @@ def classify_changes(
     conditions inside a missing scope (FR-011).
     """
     if prior is None:
-        conditions = [
-            ConditionChange(key=key, label=LABEL_NO_BASELINE)
-            for key in sorted(current_keys)
-        ]
-        return conditions, []
+        return _no_baseline_changes(current_keys)
 
     prior_keys = prior["conditions"]
     prior_scopes = prior["scopes"]
     added_scopes = current_scopes - prior_scopes
     removed_scopes = prior_scopes - current_scopes
 
-    filtered_current = {k for k in current_keys if k[0] not in added_scopes}
-    filtered_prior = {k for k in prior_keys if k[0] not in removed_scopes}
-
-    new = sorted(filtered_current - filtered_prior)
-    resolved = sorted(filtered_prior - filtered_current)
-    unchanged = sorted(filtered_current & filtered_prior)
-
-    conditions = (
-        [ConditionChange(key=k, label=LABEL_NEW) for k in new]
-        + [ConditionChange(key=k, label=LABEL_RESOLVED) for k in resolved]
-        + [ConditionChange(key=k, label=LABEL_UNCHANGED) for k in unchanged]
+    conditions = _condition_level_changes(
+        current_keys, prior_keys, added_scopes, removed_scopes
     )
-    scope_changes = [
-        {"scope_id": s, "change": "scope_added"} for s in sorted(added_scopes)
-    ] + [{"scope_id": s, "change": "scope_removed"} for s in sorted(removed_scopes)]
+    scope_changes = _scope_level_changes(added_scopes, removed_scopes)
     return conditions, scope_changes
 
 
