@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-14) -- v1 registry source resolves within the workspace
 
 **Input**: User description: "Public Extension-Pack Catalog (seshat pack search / inspect / add). Add community discovery over the existing declarative pack system. Discovery + retrieval layer only; reuse the shipped pack scaffold and validation. Start from a reviewed static git registry, not a hosted marketplace. Registry records must carry pack id, version, category, author, source, compatibility, hash, dependencies, conflicts, and verification state. Flow: search -> inspect -> fetch -> verify hash/schema -> existing validation -> explicit project addition. Packs must be declarative only (no executable code); fetching must not auto-activate; packs cannot grant readiness or approval; fail closed on invalid, incompatible, missing, or tampered packs; preserve contributor attribution."
 

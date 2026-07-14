@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-14) -- delivery shape confirmed as the skill/composer default (Option B); no new CLI verb
 
 **Input**: User description: "Shareable Seshat Proof (seshat showcase build). Compose EXISTING Explorer, Passport, readiness, review, blocker, approval, and lineage evidence into a disclosure-safe STATIC OFFLINE bundle. This is a composition/rendering layer over shipped evidence, NOT a new engine."
 
