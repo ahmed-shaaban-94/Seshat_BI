@@ -104,3 +104,47 @@ artifacts; all cited reused symbols exist; constitution and Option-B aligned; no
 Principle-V human seam was auto-cleared improperly. One implementation-phase seam
 (private-URL scanner extension) is explicitly deferred with a fail-closed
 fallback. Ready for the ratify seam (human).
+
+## H. Post-review correction (advisor pass, 2026-07-14)
+
+An adversarial review pass found one BLOCKER that section A's FR->task mapping
+structurally could not catch (it verified coverage, not whether the reused
+mechanism delivers the FR), plus one unverified claim. Both are now fixed in the
+artifacts and re-committed:
+
+1. **BLOCKER (fixed): disclosure scan scanned the wrong body.** As first drafted,
+   `disclosure` was "carried through from the Explorer projection." But
+   `build_explorer_projection` sets `disclosure = base["disclosure"]`
+   (explorer/build.py:183), which is scanned on the BASE projection BEFORE
+   `_lineage` (metric names/paths) and `_approval_receipts` (owner names) enrich
+   the tables, and before any before/after content exists. The killer case is
+   US4: user-supplied Passport snapshot content would flow into the bundle
+   UNSCANNED, so a "disclosure-safe proof" would gate on a result that never saw
+   its own rendered content. FIX: `build_showcase_bundle` now runs
+   `scan_disclosure` over the FULL composed body (tables + enriched lineage +
+   approvals + badge + manifest + comparison), MERGED with the base projection's
+   invariant findings (pass-without-evidence / blocked-without-reason, which live
+   only in `build_readiness_projection`). Order pinned: compose -> normalize/redact
+   -> scan full body -> fail-closed. This also reconciles FR-010 (abs-path blocks)
+   with FR-019 (abs-path -> repo-relative, redacted): normalization runs before the
+   scan, so only a residual path blocks. Touched: spec FR-009/FR-010 + clarification
+   + reuse-map row 7, data-model disclosure row + INV-4, contract behavior, research
+   R2, plan R2, tasks T004/T006a/T020.
+
+2. **Unverified claim (fixed): "explorer/passport verbs predate Option B, so
+   grandfathered."** Verified FALSE -- spec 120 (which added those verbs) was
+   created 2026-07-11, AFTER the 2026-07-07 Option B ratification. The decision
+   (skill, not verb) is unchanged and correct (the ratified policy governs new
+   capabilities), but the justification now rests on applying the policy, and the
+   sibling-verb tension is surfaced explicitly for the ratifier as a possible
+   verb-parity override rather than buried under a false "grandfathered" claim.
+   Touched: spec clarification + assumptions, research R1, plan R1.
+
+3. **Verified (no change needed):** `.seshat-output/` IS git-ignored (.gitignore:96),
+   so the quickstart claim holds; the containment guard remains the real control.
+   All cited reused symbols exist as named (re-confirmed).
+
+Revised verdict: CONSISTENT after the two fixes. The disclosure mechanism now
+matches FR-009; the Option-B justification is factually grounded; open_for_human
+remains empty (no genuine grain/PII/rollup/identity decision in a local rendering
+layer). Ready for the ratify seam (human).

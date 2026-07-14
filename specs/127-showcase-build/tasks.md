@@ -40,9 +40,10 @@ modified.
 
 **Purpose**: The read-only composition spine every story renders from. No user story can begin until the projection is composed and the offline/fail-closed write path is wired.
 
-- [ ] T004 Implement `build_showcase_bundle(repo_root, *, snapshots=None)` in `src/seshat/showcase/build.py` to call `seshat.explorer.build.build_explorer_projection`, carry through `workspace` / `tables` / `lineage` / `disclosure` verbatim, and return the `ShowcaseBundle` shape from data-model.md (badge/manifest/comparison wired in later stories, initially empty). READ-ONLY: assert no source write.
+- [ ] T004 Implement `build_showcase_bundle(repo_root, *, snapshots=None)` in `src/seshat/showcase/build.py` to call `seshat.explorer.build.build_explorer_projection`, carry through `workspace` / `tables` / `lineage` verbatim (badge/manifest/comparison wired in later stories, initially empty), and return the `ShowcaseBundle` shape from data-model.md. Do NOT carry through the projection's `disclosure` -- that is (re)computed in T006a over the full composed body. READ-ONLY: assert no source write.
 - [ ] T005 Implement `render_showcase_html(bundle, *, repo, rtl=False)` skeleton in `src/seshat/showcase/build.py` rendering the landing page + per-table detail + lineage from the carried-through projection, inlining a NEW `showcase.css` / `showcase.js` and embedding the brand mark as a data URI. MUST NOT read `explorer.css` / `explorer.js`.
-- [ ] T006 Wire the write path in the skill procedure (documented in SKILL.md): resolve output via `seshat.cli.guards.resolve_local_output` (refuse uncontained path, write nothing) and gate the write on `bundle["disclosure"]["status"] == "pass"` (fail-closed).
+- [ ] T006a Implement the disclosure step in `build_showcase_bundle`: run `seshat.disclosure.scan_disclosure` over the FULL composed body (tables + enriched lineage + approvals + badge + manifest + comparison) AFTER the portability normalization of T022, and MERGE the base projection's invariant findings (pass-without-evidence / blocked-without-reason). Store as `bundle["disclosure"]`. Pipeline order: compose -> normalize/redact -> scan full body. Add a unit test asserting a secret placed ONLY in enriched lineage / approvals / a supplied snapshot (not in the base projection) is caught (closes the base-only-scan gap; FR-009, INV-4).
+- [ ] T006b Wire the write path in the skill procedure (documented in SKILL.md): resolve output via `seshat.cli.guards.resolve_local_output` (refuse uncontained path, write nothing) and gate the write on `bundle["disclosure"]["status"] == "pass"` (fail-closed).
 - [ ] T007 [P] Add a guard unit test `tests/unit/test_showcase_no_cli_verb.py` asserting `seshat.cli._DISPATCH` has no `showcase` key (FR-005) and that importing the showcase package adds no network/driver import (mirrors the B1/B3 lazy-import guard).
 
 **Checkpoint**: Composition spine + offline fail-closed write path ready.
@@ -101,7 +102,7 @@ modified.
 
 - [ ] T018 [P] [US3] Unit test `tests/unit/test_showcase_manifest.py`: on the mixed-state fixture, every reference in tables/lineage appears under exactly one manifest category (coverage + disjointness) (SC-004, FR-016/017/018, INV-3).
 - [ ] T019 [P] [US3] Unit test: an absolute path is reduced to repo-relative AND listed under `redacted` with `original_class=absolute_path`; a deferred sentinel lands under `unavailable`; a missing artifact and an out-of-scope table land under `omitted` (FR-017/019).
-- [ ] T020 [P] [US3] Integration test `tests/integration/test_showcase_disclosure.py`: a fixture whose composed content contains a secret / DSN / PII value / absolute path BLOCKS generation fail-closed and writes NO bundle file; findings are reported (SC-005, FR-009/010, INV-4).
+- [ ] T020 [P] [US3] Integration test `tests/integration/test_showcase_disclosure.py`: fixtures whose composed content contains a secret / DSN / PII value / residual absolute path BLOCK generation fail-closed and write NO bundle file; findings are reported. MUST include a case where the sensitive value lives ONLY in enriched lineage, an approval receipt, or a supplied before/after snapshot (i.e. content the base projection never scanned) to prove the full-body scan (SC-005, FR-009/010, INV-4).
 
 ### Implementation for User Story 3
 

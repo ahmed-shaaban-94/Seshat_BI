@@ -20,7 +20,7 @@ The top-level in-memory document `build_showcase_bundle` returns; the input to
 | `badge` | Badge | new (derived, R4) | Evidence-derived; no score. |
 | `manifest` | DisclosureManifest | new (derived, US3) | Four-category ledger. |
 | `comparison` | Comparison \| null | new (optional, R5) | Present only when two comparable snapshots supplied. |
-| `disclosure` | object | reused from Explorer projection | `scan_disclosure` result; render is gated on `status == "pass"`. |
+| `disclosure` | object | new -- `scan_disclosure` over the FULL composed body | NOT the Explorer projection's `disclosure` (that scanned only the base body, before lineage/approvals/comparison). Computed over tables + enriched lineage + approvals + badge + manifest + comparison, MERGED with the base projection's invariant findings (pass-without-evidence, blocked-without-reason). Render/write gated on `status == "pass"`. |
 | `generated_at` | string \| null | new | Set at render/write time; excluded from any content digest. |
 
 ## Entity: TableView (reused verbatim)
@@ -88,6 +88,6 @@ Present only when two comparable Passport snapshots are supplied.
 - **INV-1**: No `stages[*].status == "pass"` renders without at least one evidence item (inherited from the Explorer projection invariant; re-asserted in showcase tests).
 - **INV-2**: `badge.label` matches none of `/%/`, grade tokens, or numeric confidence patterns.
 - **INV-3**: Every reference in `tables`/`lineage` appears in exactly one manifest category (coverage + disjointness).
-- **INV-4**: When `disclosure.status != "pass"`, no bundle file is written (fail-closed).
+- **INV-4**: `disclosure` is `scan_disclosure` run over the full composed body (not the base projection), merged with the base invariant findings; when `disclosure.status != "pass"`, no bundle file is written (fail-closed). The scan MUST run AFTER portability normalization (compose -> normalize/redact -> scan -> write), so that abs-path->repo-relative and private-URL stripping have already been applied and only residual findings block.
 - **INV-5**: `comparison` is `null` unless two comparable snapshots are supplied; `stage_transitions` contains only observed transitions.
 - **INV-6**: The shipped `explorer.css` / `explorer.js` and every source artifact are byte-unchanged after generation.

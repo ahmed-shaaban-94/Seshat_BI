@@ -11,8 +11,8 @@ contract is defined (Option B; FR-005).
 - **Inputs**:
   - `repo_root: Path | str` -- workspace root (default `.`).
   - `snapshots: tuple[Path|str, Path|str] | None` -- optional pair of Passport snapshot files for the before/after section.
-- **Behavior**: Reads `build_explorer_projection(repo_root)` (stages, evidence states, blockers, approvals, next actions, lineage, disclosure). Derives the `badge` and the four-category `manifest`. If `snapshots` is supplied, computes `comparison` using Passport comparability (same `schema_version` + `scope`, differing `source_revision`) and the Passport verify vocabulary; otherwise `comparison` is `null`. **Read-only**: no source artifact is written or mutated.
-- **Output**: a `ShowcaseBundle` dict (see data-model.md). `disclosure` is carried through from the projection.
+- **Behavior**: Reads `build_explorer_projection(repo_root)` (stages, evidence states, blockers, approvals, next actions, lineage). Derives the `badge` and the four-category `manifest`, applying portability normalization (abs-path -> repo-relative, private-URL stripped) to the composed content. If `snapshots` is supplied, computes `comparison` using Passport comparability (same `schema_version` + `scope`, differing `source_revision`) and the Passport verify vocabulary; otherwise `comparison` is `null`. THEN runs `scan_disclosure` over the FULL composed body (tables + enriched lineage + approvals + badge + manifest + comparison), merged with the base projection's invariant findings, and stores the result as `disclosure`. Pipeline order: compose -> normalize/redact -> scan full body. **Read-only**: no source artifact is written or mutated.
+- **Output**: a `ShowcaseBundle` dict (see data-model.md). `disclosure` is the scan of the full composed body, NOT a carry-through of the Explorer projection's disclosure.
 - **Errors**: propagates the projection's input-defect handling (never raises on a malformed readiness file -- it renders as an input defect). Raises only on programmer error (e.g. a non-path snapshot argument).
 
 ### `render_showcase_html(bundle, *, repo, rtl=False) -> str`
