@@ -3,7 +3,7 @@
     {
       "classification": "generated_wrapper",
       "destination": ".codex-plugin/plugin.json",
-      "output_sha256": "85da2cfb06d4fa9d351138836d5f858fa453284ab389c36968dcef3314b3d686",
+      "output_sha256": "35b7f432f82c020784d77800df16247c26e78cd57dd7c707e1c5f86594952ce0",
       "source": "distribution/bundle-templates/codex/.codex-plugin/plugin.json",
       "source_id": "codex-manifest",
       "source_sha256": "fb9a71393701dd43cea93144430690f80e4ba8520fa50bd1bc95a4cd198763ff",
@@ -1505,10 +1505,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "4d4b713ef5926a0b131b46e8771ce7fc24eb0c6cb364c49ff2302e8e15ec2fa3",
+  "manifest_digest": "ce279abb97f1139ab244fc5f4854a71a8844a50112496ef9dd410c295812cb84",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "597a8374433052b2da53900bf6664019756059dc",
+  "source_revision": "26ea0ce6d414d3b9fd39c44ba6585881f311c284",
   "target": "codex",
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

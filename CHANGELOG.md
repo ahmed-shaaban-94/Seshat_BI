@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.3.0] -- 2026-07-14
+
 Work merged to `main` since `v0.2.0` (`git log v0.2.0..HEAD`):
 
 ### Added
