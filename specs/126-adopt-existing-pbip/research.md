@@ -159,3 +159,21 @@ make the promise durable.
 **Alternatives considered**: ZIP probing or third-party extraction was rejected
 because PBIX is not a supported v1 contract and would add dependencies and
 mutation risk.
+
+## 11. Agent and marketplace discovery
+
+**Decision**: Extend the existing repository-local `pbip-workflow` skill with the
+governed adoption entry path, add the route to the shared public `seshat-bi`
+router, update the capability manifest, and regenerate both committed Claude and
+Codex bundles through `scripts/export_agent_bundles.py`.
+
+**Rationale**: Seshat BI is agent-first and the package, Claude marketplace, and
+Codex plugin are already shipped surfaces on main. A CLI-only feature would be
+harder for the target AI-assisted Power BI analyst to discover. One shared router
+keeps the two public bundles behaviorally aligned.
+
+**Alternatives considered**: A new standalone public skill was rejected for v1
+because the existing Seshat router can select the installed command and preserve
+the portable operating contract. Hand-editing generated integration bundles was
+rejected because their provenance and deterministic regeneration are enforced by
+contract tests.

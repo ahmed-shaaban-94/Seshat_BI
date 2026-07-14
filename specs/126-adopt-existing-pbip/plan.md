@@ -14,7 +14,8 @@ writing. `scaffold` recomputes that assessment and requires the user to accept
 its exact digest before atomically creating one new
 `.seshat/adoption/pbip-adoption.yaml` evidence manifest. The manifest records a
 baseline and unresolved proposals; it owns no readiness state and grants no
-approval.
+approval. The existing PBIP workflow skill and shared public Seshat router expose
+the same entry path to repository agents and generated Claude/Codex bundles.
 
 ## Technical Context
 
@@ -55,8 +56,8 @@ relationships are not explicit
 ### Pre-research gate
 
 - **I — Agent-first, gate-enforced**: PASS. The CLI is a deterministic helper an
-  agent composes; existing static findings and live-validation boundaries retain
-  authority.
+  agent composes through the PBIP workflow/router surfaces; existing static
+  findings and live-validation boundaries retain authority.
 - **II — Depend, never fork**: PASS. Existing TMDL/PBIR readers, governance rules,
   status projection, blocker explanation, and run-next logic are composed. The
   Power BI execution adapter is not invoked.
@@ -121,13 +122,29 @@ tests/
 
 docs/tools/
 └── pbip-adoption.md
+
+.claude/skills/pbip-workflow/
+└── SKILL.md                           # existing-PBIP adoption route
+
+distribution/bundle-templates/shared/skills/seshat-bi/
+└── SKILL.md                           # shared Claude/Codex route
+
+integrations/
+├── claude-code/seshat-bi/             # deterministically regenerated bundle
+└── codex/seshat-bi/                   # deterministically regenerated bundle
+
+docs/capabilities/
+└── capabilities.yaml                  # shipped CLI/agent capability claim
 ```
 
 **Structure Decision**: Keep the feature inside the existing single Python
 package. One domain module owns normalized facts, fingerprints, and safe
 scaffolding; a small parser module avoids worsening the parser hotspot; a lazy
 command handler preserves the static-check import boundary. The public schema is
-copied from the design contract and validated by a focused contract test.
+copied from the design contract and validated by a focused contract test. Agent
+discovery extends the existing PBIP skill and shared generated-bundle router;
+generated integration trees remain outputs of the reviewed export inputs, never
+hand-edited copies.
 
 ## Complexity Tracking
 
