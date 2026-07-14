@@ -98,33 +98,35 @@ stops honestly at Gold Ready because the live validation boundary needs a databa
 ![Seshat BI readiness proof showing seven evidence-backed readiness stages](assets/demo/readiness-proof.png)
 
 > [!NOTE]
-> `seshat-bi` is the intended distribution name. Repository implementation does
-> not prove public availability; the install commands below become the public path
-> only when the corresponding public-install evidence is recorded.
+> `seshat-bi` is the published distribution name. `v0.2.0` is publicly available on
+> PyPI, verified by a clean-room install (see
+> [the v0.2.0 public acceptance record](docs/releases/v0.2.0-public-acceptance.md)).
+> The Claude Code and Codex repository plugins are separately validated; neither is
+> submitted to a public catalog.
 
-| Distribution surface | Repository state | Public availability authority |
-|---|---|---|
-| Python (`seshat-bi`) | build/lifecycle validation implemented | public PyPI install evidence |
-| Claude Code GitHub plugin | generated repository bundle | external add/install acceptance plus owner publication |
-| Codex repository plugin | generated repository bundle | external CLI/IDE acceptance |
-| Claude public catalog | separate owner action | catalog install evidence |
-| OpenAI public plugin listing | separate submission/review | accepted listing/install evidence |
+| Distribution surface | State |
+|---|---|
+| Python (`seshat-bi==0.2.0`) | **available** on public PyPI; clean install verified |
+| Claude Code GitHub repository plugin | **validated** install/discovery/behavior on Claude Code 2.1.209 (Windows); see [limitation](docs/install/agent-install.md#claude-code) |
+| Codex repository plugin | **partially validated** -- install/discovery only; behavior, update, uninstall, and IDE remain unverified |
+| Claude public catalog | not submitted |
+| OpenAI public plugin listing | not submitted |
 
-Statuses must say `available`, `unavailable`, `unverified`, or a concrete blocked
-reason per surface; one successful surface never implies a coordinated full launch.
+See [the support matrix](docs/install/support-matrix.md) for the full per-surface
+breakdown; one available surface never implies a coordinated full launch.
 
 ### Three steps to first success
 
-1. `pipx install seshat-bi` *(after public availability is verified)*
+1. `pipx install seshat-bi`
 2. `seshat init-project my-bi`
 3. `cd my-bi`, run `git init`, then `seshat check`
 
 ### Try without a database
 
-#### Windows (release-gated path)
+#### Windows (validated)
 
 ```powershell
-pipx install seshat-bi           # after public availability is verified
+pipx install seshat-bi
 pipx ensurepath                  # reopen PowerShell if seshat is not found
 seshat --help
 seshat init-project my-bi
@@ -135,10 +137,10 @@ seshat next --format agent       # truthful Source Ready onboarding action
 seshat check                     # expected: exit 0
 ```
 
-#### macOS / Linux (documented; best-effort tested)
+#### macOS / Linux (documented; best-effort beta support)
 
 ```bash
-pipx install seshat-bi           # after public availability is verified
+pipx install seshat-bi
 pipx ensurepath                  # reopen your shell if seshat is not found
 seshat --help
 seshat init-project my-bi
@@ -158,18 +160,44 @@ If `seshat` is not on PATH after installation, run `pipx ensurepath`, reopen the
 | `python` or `pipx` is missing | Install Python 3.13 and `pipx`, then retry. |
 | `seshat` is not found | Run `pipx ensurepath`, reopen the shell, or use `python -m seshat.cli <verb>`. |
 | `check` or `next` says Git is unavailable / the directory is not a repo | Install Git if needed, then run `git init` in the new workspace. |
-| Plugin installation fails | Confirm the marketplace is publicly released; the local-path flow is development-only. |
+| Plugin installation fails | Confirm the marketplace source and plugin id; the local-path flow is contributor-only. |
+
+### Install for an AI coding agent
+
+The Python CLI (`seshat` / `retail`) and the repository agent plugins are separate
+things: the CLI runs governance checks, while a plugin gives an agent session the
+router skill, knowledge skills, and namespaced commands. Installing one does not
+install the other.
+
+**Claude Code** (validated on Claude Code `2.1.209`, Windows):
+
+```text
+/plugin marketplace add ahmed-shaaban-94/Seshat_BI
+/plugin install seshat-bi@seshat-bi-marketplace
+```
+
+**Codex CLI** (install/discovery validated; behavior not yet validated):
+
+```text
+codex plugin marketplace add https://github.com/ahmed-shaaban-94/Seshat_BI
+codex plugin add seshat-bi@seshat-bi-repository
+codex plugin list
+```
+
+See [the Claude Code and Codex guide](docs/install/agent-install.md) for the full
+command set, update/uninstall flows, and validated-vs-unverified boundaries, and
+[the support matrix](docs/install/support-matrix.md) for the per-surface status.
 
 ### Connect a database later
 
 A normal install brings no database, file, test, or lint dependency. When live validation is needed, install only the relevant extra:
 
 ```bash
-pipx inject seshat-bi psycopg2-binary  # or install "seshat-bi[db]" (target — not yet published)
+pipx inject seshat-bi psycopg2-binary  # or install "seshat-bi[db]"
 seshat validate --source-map mappings/<table>/source-map.yaml
 ```
 
-`mssql`, `mysql`, `snowflake`, and `files` are additional user-path extras. Put credentials only in the git-ignored `.env` file. See [the complete user install guide](docs/install/user-install.md) and [the Claude Code and Codex guide](docs/install/agent-install.md).
+`mssql`, `mysql`, `snowflake`, and `files` are additional user-path extras. Put credentials only in the git-ignored `.env` file. See [the complete user install guide](docs/install/user-install.md), [the Claude Code and Codex guide](docs/install/agent-install.md), [the support matrix](docs/install/support-matrix.md), and [the v0.2.0 public acceptance record](docs/releases/v0.2.0-public-acceptance.md).
 ## What is built today
 
 Everything below is on `main`, each with a written spec (under `specs/` or
