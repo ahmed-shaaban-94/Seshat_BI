@@ -196,76 +196,46 @@ def test_publish_without_disclosure_findings_confirms_locally(tmp_path: Path) ->
 # --- SC-003 truthfulness: no score/rank/percentage/"certified" token ever --
 
 
-def test_text_summary_contains_no_forbidden_token_for_all_pass(
-    tmp_path: Path, capsys: pytest.CaptureFixture
+@pytest.mark.parametrize(
+    ("target", "output_format", "label"),
+    [
+        ("codex", "text", "text-pass"),
+        ("claude", "text", "text-mixed"),
+        ("codex", "json", "json"),
+    ],
+)
+def test_verify_output_contains_no_forbidden_token(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture,
+    target: str,
+    output_format: str,
+    label: str,
 ) -> None:
-    output = f".seshat-output/agent-verify/test-cli-text-pass-{tmp_path.name}.json"
+    """No score/rank/pass-rate/grade/"certified" token appears in any
+    verdict combination (all-PASS on codex, mixed on claude) or output
+    format (SC-003)."""
+    output = f".seshat-output/agent-verify/test-cli-{label}-{tmp_path.name}.json"
     written = _REPO / output
     try:
-        main(
-            [
-                "agent",
-                "verify",
-                "--target",
-                "codex",
-                "--repo",
-                str(_REPO),
-                "--output",
-                output,
-            ]
-        )
+        args = [
+            "agent",
+            "verify",
+            "--target",
+            target,
+            "--repo",
+            str(_REPO),
+            "--output",
+            output,
+        ]
+        if output_format == "json":
+            args += ["--format", "json"]
+        main(args)
         captured = capsys.readouterr()
-        assert not _FORBIDDEN_TEXT.search(captured.out)
-    finally:
-        _cleanup(written)
-
-
-def test_text_summary_contains_no_forbidden_token_for_mixed_verdicts(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-) -> None:
-    output = f".seshat-output/agent-verify/test-cli-text-mixed-{tmp_path.name}.json"
-    written = _REPO / output
-    try:
-        main(
-            [
-                "agent",
-                "verify",
-                "--target",
-                "claude",
-                "--repo",
-                str(_REPO),
-                "--output",
-                output,
-            ]
+        rendered = (
+            captured.out.split("written:", 1)[0]
+            if output_format == "json"
+            else captured.out
         )
-        captured = capsys.readouterr()
-        assert not _FORBIDDEN_TEXT.search(captured.out)
-    finally:
-        _cleanup(written)
-
-
-def test_json_output_contains_no_forbidden_token(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-) -> None:
-    output = f".seshat-output/agent-verify/test-cli-json-{tmp_path.name}.json"
-    written = _REPO / output
-    try:
-        main(
-            [
-                "agent",
-                "verify",
-                "--target",
-                "codex",
-                "--repo",
-                str(_REPO),
-                "--output",
-                output,
-                "--format",
-                "json",
-            ]
-        )
-        captured = capsys.readouterr()
-        rendered = captured.out.split("written:", 1)[0]
         assert not _FORBIDDEN_TEXT.search(rendered)
     finally:
         _cleanup(written)

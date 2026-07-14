@@ -34,6 +34,51 @@ class AgentVerifyError(ValueError):
     exit 2 -- an input defect, distinct from any check's own verdict)."""
 
 
+def _validate_pass_shape(
+    check_id: str,
+    evidence: tuple[str, ...],
+    blocking_reasons: tuple[str, ...],
+    unavailable_reason: str | None,
+) -> None:
+    if not evidence:
+        raise ValueError(f"{check_id}: PASS requires non-empty evidence")
+    if blocking_reasons:
+        raise ValueError(f"{check_id}: PASS must carry no blocking reasons")
+    if unavailable_reason is not None:
+        raise ValueError(f"{check_id}: PASS must carry no unavailable_reason")
+
+
+def _validate_blocked_shape(
+    check_id: str,
+    evidence: tuple[str, ...],
+    blocking_reasons: tuple[str, ...],
+    unavailable_reason: str | None,
+) -> None:
+    if not blocking_reasons:
+        raise ValueError(f"{check_id}: BLOCKED requires >=1 blocking reason")
+    if unavailable_reason is not None:
+        raise ValueError(f"{check_id}: BLOCKED must carry no unavailable_reason")
+
+
+def _validate_unavailable_shape(
+    check_id: str,
+    evidence: tuple[str, ...],
+    blocking_reasons: tuple[str, ...],
+    unavailable_reason: str | None,
+) -> None:
+    if not unavailable_reason:
+        raise ValueError(f"{check_id}: UNAVAILABLE requires an unavailable_reason")
+    if blocking_reasons:
+        raise ValueError(f"{check_id}: UNAVAILABLE must carry no blocking_reasons")
+
+
+_VERDICT_SHAPE_VALIDATORS = {
+    "PASS": _validate_pass_shape,
+    "BLOCKED": _validate_blocked_shape,
+    "UNAVAILABLE": _validate_unavailable_shape,
+}
+
+
 @dataclass(frozen=True)
 class PerCheckResult:
     """The categorical outcome of one required check on one target.
@@ -65,35 +110,9 @@ class PerCheckResult:
                 f"{self.check_id}: evidence_class must be one of "
                 f"{EVIDENCE_CLASSES}, got {self.evidence_class!r}"
             )
-        if self.verdict == "PASS":
-            if not self.evidence:
-                raise ValueError(f"{self.check_id}: PASS requires non-empty evidence")
-            if self.blocking_reasons:
-                raise ValueError(
-                    f"{self.check_id}: PASS must carry no blocking reasons"
-                )
-            if self.unavailable_reason is not None:
-                raise ValueError(
-                    f"{self.check_id}: PASS must carry no unavailable_reason"
-                )
-        elif self.verdict == "BLOCKED":
-            if not self.blocking_reasons:
-                raise ValueError(
-                    f"{self.check_id}: BLOCKED requires >=1 blocking reason"
-                )
-            if self.unavailable_reason is not None:
-                raise ValueError(
-                    f"{self.check_id}: BLOCKED must carry no unavailable_reason"
-                )
-        else:  # UNAVAILABLE
-            if not self.unavailable_reason:
-                raise ValueError(
-                    f"{self.check_id}: UNAVAILABLE requires an unavailable_reason"
-                )
-            if self.blocking_reasons:
-                raise ValueError(
-                    f"{self.check_id}: UNAVAILABLE must carry no blocking_reasons"
-                )
+        _VERDICT_SHAPE_VALIDATORS[self.verdict](
+            self.check_id, self.evidence, self.blocking_reasons, self.unavailable_reason
+        )
 
     def to_document(self) -> dict[str, Any]:
         return {

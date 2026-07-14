@@ -84,31 +84,41 @@ def _plugin_matches(entry: object, name: object) -> bool:
     return isinstance(entry, dict) and entry.get("name") == name
 
 
-def install_discovery_check(
-    target_spec: VerifyTargetSpec, repo_root: Path | str
-) -> PerCheckResult:
-    check_id = "install_discovery"
-    root = Path(repo_root)
-
+def _read_plugin_manifest(
+    check_id: str, root: Path, target_spec: VerifyTargetSpec
+) -> tuple[dict, str | None, PerCheckResult | None]:
     manifest, manifest_error = _read_json(root / target_spec.manifest_path)
     if manifest_error is not None:
-        return _blocked(
-            check_id,
-            "per_target",
-            [f"plugin manifest {target_spec.manifest_path} {manifest_error}"],
+        return (
+            {},
+            None,
+            _blocked(
+                check_id,
+                "per_target",
+                [f"plugin manifest {target_spec.manifest_path} {manifest_error}"],
+            ),
         )
     plugin_name = manifest.get("name") if manifest else None
     if not plugin_name:
-        return _blocked(
-            check_id,
-            "per_target",
-            [f"plugin manifest declares no name: {target_spec.manifest_path}"],
+        return (
+            {},
+            None,
+            _blocked(
+                check_id,
+                "per_target",
+                [f"plugin manifest declares no name: {target_spec.manifest_path}"],
+            ),
         )
+    return manifest, plugin_name, None
 
+
+def _read_marketplace_entry(
+    check_id: str, root: Path, target_spec: VerifyTargetSpec, plugin_name: str
+) -> tuple[str, PerCheckResult | None]:
     marketplace_rel = marketplace_path_for(target_spec.name)
     marketplace, marketplace_error = _read_json(root / marketplace_rel)
     if marketplace_error is not None:
-        return _blocked(
+        return marketplace_rel, _blocked(
             check_id,
             "per_target",
             [f"marketplace/discovery entry {marketplace_rel} {marketplace_error}"],
@@ -117,7 +127,7 @@ def install_discovery_check(
     if not isinstance(plugins, list) or not any(
         _plugin_matches(entry, plugin_name) for entry in plugins
     ):
-        return _blocked(
+        return marketplace_rel, _blocked(
             check_id,
             "per_target",
             [
@@ -125,10 +135,15 @@ def install_discovery_check(
                 f"{marketplace_rel}"
             ],
         )
+    return marketplace_rel, None
 
+
+def _read_provenance_identity(
+    check_id: str, root: Path, target_spec: VerifyTargetSpec, plugin_name: str
+) -> tuple[dict, PerCheckResult | None]:
     provenance, provenance_error = _read_json(root / target_spec.provenance_manifest)
     if provenance_error is not None:
-        return _blocked(
+        return {}, _blocked(
             check_id,
             "per_target",
             [
@@ -140,7 +155,7 @@ def install_discovery_check(
         provenance.get("target") != target_spec.name
         or provenance.get("plugin") != plugin_name
     ):
-        return _blocked(
+        return {}, _blocked(
             check_id,
             "per_target",
             [
@@ -148,6 +163,30 @@ def install_discovery_check(
                 f"{target_spec.provenance_manifest}"
             ],
         )
+    return provenance, None
+
+
+def install_discovery_check(
+    target_spec: VerifyTargetSpec, repo_root: Path | str
+) -> PerCheckResult:
+    check_id = "install_discovery"
+    root = Path(repo_root)
+
+    manifest, plugin_name, blocked = _read_plugin_manifest(check_id, root, target_spec)
+    if blocked is not None:
+        return blocked
+
+    marketplace_rel, blocked = _read_marketplace_entry(
+        check_id, root, target_spec, plugin_name
+    )
+    if blocked is not None:
+        return blocked
+
+    provenance, blocked = _read_provenance_identity(
+        check_id, root, target_spec, plugin_name
+    )
+    if blocked is not None:
+        return blocked
 
     return _pass(
         check_id,
@@ -221,6 +260,27 @@ def version_compatibility_check(
 # --- update integrity (FR-018; extends the exporter provenance manifest) --
 
 
+def _entry_drift(bundle_root: Path, entry: object) -> str | None:
+    """Return a drift message for one provenance entry, or ``None`` when its
+    generated file exists and matches the recorded ``output_sha256``."""
+    destination = entry.get("destination") if isinstance(entry, dict) else None
+    expected_hash = entry.get("output_sha256") if isinstance(entry, dict) else None
+    if not isinstance(destination, str) or not isinstance(expected_hash, str):
+        return f"malformed provenance entry: {entry!r}"
+    file_path = bundle_root / destination
+    if not file_path.is_file():
+        return (
+            f"{destination}: generated file is missing "
+            f"(expected sha256 {expected_hash})"
+        )
+    observed_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
+    if observed_hash != expected_hash:
+        return (
+            f"{destination}: expected sha256 {expected_hash}, observed {observed_hash}"
+        )
+    return None
+
+
 def update_integrity_check(
     target_spec: VerifyTargetSpec, repo_root: Path | str
 ) -> PerCheckResult:
@@ -247,26 +307,11 @@ def update_integrity_check(
         )
 
     bundle_root = manifest_path.parent
-    drifted: list[str] = []
-    for entry in entries:
-        destination = entry.get("destination") if isinstance(entry, dict) else None
-        expected_hash = entry.get("output_sha256") if isinstance(entry, dict) else None
-        if not isinstance(destination, str) or not isinstance(expected_hash, str):
-            drifted.append(f"malformed provenance entry: {entry!r}")
-            continue
-        file_path = bundle_root / destination
-        if not file_path.is_file():
-            drifted.append(
-                f"{destination}: generated file is missing "
-                f"(expected sha256 {expected_hash})"
-            )
-            continue
-        observed_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
-        if observed_hash != expected_hash:
-            drifted.append(
-                f"{destination}: expected sha256 {expected_hash}, "
-                f"observed {observed_hash}"
-            )
+    drifted = [
+        message
+        for entry in entries
+        if (message := _entry_drift(bundle_root, entry)) is not None
+    ]
 
     if drifted:
         return _blocked(check_id, "per_target", drifted)
