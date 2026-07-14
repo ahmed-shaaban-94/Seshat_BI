@@ -86,3 +86,23 @@ def test_add_result_notes_content_is_inert(tmp_path: Path, capsys) -> None:
     output = capsys.readouterr().out
     assert "result: added" in output
     assert "inert" in output
+
+
+def test_add_result_carries_contributor_attribution(tmp_path: Path, capsys) -> None:
+    """The add result must carry the registry record's author/
+    verification_state through -- otherwise `add` would be the only catalog
+    surface (unlike search/inspect) where a user cannot see who the added
+    content is attributed to."""
+    repo = _seeded_repo(tmp_path)
+    assert (
+        main(["pack", "add", "--repo", str(repo), "acme.kpi", "--format", "json"]) == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["author"] == "Test Author"
+    assert payload["verification_state"] == "reviewed"
+
+    repo2 = _seeded_repo(tmp_path / "second")
+    assert main(["pack", "add", "--repo", str(repo2), "acme.kpi"]) == 0
+    text_output = capsys.readouterr().out
+    assert "author: Test Author" in text_output
+    assert "verification_state: reviewed" in text_output

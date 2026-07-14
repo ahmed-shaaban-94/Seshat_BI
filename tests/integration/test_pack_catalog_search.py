@@ -121,3 +121,38 @@ def test_search_category_filter_via_cli(tmp_path: Path, capsys) -> None:
     )
     payload = json.loads(capsys.readouterr().out)
     assert [m["id"] for m in payload["matches"]] == ["acme.vocab"]
+
+
+def test_search_surfaces_registry_defects_not_only_empty_matches(
+    tmp_path: Path, capsys
+) -> None:
+    """A duplicate id+version registry record is excluded from `matches`,
+    but that exclusion must be reported -- otherwise `search` can return an
+    empty/partial-looking result with no indication a registry defect made
+    records disappear."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/kpi", pack_id="acme.kpi")
+    dup = record_dict(
+        pack_id="acme.kpi",
+        source="packs/reference/kpi",
+        content_hash=content_digest(pack_dir),
+    )
+    write_registry(repo, [dup, dict(dup)])
+
+    assert (
+        main(
+            ["pack", "search", "--repo", str(repo), "--format", "json"],
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["matches"] == []
+    assert any(
+        finding["rule"] == "pack_registry_duplicate_record"
+        for finding in payload["registry_findings"]
+    )
+
+    assert main(["pack", "search", "--repo", str(repo)]) == 0
+    text_output = capsys.readouterr().out
+    assert "registry defect" in text_output
+    assert "pack_registry_duplicate_record" in text_output

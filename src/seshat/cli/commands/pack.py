@@ -111,17 +111,26 @@ def _full_record_dict(record) -> dict:
     }
 
 
-def _print_search_text(matches) -> None:
+def _print_registry_findings_text(registry_findings) -> None:
+    for finding in registry_findings:
+        print(
+            f"[registry defect] [{finding['rule']}] "
+            f"{finding['locator']}: {finding['message']}"
+        )
+
+
+def _print_search_text(matches, registry_findings) -> None:
     if not matches:
         print("no matches")
-        return
-    for record in matches:
-        print(
-            f"[{record.category}] {record.id} {record.version} "
-            f"-- author: {record.author} -- compatibility: {record.compatibility} "
-            f"-- verification: {record.verification_state}"
-        )
-    print(f"matches: {len(matches)}")
+    else:
+        for record in matches:
+            print(
+                f"[{record.category}] {record.id} {record.version} "
+                f"-- author: {record.author} -- compatibility: {record.compatibility} "
+                f"-- verification: {record.verification_state}"
+            )
+        print(f"matches: {len(matches)}")
+    _print_registry_findings_text(registry_findings)
 
 
 def _run_search(args: argparse.Namespace) -> int:
@@ -140,12 +149,17 @@ def _run_search(args: argparse.Namespace) -> int:
                     "query": args.query,
                     "category": args.category,
                     "matches": [_record_dict(record) for record in matches],
+                    # A schema-invalid or duplicate registry record is
+                    # excluded from `matches` but never silently hidden --
+                    # a caller must be able to see WHY the registry looks
+                    # smaller/different than expected (RR-005/FR-020).
+                    "registry_findings": list(registry.findings),
                 },
                 indent=2,
             )
         )
     else:
-        _print_search_text(matches)
+        _print_search_text(matches, registry.findings)
     return 0
 
 
@@ -175,14 +189,38 @@ def _run_inspect(args: argparse.Namespace) -> int:
     record = inspect(registry, args.id)
     if record is None:
         if args.output_format == "json":
-            print(json.dumps({"status": "not_found", "id": args.id}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "status": "not_found",
+                        "id": args.id,
+                        # "Not found" could mean the id was never registered,
+                        # OR that a matching record was excluded as a
+                        # registry defect (schema-invalid, duplicate) -- both
+                        # are surfaced, never conflated (RR-005/FR-020).
+                        "registry_findings": list(registry.findings),
+                    },
+                    indent=2,
+                )
+            )
         else:
             print(f"not found: {args.id}")
+            _print_registry_findings_text(registry.findings)
         return 1
     if args.output_format == "json":
-        print(json.dumps({"status": "found", **_full_record_dict(record)}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "status": "found",
+                    **_full_record_dict(record),
+                    "registry_findings": list(registry.findings),
+                },
+                indent=2,
+            )
+        )
     else:
         _print_inspect_text(record)
+        _print_registry_findings_text(registry.findings)
     return 0
 
 
@@ -192,6 +230,10 @@ def _print_add_text(outcome) -> None:
     for finding in outcome.findings:
         print(f"[{finding['rule']}] {finding['locator']}: {finding['message']}")
     print(f"pack: {outcome.pack_id}")
+    if outcome.author is not None:
+        print(f"author: {outcome.author}")
+    if outcome.verification_state is not None:
+        print(f"verification_state: {outcome.verification_state}")
     print(f"result: {outcome.status}")
     if outcome.added:
         print(
@@ -216,6 +258,8 @@ def _run_add(args: argparse.Namespace) -> int:
                 {
                     "status": outcome.status,
                     "pack_id": outcome.pack_id,
+                    "author": outcome.author,
+                    "verification_state": outcome.verification_state,
                     "written": list(outcome.written),
                     "findings": list(outcome.findings),
                 },

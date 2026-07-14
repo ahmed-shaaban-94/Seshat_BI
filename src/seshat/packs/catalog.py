@@ -52,20 +52,36 @@ def _finding(rule: str, locator: str, message: str) -> dict[str, str]:
 @dataclass(frozen=True)
 class CatalogOutcome:
     """The result of one ``add`` attempt. ``status`` is either ``"added"`` or
-    ``"refused"`` -- never partial: a refusal writes nothing (FR-010)."""
+    ``"refused"`` -- never partial: a refusal writes nothing (FR-010).
+    ``author``/``verification_state`` carry the registry record's own
+    contributor attribution (FR-017) whenever a record was actually found,
+    even on a refusal -- so a caller sees WHO the (attempted) content is
+    attributed to, not only for a successful add."""
 
     status: str
     pack_id: str
     written: tuple[str, ...] = ()
     findings: tuple[dict[str, str], ...] = ()
+    author: str | None = None
+    verification_state: str | None = None
 
     @property
     def added(self) -> bool:
         return self.status == "added"
 
 
-def _refuse(pack_id: str, findings: list[dict[str, str]]) -> CatalogOutcome:
-    return CatalogOutcome(status="refused", pack_id=pack_id, findings=tuple(findings))
+def _refuse(
+    pack_id: str,
+    findings: list[dict[str, str]],
+    record: RegistryRecord | None = None,
+) -> CatalogOutcome:
+    return CatalogOutcome(
+        status="refused",
+        pack_id=pack_id,
+        findings=tuple(findings),
+        author=record.author if record is not None else None,
+        verification_state=(record.verification_state if record is not None else None),
+    )
 
 
 def _iter_pack_files(directory: Path) -> list[Path]:
@@ -385,12 +401,18 @@ def add_pack(
     # keeps this dispatch free of a multi-clause conditional.
     pack_dir, manifest, findings = _verify_pack(root, record)
     if findings:
-        return _refuse(pack_id, findings)
+        return _refuse(pack_id, findings, record)
 
     dest_dir, findings = _resolve_add_target(root, record, manifest, dest)
     if findings:
-        return _refuse(pack_id, findings)
+        return _refuse(pack_id, findings, record)
 
     written = _write_pack(pack_dir, dest_dir)
     relative_written = tuple(canonical_relative_path(root, path) for path in written)
-    return CatalogOutcome(status="added", pack_id=pack_id, written=relative_written)
+    return CatalogOutcome(
+        status="added",
+        pack_id=pack_id,
+        written=relative_written,
+        author=record.author,
+        verification_state=record.verification_state,
+    )
