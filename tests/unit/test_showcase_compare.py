@@ -33,7 +33,23 @@ def test_comparable_pair_yields_real_stage_transitions_and_verdicts(
         "before_status": "blocked",
         "after_status": "pass",
     } in transitions
-    assert isinstance(result["evidence_verdicts"], list)
+
+    verdicts = {item["path"]: item["verdict"] for item in result["evidence_verdicts"]}
+    assert verdicts["mappings/orders/source-profile.md"] == "verified"
+    assert verdicts["mappings/orders/readiness-status.yaml"] == "changed"
+    assert verdicts["mappings/orders/source-map.yaml"] == "unavailable"
+
+
+def test_evidence_verdicts_diff_the_snapshots_not_the_live_workspace(
+    tmp_path: Path,
+) -> None:
+    """Regression: evidence_verdicts must compare `before` vs `after`
+    directly, never `after` vs the live workspace -- an empty/unrelated
+    tmp_path (no files on disk at all) must still yield real verdicts."""
+    result = build_comparison(tmp_path, (_BEFORE, _AFTER))
+    assert result["comparable"] is True
+    verdicts = {item["path"]: item["verdict"] for item in result["evidence_verdicts"]}
+    assert verdicts["mappings/orders/readiness-status.yaml"] == "changed"
 
 
 def test_mismatched_scope_is_not_comparable_with_a_truthful_reason(

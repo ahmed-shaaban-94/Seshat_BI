@@ -148,6 +148,61 @@ def test_secret_reachable_only_via_supplied_snapshot_blocks_generation(
     assert any(finding["rule"] == "connection_string" for finding in findings)
 
 
+def test_residual_absolute_path_outside_shared_scanner_prefixes_still_blocks(
+    tmp_path: Path,
+) -> None:
+    """A machine-local absolute path outside the workspace root, under a root
+    the shared scan_disclosure scanner's own narrow prefix list (home/Users/
+    var/etc/opt/tmp) does NOT cover, must still block generation via the
+    composer's own residual-absolute-path invariant."""
+    _base_table(tmp_path)
+
+    def _snapshot(revision: str, artifact_path: str) -> dict:
+        return {
+            "schema_version": "1.0",
+            "source_revision": revision,
+            "scope": ["orders"],
+            "readiness": [],
+            "artifacts": [
+                {
+                    "artifact_id": "evidence:leak",
+                    "path": artifact_path,
+                    "sha256": "e" * 64,
+                }
+            ],
+            "approvals": [],
+            "validation_boundary": {
+                "static": "x",
+                "live": "unavailable",
+                "unavailable_checks": [],
+            },
+            "authority_disclaimer": "test",
+            "passport_id": "passport-a",
+            "generated_at": "2026-07-01T00:00:00+00:00",
+        }
+
+    before_path = tmp_path / "before.json"
+    after_path = tmp_path / "after.json"
+    before_path.write_text(
+        json.dumps(_snapshot("1111111111111111111111111111111111111111", "clean.md")),
+        encoding="utf-8",
+    )
+    after_path.write_text(
+        json.dumps(
+            _snapshot(
+                "2222222222222222222222222222222222222222",
+                "/workspace/client/export.csv",
+            )
+        ),
+        encoding="utf-8",
+    )
+    bundle = build_showcase_bundle(tmp_path, snapshots=(before_path, after_path))
+    assert bundle["comparison"]["comparable"] is True
+    assert bundle["disclosure"]["status"] == "blocked"
+    findings = bundle["disclosure"]["findings"]
+    assert any(finding["rule"] == "residual_absolute_path" for finding in findings)
+
+
 def test_pass_without_evidence_invariant_is_carried_and_blocks(tmp_path: Path) -> None:
     _base_table(tmp_path)
     status = tmp_path / "mappings/orders/readiness-status.yaml"

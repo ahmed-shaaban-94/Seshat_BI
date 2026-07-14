@@ -2,12 +2,18 @@
 
 Two Passport snapshots are comparable only when they share ``schema_version``
 and ``scope`` and differ in ``source_revision`` (R5). When comparable, the
-stage transitions and evidence verdicts are expressed in the Passport
-verify vocabulary reused from ``seshat.passport``. When not comparable --
-different scope, different schema, only one snapshot, or none -- the result
-carries ``comparable: False`` and a truthful ``omitted_reason``; no delta is
-ever fabricated (FR-020/FR-021, INV-5). Read-only: no snapshot or workspace
-file is written.
+stage transitions and evidence verdicts are computed by diffing the two
+snapshots' OWN recorded content directly (never the live workspace) and are
+expressed in the Passport verify vocabulary (``verified``/``changed``/
+``unavailable``) reused from ``seshat.passport``. Evidence verdicts
+deliberately do NOT call ``seshat.passport.verify_passport`` -- that function
+checks ONE passport's claims against the CURRENT live workspace, which would
+only tell us whether ``after`` is still valid right now, not what changed
+between ``before`` and ``after``. When not comparable -- different scope,
+different schema, only one snapshot, or none -- the result carries
+``comparable: False`` and a truthful ``omitted_reason``; no delta is ever
+fabricated (FR-020/FR-021, INV-5). Read-only: no snapshot or workspace file
+is written.
 """
 
 from __future__ import annotations
@@ -15,8 +21,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-
-from ..passport import verify_passport
 
 
 def _empty(reason: str) -> dict[str, Any]:
@@ -123,6 +127,49 @@ def _absence_reason(snapshots: tuple[Any, Any] | None) -> str | None:
     return None
 
 
+def _artifact_index(document: dict[str, Any]) -> dict[Any, dict[str, Any]]:
+    artifacts = document.get("artifacts")
+    if not isinstance(artifacts, list):
+        return {}
+    return {
+        entry["artifact_id"]: entry
+        for entry in artifacts
+        if isinstance(entry, dict) and entry.get("artifact_id") is not None
+    }
+
+
+def _evidence_verdict(
+    after_entry: dict[str, Any], before_index: dict[Any, dict[str, Any]]
+) -> dict[str, Any]:
+    before_entry = before_index.get(after_entry.get("artifact_id"))
+    after_hash = after_entry.get("sha256")
+    before_hash = before_entry.get("sha256") if before_entry else None
+    if after_hash is None or before_hash is None:
+        verdict = "unavailable"
+    elif after_hash != before_hash:
+        verdict = "changed"
+    else:
+        verdict = "verified"
+    return {"path": after_entry.get("path"), "verdict": verdict}
+
+
+def _evidence_verdicts(
+    before: dict[str, Any], after: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Diff the two snapshots' own recorded artifact identities directly so a
+    real before-vs-after evidence change is reported even when the live
+    workspace has since moved past ``after`` (or matches it exactly)."""
+    before_index = _artifact_index(before)
+    after_artifacts = after.get("artifacts")
+    if not isinstance(after_artifacts, list):
+        return []
+    return [
+        _evidence_verdict(entry, before_index)
+        for entry in after_artifacts
+        if isinstance(entry, dict)
+    ]
+
+
 def _incomparable_result(
     reason: str, before: dict[str, Any], after: dict[str, Any]
 ) -> dict[str, Any]:
@@ -145,7 +192,6 @@ def build_comparison(
     if absence_reason is not None:
         return _empty(absence_reason)
 
-    root = Path(repo_root).resolve()
     before_path, after_path = snapshots
     before = _load_snapshot(before_path)
     after = _load_snapshot(after_path)
@@ -165,12 +211,6 @@ def build_comparison(
             after,
         )
 
-    verify_result = verify_passport(root, after)
-    evidence_verdicts = [
-        {"path": item.get("path"), "verdict": item.get("verification")}
-        for item in verify_result.get("artifacts", [])
-        if isinstance(item, dict)
-    ]
     return {
         "comparable": True,
         "omitted_reason": None,
@@ -179,5 +219,5 @@ def build_comparison(
         "stage_transitions": _stage_transitions(
             before_stages_by_table, after_stages_by_table
         ),
-        "evidence_verdicts": evidence_verdicts,
+        "evidence_verdicts": _evidence_verdicts(before, after),
     }

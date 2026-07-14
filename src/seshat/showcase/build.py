@@ -32,7 +32,11 @@ from ..disclosure import scan_disclosure
 from ..explorer.build import build_explorer_projection
 from .badge import STAGE_LABELS, STAGE_ORDER, build_badge
 from .compare import build_comparison
-from .manifest import build_manifest, normalize_portability
+from .manifest import (
+    build_manifest,
+    find_residual_absolute_paths,
+    normalize_portability,
+)
 
 SCHEMA_VERSION = "1.0"
 
@@ -97,12 +101,15 @@ def build_showcase_bundle(
     }
 
     disclosure = scan_disclosure(composed_body)
-    invariant_findings = _carry_invariant_findings(projection["disclosure"])
-    if invariant_findings:
+    extra_findings = [
+        *_carry_invariant_findings(projection["disclosure"]),
+        *find_residual_absolute_paths(composed_body),
+    ]
+    if extra_findings:
         disclosure = {
             **disclosure,
             "status": "blocked",
-            "findings": [*disclosure["findings"], *invariant_findings],
+            "findings": [*disclosure["findings"], *extra_findings],
         }
 
     return {**composed_body, "disclosure": disclosure, "generated_at": None}

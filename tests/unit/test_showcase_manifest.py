@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from seshat.showcase.manifest import build_manifest, normalize_portability
+from seshat.showcase.manifest import (
+    build_manifest,
+    find_residual_absolute_paths,
+    normalize_portability,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -201,3 +205,48 @@ def test_multiple_private_urls_in_one_value_are_all_stripped(
     assert "10.0.0.5" not in normalized["note"]
     assert normalized["note"].count("[private URL removed]") == 2
     assert redactions[0]["original_class"] == "private_url"
+
+
+def test_residual_absolute_path_outside_a_narrow_prefix_is_still_found(
+    tmp_path: Path,
+) -> None:
+    """A residual absolute path outside the workspace root, under a root the
+    shared scan_disclosure scanner's own narrow prefix list (home/Users/var/
+    etc/opt/tmp) does NOT cover -- e.g. a container mount like
+    /workspace/client/... -- must still be found by the composer's own
+    invariant so generation still fails closed regardless of the shared
+    scanner's coverage."""
+    document = {"reference": "/workspace/client/export.csv"}
+    normalized, _redactions = normalize_portability(tmp_path, document)
+    # Outside tmp_path's root: left unchanged by normalization (as designed).
+    assert normalized["reference"] == "/workspace/client/export.csv"
+
+    findings = find_residual_absolute_paths(normalized)
+    assert len(findings) == 1
+    assert findings[0]["rule"] == "residual_absolute_path"
+    assert findings[0]["locator"] == "$.reference"
+
+
+def test_residual_absolute_path_under_the_narrow_prefix_is_also_found(
+    tmp_path: Path,
+) -> None:
+    """Sanity check: a path under one of the shared scanner's own listed
+    prefixes is found too (the composer's invariant is a superset, not a
+    replacement, of the shared scanner's coverage)."""
+    document = {"reference": "/home/someone/outside/file.csv"}
+    normalized, _redactions = normalize_portability(tmp_path, document)
+    findings = find_residual_absolute_paths(normalized)
+    assert len(findings) == 1
+
+
+def test_no_residual_finding_once_normalized_to_repo_relative(
+    tmp_path: Path,
+) -> None:
+    """A path that normalization successfully rewrote to repo-relative form
+    must NOT be re-flagged as residual."""
+    target = tmp_path / "mappings" / "orders" / "source-profile.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("profile\n", encoding="utf-8")
+    document = {"reference": str(target)}
+    normalized, _redactions = normalize_portability(tmp_path, document)
+    assert find_residual_absolute_paths(normalized) == []

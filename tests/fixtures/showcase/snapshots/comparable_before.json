@@ -23,7 +23,22 @@
       "next_action": "Resolve grain with the data owner."
     }
   ],
-  "artifacts": [],
+  "artifacts": [
+    {
+      "artifact_id": "evidence:mappings/orders/source-profile.md",
+      "kind": "evidence",
+      "path": "mappings/orders/source-profile.md",
+      "sha256": "aaaa000000000000000000000000000000000000000000000000000000aa",
+      "verification": "verified"
+    },
+    {
+      "artifact_id": "status:mappings/orders/readiness-status.yaml",
+      "kind": "status",
+      "path": "mappings/orders/readiness-status.yaml",
+      "sha256": "bbbb000000000000000000000000000000000000000000000000000000bb",
+      "verification": "verified"
+    }
+  ],
   "approvals": [],
   "validation_boundary": {
     "static": "readiness statuses read from committed workspace files",

@@ -143,6 +143,48 @@ def _lineage_entries(lineage: dict[str, Any]) -> list[tuple[str, dict[str, Any]]
     return entries
 
 
+def find_residual_absolute_paths(
+    document: Any, *, locator: str = "$"
+) -> list[dict[str, str]]:
+    """Composer-owned invariant (FR-010): ``normalize_portability`` already
+    rewrites every absolute path that resolves inside the workspace root, so
+    any string that STILL matches an absolute-path pattern afterward is one
+    that fell OUTSIDE the root (e.g. ``/workspace/client/export.csv`` or
+    ``/mnt/share/raw.csv``). The shared ``scan_disclosure`` scanner's own
+    absolute-path rule only recognizes a narrower fixed prefix set
+    (home/Users/var/etc/opt/tmp), so it cannot be relied on alone to catch a
+    residual path outside that list. This walks the ALREADY-normalized body
+    and reports every such residual path as its own blocking finding, so
+    generation still fails closed regardless of the shared scanner's coverage.
+    """
+    findings: list[dict[str, str]] = []
+
+    def _walk(value: Any, loc: str) -> None:
+        if isinstance(value, str):
+            if _WINDOWS_ABS_RE.match(value) or _UNIX_ABS_RE.match(value):
+                findings.append(
+                    {
+                        "rule": "residual_absolute_path",
+                        "locator": loc,
+                        "message": (
+                            "machine-local absolute path survived portability "
+                            "normalization and is not safe for disclosure"
+                        ),
+                    }
+                )
+            return
+        if isinstance(value, dict):
+            for key, child in value.items():
+                _walk(child, f"{loc}.{key}")
+            return
+        if isinstance(value, list):
+            for i, child in enumerate(value):
+                _walk(child, f"{loc}[{i}]")
+
+    _walk(document, locator)
+    return findings
+
+
 def build_manifest(
     tables: list[dict[str, Any]],
     lineage: dict[str, Any],
