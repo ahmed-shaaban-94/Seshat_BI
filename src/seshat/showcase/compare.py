@@ -56,8 +56,12 @@ def _comparability_reason(before: dict[str, Any], after: dict[str, Any]) -> str 
 def _readiness_table_map(document: dict[str, Any]) -> dict[Any, dict[str, Any]] | None:
     """Map ``table_id -> stages`` for a snapshot's ``readiness`` list, or
     ``None`` when that member is not a well-formed list (the malformed-shape
-    guard: a snapshot cannot be diffed when its own shape cannot be read)."""
-    readiness = document.get("readiness") or []
+    guard: a snapshot cannot be diffed when its own shape cannot be read).
+    A MISSING ``readiness`` key is malformed too -- a valid Passport document
+    always carries the key, even as an explicit empty list for zero tables --
+    so a missing key must not be silently read the same as an explicit
+    ``[]`` and reported as a comparable, empty delta."""
+    readiness = document.get("readiness")
     if not isinstance(readiness, list):
         return None
     stages_by_table: dict[Any, dict[str, Any]] = {}

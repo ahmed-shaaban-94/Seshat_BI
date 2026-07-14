@@ -15,11 +15,20 @@ import re
 from pathlib import Path
 from typing import Any
 
-_WINDOWS_ABS_RE = re.compile(r"^[A-Za-z]:[\\/]")
-# Any POSIX absolute path is disclosure-sensitive, not just a fixed prefix
-# whitelist -- a workspace mounted at an unlisted root (e.g. "/workspace/...")
-# must still be reduced to repo-relative form.
-_UNIX_ABS_RE = re.compile(r"^/(?!/)")
+# Any POSIX/Windows absolute path is disclosure-sensitive, not just a fixed
+# prefix whitelist -- a workspace mounted at an unlisted root (e.g.
+# "/workspace/...") must still be reduced to repo-relative form. These are
+# NOT start-anchored: a path can appear anywhere in a larger string (a
+# blocking reason like "see /workspace/Seshat_BI/... for details"), so both
+# normalization and the residual-path check must find an embedded occurrence,
+# not only a value that IS a path in its entirety. The lookbehind excludes a
+# preceding ":", "/", "<", a quote, or word character so a URL's scheme
+# ("https://"), an interior path segment ("http://host/dash"), an HTML/SVG
+# closing tag ("</svg>"), or a self-closing tag ("...\"/>") -- all present in
+# the rendered badge markup -- is never mistaken for a filesystem path (a URL
+# is `_normalize_private_url`'s job instead).
+_WINDOWS_ABS_RE = re.compile(r"(?<![:\w<\"'])[A-Za-z]:[\\/][^\s\"'<>]*")
+_UNIX_ABS_RE = re.compile(r"(?<![:\w</\"'])/[^\s\"'<>]*")
 _PRIVATE_URL_RE = re.compile(
     r"https?://(?:localhost|127\.0\.0\.1"
     r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
@@ -42,19 +51,34 @@ def _entry(
     }
 
 
-def _normalize_absolute_path(root: Path, value: str) -> tuple[str, bool]:
-    if not (_WINDOWS_ABS_RE.match(value) or _UNIX_ABS_RE.match(value)):
-        return value, False
+def _repo_relative_or_none(root: Path, token: str) -> str | None:
     try:
-        resolved = Path(value).resolve()
+        resolved = Path(token).resolve()
     except (OSError, ValueError):
-        return value, False
+        return None
     if not resolved.is_relative_to(root):
         # Not a workspace path: left as-is. A residual absolute path that
         # survives normalization is a blocking disclosure finding (FR-010),
         # never silently dropped or invented into a fake relative form.
-        return value, False
-    return resolved.relative_to(root).as_posix(), True
+        return None
+    return resolved.relative_to(root).as_posix()
+
+
+def _normalize_absolute_path(root: Path, value: str) -> tuple[str, bool]:
+    changed = False
+
+    def _replace(match: re.Match[str]) -> str:
+        nonlocal changed
+        token = match.group(0)
+        relative = _repo_relative_or_none(root, token)
+        if relative is None:
+            return token
+        changed = True
+        return relative
+
+    normalized = _WINDOWS_ABS_RE.sub(_replace, value)
+    normalized = _UNIX_ABS_RE.sub(_replace, normalized)
+    return normalized, changed
 
 
 def _normalize_private_url(value: str) -> tuple[str, bool]:
@@ -158,7 +182,7 @@ def find_residual_absolute_paths(
     generation still fails closed regardless of the shared scanner's coverage.
     """
     if isinstance(document, str):
-        if not (_WINDOWS_ABS_RE.match(document) or _UNIX_ABS_RE.match(document)):
+        if not (_WINDOWS_ABS_RE.search(document) or _UNIX_ABS_RE.search(document)):
             return []
         return [
             {

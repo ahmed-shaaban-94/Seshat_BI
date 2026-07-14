@@ -250,3 +250,66 @@ def test_no_residual_finding_once_normalized_to_repo_relative(
     document = {"reference": str(target)}
     normalized, _redactions = normalize_portability(tmp_path, document)
     assert find_residual_absolute_paths(normalized) == []
+
+
+def test_embedded_absolute_path_mid_sentence_is_normalized(tmp_path: Path) -> None:
+    """A path embedded after other text (a blocking reason like "see
+    /workspace/.../foo for details") must be found and reduced, not only a
+    value that IS a path in its entirety -- both the absolute-path rule and
+    the residual-path walk were previously start-anchored and missed this."""
+    target = tmp_path / "mappings" / "orders" / "source-profile.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("profile\n", encoding="utf-8")
+    document = {"note": f"see {target} for details"}
+    normalized, redactions = normalize_portability(tmp_path, document)
+    assert normalized["note"] == "see mappings/orders/source-profile.md for details"
+    assert redactions[0]["original_class"] == "absolute_path"
+    assert find_residual_absolute_paths(normalized) == []
+
+
+def test_embedded_absolute_path_outside_root_is_still_found_residually(
+    tmp_path: Path,
+) -> None:
+    """The same embedded-path case, but outside the workspace root: left
+    unchanged by normalization, and still caught by the residual-path
+    walk -- not only when the whole value is a path."""
+    document = {"note": "see /workspace/client/export.csv for the raw file"}
+    normalized, redactions = normalize_portability(tmp_path, document)
+    assert normalized["note"] == document["note"]
+    assert redactions == []
+    findings = find_residual_absolute_paths(normalized)
+    assert len(findings) == 1
+    assert findings[0]["rule"] == "residual_absolute_path"
+
+
+def test_private_urls_are_never_mistaken_for_absolute_paths(tmp_path: Path) -> None:
+    """Guard against the embedded-path search over-matching: a private/
+    internal URL's path component must not be treated as a filesystem path by
+    the absolute-path rule (that is `_normalize_private_url`'s job)."""
+    document = {
+        "note": (
+            "primary at http://reports.internal/dash, "
+            "mirror at http://10.0.0.5:8080/dash"
+        )
+    }
+    normalized, redactions = normalize_portability(tmp_path, document)
+    assert "[private URL removed]" in normalized["note"]
+    assert all(r["original_class"] != "absolute_path" for r in redactions)
+    assert find_residual_absolute_paths(normalized) == []
+
+
+def test_html_closing_tags_are_never_mistaken_for_absolute_paths(
+    tmp_path: Path,
+) -> None:
+    """Regression: rendered SVG/HTML markup like "</text></svg>" must not be
+    flagged as a residual absolute path -- a "/" immediately after "<" is a
+    closing tag, never a filesystem path."""
+    document = {
+        "svg": (
+            '<svg xmlns="http://www.w3.org/2000/svg"><text>Gold: blocked</text></svg>'
+        )
+    }
+    normalized, redactions = normalize_portability(tmp_path, document)
+    assert normalized == document
+    assert redactions == []
+    assert find_residual_absolute_paths(normalized) == []

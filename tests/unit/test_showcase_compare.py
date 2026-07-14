@@ -16,6 +16,7 @@ _BEFORE = _FIXTURES / "comparable_before.json"
 _AFTER = _FIXTURES / "comparable_after.json"
 _MISMATCHED_SCOPE = _FIXTURES / "mismatched_scope.json"
 _MALFORMED_READINESS = _FIXTURES / "malformed_readiness_after.json"
+_MISSING_READINESS_KEY = _FIXTURES / "missing_readiness_key_after.json"
 
 
 def test_comparable_pair_yields_real_stage_transitions_and_verdicts(
@@ -110,6 +111,21 @@ def test_malformed_readiness_member_is_omitted_gracefully_not_a_crash(
     this must be omitted with a truthful note, never raise and never
     fabricate a delta from a shape it cannot read."""
     result = build_comparison(tmp_path, (_BEFORE, _MALFORMED_READINESS))
+    assert result["comparable"] is False
+    assert "readiness" in result["omitted_reason"]
+    assert result["stage_transitions"] == []
+    assert result["evidence_verdicts"] == []
+
+
+def test_missing_readiness_key_is_malformed_not_an_empty_valid_delta(
+    tmp_path: Path,
+) -> None:
+    """A snapshot that omits the ``readiness`` key entirely must NOT be read
+    the same as an explicit ``readiness: []`` -- a valid Passport document
+    always carries the key. Silently defaulting a missing key to `[]` would
+    make this comparable with a fabricated empty delta instead of omitting
+    with a truthful note."""
+    result = build_comparison(tmp_path, (_BEFORE, _MISSING_READINESS_KEY))
     assert result["comparable"] is False
     assert "readiness" in result["omitted_reason"]
     assert result["stage_transitions"] == []
