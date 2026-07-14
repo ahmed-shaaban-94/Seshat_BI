@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.3.1] -- 2026-07-14
+
 ### Fixed
 - **Release-artifact credential-scan false positives**: two docstrings
   (`seshat/pr_summary.py`'s `mask()`, `seshat/showcase/manifest.py`'s
