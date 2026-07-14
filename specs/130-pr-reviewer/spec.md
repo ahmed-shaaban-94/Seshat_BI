@@ -83,9 +83,12 @@ calls, with no numeric score and no leaked secret/PII. No CI and no PR involved.
    **When** the renderer runs, **Then** the summary states the change is not
    blocked, surfaces the warnings as "worth a look" (not as blockers), and states
    the single next action -- and emits NO merge-ready boolean and NO score.
-3. **Given** a finding message that embeds a DSN-shaped or PII-shaped string,
-   **When** the renderer runs, **Then** that value is masked in the summary and a
-   redaction is noted, never rendered verbatim.
+3. **Given** a finding message that embeds a shape the reused `_mask` contract
+   detects (email, SSN/national-ID number, long digit run, or `key: value` secret
+   assignment), **When** the renderer runs, **Then** that value is masked in the
+   summary and a redaction is noted, never rendered verbatim. (A bare
+   DSN/connection-URL in a finding message is a documented v1 non-coverage, not a
+   masking guarantee -- see FR-009.)
 4. **Given** an envelope with `next_actions[]` holding several candidates,
    **When** the renderer runs, **Then** it selects EXACTLY ONE next action using
    the shipped refutation-first category rank, and states no second "or also".
@@ -164,8 +167,10 @@ unit-tested against a live API.
 3. **Given** a repository that has NOT opted in, **When** CI runs, **Then** no
    friendly-summary comment is posted and no existing behavior changes.
 4. **Given** the summary body, **When** it is composed for the comment, **Then**
-   it carries no secret, DSN, PII, or local machine path (masking from US1 is
-   applied before egress), because the comment is a public surface.
+   the `_mask`-detected shapes (email, SSN/national-ID, long digit run, secret
+   assignment) are masked before egress (masking from US1 is applied), because the
+   comment is a public surface. (A bare DSN/connection-URL in a finding message is
+   a documented v1 non-coverage per FR-009, not a guarantee.)
 
 ---
 
@@ -174,9 +179,13 @@ unit-tested against a live API.
 - **Empty / no-findings envelope**: the summary states plainly that the change
   introduced no governance findings and gives the single next action from the
   status projection; it does not fabricate a blocker or a stage.
-- **Envelope with `outcome: input_defect`** (a bad commit range): the summary
-  states that the review could not be produced (naming the defect) and stops; it
-  does not invent a change story.
+- **Review envelope could not be produced** (e.g. a bad commit range makes the
+  review step fail before an envelope exists): the summary states that the review
+  could not be produced (naming the defect) and stops; it does not invent a change
+  story. NOTE: the authoritative input `build_review_result` only ever emits
+  `outcome: ok` or `outcome: blocked` (never an `input_defect` outcome), so this
+  is handled as an ABSENT/unreadable envelope -- the same honesty branch as
+  "envelope absent" -- not as a distinct outcome value.
 - **A next action list that is empty**: the summary states "no next action was
   produced by the review" honestly rather than inventing one.
 - **A readiness status file the envelope references is absent**: the affected
@@ -245,13 +254,28 @@ unit-tested against a live API.
 
 **Safety, honesty, determinism (the guardrails)**
 
-- **FR-009**: The summary MUST NOT expose secrets, DSNs, credentials, PII, or
-  local machine paths. Any such value in a finding message / evidence line MUST be
-  masked BEFORE it enters the summary, reusing the shipped masking contracts
-  (`interview_review._mask` PII shapes and `readiness_evidence._scrub` DSN-component
-  redaction). Default is mask-and-note; a value is never rendered verbatim to
-  "be helpful". This applies with special force to the sticky comment (public
-  egress).
+- **FR-009**: The summary MUST mask the PII/secret shapes the shipped
+  `interview_review._mask` contract actually detects -- email addresses,
+  national-ID / SSN-like numbers, long digit runs, and `key: value` secret
+  assignments (e.g. `password:`, `token:`) -- BEFORE any finding message /
+  evidence line enters the summary, reusing that contract verbatim (no new
+  redaction engine, per hard rule #1). Default is mask-and-note; a detected value
+  is never rendered verbatim to "be helpful". This applies with special force to
+  the sticky comment (public egress).
+  - **v1 out-of-scope, with the leak risk acknowledged**: a bare connection-string
+    / DSN URL (a `scheme` + `credentials` + `@host/db` connection string, e.g. a
+    Postgres/MySQL/Snowflake URI) that appears inside a finding
+    *message* is NOT masked by the reused contract. `_mask` has no
+    connection-URL shape, and `readiness_evidence._scrub` only redacts a DSN when
+    the caller already holds the literal DSN string (which a DB-less PR summarizer
+    does not). Adding a DSN/URL detector would be a NEW redaction primitive,
+    contradicting the reuse-only rule and pre-empting an owner scope decision, so
+    v1 deliberately does not do it. RESIDUAL RISK: a DSN URL embedded verbatim in
+    a rule's finding message would pass through to the summary and the public
+    sticky comment. This is bounded because the shipped review producers do not
+    emit DSN URLs into finding messages today; a location-tolerant / DSN-URL-aware
+    masker is deferred to a future spec. An implementer MUST NOT claim DSN-URL
+    coverage in v1.
 - **FR-010**: The summary MUST NOT approve, merge, dismiss a finding, mark a
   readiness stage `pass`, resolve a review thread, edit the PR body, or take any
   other action on the PR or on truth. It renders words only (Principle V; F024
@@ -344,9 +368,14 @@ unit-tested against a live API.
 - **SC-003**: The renderer and differ are byte-identical across repeated runs on
   the same inputs (determinism), with no wall-clock dependency -- verified by a
   repeat-invocation equality test.
-- **SC-004**: No secret, DSN, credential, PII-shaped value, or local machine path
-  appears in any rendered summary or composed comment body -- verified by a
-  redaction test over adversarial finding messages.
+- **SC-004**: No PII/secret shape that the reused `interview_review._mask`
+  contract detects -- email, SSN/national-ID-like number, long digit run, or
+  `key: value` secret assignment -- appears verbatim in any rendered summary or
+  composed comment body; verified by a redaction test over adversarial finding
+  messages carrying those shapes. The test MUST also assert the documented v1
+  limitation (FR-009): a bare DSN/connection-URL in a finding message is NOT
+  claimed to be masked, so the test does not assert its removal -- it records the
+  known residual gap rather than a false guarantee.
 - **SC-005**: On a repository that has not opted in, enabling the feature's code
   changes nothing about CI behavior and posts no comment; when opted in, at most
   ONE friendly-summary comment exists per PR at any time -- verified by the

@@ -18,8 +18,9 @@ taking any action on the PR.
 
 Technical approach: a docs-first **Product Module** (a SKILL) backed by ONE pure,
 stdlib, deterministic renderer/differ over the `build_review_result` envelope +
-the `finding_fingerprint` identity + the readiness truth. The renderer masks
-secrets/PII/DSN before any egress. The changed-vs-pre-existing distinction is a
+the `finding_fingerprint` identity + the readiness truth. The renderer masks the
+`_mask`-detected PII/secret shapes before any egress (DSN-URL detection is a
+documented v1 non-coverage, FR-009). The changed-vs-pre-existing distinction is a
 temporal fingerprint diff (base set vs head set). The networked sticky-comment
 post is a thin, opt-in step added to the EXISTING `ci.yml` -- off by default, no
 new workflow file, not part of the tested deterministic core. No new
@@ -55,7 +56,8 @@ comment step; the core is platform-independent (pure Python).
 envelope; deterministic and fast). No large-data path.
 
 **Constraints**: Deterministic, byte-stable, NO wall-clock read (FR-012);
-stdlib-only tested core; ASCII / UTF-8-no-BOM; no secret/PII/DSN egress (FR-009);
+stdlib-only tested core; ASCII / UTF-8-no-BOM; masks the `_mask`-detected
+PII/secret shapes before egress, DSN-URL a documented v1 non-coverage (FR-009);
 no numeric score (FR-011); no PR-mutating action (FR-010); opt-in and additive to
 `ci.yml` (FR-015). Windows `MAX_PATH`: repo-relative paths stay short.
 
@@ -88,8 +90,10 @@ build on US1.
   stdlib-only with no DB/network import (B1/B3 preserved); the networked comment
   post is a thin opt-in wrapper outside the tested core. No new live validator.
 - **IX. Secrets and Reproducibility**: PASS -- and load-bearing here. FR-009
-  masks secrets/PII/DSN before egress (the comment is a public surface);
-  deterministic, byte-stable, no clock (FR-012); ASCII/UTF-8-no-BOM (FR-020).
+  masks the `_mask`-detected PII/secret shapes before egress (the comment is a
+  public surface), with a bare DSN-URL in a finding message a documented v1
+  non-coverage (residual risk stated, not hidden); deterministic, byte-stable, no
+  clock (FR-012); ASCII/UTF-8-no-BOM (FR-020).
 
 **Hard-rule check**: adds no `retail check` rule (SC-006); does not approve/merge/
 publish/score (FR-010/FR-011, hard rule #9); reuses the Action, mints no workflow
@@ -121,8 +125,9 @@ src/seshat/
 |-- review_integration.py     # REUSED (input: build_review_result envelope)
 |-- sarif.py                  # REUSED (input: finding_fingerprint identity)
 |-- readiness_classify.py     # REUSED (input: refutation-first next-action rank)
-|-- readiness_evidence.py     # REUSED (input: _scrub DSN-redaction contract)
-|-- interview_review.py       # REUSED (input: _mask PII-shape contract)
+|-- readiness_evidence.py     # PATTERN REF ONLY (_redact_dsn re-impl style; its
+|                             #   _scrub needs a literal DSN, so NOT a masker here)
+|-- interview_review.py       # REUSED (input: _mask PII-shape contract -- the masker)
 |-- review_pack_export.py     # REUSED (optional: pack shape reference)
 `-- pr_summary.py             # NEW: pure, stdlib renderer + differ + comment-body
                               #      composition (deterministic, no clock, no network)
@@ -167,11 +172,17 @@ sufficient, and record any residual unknown in `research.md`:
    + locator + message); also the SARIF `partialFingerprints`
    (`seshatFinding/v1`). This IS the temporal new-vs-existing key. CONFIRMED for
    FR-006/018.
-3. **Masking contracts**: `interview_review._mask` (email/SSN/long-digit/secret-
-   assignment shapes) and `readiness_evidence._scrub` (DSN literal + parsed
-   components, decoded + raw, longest-first). CONFIRMED reusable for FR-009. Open
-   item: whether to import these private helpers or lift the patterns into the new
-   module's own small masker to avoid a fragile private-symbol dependency --
+3. **Masking contract**: `interview_review._mask` (email / SSN / long-digit /
+   secret-assignment shapes) is the reusable, self-contained pattern for FR-009 --
+   it matches by shape and needs no external input. CONFIRMED reusable. NOTE on
+   `readiness_evidence._scrub`: it is NOT usable here for DSN masking -- `_scrub`
+   only redacts a DSN when the caller passes the literal DSN string
+   (`out.replace(dsn, ...)`), which a DB-less PR summarizer does not have; it does
+   NOT shape-detect a DSN URL embedded in arbitrary text. Therefore v1 masks only
+   the `_mask` shapes; a bare DSN/connection-URL in a finding message is a
+   documented v1 non-coverage (FR-009), not a masking guarantee, and NO new
+   DSN/URL detector is added (reuse-only, hard rule #1). Open item: import the
+   private helper or lift its patterns into the new module's own small masker --
    decided in Phase 1 (lift the pattern with a citation, keeping the tested core
    self-contained and stdlib-only, mirroring how `readiness_evidence` re-implements
    `_redact_dsn` rather than importing `cli`).

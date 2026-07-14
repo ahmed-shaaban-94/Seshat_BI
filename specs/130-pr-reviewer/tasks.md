@@ -36,9 +36,11 @@ Single project: `src/seshat/`, `tests/unit/` at repo root; the skill under
 - [ ] T001 [SETUP] Write `research.md`: confirm the six consumed seams
   (review envelope, `finding_fingerprint`, masking contracts, `readiness_classify`
   rank, base-identity source, `ci.yml` reuse) are stable + sufficient; record the
-  masking decision (lift the pattern into a self-contained stdlib masker with a
-  citation, do NOT import the private `_mask` / `_scrub` symbols -- mirrors how
-  `readiness_evidence` re-implements `_redact_dsn`).
+  masking decision (lift the `interview_review._mask` shape patterns into a
+  self-contained stdlib masker with a citation, do NOT import the private symbol;
+  `readiness_evidence._scrub` is NOT lifted -- it needs a literal DSN and is not a
+  shape masker, so DSN-URL detection stays a documented v1 non-coverage per
+  FR-009 -- mirrors how `readiness_evidence` re-implements `_redact_dsn`).
 - [ ] T002 [SETUP] Write `data-model.md`: the `FriendlySummary`,
   `ChangeClassification`, and `StickyComment` shapes (frozen, additive-versioned,
   NO score field anywhere; an explicit `undetermined[]` for missing-input lines).
@@ -64,8 +66,12 @@ Single project: `src/seshat/`, `tests/unit/` at repo root; the skill under
   no numeric field.
 - [ ] T006 [P] [FOUND] Create `tests/unit/test_pr_summary.py` with the shared
   fixtures: a `blocked` review envelope, an `ok`-with-warnings envelope, an
-  `input_defect` envelope, an empty/no-findings envelope, a readiness-status
-  fixture, and adversarial finding messages carrying DSN/PII/local-path shapes.
+  absent/unproducible-envelope case (bad commit range; NOT an `input_defect`
+  outcome value -- `build_review_result` emits only `ok`/`blocked`), an
+  empty/no-findings envelope, a readiness-status fixture, and adversarial finding
+  messages carrying the `_mask`-detected shapes (email/SSN/long-digit/secret-
+  assignment) PLUS one bare DSN-URL message used to assert the documented v1
+  non-coverage (FR-009).
 
 **Checkpoint**: module + shapes + fixtures ready; stories can proceed.
 
@@ -80,13 +86,16 @@ status, required approval authority, exactly one next action, masked, no score.
 **Independent Test**: Given a fixture envelope + readiness fixture, `render_summary`
 returns a summary naming the affected stages, each stage status verbatim, the
 required authority, and exactly one next action; byte-identical on repeat; no
-score; no leaked secret/PII.
+score; no leaked `_mask`-detected secret/PII shape (DSN-URL a documented v1 gap,
+FR-009).
 
 ### Tests for User Story 1 (write FIRST, ensure they FAIL)
 
-- [ ] T007 [P] [US1] Test `mask()` redacts email / SSN-like / long-digit /
-  secret-assignment / DSN-literal + DSN-components (raw and decoded), leaves clean
-  text unchanged, is idempotent -- in `tests/unit/test_pr_summary.py`.
+- [ ] T007 [P] [US1] Test `mask()` redacts the reused `_mask` shapes -- email /
+  SSN-like / long-digit / secret-assignment -- leaves clean text unchanged, is
+  idempotent; and ASSERTS the v1 non-coverage: a bare DSN/connection-URL is NOT
+  redacted by `mask()` (documented gap, FR-009), so the test pins the known
+  behavior rather than a false guarantee -- in `tests/unit/test_pr_summary.py`.
 - [ ] T008 [P] [US1] Test `pick_next_action()` selects EXACTLY ONE action from
   `next_actions[]` by the `readiness_classify` refutation-first rank, returns a
   sentinel/`None` on an empty list (never invents one), and never returns two.
@@ -97,23 +106,31 @@ score; no leaked secret/PII.
 - [ ] T010 [P] [US1] Test `render_summary()` on the `ok`-with-warnings envelope:
   states not-blocked, surfaces warnings as "worth a look" not blockers, one next
   action, no score.
-- [ ] T011 [P] [US1] Test honesty-on-missing: `input_defect` envelope -> states the
-  review could not be produced and stops; empty next_actions -> states "no next
-  action produced"; absent readiness file -> stage `unknown` (source named), never
-  assumed `pass` (FR-017).
+- [ ] T011 [P] [US1] Test honesty-on-missing: an ABSENT/unproducible review
+  envelope (e.g. a bad commit range failed the review step -- `build_review_result`
+  emits only `ok`/`blocked`, never an `input_defect` outcome) -> states the review
+  could not be produced and stops; empty next_actions -> states "no next action
+  produced"; absent readiness file -> stage `unknown` (source named), never assumed
+  `pass` (FR-017).
 - [ ] T012 [P] [US1] Test determinism: `render_summary()` is byte-identical across
   repeated calls on the same inputs; no wall-clock read (timestamp is an explicit
   argument) (FR-012, SC-003).
-- [ ] T013 [P] [US1] Test redaction end-to-end: an adversarial finding message with
-  a DSN + email is masked in the rendered summary and a redaction is noted, never
-  verbatim (FR-009, SC-004).
+- [ ] T013 [P] [US1] Test redaction end-to-end: an adversarial finding message
+  carrying the shapes the reused `_mask` contract detects (email, SSN/national-ID
+  number, long digit run, `key: value` secret assignment) is masked in the
+  rendered summary and a redaction is noted, never verbatim. The test MUST also
+  assert the documented v1 limitation: a bare DSN/connection-URL in a finding
+  message is NOT claimed masked (records the known residual gap, does not assert
+  its removal) (FR-009, SC-004).
 
 ### Implementation for User Story 1
 
 - [ ] T014 [US1] Implement `mask(text)` in `pr_summary.py`: a self-contained
-  stdlib masker combining the `interview_review._mask` PII shapes and the
-  `readiness_evidence._scrub` DSN-component contract (cited in the docstring), no
-  import of the private helpers.
+  stdlib masker reproducing the `interview_review._mask` PII shapes (email,
+  SSN/national-ID, long digit run, `key: value` secret assignment), cited in the
+  docstring, no import of the private helper. Does NOT add a DSN/connection-URL
+  shape (v1 out-of-scope per FR-009); the docstring MUST state that a bare DSN URL
+  in a finding message is not masked in v1.
 - [ ] T015 [US1] Implement `pick_next_action(next_actions)` using
   `readiness_classify` rank; returns exactly one or an explicit "none" (T008).
 - [ ] T016 [US1] Implement `render_summary(envelope, readiness, base_fingerprints=
@@ -122,9 +139,9 @@ score; no leaked secret/PII.
   verbatim status from readiness/envelope; required authority from `approvals[]`;
   masked blocker lines; one next action; explicit `undetermined[]` for missing
   inputs. No score. No clock. (base diff wiring lands in US2.)
-- [ ] T017 [US1] Implement the honesty branches (input_defect, empty next_actions,
-  absent readiness, non-file locator, source conflict surfaced not resolved)
-  (FR-017/019).
+- [ ] T017 [US1] Implement the honesty branches (absent/unproducible envelope,
+  empty next_actions, absent readiness, non-file locator, source conflict surfaced
+  not resolved) (FR-017/019).
 
 **Checkpoint**: US1 fully functional and testable; MVP renders from one envelope.
 
