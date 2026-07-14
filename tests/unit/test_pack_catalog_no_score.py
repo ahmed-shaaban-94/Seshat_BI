@@ -35,15 +35,22 @@ def _assert_not_numeric_if_forbidden(
     assert not _numeric(value), f"{key!r} must never be numeric: {value!r}"
 
 
+def _walk_dict_no_numeric_score(node: dict, forbidden_keys: frozenset[str]) -> None:
+    for key, value in node.items():
+        _assert_not_numeric_if_forbidden(key, value, forbidden_keys)
+        _walk_no_numeric_score(value, forbidden_keys)
+
+
+def _walk_list_no_numeric_score(node: list, forbidden_keys: frozenset[str]) -> None:
+    for item in node:
+        _walk_no_numeric_score(item, forbidden_keys)
+
+
 def _walk_no_numeric_score(node: object, forbidden_keys: frozenset[str]) -> None:
     if isinstance(node, dict):
-        for key, value in node.items():
-            _assert_not_numeric_if_forbidden(key, value, forbidden_keys)
-            _walk_no_numeric_score(value, forbidden_keys)
-        return
-    if isinstance(node, list):
-        for item in node:
-            _walk_no_numeric_score(item, forbidden_keys)
+        _walk_dict_no_numeric_score(node, forbidden_keys)
+    elif isinstance(node, list):
+        _walk_list_no_numeric_score(node, forbidden_keys)
 
 
 _SCORE_LIKE_KEYS = frozenset(

@@ -86,11 +86,26 @@ class Registry:
     findings: tuple[dict[str, str], ...] = field(default_factory=tuple)
 
 
-def _record_schema() -> dict[str, Any]:
+def _full_schema() -> dict[str, Any]:
     import json
 
-    document = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
-    return document["properties"]["records"]["items"]
+    return json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def _record_schema() -> dict[str, Any]:
+    return _full_schema()["properties"]["records"]["items"]
+
+
+def _envelope_schema() -> dict[str, Any]:
+    """The top-level shape only (``schema_version``, ``additionalProperties:
+    false``, ``records`` as an array) -- NOT each record's item schema,
+    which is validated per-record so one schema-invalid record is excluded
+    and reported rather than failing the whole load (FR-002/FR-020)."""
+    full = _full_schema()
+    return {
+        **full,
+        "properties": {**full["properties"], "records": {"type": "array"}},
+    }
 
 
 def _read_index_text(resolved: Path, relative: str) -> str:
@@ -211,8 +226,16 @@ def _resolve_registry_path(root: Path, registry_path: Path | str) -> Path | None
 def _load_index_document(root: Path, resolved: Path) -> dict:
     relative = canonical_relative_path(root, resolved)
     document = _parse_index(_read_index_text(resolved, relative), relative)
-    if "records" not in document or not isinstance(document.get("records"), list):
-        raise RegistryError(f"registry index has no 'records' array: {relative}")
+    envelope_errors = validate_json_contract(document, _envelope_schema(), relative)
+    if envelope_errors:
+        # An incompatible/malformed ENVELOPE (wrong schema_version, an
+        # unexpected top-level field, "records" not an array) fails the
+        # whole load closed -- unlike a single bad record, which is excluded
+        # and reported instead (RR-005; reuses the shared JSON-contract
+        # validator, never a second schema check).
+        raise RegistryError(
+            f"registry index envelope is invalid: {relative}: {envelope_errors[0]}"
+        )
     return document
 
 

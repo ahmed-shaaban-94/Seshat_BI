@@ -189,3 +189,66 @@ def test_workspace_collision_is_refused(tmp_path: Path) -> None:
     assert outcome.status == "refused"
     assert {f["rule"] for f in outcome.findings} == {"pack_catalog_collision"}
     assert not (dest / "seshat-pack.yaml").exists()
+
+
+def test_undeclared_file_is_refused(tmp_path: Path) -> None:
+    """A pack source directory file the manifest never declares as an
+    artifact or fixture (e.g. a stray script) must refuse the add -- a
+    matching content hash over the whole directory does not make an
+    undeclared file declarative."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/sneaky", pack_id="acme.sneaky")
+    (pack_dir / "run.sh").write_text("#!/bin/sh\necho hi\n", encoding="utf-8")
+    registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.sneaky",
+            source="packs/reference/sneaky",
+            content_hash=content_digest(pack_dir),
+        )
+    )
+    outcome = add_pack(repo, registry, "acme.sneaky")
+    assert outcome.status == "refused"
+    assert any(f["rule"] == "pack_catalog_undeclared_file" for f in outcome.findings)
+    assert _nothing_written(repo)
+
+
+def test_unreadable_declared_content_is_refused(tmp_path: Path) -> None:
+    """A declared artifact file that cannot be read/parsed (malformed YAML
+    or non-UTF-8 bytes) must fail closed, never be silently skipped by the
+    disclosure pass -- otherwise a secret inside unparseable content would
+    slip through untouched."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/binary", pack_id="acme.binary")
+    (pack_dir / "artifacts/note.yaml").write_bytes(b"\xff\xfe\x00\x01not-utf8")
+    registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.binary",
+            source="packs/reference/binary",
+            content_hash=content_digest(pack_dir),
+        )
+    )
+    outcome = add_pack(repo, registry, "acme.binary")
+    assert outcome.status == "refused"
+    assert any(f["rule"] == "pack_catalog_unreadable_content" for f in outcome.findings)
+    assert _nothing_written(repo)
+
+
+def test_dest_is_existing_file_is_refused_as_collision(tmp_path: Path) -> None:
+    """``--dest`` naming an existing FILE (not a directory) must refuse as a
+    collision, not crash with NotADirectoryError from a bare iterdir()."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(repo, "packs/reference/kpi", pack_id="acme.kpi")
+    registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.kpi",
+            source="packs/reference/kpi",
+            content_hash=content_digest(pack_dir),
+        )
+    )
+    dest = repo / "packs/added/kpi-file"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("i am a file, not a directory", encoding="utf-8")
+    outcome = add_pack(repo, registry, "acme.kpi", dest=str(dest))
+    assert outcome.status == "refused"
+    assert {f["rule"] for f in outcome.findings} == {"pack_catalog_collision"}
+    assert dest.read_text(encoding="utf-8") == "i am a file, not a directory"

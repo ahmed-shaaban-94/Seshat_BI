@@ -74,6 +74,7 @@ def build_showcase_bundle(
     projection = build_explorer_projection(root)
 
     comparison_raw = build_comparison(root, snapshots) if snapshots else None
+    brand_asset_svg, brand_asset_ok = _load_brand_asset_text(root)
 
     normalized, redactions = normalize_portability(
         root,
@@ -98,6 +99,11 @@ def build_showcase_bundle(
         "badge": badge,
         "manifest": manifest,
         "comparison": comparison,
+        # Scanned as TEXT here, before rendering, so the exact bytes the
+        # rendered HTML embeds are the exact bytes the fail-closed scan
+        # inspected -- render_showcase_html reads this field, never the
+        # workspace file directly (closes the brand-asset disclosure gap).
+        "brand_asset_svg": brand_asset_svg or "",
     }
 
     disclosure = scan_disclosure(composed_body)
@@ -105,6 +111,17 @@ def build_showcase_bundle(
         *_carry_invariant_findings(projection["disclosure"]),
         *find_residual_absolute_paths(composed_body),
     ]
+    if not brand_asset_ok:
+        extra_findings.append(
+            {
+                "rule": "showcase_brand_asset_unreadable",
+                "locator": "$.brand_asset_svg",
+                "message": (
+                    "the brand asset could not be read or parsed for the "
+                    "disclosure scan"
+                ),
+            }
+        )
     if extra_findings:
         disclosure = {
             **disclosure,
@@ -191,15 +208,25 @@ def _escape(value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
-def _brand_img(repo: Path) -> str:
+def _load_brand_asset_text(root: Path) -> tuple[str | None, bool]:
+    """Read the brand asset as TEXT so it can be included in the disclosure-
+    scanned composed body, rather than re-reading raw bytes from the
+    workspace at render time (which would bypass the fail-closed scan).
+    Returns ``(text, ok)``; unreadable/non-UTF-8 content is ``(None, False)``
+    -- a fail-closed finding, never a silent skip."""
     from ..demo.fixtures import packaged_brand_asset
 
     try:
-        encoded = base64.b64encode(packaged_brand_asset(repo).read_bytes()).decode(
-            "ascii"
-        )
-    except OSError:
+        return packaged_brand_asset(root).read_text(encoding="utf-8"), True
+    except (OSError, UnicodeDecodeError):
+        return None, False
+
+
+def _brand_img(bundle: dict[str, Any]) -> str:
+    svg_text = bundle.get("brand_asset_svg")
+    if not svg_text:
         return ""
+    encoded = base64.b64encode(svg_text.encode("utf-8")).decode("ascii")
     return (
         f'<img src="data:image/svg+xml;base64,{encoded}" '
         'alt="Seshat BI seven-point readiness star">'
@@ -432,10 +459,13 @@ def render_showcase_html(
 ) -> str:
     """Render the self-contained offline showcase bundle HTML.
 
-    Reads only ``bundle`` (the ``build_showcase_bundle`` output) plus the
-    packaged brand asset; never opens an arbitrary repository file. Inlines
-    its OWN ``showcase.css`` / ``showcase.js`` -- it does not read or modify
-    ``explorer.css`` / ``explorer.js`` (FR-025).
+    Reads only ``bundle`` (the ``build_showcase_bundle`` output, which
+    already carries the brand asset as already-disclosure-scanned text
+    under ``bundle["brand_asset_svg"]``); it never opens the brand asset or
+    any other repository file itself at render time. Inlines its OWN
+    ``showcase.css`` / ``showcase.js`` -- it does not read or modify
+    ``explorer.css`` / ``explorer.js`` (FR-025). ``repo`` is accepted for
+    interface stability but is not read by this function.
     """
     labels = _LABELS["ar" if rtl else "en"]
     css = _asset_text("showcase.css")
@@ -457,7 +487,7 @@ def render_showcase_html(
 </head>
 <body>
   <header class="product-header">
-    {_brand_img(repo)}
+    {_brand_img(bundle)}
     <div><p class="product-name">{_escape(labels["product_name"])}</p>
     <h1>{_escape(labels["title"])}</h1></div>
     <span class="mode-badge">{_escape(labels["mode"])}</span>

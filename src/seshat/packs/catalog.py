@@ -126,6 +126,32 @@ def _text_document(path: Path) -> Any:
         return None
 
 
+def _disclosure_findings_for_file(
+    path: Path, relative: str, manifest_relative: str
+) -> list[dict[str, str]]:
+    document = _text_document(path)
+    if document is None:
+        # Unreadable/malformed content is fail-closed, NEVER silently
+        # skipped -- otherwise a secret or DSN inside a file the pack model
+        # cannot parse would slip past the disclosure pass entirely.
+        return [
+            _finding(
+                "pack_catalog_unreadable_content",
+                f"{manifest_relative}#{relative}",
+                "pack file content could not be read or parsed for the disclosure scan",
+            )
+        ]
+    result = scan_disclosure(document)
+    return [
+        _finding(
+            "pack_catalog_disclosure",
+            f"{manifest_relative}#{relative}:{item['locator']}",
+            item["message"],
+        )
+        for item in result["findings"]
+    ]
+
+
 def _disclosure_findings(
     pack_dir: Path, manifest_relative: str
 ) -> list[dict[str, str]]:
@@ -138,19 +164,44 @@ def _disclosure_findings(
         relative = path.relative_to(pack_dir).as_posix()
         if relative == _MANIFEST_NAME:
             continue  # already scanned inside validate_pack
-        document = _text_document(path)
-        if document is None:
-            continue
-        result = scan_disclosure(document)
         findings.extend(
-            _finding(
-                "pack_catalog_disclosure",
-                f"{manifest_relative}#{relative}:{item['locator']}",
-                item["message"],
-            )
-            for item in result["findings"]
+            _disclosure_findings_for_file(path, relative, manifest_relative)
         )
     return findings
+
+
+def _declared_files(manifest: PackManifest) -> frozenset[str]:
+    """Every file path the manifest declares (itself, artifacts, fixtures).
+    A pack source file outside this set is undeclared content (FR-014)."""
+    declared = {_MANIFEST_NAME}
+    declared.update(artifact.path for artifact in manifest.artifacts)
+    declared.update(manifest.fixtures)
+    return frozenset(declared)
+
+
+def _undeclared_file_finding(relative: str) -> dict[str, str]:
+    return _finding(
+        "pack_catalog_undeclared_file",
+        relative,
+        "pack source contains a file the manifest does not declare as an "
+        "artifact or fixture; a hash match over the whole directory does "
+        "not make undeclared content declarative",
+    )
+
+
+def _undeclared_file_findings(
+    pack_dir: Path, manifest: PackManifest
+) -> list[dict[str, str]]:
+    """Refuse any pack-directory file the manifest never declared (FR-014):
+    ``validate_pack`` only reads the manifest plus its declared artifacts/
+    fixtures, so an undeclared file (e.g. a stray script) would otherwise be
+    copied into the workspace without ever being validated or scanned."""
+    declared = _declared_files(manifest)
+    return [
+        _undeclared_file_finding(path.relative_to(pack_dir).as_posix())
+        for path in _iter_pack_files(pack_dir)
+        if path.relative_to(pack_dir).as_posix() not in declared
+    ]
 
 
 def _existing_manifests(root: Path, added_root: str) -> list[PackManifest]:
@@ -241,6 +292,10 @@ def _verify_pack(
     if manifest is None or content_findings:
         return None, None, content_findings
 
+    undeclared_findings = _undeclared_file_findings(pack_dir, manifest)
+    if undeclared_findings:
+        return None, None, undeclared_findings
+
     disclosure_findings = _disclosure_findings(pack_dir, manifest_relative)
     if disclosure_findings:
         return None, None, disclosure_findings
@@ -272,7 +327,7 @@ def _resolve_add_target(
                 "destination path escapes the workspace",
             )
         ]
-    if dest_dir.exists() and any(dest_dir.iterdir()):
+    if _collides(dest_dir):
         return None, [
             _finding(
                 "pack_catalog_collision",
@@ -282,6 +337,17 @@ def _resolve_add_target(
             )
         ]
     return dest_dir, []
+
+
+def _collides(dest_dir: Path) -> bool:
+    """A destination that already exists is a collision -- whether it is a
+    non-empty directory OR a non-directory (e.g. a plain file), which would
+    otherwise raise ``NotADirectoryError`` from a bare ``iterdir()``."""
+    if not dest_dir.exists():
+        return False
+    if not dest_dir.is_dir():
+        return True
+    return any(dest_dir.iterdir())
 
 
 def add_pack(
@@ -313,12 +379,16 @@ def add_pack(
             ],
         )
 
+    # _verify_pack/_resolve_add_target return non-empty findings on every
+    # refusal path and empty findings ONLY alongside a real pack_dir/
+    # manifest/dest_dir -- so checking `findings` alone is sufficient and
+    # keeps this dispatch free of a multi-clause conditional.
     pack_dir, manifest, findings = _verify_pack(root, record)
-    if findings or pack_dir is None or manifest is None:
+    if findings:
         return _refuse(pack_id, findings)
 
     dest_dir, findings = _resolve_add_target(root, record, manifest, dest)
-    if findings or dest_dir is None:
+    if findings:
         return _refuse(pack_id, findings)
 
     written = _write_pack(pack_dir, dest_dir)

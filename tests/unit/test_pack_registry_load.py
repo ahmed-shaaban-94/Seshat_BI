@@ -69,6 +69,35 @@ def test_registry_missing_records_key_fails_closed(tmp_path: Path) -> None:
         load_registry(repo)
 
 
+def test_wrong_schema_version_envelope_fails_closed(tmp_path: Path) -> None:
+    """A registry declaring an incompatible envelope schema_version must
+    fail the WHOLE load closed, even though every individual record would
+    otherwise be schema-valid -- an envelope defect is not a per-record
+    defect (RR-005)."""
+    repo = build_test_repo(tmp_path)
+    registry_dir = repo / "packs/registry"
+    registry_dir.mkdir(parents=True)
+    (registry_dir / "index.yaml").write_text(
+        "schema_version: '2.0'\nrecords: []\n", encoding="utf-8"
+    )
+    with pytest.raises(RegistryError):
+        load_registry(repo)
+
+
+def test_unexpected_top_level_field_envelope_fails_closed(tmp_path: Path) -> None:
+    """An unexpected top-level field is an envelope defect the per-record
+    validator would never see, since it only inspects ``records``."""
+    repo = build_test_repo(tmp_path)
+    registry_dir = repo / "packs/registry"
+    registry_dir.mkdir(parents=True)
+    (registry_dir / "index.yaml").write_text(
+        "schema_version: '1.0'\nrecords: []\nunexpected_field: true\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RegistryError):
+        load_registry(repo)
+
+
 def test_duplicate_id_and_version_is_a_defect_and_not_silently_chosen(
     tmp_path: Path,
 ) -> None:

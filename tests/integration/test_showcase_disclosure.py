@@ -203,6 +203,45 @@ def test_residual_absolute_path_outside_shared_scanner_prefixes_still_blocks(
     assert any(finding["rule"] == "residual_absolute_path" for finding in findings)
 
 
+def test_secret_in_repo_local_brand_asset_blocks_generation(tmp_path: Path) -> None:
+    """A workspace-local brand asset override
+    (assets/brand/seshat-seven-star.svg) is read and embedded into the
+    rendered HTML; a secret hiding in that file must still block generation
+    -- it must be scanned BEFORE rendering, not read fresh at render time
+    after the scan already passed."""
+    _base_table(tmp_path)
+    brand_dir = tmp_path / "assets" / "brand"
+    brand_dir.mkdir(parents=True)
+    (brand_dir / "seshat-seven-star.svg").write_text(
+        f'<svg xmlns="http://www.w3.org/2000/svg"><!-- {_DSN} --></svg>',
+        encoding="utf-8",
+    )
+    bundle = build_showcase_bundle(tmp_path)
+    assert bundle["disclosure"]["status"] == "blocked"
+    findings = bundle["disclosure"]["findings"]
+    assert any(finding["rule"] == "connection_string" for finding in findings)
+
+
+def test_clean_brand_asset_is_embedded_from_the_scanned_bundle(
+    tmp_path: Path,
+) -> None:
+    """A clean repo-local brand asset override renders successfully, and the
+    embedded image comes from the bundle's already-scanned text (not a
+    fresh independent file read at render time)."""
+    _base_table(tmp_path)
+    brand_dir = tmp_path / "assets" / "brand"
+    brand_dir.mkdir(parents=True)
+    (brand_dir / "seshat-seven-star.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg"><title>ok</title></svg>',
+        encoding="utf-8",
+    )
+    bundle = build_showcase_bundle(tmp_path)
+    assert bundle["disclosure"]["status"] == "pass"
+    assert bundle["brand_asset_svg"].startswith("<svg")
+    html = render_showcase_html(bundle, repo=tmp_path)
+    assert "data:image/svg+xml;base64," in html
+
+
 def test_pass_without_evidence_invariant_is_carried_and_blocks(tmp_path: Path) -> None:
     _base_table(tmp_path)
     status = tmp_path / "mappings/orders/readiness-status.yaml"
