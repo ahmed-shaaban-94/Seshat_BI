@@ -66,12 +66,20 @@ T018-T020, T024-T025, T028-T030). No orphan FR; no orphan task.
   unavailable (FR-003); no live DB added. Aligned.
 - Principle IX + hard rules: fail-closed disclosure, ASCII/UTF-8-no-BOM,
   contained local output, short paths. Aligned.
-- Option B (ratified 2026-07-07): honored; the pre-ratification
-  explorer/passport verbs are grandfathered, not precedent for a new verb.
+- Option B (ratified 2026-07-07): honored as the recommended default (skill,
+  not verb). The peer `explorer`/`passport` CLI verbs were added by spec 120
+  (created 2026-07-11, AFTER the ratification), so they are NOT a grandfathered
+  pre-ratification exception -- they are a live post-ratification verb-parity
+  precedent for the nearest sibling surfaces. Because the verb-vs-skill choice is
+  a product-identity call the Option B doc itself reserves for the owner, this
+  spec routes it to the ratifier (see Section D item 1 and the spec's
+  "Open for human" note) rather than presenting it as auto-cleared.
 
 ## D. Ambiguities / underspecification (resolved by auto-answer, recorded)
 
-1. Verb vs skill -> skill (Option B). Recorded as auto_decision.
+1. Verb vs skill -> RECLASSIFIED to open_for_human (see Section E). Skill
+   (Option B) is the recommended default, but the choice is a product-identity
+   call reserved for the owner, not an auto-cleared decision.
 2. Redact vs block on live findings -> block fail-closed; redacted =
    portability normalization. Recorded.
 3. "valid comparable snapshots" -> same schema+scope, differing revision.
@@ -81,7 +89,23 @@ T018-T020, T024-T025, T028-T030). No orphan FR; no orphan task.
 
 No open [NEEDS CLARIFICATION] markers remain in spec.md.
 
-## E. Open questions carried to plan/implementation (not blocking the spec)
+## E. Open for human (ratifier) + open questions carried to implementation
+
+**Open for human (Principle-V-adjacent, ratifier decides at the ratify seam):**
+
+- **Skill vs `seshat showcase build` CLI verb (product identity).** The
+  recommended default is a read-only skill over a reusable library function,
+  applying the ratified Option B policy (`cli-verbs-vs-skill-driven.md`,
+  2026-07-07). This is NOT auto-cleared: (1) the choice is reversible-but-costly;
+  (2) the nearest sibling surfaces `explorer`/`passport` are shipped CLI verbs
+  added by spec 120 AFTER the Option B ratification -- a live verb-parity
+  counter-argument; (3) the Option B doc states the verb-vs-skill choice "is a
+  genuine change to the product's stated identity ... an owner decision." The
+  ratifier may confirm the skill default or override to verb-parity. FR-005
+  encodes the recommended default and must be re-confirmed (or amended) at
+  ratification.
+
+**Open questions carried to plan/implementation (not blocking the spec):**
 
 - Private-URL scanner coverage (FR-019 / research R3): preferred = extend the
   shared disclosure.py with a private-URL rule (central, testable); fallback =
@@ -100,10 +124,12 @@ No open [NEEDS CLARIFICATION] markers remain in spec.md.
 ## G. Verdict
 
 CONSISTENT. All FRs and SCs are task-covered; no contradictions across
-artifacts; all cited reused symbols exist; constitution and Option-B aligned; no
-Principle-V human seam was auto-cleared improperly. One implementation-phase seam
-(private-URL scanner extension) is explicitly deferred with a fail-closed
-fallback. Ready for the ratify seam (human).
+artifacts; all cited reused symbols exist; constitution and Option-B aligned.
+One product-identity choice (skill vs CLI verb) is routed to the ratifier as an
+open_for_human item (Section E) with skill as the recommended default -- it is
+NOT auto-cleared. One implementation-phase seam (private-URL scanner extension)
+is explicitly deferred with a fail-closed fallback. Ready for the ratify seam
+(human).
 
 ## H. Post-review correction (advisor pass, 2026-07-14)
 
@@ -144,7 +170,11 @@ artifacts and re-committed:
    so the quickstart claim holds; the containment guard remains the real control.
    All cited reused symbols exist as named (re-confirmed).
 
-Revised verdict: CONSISTENT after the two fixes. The disclosure mechanism now
-matches FR-009; the Option-B justification is factually grounded; open_for_human
-remains empty (no genuine grain/PII/rollup/identity decision in a local rendering
-layer). Ready for the ratify seam (human).
+Revised verdict: CONSISTENT after the fixes. The disclosure mechanism now
+matches FR-009; the Option-B justification is factually grounded. A later
+correction (2026-07-14, second advisor pass) additionally RECLASSIFIED the
+verb-vs-skill choice from an auto-cleared decision to an open_for_human ratifier
+call (Section E), because it is a reversible-but-costly product-identity decision
+with a live post-ratification sibling-verb precedent (`explorer`/`passport`, spec
+120); skill remains the recommended default. No PII/grain/rollup decision arises
+in a local rendering layer. Ready for the ratify seam (human).
