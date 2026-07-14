@@ -129,6 +129,34 @@ def test_disclosure_hit_is_refused(tmp_path: Path) -> None:
     assert _nothing_written(repo)
 
 
+def test_disclosure_hit_in_a_yaml_comment_is_refused(tmp_path: Path) -> None:
+    """A secret hiding in a YAML COMMENT (which yaml.safe_load silently
+    drops from the parsed mapping) must still be caught, since the
+    ORIGINAL bytes -- comment included -- are what gets copied into the
+    workspace on a successful add."""
+    repo = build_test_repo(tmp_path)
+    pack_dir = write_pack(
+        repo,
+        "packs/reference/commented",
+        pack_id="acme.commented",
+        extra_artifact_text=(
+            "note: a generic declarative artifact.\n"
+            "# see postgres://user:pass@host:5432/db for context\n"
+        ),
+    )
+    registry = _one_record_registry(
+        record_dict(
+            pack_id="acme.commented",
+            source="packs/reference/commented",
+            content_hash=content_digest(pack_dir),
+        )
+    )
+    outcome = add_pack(repo, registry, "acme.commented")
+    assert outcome.status == "refused"
+    assert any(f["rule"] == "pack_catalog_disclosure" for f in outcome.findings)
+    assert _nothing_written(repo)
+
+
 def test_schema_invalid_content_is_refused_via_existing_validation(
     tmp_path: Path,
 ) -> None:

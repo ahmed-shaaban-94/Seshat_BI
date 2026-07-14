@@ -124,18 +124,23 @@ def _resolve_pack_dir(
 
 
 def _text_document(path: Path) -> Any:
-    """Best-effort structured read for the explicit disclosure pass: YAML
-    files are parsed (so secret/PII keys are checked by name); anything else
-    is wrapped as a single string value (so connection-string and
-    absolute-path patterns are still checked)."""
+    """Best-effort structured read for the explicit disclosure pass. YAML
+    files are scanned BOTH as their parsed mapping (so secret/PII KEYS are
+    checked by name) AND as raw text (so a pattern match -- a connection
+    string or absolute path -- hiding in a YAML COMMENT, which
+    ``yaml.safe_load`` silently drops, is still caught before the original
+    bytes are copied into the workspace). Anything else is wrapped as a
+    single string value (so connection-string and absolute-path patterns
+    are still checked)."""
     import yaml
 
     if path.suffix.lower() in (".yaml", ".yml"):
         try:
-            parsed = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+            raw_text = path.read_text(encoding="utf-8-sig")
+            parsed = yaml.safe_load(raw_text)
         except (OSError, UnicodeDecodeError, yaml.YAMLError):
             return None
-        return parsed
+        return {"parsed": parsed, "raw_text": raw_text}
     try:
         return {"content": path.read_text(encoding="utf-8-sig")}
     except (OSError, UnicodeDecodeError):

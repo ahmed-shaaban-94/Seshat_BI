@@ -289,6 +289,34 @@ def test_update_integrity_blocked_on_seeded_drift_names_path_and_hashes(
     )
 
 
+def test_update_integrity_blocked_when_destination_escapes_bundle_root(
+    tmp_path: Path,
+) -> None:
+    """A provenance entry whose destination is an absolute path outside
+    bundle_root must be refused as a containment escape -- never resolved
+    and hashed as if it proved the installed bundle's own contents are
+    intact (which it would, trivially, for ANY matching outside file)."""
+    target_spec = _target_spec(tmp_path)
+    outside_file = tmp_path / "outside-secret.txt"
+    outside_file.write_bytes(b"arbitrary file outside the bundle\n")
+    manifest = {
+        "entries": [
+            {
+                "destination": str(outside_file),
+                "output_sha256": _sha(outside_file.read_bytes()),
+            }
+        ]
+    }
+    _write_json(tmp_path / target_spec.provenance_manifest, manifest)
+
+    result = checks.update_integrity_check(target_spec, tmp_path)
+
+    assert result.verdict == "BLOCKED"
+    assert any(
+        "escapes the bundle root" in reason for reason in result.blocking_reasons
+    )
+
+
 def test_update_integrity_blocked_on_missing_generated_file(tmp_path: Path) -> None:
     target_spec = _target_spec(tmp_path)
     bundle_root = _write_bundle_with_manifest(tmp_path, target_spec)

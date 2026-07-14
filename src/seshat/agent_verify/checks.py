@@ -30,6 +30,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ..artifact_identity import resolve_within
 from .model import PerCheckResult
 from .targets import VerifyTargetSpec, marketplace_path_for
 
@@ -262,12 +263,20 @@ def version_compatibility_check(
 
 def _entry_drift(bundle_root: Path, entry: object) -> str | None:
     """Return a drift message for one provenance entry, or ``None`` when its
-    generated file exists and matches the recorded ``output_sha256``."""
+    generated file exists and matches the recorded ``output_sha256``.
+
+    ``destination`` MUST resolve to a path contained within ``bundle_root``
+    -- an absolute path or a ``..``-escaping value in an edited manifest
+    must never let this check hash an arbitrary file outside the generated
+    bundle and report it as proof the bundle is intact."""
     destination = entry.get("destination") if isinstance(entry, dict) else None
     expected_hash = entry.get("output_sha256") if isinstance(entry, dict) else None
     if not isinstance(destination, str) or not isinstance(expected_hash, str):
         return f"malformed provenance entry: {entry!r}"
-    file_path = bundle_root / destination
+    try:
+        file_path = resolve_within(bundle_root, destination)
+    except ValueError:
+        return f"{destination}: provenance destination escapes the bundle root"
     if not file_path.is_file():
         return (
             f"{destination}: generated file is missing "

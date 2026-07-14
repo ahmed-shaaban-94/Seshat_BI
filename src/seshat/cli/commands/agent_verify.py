@@ -88,19 +88,35 @@ def _write_record_or_error(record, *, repo_root: Path, output):
         return None, 2
 
 
-def _maybe_publish(record, *, requested: bool) -> int | None:
+def _maybe_publish(
+    record, *, requested: bool
+) -> tuple[dict[str, str] | None, int | None]:
+    """Returns ``(publish_info, error_code)`` -- never prints anything
+    itself, so the caller decides how to surface the result (folded into
+    the JSON object or printed as text) and stdout stays one parseable
+    document in ``--format json`` mode."""
     if not requested:
-        return None
+        return None, None
     from seshat.agent_verify.record import publish_record
 
     try:
         outcome = publish_record(record, requested=True)
     except ValueError as exc:
-        print(f"publish refused: {exc}")
-        return 2
-    disclosure_status = outcome["disclosure"]["status"]
-    print(f"publish: {outcome['status']} (disclosure={disclosure_status})")
-    return None
+        return {"status": "refused", "reason": str(exc)}, 2
+    return {
+        "status": outcome["status"],
+        "disclosure_status": outcome["disclosure"]["status"],
+    }, None
+
+
+def _print_publish_text(publish_info: dict[str, str]) -> None:
+    if publish_info["status"] == "refused":
+        print(f"publish refused: {publish_info['reason']}")
+    else:
+        print(
+            f"publish: {publish_info['status']} "
+            f"(disclosure={publish_info['disclosure_status']})"
+        )
 
 
 def _exit_code_for(results: Sequence[PerCheckResult]) -> int:
@@ -129,19 +145,23 @@ def _run_verify(args: argparse.Namespace) -> int:
     if error_code is not None:
         return error_code
 
+    publish_info, publish_error_code = _maybe_publish(record, requested=args.publish)
+
     written_relative = written.relative_to(repo_root).as_posix()
     if args.output_format == "json":
-        # The written path is folded INTO the JSON object (never appended as
-        # a trailing text line) so `--format json` output stays one valid,
-        # pipeable JSON document on stdout.
-        print(
-            json.dumps({**record.to_document(), "written": written_relative}, indent=2)
-        )
+        # The written path AND any publish outcome are folded INTO the JSON
+        # object (never appended as trailing text lines) so `--format json`
+        # output stays one valid, pipeable JSON document on stdout.
+        document = {**record.to_document(), "written": written_relative}
+        if publish_info is not None:
+            document["publish"] = publish_info
+        print(json.dumps(document, indent=2))
     else:
         _print_report(args.target, results)
         print(f"written: {written_relative}")
+        if publish_info is not None:
+            _print_publish_text(publish_info)
 
-    publish_error_code = _maybe_publish(record, requested=args.publish)
     if publish_error_code is not None:
         return publish_error_code
 

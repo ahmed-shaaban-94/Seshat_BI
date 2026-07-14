@@ -271,3 +271,39 @@ def test_json_format_stdout_is_a_single_parseable_document(
         assert "results" in document
     finally:
         _cleanup(written)
+
+
+def test_publish_with_json_format_stays_a_single_parseable_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """`--format json --publish` must ALSO keep stdout pipeable -- the
+    publish outcome line must not be appended as trailing plain text after
+    the JSON document; it is folded into the document as a `publish` key."""
+    output = f".seshat-output/agent-verify/test-cli-publish-json-{tmp_path.name}.json"
+    written = _REPO / output
+    try:
+        exit_code = main(
+            [
+                "agent",
+                "verify",
+                "--target",
+                "codex",
+                "--repo",
+                str(_REPO),
+                "--output",
+                output,
+                "--format",
+                "json",
+                "--publish",
+            ]
+        )
+        captured = capsys.readouterr()
+        document = json.loads(captured.out)
+        assert document["written"] == output
+        assert document["publish"]["status"] in {
+            "publish_intent_confirmed",
+            "refused",
+        }
+        assert exit_code in (0, 1, 2, 3)
+    finally:
+        _cleanup(written)
