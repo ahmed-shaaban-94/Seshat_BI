@@ -193,6 +193,29 @@ def _partition_duplicates(
     return usable, findings
 
 
+def _resolve_registry_path(root: Path, registry_path: Path | str) -> Path | None:
+    """Resolve the registry path within the workspace root. Returns ``None``
+    for an absent file (FR-021's "empty registry" case); raises
+    :class:`RegistryError` for a containment escape or a non-file path."""
+    try:
+        resolved = resolve_within(root, registry_path)
+    except ValueError as exc:
+        raise RegistryError("registry path resolves outside the workspace") from exc
+    if not resolved.exists():
+        return None
+    if not resolved.is_file():
+        raise RegistryError("registry path is not a file")
+    return resolved
+
+
+def _load_index_document(root: Path, resolved: Path) -> dict:
+    relative = canonical_relative_path(root, resolved)
+    document = _parse_index(_read_index_text(resolved, relative), relative)
+    if "records" not in document or not isinstance(document.get("records"), list):
+        raise RegistryError(f"registry index has no 'records' array: {relative}")
+    return document
+
+
 def load_registry(
     repo_root: Path | str, registry_path: Path | str = DEFAULT_REGISTRY_PATH
 ) -> Registry:
@@ -207,21 +230,11 @@ def load_registry(
     FR-020) so the rest of the registry stays usable.
     """
     root = Path(repo_root).resolve()
-    try:
-        resolved = resolve_within(root, registry_path)
-    except ValueError as exc:
-        raise RegistryError("registry path resolves outside the workspace") from exc
-    if not resolved.exists():
+    resolved = _resolve_registry_path(root, registry_path)
+    if resolved is None:
         return Registry()
-    if not resolved.is_file():
-        raise RegistryError("registry path is not a file")
 
-    relative = canonical_relative_path(root, resolved)
-    document = _parse_index(_read_index_text(resolved, relative), relative)
-
-    if "records" not in document or not isinstance(document.get("records"), list):
-        raise RegistryError(f"registry index has no 'records' array: {relative}")
-
+    document = _load_index_document(root, resolved)
     valid_records, invalid_findings = _valid_records_and_findings(document["records"])
     usable_records, duplicate_findings = _partition_duplicates(valid_records)
     return Registry(

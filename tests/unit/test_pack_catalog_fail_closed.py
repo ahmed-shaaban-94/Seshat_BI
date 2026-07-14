@@ -87,29 +87,24 @@ def test_incompatible_core_is_refused(tmp_path: Path) -> None:
     assert _nothing_written(repo)
 
 
-def test_missing_dangling_source_is_refused(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("source", "expected_rule"),
+    [
+        ("packs/reference/absent", "pack_catalog_missing_content"),
+        ("../outside-workspace", "pack_catalog_containment"),
+    ],
+    ids=["missing_dangling_source", "containment_escape"],
+)
+def test_unresolvable_source_is_refused(
+    tmp_path: Path, source: str, expected_rule: str
+) -> None:
     repo = build_test_repo(tmp_path)
     registry = _one_record_registry(
-        record_dict(
-            pack_id="acme.kpi", source="packs/reference/absent", content_hash="0" * 64
-        )
+        record_dict(pack_id="acme.kpi", source=source, content_hash="0" * 64)
     )
     outcome = add_pack(repo, registry, "acme.kpi")
     assert outcome.status == "refused"
-    assert {f["rule"] for f in outcome.findings} == {"pack_catalog_missing_content"}
-    assert _nothing_written(repo)
-
-
-def test_containment_escape_is_refused(tmp_path: Path) -> None:
-    repo = build_test_repo(tmp_path)
-    registry = _one_record_registry(
-        record_dict(
-            pack_id="acme.kpi", source="../outside-workspace", content_hash="0" * 64
-        )
-    )
-    outcome = add_pack(repo, registry, "acme.kpi")
-    assert outcome.status == "refused"
-    assert {f["rule"] for f in outcome.findings} == {"pack_catalog_containment"}
+    assert {f["rule"] for f in outcome.findings} == {expected_rule}
     assert _nothing_written(repo)
 
 

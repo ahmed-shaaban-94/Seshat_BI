@@ -27,13 +27,21 @@ def _numeric(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _assert_not_numeric_if_forbidden(
+    key: str, value: object, forbidden_keys: frozenset[str]
+) -> None:
+    if key not in forbidden_keys:
+        return
+    assert not _numeric(value), f"{key!r} must never be numeric: {value!r}"
+
+
 def _walk_no_numeric_score(node: object, forbidden_keys: frozenset[str]) -> None:
     if isinstance(node, dict):
         for key, value in node.items():
-            if key in forbidden_keys:
-                assert not _numeric(value), f"{key!r} must never be numeric: {value!r}"
+            _assert_not_numeric_if_forbidden(key, value, forbidden_keys)
             _walk_no_numeric_score(value, forbidden_keys)
-    elif isinstance(node, list):
+        return
+    if isinstance(node, list):
         for item in node:
             _walk_no_numeric_score(item, forbidden_keys)
 

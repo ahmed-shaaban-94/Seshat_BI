@@ -205,13 +205,91 @@ def _write_pack(pack_dir: Path, dest_dir: Path) -> list[str]:
     return written
 
 
+def _verify_pack(
+    root: Path, record: RegistryRecord
+) -> tuple[Path | None, PackManifest | None, list[dict[str, str]]]:
+    """Fetch -> hash-verify -> schema/content-validate -> disclosure-scan one
+    registry record. Returns ``(pack_dir, manifest, [])`` on all-pass, or
+    ``(None, None, findings)`` on the first refusal (fail-closed)."""
+    incompatible = _compatibility_findings(
+        record.compatibility, f"registry:{record.id}"
+    )
+    if incompatible:
+        return None, None, incompatible
+
+    pack_dir, missing_or_escaped = _resolve_pack_dir(root, record)
+    if pack_dir is None:
+        return None, None, [missing_or_escaped]  # type: ignore[list-item]
+
+    computed_hash = content_digest(pack_dir)
+    if computed_hash != record.hash:
+        return (
+            None,
+            None,
+            [
+                _finding(
+                    "pack_catalog_tamper",
+                    f"registry:{record.id}",
+                    f"fetched content hash does not match the recorded hash "
+                    f"for {record.id!r}",
+                )
+            ],
+        )
+
+    manifest_relative = canonical_relative_path(root, pack_dir / _MANIFEST_NAME)
+    manifest, content_findings = validate_pack(root, manifest_relative)
+    if manifest is None or content_findings:
+        return None, None, content_findings
+
+    disclosure_findings = _disclosure_findings(pack_dir, manifest_relative)
+    if disclosure_findings:
+        return None, None, disclosure_findings
+
+    return pack_dir, manifest, []
+
+
+def _resolve_add_target(
+    root: Path,
+    record: RegistryRecord,
+    manifest: PackManifest,
+    dest: Path | str | None,
+) -> tuple[Path | None, list[dict[str, str]]]:
+    """Check declared dependencies/conflicts against what is already added,
+    then resolve (and containment/collision-check) the destination
+    directory. Returns ``(dest_dir, [])`` on all-pass, ``(None, findings)``
+    otherwise."""
+    existing = _existing_manifests(root, DEFAULT_ADDED_ROOT)
+    selection_findings = _selection_findings_for(manifest, existing)
+    if selection_findings:
+        return None, selection_findings
+
+    dest_dir = _dest_dir(root, record, dest)
+    if dest_dir is None:
+        return None, [
+            _finding(
+                "pack_catalog_containment",
+                record.id,
+                "destination path escapes the workspace",
+            )
+        ]
+    if dest_dir.exists() and any(dest_dir.iterdir()):
+        return None, [
+            _finding(
+                "pack_catalog_collision",
+                canonical_relative_path(root, dest_dir),
+                "pack content already exists at the destination; "
+                "add refuses to overwrite it silently",
+            )
+        ]
+    return dest_dir, []
+
+
 def add_pack(
     repo_root: Path | str,
     registry: Registry,
     pack_id: str,
     *,
     dest: Path | str | None = None,
-    added_root: str = DEFAULT_ADDED_ROOT,
 ) -> CatalogOutcome:
     """Run the full fail-closed chain and, only on all-pass, add the
     verified declarative pack as a reviewable workspace change.
@@ -235,68 +313,13 @@ def add_pack(
             ],
         )
 
-    incompatible = _compatibility_findings(
-        record.compatibility, f"registry:{record.id}"
-    )
-    if incompatible:
-        return _refuse(pack_id, incompatible)
+    pack_dir, manifest, findings = _verify_pack(root, record)
+    if findings or pack_dir is None or manifest is None:
+        return _refuse(pack_id, findings)
 
-    pack_dir, missing_or_escaped = _resolve_pack_dir(root, record)
-    if pack_dir is None:
-        return _refuse(pack_id, [missing_or_escaped])  # type: ignore[list-item]
-
-    computed_hash = content_digest(pack_dir)
-    if computed_hash != record.hash:
-        return _refuse(
-            pack_id,
-            [
-                _finding(
-                    "pack_catalog_tamper",
-                    f"registry:{record.id}",
-                    f"fetched content hash does not match the recorded hash "
-                    f"for {record.id!r}",
-                )
-            ],
-        )
-
-    manifest_relative = canonical_relative_path(root, pack_dir / _MANIFEST_NAME)
-    manifest, content_findings = validate_pack(root, manifest_relative)
-    if manifest is None or content_findings:
-        return _refuse(pack_id, content_findings)
-
-    disclosure_findings = _disclosure_findings(pack_dir, manifest_relative)
-    if disclosure_findings:
-        return _refuse(pack_id, disclosure_findings)
-
-    existing = _existing_manifests(root, added_root)
-    selection_findings = _selection_findings_for(manifest, existing)
-    if selection_findings:
-        return _refuse(pack_id, selection_findings)
-
-    dest_dir = _dest_dir(root, record, dest)
-    if dest_dir is None:
-        return _refuse(
-            pack_id,
-            [
-                _finding(
-                    "pack_catalog_containment",
-                    pack_id,
-                    "destination path escapes the workspace",
-                )
-            ],
-        )
-    if dest_dir.exists() and any(dest_dir.iterdir()):
-        return _refuse(
-            pack_id,
-            [
-                _finding(
-                    "pack_catalog_collision",
-                    canonical_relative_path(root, dest_dir),
-                    "pack content already exists at the destination; "
-                    "add refuses to overwrite it silently",
-                )
-            ],
-        )
+    dest_dir, findings = _resolve_add_target(root, record, manifest, dest)
+    if findings or dest_dir is None:
+        return _refuse(pack_id, findings)
 
     written = _write_pack(pack_dir, dest_dir)
     relative_written = tuple(canonical_relative_path(root, path) for path in written)

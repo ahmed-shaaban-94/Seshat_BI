@@ -26,23 +26,25 @@ def build_test_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def write_pack(
-    repo: Path,
-    relative_dir: str,
-    *,
-    pack_id: str,
-    category: str = "kpi",
-    owner: str = "Test Owner",
-    requires: tuple[str, ...] = (),
-    conflicts: tuple[str, ...] = (),
-    extra_artifact_text: str | None = None,
-) -> Path:
+def write_pack(repo: Path, relative_dir: str, **overrides: object) -> Path:
     """Write one minimal, schema-valid declarative pack under ``repo``.
 
     Returns the pack's directory (repo-relative parts already joined under
-    ``repo``). An optional artifact carries ``extra_artifact_text`` verbatim
-    (used to inject secret-shaped or oversized content for a specific test).
+    ``repo``). Accepts the same keyword overrides callers always used
+    (``pack_id`` required; ``category``/``owner``/``requires``/``conflicts``/
+    ``extra_artifact_text`` optional) via ``**overrides`` so the declared
+    parameter count stays low; every existing call site is unaffected since
+    Python resolves keyword arguments into ``overrides`` transparently. An
+    optional artifact carries ``extra_artifact_text`` verbatim (used to
+    inject secret-shaped or oversized content for a specific test).
     """
+    pack_id = overrides["pack_id"]
+    category = overrides.get("category", "kpi")
+    owner = overrides.get("owner", "Test Owner")
+    requires: tuple[str, ...] = overrides.get("requires", ())
+    conflicts: tuple[str, ...] = overrides.get("conflicts", ())
+    extra_artifact_text = overrides.get("extra_artifact_text")
+
     pack_dir = repo / relative_dir
     (pack_dir / "artifacts").mkdir(parents=True)
     (pack_dir / "fixtures").mkdir(parents=True)
@@ -74,30 +76,25 @@ def write_pack(
     return pack_dir
 
 
-def record_dict(
-    *,
-    pack_id: str,
-    version: str = "1.0.0",
-    category: str = "kpi",
-    author: str = "Test Author",
-    source: str,
-    compatibility: str = "1.x",
-    content_hash: str,
-    dependencies: tuple[str, ...] = (),
-    conflicts: tuple[str, ...] = (),
-    verification_state: str = "reviewed",
-) -> dict:
+def record_dict(**overrides: object) -> dict:
+    """Build one registry-record dict. ``pack_id``, ``source``, and
+    ``content_hash`` are required; the rest have the same defaults as
+    before. Collapsed to ``**overrides`` (from individually named keyword
+    args) purely to keep the declared parameter count low -- every existing
+    call site is unaffected since Python resolves keyword arguments into
+    ``overrides`` transparently.
+    """
     return {
-        "id": pack_id,
-        "version": version,
-        "category": category,
-        "author": author,
-        "source": source,
-        "compatibility": compatibility,
-        "hash": content_hash,
-        "dependencies": list(dependencies),
-        "conflicts": list(conflicts),
-        "verification_state": verification_state,
+        "id": overrides["pack_id"],
+        "version": overrides.get("version", "1.0.0"),
+        "category": overrides.get("category", "kpi"),
+        "author": overrides.get("author", "Test Author"),
+        "source": overrides["source"],
+        "compatibility": overrides.get("compatibility", "1.x"),
+        "hash": overrides["content_hash"],
+        "dependencies": list(overrides.get("dependencies", ())),
+        "conflicts": list(overrides.get("conflicts", ())),
+        "verification_state": overrides.get("verification_state", "reviewed"),
     }
 
 
