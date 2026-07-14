@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -63,12 +63,20 @@ def _target_spec(
     )
 
 
+def _bundle_source(target_spec: VerifyTargetSpec) -> str:
+    bundle_dir = PurePosixPath(target_spec.manifest_path).parent.parent
+    return f"./{bundle_dir.as_posix()}"
+
+
 def _write_install_fixture(tmp_path: Path, target_spec: VerifyTargetSpec) -> None:
     _write_json(
         tmp_path / target_spec.manifest_path, {"name": "seshat-bi", "version": "0.2.0"}
     )
     marketplace_rel = marketplace_path_for(target_spec.name)
-    _write_json(tmp_path / marketplace_rel, {"plugins": [{"name": "seshat-bi"}]})
+    _write_json(
+        tmp_path / marketplace_rel,
+        {"plugins": [{"name": "seshat-bi", "source": _bundle_source(target_spec)}]},
+    )
     _write_json(
         tmp_path / target_spec.provenance_manifest,
         {"target": target_spec.name, "plugin": "seshat-bi", "entries": []},
@@ -134,7 +142,33 @@ def test_install_discovery_blocked_on_marketplace_not_listing_plugin(
     )
 
 
-def test_install_discovery_blocked_on_provenance_identity_mismatch(
+def test_install_discovery_blocked_on_marketplace_source_pointing_elsewhere(
+    tmp_path: Path,
+) -> None:
+    """A marketplace entry naming the right plugin but whose ``source`` path
+    resolves to a DIFFERENT bundle directory (stale or misdirected) must
+    never be accepted just because the ``name`` field still matches."""
+    target_spec = _target_spec(tmp_path)
+    _write_json(
+        tmp_path / target_spec.manifest_path, {"name": "seshat-bi", "version": "0.2.0"}
+    )
+    _write_json(
+        tmp_path / marketplace_path_for(target_spec.name),
+        {
+            "plugins": [
+                {"name": "seshat-bi", "source": "./integrations/some-other-bundle"}
+            ]
+        },
+    )
+    result = checks.install_discovery_check(target_spec, tmp_path)
+    assert result.verdict == "BLOCKED"
+    assert any(
+        "marketplace entry does not list" in reason
+        for reason in result.blocking_reasons
+    )
+
+
+def test_install_discovery_blocked_on_marketplace_entry_missing_source(
     tmp_path: Path,
 ) -> None:
     target_spec = _target_spec(tmp_path)
@@ -144,6 +178,52 @@ def test_install_discovery_blocked_on_provenance_identity_mismatch(
     _write_json(
         tmp_path / marketplace_path_for(target_spec.name),
         {"plugins": [{"name": "seshat-bi"}]},
+    )
+    result = checks.install_discovery_check(target_spec, tmp_path)
+    assert result.verdict == "BLOCKED"
+    assert any(
+        "marketplace entry does not list" in reason
+        for reason in result.blocking_reasons
+    )
+
+
+def test_install_discovery_pass_with_dict_shaped_source(tmp_path: Path) -> None:
+    """Codex's marketplace schema nests the path as ``source.path`` (a dict),
+    unlike Claude's plain string ``source`` -- both shapes must resolve."""
+    target_spec = _target_spec(tmp_path, name="codex")
+    _write_json(
+        tmp_path / target_spec.manifest_path, {"name": "seshat-bi", "version": "0.2.0"}
+    )
+    bundle_dir = PurePosixPath(target_spec.manifest_path).parent.parent.as_posix()
+    _write_json(
+        tmp_path / marketplace_path_for(target_spec.name),
+        {
+            "plugins": [
+                {
+                    "name": "seshat-bi",
+                    "source": {"source": "local", "path": f"./{bundle_dir}"},
+                }
+            ]
+        },
+    )
+    _write_json(
+        tmp_path / target_spec.provenance_manifest,
+        {"target": "codex", "plugin": "seshat-bi", "entries": []},
+    )
+    result = checks.install_discovery_check(target_spec, tmp_path)
+    assert result.verdict == "PASS"
+
+
+def test_install_discovery_blocked_on_provenance_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    target_spec = _target_spec(tmp_path)
+    _write_json(
+        tmp_path / target_spec.manifest_path, {"name": "seshat-bi", "version": "0.2.0"}
+    )
+    _write_json(
+        tmp_path / marketplace_path_for(target_spec.name),
+        {"plugins": [{"name": "seshat-bi", "source": _bundle_source(target_spec)}]},
     )
     _write_json(
         tmp_path / target_spec.provenance_manifest,

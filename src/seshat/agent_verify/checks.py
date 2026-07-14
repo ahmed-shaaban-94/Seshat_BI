@@ -27,7 +27,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..artifact_identity import resolve_within
@@ -81,8 +81,26 @@ def _read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
 # --- installation & discovery (FR-009/FR-010; extends spec 108) -----------
 
 
-def _plugin_matches(entry: object, name: object) -> bool:
-    return isinstance(entry, dict) and entry.get("name") == name
+def _entry_source_path(entry: dict) -> str | None:
+    source = entry.get("source")
+    if isinstance(source, str):
+        return source
+    if isinstance(source, dict) and isinstance(source.get("path"), str):
+        return source["path"]
+    return None
+
+
+def _plugin_matches(entry: object, name: object, bundle_dir: PurePosixPath) -> bool:
+    """A marketplace/discovery entry matches only when its declared ``name``
+    AND its ``source`` path both resolve to this target's own bundle
+    directory -- a stale or misdirected ``source`` pointing at a different
+    bundle must never be accepted just because ``name`` still matches."""
+    if not isinstance(entry, dict) or entry.get("name") != name:
+        return False
+    source_path = _entry_source_path(entry)
+    if source_path is None:
+        return False
+    return PurePosixPath(source_path) == bundle_dir
 
 
 def _read_plugin_manifest(
@@ -124,16 +142,17 @@ def _read_marketplace_entry(
             "per_target",
             [f"marketplace/discovery entry {marketplace_rel} {marketplace_error}"],
         )
+    bundle_dir = PurePosixPath(target_spec.manifest_path).parent.parent
     plugins = marketplace.get("plugins") if marketplace else None
     if not isinstance(plugins, list) or not any(
-        _plugin_matches(entry, plugin_name) for entry in plugins
+        _plugin_matches(entry, plugin_name, bundle_dir) for entry in plugins
     ):
         return marketplace_rel, _blocked(
             check_id,
             "per_target",
             [
-                f"marketplace entry does not list plugin {plugin_name!r}: "
-                f"{marketplace_rel}"
+                f"marketplace entry does not list plugin {plugin_name!r} with a "
+                f"source resolving to {bundle_dir.as_posix()!r}: {marketplace_rel}"
             ],
         )
     return marketplace_rel, None

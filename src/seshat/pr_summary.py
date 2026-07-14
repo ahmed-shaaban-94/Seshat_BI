@@ -479,24 +479,30 @@ def _stage_status_for(
     )
 
 
+def _readiness_stages_map(
+    readiness_is_mapping: bool, readiness: Mapping[str, Any] | None
+) -> Mapping[str, Any]:
+    if not readiness_is_mapping:
+        return {}
+    stages_field = readiness.get("stages")
+    if isinstance(stages_field, Mapping):
+        return stages_field
+    return {}
+
+
 def _build_stage_statuses(
     affected_stages: list[str],
     readiness: Mapping[str, Any] | None,
 ) -> tuple[list[StageStatus], list[str]]:
     readiness_is_mapping = isinstance(readiness, Mapping)
-    readiness_stages: Mapping[str, Any] = {}
-    if readiness_is_mapping:
-        stages_field = readiness.get("stages")
-        if isinstance(stages_field, Mapping):
-            readiness_stages = stages_field
+    readiness_stages = _readiness_stages_map(readiness_is_mapping, readiness)
 
-    stage_statuses: list[StageStatus] = []
-    undetermined: list[str] = []
-    for stage in affected_stages:
-        status, note = _stage_status_for(stage, readiness_is_mapping, readiness_stages)
-        stage_statuses.append(status)
-        if note is not None:
-            undetermined.append(note)
+    resolved = [
+        _stage_status_for(stage, readiness_is_mapping, readiness_stages)
+        for stage in affected_stages
+    ]
+    stage_statuses = [status for status, _note in resolved]
+    undetermined = [note for _status, note in resolved if note is not None]
     if affected_stages and not readiness_is_mapping:
         undetermined.append(
             "readiness stage status: readiness-status.yaml is absent -- "
@@ -606,6 +612,37 @@ def _choose_next_action(next_actions: list[str]) -> tuple[str, str | None]:
     return chosen, None
 
 
+def _findings_list(envelope: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    return [f for f in (envelope.get("findings") or []) if isinstance(f, Mapping)]
+
+
+def _findings_section(
+    base_fingerprints: Iterable[str] | None,
+    all_findings: list[Mapping[str, Any]],
+) -> tuple[list[str], list[BlockerGroup], str | None]:
+    if base_fingerprints is None:
+        return _unclassified_blocker_section(all_findings)
+    lines, blocker_groups = _classified_blocker_section(base_fingerprints, all_findings)
+    return lines, blocker_groups, None
+
+
+def _authority_section_lines(authority_lines: list[str]) -> list[str]:
+    if authority_lines:
+        return [f"- {line}" for line in authority_lines]
+    return ["- no blocked stage requires naming an authority here"]
+
+
+def _optional_section(heading: str, items: list[str]) -> list[str]:
+    if not items:
+        return []
+    return [heading, *(f"- {item}" for item in items)]
+
+
+def _extend_if_present(target: list[str], value: str | None) -> None:
+    if value is not None:
+        target.append(value)
+
+
 def render_summary(
     envelope: Mapping[str, Any] | None,
     readiness: Mapping[str, Any] | None,
@@ -632,9 +669,7 @@ def render_summary(
     affected_stages = _as_str_list(envelope.get("affected_stages"))
     changed_files = _as_str_list(envelope.get("changed_files"))
     changed_readiness_state = _as_str_list(envelope.get("changed_readiness_state"))
-    all_findings = [
-        f for f in (envelope.get("findings") or []) if isinstance(f, Mapping)
-    ]
+    all_findings = _findings_list(envelope)
 
     artifact_lines = _artifact_narrative_lines(
         affected_stages, changed_files, changed_readiness_state, all_findings
@@ -652,16 +687,11 @@ def render_summary(
     conflicts.extend(_stage_conflicts(outcome, stage_statuses))
 
     lines.append("\n## Findings\n")
-    if base_fingerprints is not None:
-        section_lines, blocker_groups = _classified_blocker_section(
-            base_fingerprints, all_findings
-        )
-    else:
-        section_lines, blocker_groups, note = _unclassified_blocker_section(
-            all_findings
-        )
-        undetermined.append(note)
+    section_lines, blocker_groups, findings_note = _findings_section(
+        base_fingerprints, all_findings
+    )
     lines.extend(section_lines)
+    _extend_if_present(undetermined, findings_note)
 
     warning_lines = _worth_a_look_lines(all_findings)
     lines.append("\n## Worth a look (not blocking)\n")
@@ -670,25 +700,18 @@ def render_summary(
     authority_lines, authority_gaps = _authority_lines(readiness, tuple(stage_statuses))
     undetermined.extend(authority_gaps)
     lines.append("\n## Required approval authority\n")
-    if authority_lines:
-        lines.extend(f"- {line}" for line in authority_lines)
-    else:
-        lines.append("- no blocked stage requires naming an authority here")
+    lines.extend(_authority_section_lines(authority_lines))
 
     next_actions = _as_str_list(envelope.get("next_actions"))
     next_action_text, next_action_gap = _choose_next_action(next_actions)
-    if next_action_gap is not None:
-        undetermined.append(next_action_gap)
+    _extend_if_present(undetermined, next_action_gap)
     lines.append("\n## Next action (exactly one)\n")
     lines.append(f"- {mask(next_action_text)}")
 
-    if conflicts:
-        lines.append("\n## Conflicts (surfaced, not resolved)\n")
-        lines.extend(f"- {c}" for c in conflicts)
-
-    if undetermined:
-        lines.append("\n## Could not determine\n")
-        lines.extend(f"- {u}" for u in undetermined)
+    lines.extend(
+        _optional_section("\n## Conflicts (surfaced, not resolved)\n", conflicts)
+    )
+    lines.extend(_optional_section("\n## Could not determine\n", undetermined))
 
     text = "\n".join(lines) + "\n"
     return FriendlySummary(
