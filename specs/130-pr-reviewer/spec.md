@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: Ratified (Ahmed Shaaban, 2026-07-14) -- roadmap F-number assigned at implementation scheduling
 
 **Input**: User description: "Friendly PR Reviewer. Add an OPT-IN PLAIN-LANGUAGE PR
 SUMMARY over EXISTING authoritative review results. A presentation layer over
