@@ -141,9 +141,16 @@ The ordering is non-negotiable, and the gates are the product:
 
 ## What is built today
 
-Everything below is on `main`, each with a written spec (under `specs/` or
-`docs/superpowers/specs/`) and held by the `retail check` gate. (For what is
-planned but not yet built, see the [Roadmap](#roadmap).)
+Everything below is on `main`, spec-backed, and held by the `retail check` gate. Highlights:
+
+- The static `retail check` gate over SQL, TMDL/PBIR, DAX, config, and docs.
+- Live `retail validate` (PK uniqueness, date coverage, orphan FKs, reconciliation).
+- The full seven-stage readiness spine (source intelligence -> handoff pack).
+- Agent surfaces: `seshat status` / `next`, offline HTML proof, read-only MCP governor, review/SARIF output.
+- The `seshat` CLI + `init-project`, PBIR authoring adapters, and companion dbt / Dagster adapters.
+
+<details>
+<summary>Full capability list</summary>
 
 | Capability | What it gives you |
 |------------|-------------------|
@@ -174,6 +181,8 @@ planned but not yet built, see the [Roadmap](#roadmap).)
 
 A green static check is necessary but not sufficient: semantic correctness needs
 the live validation boundary when a database is available.
+
+</details>
 
 ---
 
@@ -258,6 +267,9 @@ read readiness status
 
 ## Repository layout
 
+<details>
+<summary>Where everything lives</summary>
+
 | Path | Purpose |
 |------|---------|
 | `AGENTS.md` | Operating contract for AI agents. Read first. |
@@ -273,7 +285,9 @@ read readiness status
 | `docs/readiness/` | The seven-stage Readiness System spine. |
 | `docs/roadmap/` | Delivered ledger + the planned companion tier. |
 | `docs/brand/` | The **Seshat BI** visual identity and brand rules. |
-| `assets/brand/` | Committed brand assets (logo, seven-point star). |
+| `assets/brand/` | Committed brand assets (logo, Seshat star). |
+
+</details>
 
 ---
 
@@ -334,13 +348,12 @@ blocked by real BI gates before delivery. It is deliberately **not**:
 
 ## Brand
 
-The public identity is **Seshat BI**: a seven-point gold star (canonical truth and
-the seven readiness gates), a teal data network (lineage and the BI model), and the
-seated Seshat figure with a stylus (mapping and documentation before transformation).
-The star is always seven-pointed.
+The public identity is **Seshat BI**: the seated Seshat figure with a stylus
+(mapping and documentation before transformation), a gold star (canonical truth and
+the seven readiness gates), and a teal data network (lineage and the BI model).
 
 <div align="center">
-<img src="assets/brand/seshat-bi-brand-board.png" alt="Seshat BI brand board: logo system and palette" width="640" />
+<img src="assets/brand/seshat-bi-mark.png" alt="Seshat BI logo mark: seated Seshat figure, gold star, and teal data network on deep navy" width="240" />
 </div>
 
 Full guide: [`docs/brand/visual-identity.md`](docs/brand/visual-identity.md) --
