@@ -129,11 +129,17 @@ def _run_verify(args: argparse.Namespace) -> int:
     if error_code is not None:
         return error_code
 
+    written_relative = written.relative_to(repo_root).as_posix()
     if args.output_format == "json":
-        print(json.dumps(record.to_document(), indent=2))
+        # The written path is folded INTO the JSON object (never appended as
+        # a trailing text line) so `--format json` output stays one valid,
+        # pipeable JSON document on stdout.
+        print(
+            json.dumps({**record.to_document(), "written": written_relative}, indent=2)
+        )
     else:
         _print_report(args.target, results)
-    print(f"written: {written.relative_to(repo_root).as_posix()}")
+        print(f"written: {written_relative}")
 
     publish_error_code = _maybe_publish(record, requested=args.publish)
     if publish_error_code is not None:

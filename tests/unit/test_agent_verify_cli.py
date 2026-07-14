@@ -239,3 +239,35 @@ def test_verify_output_contains_no_forbidden_token(
         assert not _FORBIDDEN_TEXT.search(rendered)
     finally:
         _cleanup(written)
+
+
+def test_json_format_stdout_is_a_single_parseable_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """`--format json` must keep stdout pipeable to `json.load` -- the
+    written-path line must NOT be appended as trailing plain text after the
+    JSON document; it is folded into the document itself as a `written`
+    key."""
+    output = f".seshat-output/agent-verify/test-cli-json-parseable-{tmp_path.name}.json"
+    written = _REPO / output
+    try:
+        main(
+            [
+                "agent",
+                "verify",
+                "--target",
+                "codex",
+                "--repo",
+                str(_REPO),
+                "--output",
+                output,
+                "--format",
+                "json",
+            ]
+        )
+        captured = capsys.readouterr()
+        document = json.loads(captured.out)
+        assert document["written"] == output
+        assert "results" in document
+    finally:
+        _cleanup(written)

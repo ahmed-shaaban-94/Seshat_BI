@@ -34,6 +34,9 @@ _PRIVATE_URL_RE = re.compile(
     r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
     r"|192\.168\.\d{1,3}\.\d{1,3}"
     r"|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
+    # Link-local, incl. the 169.254.169.254 cloud-metadata/admin endpoint --
+    # a common SSRF target that would otherwise pass as "not private".
+    r"|169\.254\.\d{1,3}\.\d{1,3}"
     r"|[\w-]+(?:\.[\w-]+)*\.(?:internal|local))"
     r"(?::\d+)?(?:/[^\s\"'<>]*)?",
     re.IGNORECASE,

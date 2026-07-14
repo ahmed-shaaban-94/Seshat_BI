@@ -157,21 +157,37 @@ def _evidence_verdict(
     return {"path": after_entry.get("path"), "verdict": verdict}
 
 
+def _removed_artifact_verdicts(
+    before_index: dict[Any, dict[str, Any]], after_index: dict[Any, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """An artifact recorded in ``before`` but absent from ``after`` is a real
+    evidence change (the reference was removed) -- reported here so it is
+    never silently omitted just because only ``after``'s own list was
+    walked."""
+    return [
+        {"path": entry.get("path"), "verdict": "missing"}
+        for artifact_id, entry in before_index.items()
+        if artifact_id not in after_index
+    ]
+
+
 def _evidence_verdicts(
     before: dict[str, Any], after: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Diff the two snapshots' own recorded artifact identities directly so a
     real before-vs-after evidence change is reported even when the live
     workspace has since moved past ``after`` (or matches it exactly)."""
-    before_index = _artifact_index(before)
     after_artifacts = after.get("artifacts")
     if not isinstance(after_artifacts, list):
         return []
-    return [
+    before_index = _artifact_index(before)
+    after_index = _artifact_index(after)
+    present_verdicts = [
         _evidence_verdict(entry, before_index)
         for entry in after_artifacts
         if isinstance(entry, dict)
     ]
+    return present_verdicts + _removed_artifact_verdicts(before_index, after_index)
 
 
 def _incomparable_result(

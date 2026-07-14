@@ -157,6 +157,17 @@ def test_private_url_is_stripped_and_redacted(tmp_path: Path) -> None:
     assert redactions[0]["original_class"] == "private_url"
 
 
+def test_link_local_metadata_url_is_stripped_and_redacted(tmp_path: Path) -> None:
+    """The 169.254.0.0/16 link-local range (e.g. the cloud-metadata/admin
+    endpoint 169.254.169.254, a common SSRF target) must be treated as a
+    private URL too, not just RFC1918 + .internal/.local."""
+    document = {"note": "see http://169.254.169.254/latest/meta-data for the token"}
+    normalized, redactions = normalize_portability(tmp_path, document)
+    assert "169.254.169.254" not in normalized["note"]
+    assert "[private URL removed]" in normalized["note"]
+    assert redactions[0]["original_class"] == "private_url"
+
+
 def test_foreign_absolute_path_outside_root_is_left_for_the_scanner(
     tmp_path: Path,
 ) -> None:

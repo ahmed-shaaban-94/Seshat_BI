@@ -3,6 +3,7 @@ fabricated delta; graceful omission when snapshots are not comparable."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -130,3 +131,57 @@ def test_missing_readiness_key_is_malformed_not_an_empty_valid_delta(
     assert "readiness" in result["omitted_reason"]
     assert result["stage_transitions"] == []
     assert result["evidence_verdicts"] == []
+
+
+def test_removed_artifact_reports_a_missing_evidence_verdict(
+    tmp_path: Path,
+) -> None:
+    """An artifact recorded in `before` but absent from `after` (the
+    evidence reference was removed) must appear as its own `missing`
+    verdict -- not be silently omitted just because only `after`'s own
+    artifact list is walked."""
+
+    def _snapshot(revision: str, artifacts: list[dict]) -> dict:
+        return {
+            "schema_version": "1.0",
+            "source_revision": revision,
+            "scope": ["orders"],
+            "readiness": [],
+            "artifacts": artifacts,
+            "approvals": [],
+            "validation_boundary": {
+                "static": "x",
+                "live": "unavailable",
+                "unavailable_checks": [],
+            },
+            "authority_disclaimer": "test",
+            "passport_id": "passport-a",
+            "generated_at": "2026-07-01T00:00:00+00:00",
+        }
+
+    before_path = tmp_path / "before.json"
+    after_path = tmp_path / "after.json"
+    before_path.write_text(
+        json.dumps(
+            _snapshot(
+                "1111111111111111111111111111111111111111",
+                [
+                    {
+                        "artifact_id": "evidence:removed",
+                        "path": "mappings/orders/removed.md",
+                        "sha256": "a" * 64,
+                    }
+                ],
+            )
+        ),
+        encoding="utf-8",
+    )
+    after_path.write_text(
+        json.dumps(_snapshot("2222222222222222222222222222222222222222", [])),
+        encoding="utf-8",
+    )
+
+    result = build_comparison(tmp_path, (before_path, after_path))
+    assert result["comparable"] is True
+    verdicts = {item["path"]: item["verdict"] for item in result["evidence_verdicts"]}
+    assert verdicts["mappings/orders/removed.md"] == "missing"
