@@ -826,6 +826,21 @@ capabilities:
       roadmap: "F012"
       skill: "retail-control-room"
 
+  - id: portfolio-watch
+    name: "portfolio watch"
+    summary: "Recurring, read-only portfolio summary joining source drift, contract/metric drift, dashboard-intent divergence, readiness, approvals, and review across every governed scope, with a persisted local baseline so new/resolved/unchanged conditions are diffable across runs; one prioritized next action per scope, never a score."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "watch"
+    documentation: ".claude/skills/portfolio-watch/SKILL.md"
+    references:
+      dispatch: "watch"
+      skill: "portfolio-watch"
+
   - id: report-intent-interview
     name: "report-intent-interview"
     summary: "Interviews a report requester into a committed Report Intent artifact (audience, purpose, decision, questions, outcome/driver/guardrail metrics by name only) plus a report_intent_approval decision; never defines metric meaning, never self-grants approval."

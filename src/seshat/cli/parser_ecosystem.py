@@ -379,6 +379,36 @@ def _add_agent_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_watch_parser(sub: argparse._SubParsersAction) -> None:
+    """`watch` (spec 131): the ONE deliberate read-only CLI addition for
+    Portfolio Watch, mirroring the ratified ``status --format json``
+    precedent (FR-023, research D7) -- NOT a broad new verb family. Runs the
+    recurring, read-only, baseline-diffable portfolio summary: per governed
+    scope, the covered-dimension findings, open blockers, human-attention
+    flag, one prioritized next action, and new/resolved/unchanged change
+    labels against the local baseline snapshot. No DB, no gate, no score."""
+    p = sub.add_parser(
+        "watch",
+        help=(
+            "recurring read-only portfolio summary + baseline diff across "
+            "governed scopes (source drift, contract/metric drift, dashboard-"
+            "intent divergence, readiness, approvals, review) -- never a score"
+        ),
+    )
+    p.add_argument("--repo", default=".", help="repo root to summarize")
+    p.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default="text",
+        help=(
+            "'text' (default) is human-readable. 'json' emits the machine-"
+            "readable Portfolio Watch summary (schema_version 1.0) -- no "
+            "numeric health/confidence/priority score, ever."
+        ),
+    )
+
+
 def _add_explorer_parser(sub: argparse._SubParsersAction) -> None:
     """`explorer` verb group (spec 120, US8): generate the disclosure-safe
     offline readiness explorer from committed state only. Local output under
