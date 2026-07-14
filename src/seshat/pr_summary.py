@@ -301,6 +301,48 @@ def _stage_blocking_reasons(readiness: Mapping[str, Any], stage: str) -> list[st
     return reasons
 
 
+def _approval_owner_note(stage: str, approvals_list: list[Any]) -> str:
+    match = next(
+        (
+            a
+            for a in approvals_list
+            if isinstance(a, Mapping)
+            and a.get("stage") == stage
+            and isinstance(a.get("owner"), str)
+            and a["owner"].strip()
+        ),
+        None,
+    )
+    if match is not None:
+        return (
+            f" -- approvals[] names {mask(str(match['owner']))} on "
+            "record, but the stage is still blocked (a fresh named "
+            "human approval is required)"
+        )
+    return (
+        " -- no owner is recorded yet in approvals[]; a named "
+        "human must approve (this summary cannot self-grant it)"
+    )
+
+
+def _authority_line_for_stage(
+    ss: StageStatus,
+    readiness: Mapping[str, Any],
+    approvals_list: list[Any],
+) -> str:
+    reasons = _stage_blocking_reasons(readiness, ss.stage)
+    if not reasons:
+        return (
+            f"{ss.stage}: blocked, but readiness-status.yaml names no "
+            "blocking_reasons[] to route to an authority"
+        )
+    category, _explanation, next_surface = classify(reasons[0])
+    owner_note = (
+        _approval_owner_note(ss.stage, approvals_list) if category == "approval" else ""
+    )
+    return f"{ss.stage}: route to {next_surface} (category: {category}){owner_note}"
+
+
 def _authority_lines(
     readiness: Mapping[str, Any] | None,
     stage_statuses: tuple[StageStatus, ...],
@@ -319,61 +361,12 @@ def _authority_lines(
 
     approvals = readiness.get("approvals")
     approvals_list = approvals if isinstance(approvals, list) else []
-    lines: list[str] = []
-    for ss in blocked:
-        reasons = _stage_blocking_reasons(readiness, ss.stage)
-        if not reasons:
-            lines.append(
-                f"{ss.stage}: blocked, but readiness-status.yaml names no "
-                "blocking_reasons[] to route to an authority"
-            )
-            continue
-        category, _explanation, next_surface = classify(reasons[0])
-        owner_note = ""
-        if category == "approval":
-            match = next(
-                (
-                    a
-                    for a in approvals_list
-                    if isinstance(a, Mapping)
-                    and a.get("stage") == ss.stage
-                    and isinstance(a.get("owner"), str)
-                    and a["owner"].strip()
-                ),
-                None,
-            )
-            if match is not None:
-                owner_note = (
-                    f" -- approvals[] names {mask(str(match['owner']))} on "
-                    "record, but the stage is still blocked (a fresh named "
-                    "human approval is required)"
-                )
-            else:
-                owner_note = (
-                    " -- no owner is recorded yet in approvals[]; a named "
-                    "human must approve (this summary cannot self-grant it)"
-                )
-        lines.append(
-            f"{ss.stage}: route to {next_surface} (category: {category}){owner_note}"
-        )
+    lines = [_authority_line_for_stage(ss, readiness, approvals_list) for ss in blocked]
     return lines, []
 
 
-def render_summary(
-    envelope: Mapping[str, Any] | None,
-    readiness: Mapping[str, Any] | None,
-    base_fingerprints: Iterable[str] | None = None,
-    *,
-    timestamp: str | None = None,
-) -> FriendlySummary:
-    """Build the plain-language PR summary from ONE review envelope + the
-    committed readiness truth. Pure, deterministic, no clock (any timestamp
-    is this explicit argument), no score, no ``merge_ready`` boolean. Every
-    line traces to a field of ``envelope`` / ``readiness`` / a fingerprint.
-    """
-    undetermined: list[str] = []
-    conflicts: list[str] = []
-    lines: list[str] = ["# Friendly PR Summary"]
+def _header_lines(timestamp: str | None) -> list[str]:
+    lines = ["# Friendly PR Summary"]
     if timestamp is not None:
         lines.append(f"(as of {timestamp})")
     lines.append("")
@@ -382,51 +375,53 @@ def render_summary(
         "results, not a merge-safety verdict (see F025 pr-readiness-reviewer "
         "for that). It renders no merge-ready boolean and no score."
     )
+    return lines
 
-    if envelope is None:
-        undetermined.append(
-            "review envelope: absent or could not be produced (e.g. a bad "
-            "commit range) -- no change story can be rendered from it"
-        )
-        lines.append("")
-        lines.append(
-            "## The review could not be produced\n\n"
-            "The review envelope is absent. No change story is rendered "
-            "from it; nothing here is invented."
-        )
-        return FriendlySummary(
-            schema_version=SCHEMA_VERSION,
-            outcome="unproducible",
-            affected_artifacts=(),
-            stage_statuses=(),
-            blocker_groups=(),
-            warnings=(),
-            required_authority=(),
-            next_action=NO_NEXT_ACTION,
-            undetermined=tuple(undetermined),
-            conflicts=(),
-            timestamp=timestamp,
-            text="\n".join(lines) + "\n",
-        )
 
-    outcome = str(envelope.get("outcome", "unknown"))
-    if outcome == "blocked":
-        lines.append("\nOverall: this change is currently BLOCKED.")
-    elif outcome == "ok":
-        lines.append("\nOverall: this change is NOT blocked.")
-    else:
-        lines.append(
-            f"\nOverall: outcome reported as '{outcome}' (verbatim from the "
-            "review envelope)."
-        )
-
-    affected_stages = _as_str_list(envelope.get("affected_stages"))
-    changed_files = _as_str_list(envelope.get("changed_files"))
-    changed_readiness_state = _as_str_list(envelope.get("changed_readiness_state"))
-    all_findings = [
-        f for f in (envelope.get("findings") or []) if isinstance(f, Mapping)
+def _unproducible_summary(lines: list[str], timestamp: str | None) -> FriendlySummary:
+    undetermined = [
+        "review envelope: absent or could not be produced (e.g. a bad "
+        "commit range) -- no change story can be rendered from it"
     ]
+    lines.append("")
+    lines.append(
+        "## The review could not be produced\n\n"
+        "The review envelope is absent. No change story is rendered "
+        "from it; nothing here is invented."
+    )
+    return FriendlySummary(
+        schema_version=SCHEMA_VERSION,
+        outcome="unproducible",
+        affected_artifacts=(),
+        stage_statuses=(),
+        blocker_groups=(),
+        warnings=(),
+        required_authority=(),
+        next_action=NO_NEXT_ACTION,
+        undetermined=tuple(undetermined),
+        conflicts=(),
+        timestamp=timestamp,
+        text="\n".join(lines) + "\n",
+    )
 
+
+def _outcome_line(outcome: str) -> str:
+    if outcome == "blocked":
+        return "\nOverall: this change is currently BLOCKED."
+    if outcome == "ok":
+        return "\nOverall: this change is NOT blocked."
+    return (
+        f"\nOverall: outcome reported as '{outcome}' (verbatim from the "
+        "review envelope)."
+    )
+
+
+def _artifact_narrative_lines(
+    affected_stages: list[str],
+    changed_files: list[str],
+    changed_readiness_state: list[str],
+    all_findings: list[Mapping[str, Any]],
+) -> list[str]:
     artifact_lines: list[str] = []
     if affected_stages:
         artifact_lines.append(
@@ -448,11 +443,46 @@ def render_summary(
         )
     if not all_findings:
         artifact_lines.append("This change introduced no governance findings.")
-    lines.append("\n## What changed\n")
-    lines.extend(artifact_lines)
+    return artifact_lines
 
-    # --- per-stage status, verbatim, never upgraded --------------------
-    stage_statuses: list[StageStatus] = []
+
+def _stage_status_for(
+    stage: str,
+    readiness_is_mapping: bool,
+    readiness_stages: Mapping[str, Any],
+) -> tuple[StageStatus, str | None]:
+    """Returns (status, undetermined_note_or_None)."""
+    if not readiness_is_mapping:
+        return (
+            StageStatus(
+                SCHEMA_VERSION, stage, "unknown", "readiness-status.yaml: absent"
+            ),
+            None,
+        )
+    block = readiness_stages.get(stage) if readiness_stages else None
+    if isinstance(block, Mapping) and isinstance(block.get("status"), str):
+        return (
+            StageStatus(
+                SCHEMA_VERSION, stage, block["status"], "readiness-status.yaml"
+            ),
+            None,
+        )
+    return (
+        StageStatus(
+            SCHEMA_VERSION,
+            stage,
+            "unknown",
+            "readiness-status.yaml: stage entry absent",
+        ),
+        f"readiness stage status for '{stage}': not present in "
+        "readiness-status.yaml -- reported unknown, never assumed pass",
+    )
+
+
+def _build_stage_statuses(
+    affected_stages: list[str],
+    readiness: Mapping[str, Any] | None,
+) -> tuple[list[StageStatus], list[str]]:
     readiness_is_mapping = isinstance(readiness, Mapping)
     readiness_stages: Mapping[str, Any] = {}
     if readiness_is_mapping:
@@ -460,134 +490,183 @@ def render_summary(
         if isinstance(stages_field, Mapping):
             readiness_stages = stages_field
 
+    stage_statuses: list[StageStatus] = []
+    undetermined: list[str] = []
     for stage in affected_stages:
-        if not readiness_is_mapping:
-            stage_statuses.append(
-                StageStatus(
-                    SCHEMA_VERSION, stage, "unknown", "readiness-status.yaml: absent"
-                )
-            )
-            continue
-        block = readiness_stages.get(stage) if readiness_stages else None
-        if isinstance(block, Mapping) and isinstance(block.get("status"), str):
-            stage_statuses.append(
-                StageStatus(
-                    SCHEMA_VERSION, stage, block["status"], "readiness-status.yaml"
-                )
-            )
-        else:
-            stage_statuses.append(
-                StageStatus(
-                    SCHEMA_VERSION,
-                    stage,
-                    "unknown",
-                    "readiness-status.yaml: stage entry absent",
-                )
-            )
-            undetermined.append(
-                f"readiness stage status for '{stage}': not present in "
-                "readiness-status.yaml -- reported unknown, never assumed pass"
-            )
+        status, note = _stage_status_for(stage, readiness_is_mapping, readiness_stages)
+        stage_statuses.append(status)
+        if note is not None:
+            undetermined.append(note)
     if affected_stages and not readiness_is_mapping:
         undetermined.append(
             "readiness stage status: readiness-status.yaml is absent -- "
             "affected stage(s) reported unknown, never assumed pass"
         )
+    return stage_statuses, undetermined
 
-    lines.append("\n## Readiness stage status\n")
-    if stage_statuses:
-        for ss in stage_statuses:
-            lines.append(f"- {ss.stage}: {ss.status} (source: {ss.source})")
-    else:
-        lines.append("- no affected stage was named by the review envelope")
 
-    # --- two sources disagree: envelope outcome vs a stage already `pass` --
-    if outcome == "blocked":
-        for ss in stage_statuses:
-            if ss.status == "pass":
-                conflicts.append(
-                    f"conflict: readiness-status.yaml reports stage "
-                    f"'{ss.stage}' as 'pass', but the review envelope outcome "
-                    "is 'blocked' with findings affecting it -- surfaced, "
-                    "not resolved (a human judgment call)"
-                )
+def _stage_status_lines(stage_statuses: list[StageStatus]) -> list[str]:
+    if not stage_statuses:
+        return ["- no affected stage was named by the review envelope"]
+    return [f"- {ss.stage}: {ss.status} (source: {ss.source})" for ss in stage_statuses]
 
-    # --- blockers / change classification -------------------------------
-    lines.append("\n## Findings\n")
-    blocker_groups: list[BlockerGroup] = []
-    if base_fingerprints is not None:
-        base_set = list(base_fingerprints)
-        classification = classify_changes(base_set, all_findings)
-        head_by_fp = {finding_fingerprint(_coerce_finding(f)): f for f in all_findings}
-        new_lines = _cap(
-            [
-                mask(_finding_line(head_by_fp[fp]))
-                for fp in classification.new
-                if fp in head_by_fp
-            ]
-        )
-        carried_lines = _cap(
-            [
-                mask(_finding_line(head_by_fp[fp]))
-                for fp in classification.carried_over
-                if fp in head_by_fp
-            ]
-        )
-        resolved_lines = _cap(
-            [
-                f"a finding present at the base branch (fingerprint "
-                f"{fp[:12]}...) is no longer present at head -- RESOLVED by "
-                "this PR"
-                for fp in classification.resolved
-            ]
-        )
-        blocker_groups = [
-            BlockerGroup(SCHEMA_VERSION, "new", tuple(new_lines)),
-            BlockerGroup(SCHEMA_VERSION, "resolved", tuple(resolved_lines)),
-            BlockerGroup(SCHEMA_VERSION, "carried_over", tuple(carried_lines)),
+
+def _stage_conflicts(outcome: str, stage_statuses: list[StageStatus]) -> list[str]:
+    if outcome != "blocked":
+        return []
+    return [
+        f"conflict: readiness-status.yaml reports stage "
+        f"'{ss.stage}' as 'pass', but the review envelope outcome "
+        "is 'blocked' with findings affecting it -- surfaced, "
+        "not resolved (a human judgment call)"
+        for ss in stage_statuses
+        if ss.status == "pass"
+    ]
+
+
+def _bulleted_or_none(items: list[str]) -> list[str]:
+    if items:
+        return [f"- {item}" for item in items]
+    return ["- none"]
+
+
+def _classified_blocker_section(
+    base_fingerprints: Iterable[str],
+    all_findings: list[Mapping[str, Any]],
+) -> tuple[list[str], list[BlockerGroup]]:
+    base_set = list(base_fingerprints)
+    classification = classify_changes(base_set, all_findings)
+    head_by_fp = {finding_fingerprint(_coerce_finding(f)): f for f in all_findings}
+    new_lines = _cap(
+        [
+            mask(_finding_line(head_by_fp[fp]))
+            for fp in classification.new
+            if fp in head_by_fp
         ]
-        lines.append("### NEW in this PR")
-        if new_lines:
-            lines.extend(f"- {line}" for line in new_lines)
-        else:
-            lines.append("- none")
-        lines.append("\n### RESOLVED by this PR")
-        if resolved_lines:
-            lines.extend(f"- {line}" for line in resolved_lines)
-        else:
-            lines.append("- none")
-        lines.append("\n### Pre-existing / carried over")
-        if carried_lines:
-            lines.extend(f"- {line}" for line in carried_lines)
-        else:
-            lines.append("- none")
-    else:
-        undetermined.append(
-            "new-vs-pre-existing distinction: could not be determined -- no "
-            "base fingerprint set was supplied; findings are listed as "
-            "'present', never defaulted to 'new'"
-        )
-        present_lines = _cap([mask(_finding_line(f)) for f in all_findings])
-        blocker_groups = [BlockerGroup(SCHEMA_VERSION, "present", tuple(present_lines))]
-        lines.append(
-            "new-vs-pre-existing could not be determined (no base "
-            "fingerprint set was supplied); findings are listed as 'present':"
-        )
-        for line in present_lines:
-            lines.append(f"- {line}")
-        if not present_lines:
-            lines.append("- none")
+    )
+    carried_lines = _cap(
+        [
+            mask(_finding_line(head_by_fp[fp]))
+            for fp in classification.carried_over
+            if fp in head_by_fp
+        ]
+    )
+    resolved_lines = _cap(
+        [
+            f"a finding present at the base branch (fingerprint "
+            f"{fp[:12]}...) is no longer present at head -- RESOLVED by "
+            "this PR"
+            for fp in classification.resolved
+        ]
+    )
+    blocker_groups = [
+        BlockerGroup(SCHEMA_VERSION, "new", tuple(new_lines)),
+        BlockerGroup(SCHEMA_VERSION, "resolved", tuple(resolved_lines)),
+        BlockerGroup(SCHEMA_VERSION, "carried_over", tuple(carried_lines)),
+    ]
+    lines: list[str] = ["### NEW in this PR"]
+    lines.extend(_bulleted_or_none(new_lines))
+    lines.append("\n### RESOLVED by this PR")
+    lines.extend(_bulleted_or_none(resolved_lines))
+    lines.append("\n### Pre-existing / carried over")
+    lines.extend(_bulleted_or_none(carried_lines))
+    return lines, blocker_groups
 
-    warning_lines = _cap(
+
+def _unclassified_blocker_section(
+    all_findings: list[Mapping[str, Any]],
+) -> tuple[list[str], list[BlockerGroup], str]:
+    present_lines = _cap([mask(_finding_line(f)) for f in all_findings])
+    blocker_groups = [BlockerGroup(SCHEMA_VERSION, "present", tuple(present_lines))]
+    undetermined_note = (
+        "new-vs-pre-existing distinction: could not be determined -- no "
+        "base fingerprint set was supplied; findings are listed as "
+        "'present', never defaulted to 'new'"
+    )
+    lines = [
+        "new-vs-pre-existing could not be determined (no base "
+        "fingerprint set was supplied); findings are listed as 'present':"
+    ]
+    lines.extend(f"- {line}" for line in present_lines)
+    if not present_lines:
+        lines.append("- none")
+    return lines, blocker_groups, undetermined_note
+
+
+def _worth_a_look_lines(all_findings: list[Mapping[str, Any]]) -> list[str]:
+    return _cap(
         [mask(_finding_line(f)) for f in all_findings if f.get("severity") == "warning"]
     )
-    lines.append("\n## Worth a look (not blocking)\n")
-    if warning_lines:
-        lines.extend(f"- {line}" for line in warning_lines)
-    else:
-        lines.append("- none")
 
-    # --- required approval authority ------------------------------------
+
+def _choose_next_action(next_actions: list[str]) -> tuple[str, str | None]:
+    chosen = pick_next_action(next_actions)
+    if chosen is None:
+        return NO_NEXT_ACTION, f"next action: {NO_NEXT_ACTION}"
+    return chosen, None
+
+
+def render_summary(
+    envelope: Mapping[str, Any] | None,
+    readiness: Mapping[str, Any] | None,
+    base_fingerprints: Iterable[str] | None = None,
+    *,
+    timestamp: str | None = None,
+) -> FriendlySummary:
+    """Build the plain-language PR summary from ONE review envelope + the
+    committed readiness truth. Pure, deterministic, no clock (any timestamp
+    is this explicit argument), no score, no ``merge_ready`` boolean. Every
+    line traces to a field of ``envelope`` / ``readiness`` / a fingerprint.
+    """
+    lines = _header_lines(timestamp)
+
+    if envelope is None:
+        return _unproducible_summary(lines, timestamp)
+
+    undetermined: list[str] = []
+    conflicts: list[str] = []
+
+    outcome = str(envelope.get("outcome", "unknown"))
+    lines.append(_outcome_line(outcome))
+
+    affected_stages = _as_str_list(envelope.get("affected_stages"))
+    changed_files = _as_str_list(envelope.get("changed_files"))
+    changed_readiness_state = _as_str_list(envelope.get("changed_readiness_state"))
+    all_findings = [
+        f for f in (envelope.get("findings") or []) if isinstance(f, Mapping)
+    ]
+
+    artifact_lines = _artifact_narrative_lines(
+        affected_stages, changed_files, changed_readiness_state, all_findings
+    )
+    lines.append("\n## What changed\n")
+    lines.extend(artifact_lines)
+
+    stage_statuses, stage_undetermined = _build_stage_statuses(
+        affected_stages, readiness
+    )
+    undetermined.extend(stage_undetermined)
+    lines.append("\n## Readiness stage status\n")
+    lines.extend(_stage_status_lines(stage_statuses))
+
+    conflicts.extend(_stage_conflicts(outcome, stage_statuses))
+
+    lines.append("\n## Findings\n")
+    if base_fingerprints is not None:
+        section_lines, blocker_groups = _classified_blocker_section(
+            base_fingerprints, all_findings
+        )
+    else:
+        section_lines, blocker_groups, note = _unclassified_blocker_section(
+            all_findings
+        )
+        undetermined.append(note)
+    lines.extend(section_lines)
+
+    warning_lines = _worth_a_look_lines(all_findings)
+    lines.append("\n## Worth a look (not blocking)\n")
+    lines.extend(_bulleted_or_none(warning_lines))
+
     authority_lines, authority_gaps = _authority_lines(readiness, tuple(stage_statuses))
     undetermined.extend(authority_gaps)
     lines.append("\n## Required approval authority\n")
@@ -596,14 +675,10 @@ def render_summary(
     else:
         lines.append("- no blocked stage requires naming an authority here")
 
-    # --- exactly one next action ------------------------------------------
     next_actions = _as_str_list(envelope.get("next_actions"))
-    chosen = pick_next_action(next_actions)
-    if chosen is None:
-        undetermined.append(f"next action: {NO_NEXT_ACTION}")
-        next_action_text = NO_NEXT_ACTION
-    else:
-        next_action_text = chosen
+    next_action_text, next_action_gap = _choose_next_action(next_actions)
+    if next_action_gap is not None:
+        undetermined.append(next_action_gap)
     lines.append("\n## Next action (exactly one)\n")
     lines.append(f"- {mask(next_action_text)}")
 
