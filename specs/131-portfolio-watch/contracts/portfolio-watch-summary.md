@@ -19,8 +19,10 @@ tasks-level detail.
     | `unreadable`), a shipped `class` when `covered`, an optional `measured` magnitude, a
     committed `evidence` citation (required when `covered`), and a `source_surface` citation,
   - `open_blockers[]` relayed from readiness `blocking_reasons`,
-  - `requires_human_attention` (bool) -- true when the top-ranked open condition is an
-    unmet/invalid approval or a relayed Principle-V drift blocker (FR-006),
+  - `requires_human_attention` (bool) -- true whenever the scope carries an
+    unmet/invalid approval OR a relayed Principle-V / PII drift blocker, set
+    INDEPENDENTLY of the scope's category rank (a buried PII blocker still sets it)
+    (FR-006),
   - `prioritized_next_action` -- `{category, action}` where `category` is chosen by the
     shipped `readiness_classify` fixed rank and `action` is the scope's RELAYED
     `next_action` (FR-005),

@@ -51,7 +51,7 @@ scopes:
   - scope_id, source_path, current_stage
     dimensions: [ Covered Dimension Finding, ... ]   # one per covered dimension
     open_blockers: [ <string>, ... ]                 # relayed from readiness blocking_reasons
-    requires_human_attention: <bool>                 # FR-006: unmet approval or relayed Principle-V drift
+    requires_human_attention: <bool>                 # FR-006: unmet approval or relayed Principle-V/PII drift; set independently of rank
     prioritized_next_action:
       category: approval|grain|live_validation|artifact|readiness   # from readiness_classify rank (D4)
       action: <string>                               # RELAYED next_action; never synthesized
