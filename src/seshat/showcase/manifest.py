@@ -157,32 +157,36 @@ def find_residual_absolute_paths(
     and reports every such residual path as its own blocking finding, so
     generation still fails closed regardless of the shared scanner's coverage.
     """
-    findings: list[dict[str, str]] = []
-
-    def _walk(value: Any, loc: str) -> None:
-        if isinstance(value, str):
-            if _WINDOWS_ABS_RE.match(value) or _UNIX_ABS_RE.match(value):
-                findings.append(
-                    {
-                        "rule": "residual_absolute_path",
-                        "locator": loc,
-                        "message": (
-                            "machine-local absolute path survived portability "
-                            "normalization and is not safe for disclosure"
-                        ),
-                    }
-                )
-            return
-        if isinstance(value, dict):
-            for key, child in value.items():
-                _walk(child, f"{loc}.{key}")
-            return
-        if isinstance(value, list):
-            for i, child in enumerate(value):
-                _walk(child, f"{loc}[{i}]")
-
-    _walk(document, locator)
-    return findings
+    if isinstance(document, str):
+        if not (_WINDOWS_ABS_RE.match(document) or _UNIX_ABS_RE.match(document)):
+            return []
+        return [
+            {
+                "rule": "residual_absolute_path",
+                "locator": locator,
+                "message": (
+                    "machine-local absolute path survived portability "
+                    "normalization and is not safe for disclosure"
+                ),
+            }
+        ]
+    if isinstance(document, dict):
+        return [
+            finding
+            for key, child in document.items()
+            for finding in find_residual_absolute_paths(
+                child, locator=f"{locator}.{key}"
+            )
+        ]
+    if isinstance(document, list):
+        return [
+            finding
+            for i, child in enumerate(document)
+            for finding in find_residual_absolute_paths(
+                child, locator=f"{locator}[{i}]"
+            )
+        ]
+    return []
 
 
 def build_manifest(
