@@ -81,15 +81,11 @@ def _scaffold_refusal(
 
 
 def _scaffold_written(digest: str, next_step: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "outcome": "written",
-        "assessment_digest": digest,
-        "written": [MANIFEST_PATH],
-        "blocking_reasons": [],
-        "next_step": next_step,
-        "approvals": [],
-    }
+    # Reuse the single result builder so the emitted shape has one definition;
+    # a written result differs only by outcome and the recorded manifest path.
+    result = _scaffold_refusal("written", digest, [], next_step)
+    result["written"] = [MANIFEST_PATH]
+    return result
 
 
 def _is_safe_existing_dir(root: Path, current: Path) -> bool:
