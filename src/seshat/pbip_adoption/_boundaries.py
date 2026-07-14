@@ -15,6 +15,7 @@ from typing import Iterable
 from ._facts import _Fact
 from ._safety import (
     _CONNECTION_LITERAL,
+    _CONNECTION_M_SOURCE,
     _CREDENTIAL_LITERAL,
     _FileRecord,
     _read_text,
@@ -92,7 +93,7 @@ def _scan_one_text(artifact: str, text: str, facts: list[_Fact]) -> None:
                 required_authority="governance",
             )
         )
-    elif _CONNECTION_LITERAL.search(text):
+    elif _CONNECTION_LITERAL.search(text) or _CONNECTION_M_SOURCE.search(text):
         facts.append(
             _Fact(
                 id=f"blocked:C1:{artifact}",

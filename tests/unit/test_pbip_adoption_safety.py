@@ -73,6 +73,49 @@ def test_safe_detail_redacts_the_credential_value_not_only_its_key() -> None:
         assert "hunter2" not in redacted
 
 
+def _write_pbip_with_source(root: Path, m_source: str) -> None:
+    root.mkdir()
+    (root / "Model.pbip").write_text(
+        '{"version": "1.0", "artifacts": []}\n', encoding="utf-8"
+    )
+    definition = root / "Model.SemanticModel" / "definition"
+    definition.mkdir(parents=True)
+    (definition / "model.tmdl").write_text(
+        "table Sales\n"
+        "\tpartition Sales = m\n"
+        "\t\tsource =\n"
+        "\t\t\tlet\n"
+        f"\t\t\t\tSource = {m_source}\n"
+        "\t\t\tin\n"
+        "\t\t\t\tSource\n",
+        encoding="utf-8",
+    )
+
+
+def test_literal_m_connection_source_is_flagged_pre_git(tmp_path: Path) -> None:
+    project = tmp_path / "literal-m"
+    _write_pbip_with_source(project, 'Sql.Database("prod.internal", "DW")')
+    assessment = assess_pbip(project)
+    assert any(
+        fact["id"].startswith("blocked:C1:") and fact["classification"] == "blocked"
+        for fact in assessment["facts"]
+    ), "a literal M data-source host must be flagged even before Git"
+    assert "prod.internal" not in json.dumps(assessment)
+
+
+def test_parameterized_m_source_is_not_flagged_as_a_literal(tmp_path: Path) -> None:
+    project = tmp_path / "param-m"
+    _write_pbip_with_source(project, "PostgreSQL.Database(Server, Database)")
+    assessment = assess_pbip(project)
+    # The safe parameterized (identifier) form must not trip the literal scan.
+    assert not any(fact["id"].startswith("blocked:C1:") for fact in assessment["facts"])
+    # ...but the source reference itself is inventoried for the analyst.
+    assert any(
+        fact["id"].startswith("proposed:source-reference:")
+        for fact in assessment["facts"]
+    )
+
+
 def test_malformed_adoption_manifest_fails_closed_with_a_blocker(
     tmp_path: Path,
 ) -> None:

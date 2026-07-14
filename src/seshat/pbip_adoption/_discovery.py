@@ -290,6 +290,29 @@ def _emit_table(
                 required_authority="metric_owner",
             )
         )
+    _emit_table_sources(ctx, table, artifact)
+
+
+def _emit_table_sources(ctx: _Discovery, table: Any, artifact: str) -> None:
+    """Inventory each partition/M source reference without approving a mapping.
+
+    Only the presence and position of a source reference is recorded; the raw
+    M body (which may carry a literal host/database) is never echoed into a
+    fact -- the credential/connection scan handles unsafe literals separately.
+    """
+    for index in range(len(getattr(table, "partition_sources", ()) or ())):
+        ctx.facts.append(
+            _Fact(
+                id=f"proposed:source-reference:{artifact}:{index}",
+                classification="proposed",
+                category="proposal",
+                subject=f"source reference in table {table.name}",
+                detail="A semantic-model source reference is observed; its "
+                "mapping to a governed gold source requires analyst review.",
+                artifact=artifact,
+                required_authority="analyst",
+            )
+        )
 
 
 def _emit_relationships(
