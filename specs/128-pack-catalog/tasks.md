@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `specs/128-pack-catalog/`
 
-**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
+**Prerequisites**: `plan.md`, `spec.md` (the authored chain artifacts). Research is inlined in `plan.md` Phase 0; entities are in `spec.md` "Key Entities"; the registry-index contract and `quickstart.md` are PRODUCED by these tasks (T001/T002 and T035), not pre-existing inputs.
 
 **Tests**: Required. Every story has contract, unit, or integration tests because the specification defines independently testable safety boundaries (a fail-closed retrieval gate).
 

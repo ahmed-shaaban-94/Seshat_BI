@@ -8,7 +8,7 @@ This is the fourth required Spec-Kit chain artifact (specify -> plan -> tasks ->
 
 ## Summary
 
-The three artifacts are internally consistent and align with the shipped code and the constitution. Two MEDIUM coverage gaps were found during the pass (FR-018 and SC-009 had no tagged task) and were remediated in place by extending task T022 and adding task T037. No CRITICAL or HIGH finding remains. The feature is correctly scoped as the discovery/retrieval layer spec 120 US5 explicitly deferred, and it does not step on the shipped "no install/activate verb by design" posture.
+The three artifacts align with the shipped code and the constitution. Three MEDIUM findings were raised and remediated in place: two coverage gaps (FR-018 and SC-009 had no tagged task -> extend T022, add T037) and one internal-reference defect (plan.md/tasks.md pointed at chain files that a spec-only chain does not create -> references reconciled to where the content actually lives; finding A5). No CRITICAL or HIGH finding remains. The feature is correctly scoped as the discovery/retrieval layer spec 120 US5 explicitly deferred, and it does not step on the shipped "no install/activate verb by design" posture.
 
 ## Coverage matrix (post-remediation)
 
@@ -64,6 +64,7 @@ Every user story (US1 search, US2 inspect, US3 fetch/verify/add) has both accept
 | A2 | MEDIUM | tasks.md | SC-009 (the catalog is fully exercisable offline against a checked-out static registry) was asserted in the plan's testing note but had no dedicated task. | REMEDIATED: added T037, an offline-guarantee integration test (no socket, no driver import) covering FR-001, FR-018, SC-009. |
 | A3 | LOW (resolved by design) | spec.md vs shipped code | The shipped pack system states "no install/activate verb by design" (parser_ecosystem.py) and "constructing a selection installs nothing and persists nothing" (model.py); this feature adds an add verb and a registry. Potential contradiction. | NOT A DEFECT: reconciled in spec Clarification 2 and FR-011/FR-012 -- add fetches verified content into the workspace as a reviewable committed change; it writes NO activation state and promotes NO readiness. Verified the spec's add description does not read as an install/activate lifecycle. |
 | A4 | LOW (resolved by design) | plan.md vs anti-reinvent rule | The plan introduces a NEW schema (seshat-pack-registry.schema.json). Risk of being read as a second pack format. | NOT A DEFECT: FR-003 + RR-002 + Complexity Tracking state explicitly that the index schema is metadata ABOUT packs and that pack CONTENT continues to use the unchanged seshat-extension-pack.schema.json with the unchanged validators. Required because Requirement-2 fields (source, hash, verification_state, author) do not exist on PackManifest. |
+| A5 | MEDIUM | plan.md, tasks.md | plan.md used live markdown links to research.md / data-model.md / quickstart.md and listed a contracts/ + checklists/ tree as if present; tasks.md Prerequisites listed research.md / data-model.md / contracts/ / quickstart.md as inputs. This is a spec-only chain that authors exactly four artifacts (spec, plan, tasks, analysis); those referenced files do not exist yet. | REMEDIATED: plan.md now marks the Documentation tree entries as PRODUCED AT IMPLEMENTATION (research inlined in Phase 0; entities in spec.md Key Entities; the registry-index contract by tasks T001/T002; quickstart by T035; requirement coverage by this analysis matrix) and rewrote the Phase 0/Phase 1 references to point to where the content actually lives instead of dangling links. tasks.md Prerequisites trimmed to the artifacts that exist, noting the rest are produced by the tasks themselves. No dangling internal reference remains. |
 
 ## Consistency checks
 
@@ -72,6 +73,7 @@ Every user story (US1 search, US2 inspect, US3 fetch/verify/add) has both accept
 - **Fail-closed mapping**: Every refusal class in FR-010 maps to a reused component in the plan and to a test in T020. No refusal class is unmapped.
 - **No-score / no-self-grant**: FR-015/FR-016 (verification state categorical + human-authored) are consistent with the hard-stops and with T027/T033. No numeric score appears anywhere.
 - **Anti-reinvent**: No task modifies model.py, loader.py, validator.py, scaffold.py, or the pack content schema (stated explicitly in the tasks' Dependencies note). Consistent with RR-001..RR-006 and Principle II.
+- **Internal references** (added by finding A5): after remediation, every markdown link and referenced file path in plan.md and tasks.md either resolves to an existing artifact (spec.md, plan.md, tasks.md, analysis.md, the shipped src/schemas paths) or is explicitly labeled as PRODUCED AT IMPLEMENTATION by a named task. No dangling live link remains.
 
 ## Constitution alignment (v1.7.0)
 
@@ -89,4 +91,4 @@ open_for_human is therefore empty for this feature.
 
 ## Result
 
-PASS. All four chain artifacts (spec, plan, tasks, this analysis) exist and are consistent. Two MEDIUM coverage gaps found and remediated in place. Chain is spec-only; the implement step remains owner-gated.
+PASS. All four chain artifacts (spec, plan, tasks, this analysis) exist and are consistent. Three MEDIUM findings (FR-018 + SC-009 coverage, and A5 dangling internal references) found and remediated in place. Chain is spec-only; the implement step remains owner-gated.

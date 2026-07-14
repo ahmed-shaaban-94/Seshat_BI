@@ -94,19 +94,24 @@ and re-checked after design.*
 
 ### Documentation (this feature)
 
+Authored NOW by this spec-only chain: `plan.md`, `spec.md`, `tasks.md`,
+`analysis.md`. The remaining entries below are PRODUCED AT IMPLEMENTATION by the
+named tasks (this chain does not pre-create empty stubs); their content already
+lives inline where noted.
+
 ```text
 specs/128-pack-catalog/
-├── plan.md
-├── spec.md
-├── tasks.md
-├── analysis.md              # /speckit-analyze cross-artifact findings
-├── research.md              # Phase 0 decisions (below)
-├── data-model.md            # registry record + catalog finding + fetched-content entities
-├── quickstart.md            # acceptance walkthrough (search -> inspect -> add + refusals)
+├── plan.md                  # AUTHORED (this chain)
+├── spec.md                  # AUTHORED (this chain)
+├── tasks.md                 # AUTHORED (this chain)
+├── analysis.md              # AUTHORED (this chain): cross-artifact findings
+├── research.md              # PRODUCED LATER; Phase 0 decisions are inlined in this plan (below)
+├── data-model.md            # PRODUCED LATER; entities are in spec.md "Key Entities"
+├── quickstart.md            # PRODUCED by task T035 (acceptance walkthrough)
 ├── contracts/
-│   └── seshat-pack-registry.schema.json   # the NEW registry-INDEX schema
+│   └── seshat-pack-registry.schema.json   # PRODUCED by tasks T001/T002 (NEW registry-INDEX schema)
 └── checklists/
-    └── requirements.md
+    └── requirements.md      # PRODUCED LATER; requirement coverage is in analysis.md's matrix
 ```
 
 ### Source Code (repository root)
@@ -152,8 +157,9 @@ successful add writes only reviewable workspace content.
 
 ## Phase 0 - Research
 
-See [research.md](./research.md). Key decisions (each an auto-decision recorded
-against a repo default or a hard-stop):
+The Phase 0 research is inlined here (this spec-only chain does not emit a
+separate `research.md`; a later implementation pass may extract it). Key
+decisions (each an auto-decision recorded against a repo default or a hard-stop):
 
 1. **Transport = static git registry, not a service.** v1 indexes a reviewed,
    version-controlled `index.yaml` from the checked-out repository. No hosted
@@ -195,16 +201,22 @@ recommended default; see spec Clarifications).
 
 ## Phase 1 - Design and Contracts
 
-- [data-model.md](./data-model.md) defines the Registry, Registry Record,
-  Verification State, Fetched Pack Content, and Catalog Finding entities and
-  their state/validation rules, and the exact reuse boundary to the shipped
-  `PackManifest` / `PackSelection` model.
-- `contracts/seshat-pack-registry.schema.json` is the observable boundary for the
-  registry INDEX (the one new schema); the pack CONTENT contract remains
+The design entities are already specified in `spec.md` "Key Entities" (Registry,
+Registry Record, Verification State, Fetched Pack Content, Catalog Finding); this
+spec-only chain does not emit a separate `data-model.md` (a later implementation
+pass may extract one). The contracts and walkthrough are PRODUCED by tasks, not
+pre-created here:
+
+- Entities + their state/validation rules and the reuse boundary to the shipped
+  `PackManifest` / `PackSelection` model: see `spec.md` "Key Entities" and
+  "Reused / Anti-Reinvent Requirements".
+- The registry INDEX contract (`schemas/seshat-pack-registry.schema.json` /
+  `specs/128-pack-catalog/contracts/seshat-pack-registry.schema.json`) is the one
+  new schema; it is authored by tasks T001/T002. The pack CONTENT contract remains
   `schemas/seshat-extension-pack.schema.json`, unchanged.
-- [quickstart.md](./quickstart.md) is the acceptance walkthrough: a clean search
-  -> inspect -> add, plus a tampered-pack refusal and an incompatible-pack
-  refusal.
+- The acceptance walkthrough (a clean search -> inspect -> add, plus a
+  tampered-pack refusal and an incompatible-pack refusal) is authored by task
+  T035 as `quickstart.md`.
 - The SPECKIT pointer in `CLAUDE.md` continues to reference the current plan; no
   edit to shipped pack surfaces is planned.
 
