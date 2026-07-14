@@ -241,69 +241,43 @@ def test_verify_output_contains_no_forbidden_token(
         _cleanup(written)
 
 
+@pytest.mark.parametrize("publish", [False, True])
 def test_json_format_stdout_is_a_single_parseable_document(
-    tmp_path: Path, capsys: pytest.CaptureFixture
+    tmp_path: Path, capsys: pytest.CaptureFixture, publish: bool
 ) -> None:
-    """`--format json` must keep stdout pipeable to `json.load` -- the
-    written-path line must NOT be appended as trailing plain text after the
-    JSON document; it is folded into the document itself as a `written`
-    key."""
-    output = f".seshat-output/agent-verify/test-cli-json-parseable-{tmp_path.name}.json"
+    """`--format json` (with or without `--publish`) must keep stdout
+    pipeable to `json.load` -- neither the written-path line nor a publish
+    outcome line may be appended as trailing plain text after the JSON
+    document; both are folded into the document itself (`written`, and
+    `publish` when requested)."""
+    label = "publish-json" if publish else "json-parseable"
+    output = f".seshat-output/agent-verify/test-cli-{label}-{tmp_path.name}.json"
     written = _REPO / output
     try:
-        main(
-            [
-                "agent",
-                "verify",
-                "--target",
-                "codex",
-                "--repo",
-                str(_REPO),
-                "--output",
-                output,
-                "--format",
-                "json",
-            ]
-        )
+        args = [
+            "agent",
+            "verify",
+            "--target",
+            "codex",
+            "--repo",
+            str(_REPO),
+            "--output",
+            output,
+            "--format",
+            "json",
+        ]
+        if publish:
+            args.append("--publish")
+        exit_code = main(args)
         captured = capsys.readouterr()
         document = json.loads(captured.out)
         assert document["written"] == output
         assert "results" in document
-    finally:
-        _cleanup(written)
-
-
-def test_publish_with_json_format_stays_a_single_parseable_document(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-) -> None:
-    """`--format json --publish` must ALSO keep stdout pipeable -- the
-    publish outcome line must not be appended as trailing plain text after
-    the JSON document; it is folded into the document as a `publish` key."""
-    output = f".seshat-output/agent-verify/test-cli-publish-json-{tmp_path.name}.json"
-    written = _REPO / output
-    try:
-        exit_code = main(
-            [
-                "agent",
-                "verify",
-                "--target",
-                "codex",
-                "--repo",
-                str(_REPO),
-                "--output",
-                output,
-                "--format",
-                "json",
-                "--publish",
-            ]
-        )
-        captured = capsys.readouterr()
-        document = json.loads(captured.out)
-        assert document["written"] == output
-        assert document["publish"]["status"] in {
-            "publish_intent_confirmed",
-            "refused",
-        }
+        if publish:
+            assert document["publish"]["status"] in {
+                "publish_intent_confirmed",
+                "refused",
+            }
         assert exit_code in (0, 1, 2, 3)
     finally:
         _cleanup(written)
