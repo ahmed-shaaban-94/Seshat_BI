@@ -1,0 +1,28 @@
+schema_version: "1.0"
+pack_id: seshat.registry.dashboard-starter-basic
+version: "1.0.0"
+category: dashboard_blueprint
+owner: "Seshat BI maintainers"
+description: >-
+  Generic starter dashboard blueprint: a headline-plus-trend page layout
+  suggestion with visual slots bound to metric-contract placeholders. Every
+  visual slot must still bind to an APPROVED metric contract at design time;
+  this pack grants no readiness pass.
+core_compatibility: "1.x"
+provides:
+  - headline-trend-page-template
+requires: []
+conflicts: []
+artifacts:
+  - path: artifacts/starter-blueprint.yaml
+    purpose: "Declarative page-layout suggestion with unbound visual slots."
+human_decisions:
+  - "The dashboard designer binds every visual slot to an approved metric contract before this blueprint informs a real report."
+fixtures:
+  - fixtures/synthetic-blueprint-sample.csv
+verification:
+  - "retail pack validate --repo . --pack packs/registry/reference/dashboard-starter-basic/seshat-pack.yaml"
+non_goals:
+  - "Does not create, approve, or bind a metric contract."
+  - "Does not execute code, change stage order, or grant any approval."
+  - "Does not claim to fit every client schema."
