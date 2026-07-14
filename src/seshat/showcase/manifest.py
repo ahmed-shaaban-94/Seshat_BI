@@ -193,8 +193,8 @@ def find_residual_absolute_paths(
     any string that STILL matches an absolute-path pattern afterward is one
     that fell OUTSIDE the root (e.g. ``/workspace/client/export.csv`` or
     ``/mnt/share/raw.csv``). The shared ``scan_disclosure`` scanner's own
-    absolute-path rule only recognizes a narrower fixed prefix set
-    (home/Users/var/etc/opt/tmp), so it cannot be relied on alone to catch a
+    absolute-path rule only recognizes a narrower fixed prefix list (home,
+    Users, var, etc, opt, tmp), so it cannot be relied on alone to catch a
     residual path outside that list. This walks the ALREADY-normalized body
     and reports every such residual path as its own blocking finding, so
     generation still fails closed regardless of the shared scanner's coverage.

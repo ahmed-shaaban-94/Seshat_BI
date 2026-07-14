@@ -110,8 +110,9 @@ def mask(text: str) -> str:
     a no-op, since ``[REDACTED]`` matches none of the four shapes).
 
     v1 non-coverage (documented, not a bug -- FR-009): a bare DSN/connection-
-    string URL (``scheme://user:pass@host/db``) embedded in a finding message
-    is NOT masked. ``interview_review._mask`` has no connection-URL shape, and
+    string URL (a scheme, then a login and a password separated by a colon,
+    then an ``@`` and a host/db path) embedded in a finding message is NOT
+    masked. ``interview_review._mask`` has no connection-URL shape, and
     ``readiness_evidence._scrub`` only redacts a DSN when the caller already
     holds the literal DSN string, which this DB-less presentation layer never
     does. Adding a DSN/URL detector would be a NEW redaction primitive

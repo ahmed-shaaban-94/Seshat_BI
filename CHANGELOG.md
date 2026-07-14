@@ -27,6 +27,20 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Fixed
+- **Release-artifact credential-scan false positives**: two docstrings
+  (`seshat/pr_summary.py`'s `mask()`, `seshat/showcase/manifest.py`'s
+  `find_residual_absolute_paths()`) used a literal example DSN/path shape
+  (`scheme://user:pass@host/db`, `home/Users/var/etc/opt/tmp`) to document a
+  known non-coverage gap and a scanner's recognized prefix list, respectively.
+  Both incidentally matched `scripts/inspect_release_artifacts.py`'s
+  credential-bearing-URL and macOS-user-path content patterns, which blocked
+  the v0.3.0 release-candidate build. Reworded both to describe the same shape
+  in prose without forming the literal pattern; verified zero matches against
+  the scanner's actual regexes and a clean `inspect_release_artifacts.py`
+  `pass` on a locally rebuilt wheel/sdist. No behavior change to either
+  function -- docstring-only.
+
 ## [0.3.0] -- 2026-07-14
 
 Work merged to `main` since `v0.2.0` (`git log v0.2.0..HEAD`):
