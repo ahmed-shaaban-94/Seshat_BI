@@ -197,11 +197,11 @@ def test_publish_without_disclosure_findings_confirms_locally(tmp_path: Path) ->
 
 
 @pytest.mark.parametrize(
-    ("target", "output_format", "label"),
+    ("target", "output_format"),
     [
-        ("codex", "text", "text-pass"),
-        ("claude", "text", "text-mixed"),
-        ("codex", "json", "json"),
+        ("codex", "text"),
+        ("claude", "text"),
+        ("codex", "json"),
     ],
 )
 def test_verify_output_contains_no_forbidden_token(
@@ -209,11 +209,11 @@ def test_verify_output_contains_no_forbidden_token(
     capsys: pytest.CaptureFixture,
     target: str,
     output_format: str,
-    label: str,
 ) -> None:
     """No score/rank/pass-rate/grade/"certified" token appears in any
     verdict combination (all-PASS on codex, mixed on claude) or output
     format (SC-003)."""
+    label = f"{target}-{output_format}"
     output = f".seshat-output/agent-verify/test-cli-{label}-{tmp_path.name}.json"
     written = _REPO / output
     try:
