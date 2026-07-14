@@ -198,7 +198,7 @@ jobs:
             integrations/claude-code/seshat-bi \
             integrations/codex/seshat-bi
           git diff --cached --check
-          git commit -m "release: prepare v${VERSION}"
+          git commit -m "chore: prepare v${VERSION}"
           git push --set-upstream origin "${RELEASE_BRANCH}"
 
       - name: Open a draft release pull request

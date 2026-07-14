@@ -28,6 +28,13 @@ explicitly identifies a public release event.
 ## [Unreleased]
 
 ### Fixed
+- **`prepare-coordinated-release` commit-subject P2 mismatch**: the workflow's
+  auto-generated release-branch commit used the subject `release: prepare
+  v${VERSION}`, but `release` is not a registered P2 commit type and the
+  subject carries no `[bot]`-style exemption prefix, so CI's `retail check`
+  always failed on the workflow's own commit. Changed the template to `chore:
+  prepare v${VERSION}`. Both the v0.3.0 and v0.3.1 runs needed a manual amend
+  before this fix landed.
 - **Release-artifact credential-scan false positives**: two docstrings
   (`seshat/pr_summary.py`'s `mask()`, `seshat/showcase/manifest.py`'s
   `find_residual_absolute_paths()`) used a literal example DSN/path shape
