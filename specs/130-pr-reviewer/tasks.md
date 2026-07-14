@@ -145,7 +145,7 @@ defaulting all to "new".
 
 - [ ] T018 [P] [US2] Test `classify_changes(base, head)`: a shared fingerprint ->
   carried_over; head-only -> new; base-only -> resolved; the three sets are
-  disjoint and cover base ∪ head (SC-002).
+  disjoint and cover the union of base and head (SC-002).
 - [ ] T019 [P] [US2] Test identity is keyed on `finding_fingerprint` (rule_id +
   severity + locator + message), so a message differing only in a masked position
   is classified honestly from the fingerprint (FR-006).

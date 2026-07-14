@@ -105,45 +105,45 @@ tested core and adds no dependency to the package's import path.
 
 ```text
 specs/130-pr-reviewer/
-├── plan.md              # This file
-├── spec.md              # Feature spec (committed)
-├── research.md          # Phase 0 output (reuse-surface confirmation)
-├── data-model.md        # Phase 1 output (the summary + classification shapes)
-├── quickstart.md        # Phase 1 output (how to render a summary from an envelope)
-├── contracts/           # Phase 1 output (renderer/differ input-output contract)
-└── tasks.md             # Phase 2 output (/speckit-tasks)
+|-- plan.md              # This file
+|-- spec.md              # Feature spec (committed)
+|-- research.md          # Phase 0 output (reuse-surface confirmation)
+|-- data-model.md        # Phase 1 output (the summary + classification shapes)
+|-- quickstart.md        # Phase 1 output (how to render a summary from an envelope)
+|-- contracts/           # Phase 1 output (renderer/differ input-output contract)
+`-- tasks.md             # Phase 2 output (/speckit-tasks)
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/seshat/
-├── review_integration.py     # REUSED (input: build_review_result envelope)
-├── sarif.py                  # REUSED (input: finding_fingerprint identity)
-├── readiness_classify.py     # REUSED (input: refutation-first next-action rank)
-├── readiness_evidence.py     # REUSED (input: _scrub DSN-redaction contract)
-├── interview_review.py       # REUSED (input: _mask PII-shape contract)
-├── review_pack_export.py     # REUSED (optional: pack shape reference)
-└── pr_summary.py             # NEW: pure, stdlib renderer + differ + comment-body
+|-- review_integration.py     # REUSED (input: build_review_result envelope)
+|-- sarif.py                  # REUSED (input: finding_fingerprint identity)
+|-- readiness_classify.py     # REUSED (input: refutation-first next-action rank)
+|-- readiness_evidence.py     # REUSED (input: _scrub DSN-redaction contract)
+|-- interview_review.py       # REUSED (input: _mask PII-shape contract)
+|-- review_pack_export.py     # REUSED (optional: pack shape reference)
+`-- pr_summary.py             # NEW: pure, stdlib renderer + differ + comment-body
                               #      composition (deterministic, no clock, no network)
 
 tests/unit/
-└── test_pr_summary.py        # NEW: fixture-driven tests for renderer / differ /
+`-- test_pr_summary.py        # NEW: fixture-driven tests for renderer / differ /
                               #      masking / next-action pick / sticky-marker body
 
 .claude/skills/
-└── friendly-pr-reviewer/
-    └── SKILL.md              # NEW: the Product Module skill (agent runtime); embeds
+`-- friendly-pr-reviewer/
+    `-- SKILL.md              # NEW: the Product Module skill (agent runtime); embeds
                               #      the F024 Module Contract; when-to-run + boundary
 
 templates/
-└── friendly-pr-summary.md    # NEW: the plain-language summary/sticky-comment shape
+`-- friendly-pr-summary.md    # NEW: the plain-language summary/sticky-comment shape
 
 docs/tools/
-└── friendly-pr-reviewer.md   # NEW: tool doc (inputs, the temporal diff, opt-in step)
+`-- friendly-pr-reviewer.md   # NEW: tool doc (inputs, the temporal diff, opt-in step)
 
 .github/workflows/
-└── ci.yml                    # EDITED: ONE additive, OPT-IN, off-by-default step
+`-- ci.yml                    # EDITED: ONE additive, OPT-IN, off-by-default step
                               #         that renders + posts the sticky comment
 ```
 
