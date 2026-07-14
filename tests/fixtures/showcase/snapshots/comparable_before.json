@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "source_revision": "1111111111111111111111111111111111111111",
+  "scope": ["orders"],
+  "readiness": [
+    {
+      "table_id": "orders",
+      "source_path": "mappings/orders/readiness-status.yaml",
+      "current_stage": "mapping_ready",
+      "stages": {
+        "source_ready": {
+          "status": "pass",
+          "evidence": ["mappings/orders/source-profile.md"],
+          "blocking_reasons": []
+        },
+        "mapping_ready": {
+          "status": "blocked",
+          "evidence": [],
+          "blocking_reasons": ["grain needs owner approval"]
+        }
+      },
+      "blocking_reasons": ["grain needs owner approval"],
+      "next_action": "Resolve grain with the data owner."
+    }
+  ],
+  "artifacts": [],
+  "approvals": [],
+  "validation_boundary": {
+    "static": "readiness statuses read from committed workspace files",
+    "live": "unavailable",
+    "unavailable_checks": ["live_database_validation", "powerbi_semantic_validation"]
+  },
+  "authority_disclaimer": "This is a test fixture passport; it grants no approval.",
+  "passport_id": "passport-fixture-before",
+  "generated_at": "2026-07-01T00:00:00+00:00"
+}

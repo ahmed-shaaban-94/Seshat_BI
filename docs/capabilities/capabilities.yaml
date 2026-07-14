@@ -1107,3 +1107,17 @@ capabilities:
     command: null
     documentation: "docs/roadmap/seshat-bi-agent-controlled-user-tool-roadmap.md"
     references: {}
+
+  - id: showcase-build
+    name: "showcase build (Shareable Seshat Proof)"
+    summary: "Read-only composer over the shipped Explorer projection, Passport, and disclosure scanner: renders one offline, disclosure-scanned showcase bundle (per-table readiness detail, a truthful badge/card, a four-category disclosure manifest, and an optional before/after) -- no new CLI verb (ratified Option B)."
+    state: shipped
+    authority: advisory
+    surface: skill
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: ".claude/skills/showcase-build/SKILL.md"
+    references:
+      skill: "showcase-build"

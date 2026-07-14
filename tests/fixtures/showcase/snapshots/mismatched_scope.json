@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "source_revision": "3333333333333333333333333333333333333333",
+  "scope": ["other_table"],
+  "readiness": [
+    {
+      "table_id": "other_table",
+      "source_path": "mappings/other_table/readiness-status.yaml",
+      "current_stage": "source_ready",
+      "stages": {
+        "source_ready": {
+          "status": "pass",
+          "evidence": ["mappings/other_table/source-profile.md"],
+          "blocking_reasons": []
+        }
+      },
+      "blocking_reasons": [],
+      "next_action": "Map the source."
+    }
+  ],
+  "artifacts": [],
+  "approvals": [],
+  "validation_boundary": {
+    "static": "readiness statuses read from committed workspace files",
+    "live": "unavailable",
+    "unavailable_checks": ["live_database_validation", "powerbi_semantic_validation"]
+  },
+  "authority_disclaimer": "This is a test fixture passport; it grants no approval.",
+  "passport_id": "passport-fixture-mismatched-scope",
+  "generated_at": "2026-07-05T00:00:00+00:00"
+}

@@ -1,0 +1,13 @@
+table: onboarding_candidate
+current_stage: source_ready
+stages:
+  source_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  mapping_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  silver_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  gold_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  semantic_model_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  dashboard_ready: {status: not_started, evidence: [], blocking_reasons: []}
+  publish_ready: {status: not_started, evidence: [], blocking_reasons: []}
+blocking_reasons: []
+approvals: []
+next_action: Author the initial source profile.
