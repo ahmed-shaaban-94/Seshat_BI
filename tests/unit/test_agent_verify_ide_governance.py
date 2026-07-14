@@ -27,47 +27,66 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.mark.parametrize(
-    ("ide_surface_flag", "manifest_data", "expected_verdict", "expected_substring"),
+    "case",
     [
-        pytest.param(False, None, "UNAVAILABLE", "no IDE surface", id="declares_none"),
         pytest.param(
-            False,
-            {"name": "seshat-bi", "interface": {"displayName": "Seshat BI"}},
-            "UNAVAILABLE",
-            None,
+            {
+                "ide_surface_flag": False,
+                "manifest_data": None,
+                "expected_verdict": "UNAVAILABLE",
+                "expected_substring": "no IDE surface",
+            },
+            id="declares_none",
+        ),
+        pytest.param(
+            {
+                "ide_surface_flag": False,
+                "manifest_data": {
+                    "name": "seshat-bi",
+                    "interface": {"displayName": "Seshat BI"},
+                },
+                "expected_verdict": "UNAVAILABLE",
+                "expected_substring": None,
+            },
             id="declares_none_even_with_interface_present",
         ),
         pytest.param(
-            True,
-            {"name": "seshat-bi", "interface": {"displayName": "Seshat BI"}},
-            "PASS",
-            "Seshat BI",
+            {
+                "ide_surface_flag": True,
+                "manifest_data": {
+                    "name": "seshat-bi",
+                    "interface": {"displayName": "Seshat BI"},
+                },
+                "expected_verdict": "PASS",
+                "expected_substring": "Seshat BI",
+            },
             id="declared_and_interface_present",
         ),
         pytest.param(
-            True,
-            {"name": "seshat-bi"},
-            "BLOCKED",
-            None,
+            {
+                "ide_surface_flag": True,
+                "manifest_data": {"name": "seshat-bi"},
+                "expected_verdict": "BLOCKED",
+                "expected_substring": None,
+            },
             id="declared_but_interface_missing",
         ),
     ],
 )
 def test_ide_surface_verdict_matches_declaration_and_manifest(
-    tmp_path: Path,
-    ide_surface_flag: bool,
-    manifest_data: dict | None,
-    expected_verdict: str,
-    expected_substring: str | None,
+    tmp_path: Path, case: dict
 ) -> None:
+    ide_surface_flag = case["ide_surface_flag"]
     name = "codex" if ide_surface_flag else "claude"
     spec = target_spec(tmp_path, name=name, ide_surface=ide_surface_flag)
+    manifest_data = case["manifest_data"]
     if manifest_data is not None:
         write_json(tmp_path / spec.manifest_path, manifest_data)
 
     result = checks.ide_surface_check(spec, tmp_path)
 
-    assert result.verdict == expected_verdict
+    assert result.verdict == case["expected_verdict"]
+    expected_substring = case["expected_substring"]
     if expected_substring is not None:
         text = result.unavailable_reason or (
             result.evidence[0] if result.evidence else ""
