@@ -108,6 +108,26 @@ def test_unresolvable_source_is_refused(
     assert _nothing_written(repo)
 
 
+def test_missing_content_finding_redacts_a_secret_shaped_source(
+    tmp_path: Path,
+) -> None:
+    """A malformed registry record's ``source`` is attacker-influenced
+    content, not a trusted internal identifier -- a DSN-shaped value must
+    never be echoed verbatim into the otherwise disclosure-safe fail-closed
+    finding."""
+    repo = build_test_repo(tmp_path)
+    leaky_source = "postgres://user:pass@host:5432/db"
+    registry = _one_record_registry(
+        record_dict(pack_id="acme.kpi", source=leaky_source, content_hash="0" * 64)
+    )
+    outcome = add_pack(repo, registry, "acme.kpi")
+    assert outcome.status == "refused"
+    assert {f["rule"] for f in outcome.findings} == {"pack_catalog_missing_content"}
+    assert all(leaky_source not in f["message"] for f in outcome.findings)
+    assert any("[REDACTED]" in f["message"] for f in outcome.findings)
+    assert _nothing_written(repo)
+
+
 def test_disclosure_hit_is_refused(tmp_path: Path) -> None:
     repo = build_test_repo(tmp_path)
     pack_dir = write_pack(

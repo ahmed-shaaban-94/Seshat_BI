@@ -643,23 +643,30 @@ def _extend_if_present(target: list[str], value: str | None) -> None:
         target.append(value)
 
 
-def render_summary(
-    envelope: Mapping[str, Any] | None,
+@dataclass
+class _RenderedBody:
+    """Everything ``render_summary`` needs to assemble the final
+    ``FriendlySummary`` once the narrative ``lines`` are composed."""
+
+    outcome: str
+    artifact_lines: list[str]
+    stage_statuses: list[StageStatus]
+    blocker_groups: list[BlockerGroup]
+    warning_lines: list[str]
+    authority_lines: list[str]
+    next_action_text: str
+    undetermined: list[str]
+    conflicts: list[str]
+
+
+def _render_body(
+    envelope: Mapping[str, Any],
     readiness: Mapping[str, Any] | None,
-    base_fingerprints: Iterable[str] | None = None,
-    *,
-    timestamp: str | None = None,
-) -> FriendlySummary:
-    """Build the plain-language PR summary from ONE review envelope + the
-    committed readiness truth. Pure, deterministic, no clock (any timestamp
-    is this explicit argument), no score, no ``merge_ready`` boolean. Every
-    line traces to a field of ``envelope`` / ``readiness`` / a fingerprint.
-    """
-    lines = _header_lines(timestamp)
-
-    if envelope is None:
-        return _unproducible_summary(lines, timestamp)
-
+    base_fingerprints: Iterable[str] | None,
+    lines: list[str],
+) -> _RenderedBody:
+    """Append every narrative section to ``lines`` (in place) and collect the
+    structured pieces ``render_summary`` folds into the returned summary."""
     undetermined: list[str] = []
     conflicts: list[str] = []
 
@@ -713,18 +720,49 @@ def render_summary(
     )
     lines.extend(_optional_section("\n## Could not determine\n", undetermined))
 
+    return _RenderedBody(
+        outcome=outcome,
+        artifact_lines=artifact_lines,
+        stage_statuses=stage_statuses,
+        blocker_groups=blocker_groups,
+        warning_lines=warning_lines,
+        authority_lines=authority_lines,
+        next_action_text=next_action_text,
+        undetermined=undetermined,
+        conflicts=conflicts,
+    )
+
+
+def render_summary(
+    envelope: Mapping[str, Any] | None,
+    readiness: Mapping[str, Any] | None,
+    base_fingerprints: Iterable[str] | None = None,
+    *,
+    timestamp: str | None = None,
+) -> FriendlySummary:
+    """Build the plain-language PR summary from ONE review envelope + the
+    committed readiness truth. Pure, deterministic, no clock (any timestamp
+    is this explicit argument), no score, no ``merge_ready`` boolean. Every
+    line traces to a field of ``envelope`` / ``readiness`` / a fingerprint.
+    """
+    lines = _header_lines(timestamp)
+
+    if envelope is None:
+        return _unproducible_summary(lines, timestamp)
+
+    body = _render_body(envelope, readiness, base_fingerprints, lines)
     text = "\n".join(lines) + "\n"
     return FriendlySummary(
         schema_version=SCHEMA_VERSION,
-        outcome=outcome,
-        affected_artifacts=tuple(artifact_lines),
-        stage_statuses=tuple(stage_statuses),
-        blocker_groups=tuple(blocker_groups),
-        warnings=tuple(warning_lines),
-        required_authority=tuple(authority_lines),
-        next_action=next_action_text,
-        undetermined=tuple(undetermined),
-        conflicts=tuple(conflicts),
+        outcome=body.outcome,
+        affected_artifacts=tuple(body.artifact_lines),
+        stage_statuses=tuple(body.stage_statuses),
+        blocker_groups=tuple(body.blocker_groups),
+        warnings=tuple(body.warning_lines),
+        required_authority=tuple(body.authority_lines),
+        next_action=body.next_action_text,
+        undetermined=tuple(body.undetermined),
+        conflicts=tuple(body.conflicts),
         timestamp=timestamp,
         text=mask(text),
     )

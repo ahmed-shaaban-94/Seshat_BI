@@ -49,6 +49,18 @@ def _finding(rule: str, locator: str, message: str) -> dict[str, str]:
     return {"rule": rule, "locator": locator, "message": message}
 
 
+def _safe_locator(value: str) -> str:
+    """Redact ``value`` before it is echoed into a finding if it matches a
+    disclosure-unsafe shape (a DSN/connection string, absolute path, or
+    secret-shaped value). A registry record's own fields are attacker-
+    influenced content, not a trusted internal identifier, so they must clear
+    the same disclosure bar as any other pack content before being echoed
+    back into a "disclosure-safe" fail-closed finding (FR-010)."""
+    if scan_disclosure({"value": value})["findings"]:
+        return "[REDACTED]"
+    return value
+
+
 @dataclass(frozen=True)
 class CatalogOutcome:
     """The result of one ``add`` attempt. ``status`` is either ``"added"`` or
@@ -118,7 +130,7 @@ def _resolve_pack_dir(
         return None, _finding(
             "pack_catalog_missing_content",
             f"registry:{record.id}",
-            f"pack source is missing or dangling: {record.source}",
+            f"pack source is missing or dangling: {_safe_locator(record.source)}",
         )
     return pack_dir, None
 
