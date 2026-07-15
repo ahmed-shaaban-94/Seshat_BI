@@ -1,0 +1,5 @@
+name: metric_alpha
+decision_scope: {kpis: [metric_alpha]}
+binds_to:
+  gold_table: gold.fact_catalog
+  columns: [amount]

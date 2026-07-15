@@ -1,0 +1,6 @@
+decisions:
+  - id: naming.metric_alpha
+    decision_type: naming
+    statement: proposed label
+    scope: {kpis: [metric_alpha]}
+    status: proposed

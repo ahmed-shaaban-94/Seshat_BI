@@ -1,4 +1,4 @@
-"""Spec-120 ecosystem subcommand parsers (passport / pack / benchmark / explorer).
+"""Ecosystem subcommand parsers (passport / pack / benchmark / explorer / impact-map).
 
 Split out of ``parser.py`` verbatim (flag order, metavar, and help text
 unchanged) because that module is a standing CodeScene
@@ -436,4 +436,40 @@ def _add_explorer_parser(sub: argparse._SubParsersAction) -> None:
             "HTML output under .seshat-output/ "
             "(default: .seshat-output/explorer/index.html)"
         ),
+    )
+
+
+def _add_impact_map_parser(sub: argparse._SubParsersAction) -> None:
+    """One narrow, offline decision-change impact projection surface."""
+
+    parser = sub.add_parser(
+        "impact-map",
+        help=(
+            "project direct/transitive downstream impact for one approved "
+            "decision from committed evidence only"
+        ),
+    )
+    parser.add_argument("--repo", default=".", help="repo root to read from")
+    parser.add_argument(
+        "--decision",
+        required=True,
+        metavar="DECISION_ID",
+        help="approved Decision Store record id to project",
+    )
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help="preview impact for an approved decision with no committed trigger",
+    )
+    parser.add_argument(
+        "--output",
+        default=".seshat-output/impact-map/impact-map.json",
+        metavar="PATH",
+        help="machine-readable JSON output under .seshat-output/",
+    )
+    parser.add_argument(
+        "--human-output",
+        default=".seshat-output/impact-map/impact-map.md",
+        metavar="PATH",
+        help="human-readable Markdown output under .seshat-output/",
     )

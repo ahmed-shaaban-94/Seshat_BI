@@ -1,0 +1,22 @@
+decisions:
+  - id: naming.metric_alpha.v1
+    decision_type: naming
+    statement: original label
+    scope: {kpis: [metric_alpha]}
+    status: superseded
+    superseded_by: naming.metric_alpha
+  - id: naming.metric_alpha
+    decision_type: naming
+    statement: current changed label
+    scope: {kpis: [metric_alpha]}
+    status: superseded
+    supersedes: naming.metric_alpha.v1
+    superseded_by: naming.metric_alpha.missing
+    approval:
+      approved_by: "Alex Owner (analyst)"
+      approved_at: "2026-07-01"
+      source: interview
+      evidence: [evidence/decision.md]
+      evidence_identity:
+        evidence/decision.md: 707d635f4f9218777f7d48c16cf92eb6a4d4a877e9bf3c2b926d4d82306e51da
+      reviewed_scope: {kpis: [metric_alpha]}

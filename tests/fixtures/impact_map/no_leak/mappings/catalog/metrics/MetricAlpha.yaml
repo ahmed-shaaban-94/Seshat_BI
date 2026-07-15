@@ -1,0 +1,2 @@
+name: metric_alpha
+decision_scope: {kpis: [metric_alpha]}

@@ -1,0 +1,3 @@
+table 'gold fact_catalog'
+    measure metric_alpha = SUM('gold fact_catalog'[amount])
+        // Binds to approved metric contract: metric_alpha

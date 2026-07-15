@@ -44,6 +44,20 @@ capabilities:
       skill: "retail-govern"
       verb: "retail-govern"
 
+  - id: decision-change-impact-map
+    name: "decision change impact map"
+    summary: "Read-only, offline projection of affected committed artifacts for one approved decision change."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: "impact-map"
+    documentation: "specs/132-decision-change-impact-map/spec.md"
+    references:
+      dispatch: "impact-map"
+
   - id: retail-semantic-check
     name: "retail semantic-check"
     summary: "Detects when a committed measure's denominator drifts from its metric contract (Stage 5 readiness verdict)."
