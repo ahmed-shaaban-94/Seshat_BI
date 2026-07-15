@@ -259,7 +259,8 @@ disclosure-scan before write; contained write; deterministic.
 ### Implementation for US5
 
 - [ ] T037 [US5] Implement deterministic ordering in the composer: sort `affected[]` by
-  `(direct-first, artifact_id)`, `edges` by `(from,to)`, `incomplete_lineage[]` by `(kind,locator)`,
+  `(direct-first, artifact_id)`, each `affected[].evidence_paths` in traversal order and
+  `affected[].contributing_decisions` by `decision_id`, `incomplete_lineage[]` by `(kind,locator)`,
   `supersession_chain[]` in pointer order; exclude `generated_at` from any digest (NFR-001).
 - [ ] T038 [US5] Implement the thin read-only surface in `src/seshat/cli/commands/impact_map.py`
   (mirror `commands/explorer.py`/`commands/passport.py`): build dict → `scan_disclosure` → render human

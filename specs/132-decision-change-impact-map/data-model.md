@@ -63,9 +63,10 @@ identity scheme for every resolved downstream artifact.
   subject: {                                     # [new] the changed decision, read-only
     decision_id: str,                            # [reuse] ChangedDecision.id
     decision_type: str,                          # [reuse]
-    trigger: "superseded" | "evidence_stale"      # [new] which leg fired (both possible → list)
-            | ["superseded","evidence_stale"],
-    is_preview: bool,                            # [new] true when run against a not-yet-superseded decision (FR-004)
+    trigger: "superseded" | "evidence_stale"      # [new] which mode fired: committed legs (a)/(b) may
+            | ["superseded","evidence_stale"]     #   fire together (list); OR the explicit
+            | "preview",                          #   "preview" mode (c) — FR-003
+    is_preview: bool,                            # [new] true iff trigger == "preview" (run against a not-yet-superseded, non-stale approved decision — FR-004)
     critical: bool                               # [reuse] via decision_store.is_critical
   },
   supersession_chain: [                          # [new view over reuse pointers], in pointer order

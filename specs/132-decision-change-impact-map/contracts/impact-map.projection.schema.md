@@ -10,7 +10,9 @@ contract holds in either.
 
 - `schema_version` — string, `"1.0"`.
 - `subject` — object: `{ decision_id, decision_type, trigger, is_preview, critical }`.
-  `trigger` ∈ `"superseded"` | `"evidence_stale"` | a list of both.
+  `trigger` ∈ `"superseded"` | `"evidence_stale"` | `"preview"` | a list combining `"superseded"`
+  and `"evidence_stale"` (both committed conditions may fire together). When `trigger` is `"preview"`,
+  `is_preview` MUST be `true` and no committed change condition is required (FR-003 mode (c), FR-004).
 - `supersession_chain` — array (possibly empty) of `{ decision_id, relation, resolved }` in pointer
   order.
 - `affected` — array (possibly empty) of affected-artifact objects (see below).
@@ -42,7 +44,7 @@ decision — spec Edge Case "multiple decisions affecting the same artifact").
 | INV-5 Fail-closed, never false "no impact" | FR-019, SC-008 | degraded-input matrix; assert `blocking_condition` set, no empty-clean result |
 | INV-6 Byte-deterministic modulo `generated_at` | NFR-001, SC-010 | double-run byte diff |
 | INV-7 Disclosure-safe pre-write | NFR-003, SC-011 | `scan_disclosure` blocks a planted secret/PII/connection-string |
-| INV-8 `affected`/`edges`/`incomplete_lineage`/`chain` stably ordered | NFR-001 | sorted-order assertion |
+| INV-8 `affected`/`incomplete_lineage`/`supersession_chain` stably ordered; within each `affected[]` entry, `evidence_paths` and `contributing_decisions` stably ordered | NFR-001 | sorted-order assertion |
 | INV-9 Transitive entries carry the full ordered edge evidence chain | FR-009/010/011, SC-002 | transitive fixture path assertion |
 | INV-10 Cycle recorded + bounded, never a completed transitive path | FR-014, SC-006 | cyclic fixture terminates + records cycle |
 | INV-11 Only reused authorities; no new store/engine/authority/model/stage/CLI-family/UI | FR-001/002/024/025, SC-013 | no-duplicate task asserts imports, not re-implementations |

@@ -330,7 +330,7 @@ written only under the contained output root.
 
 ### Functional Requirements — Trigger (US1, US3; D3)
 
-- **FR-003**: The impact map MUST apply to an **approved** decision and MUST be triggerable by either of exactly two committed conditions: (a) the decision is superseded, or (b) its cited evidence is stale (a cited evidence file's current content identity no longer matches the identity recorded at approval).
+- **FR-003**: The impact map MUST apply to an **approved** decision and MUST support exactly three trigger modes: (a) **superseded** — the decision is superseded; (b) **evidence_stale** — its cited evidence is stale (a cited evidence file's current content identity no longer matches the identity recorded at approval); and (c) **preview** — an explicit reviewer-initiated request against a not-yet-superseded, non-stale approved decision (FR-004), which projects "what would be affected if this were superseded" and is marked `is_preview: true`. Modes (a) and (b) are the two *committed* conditions detected from state; mode (c) is an explicit request and requires no committed change condition. The map MUST NOT run on an unapproved decision (it is reported as not a valid subject, not as "no impact").
 - **FR-004**: The feature MUST support producing the map as a **preview** for a not-yet-superseded approved decision (what would be affected if it were superseded) without changing any state.
 - **FR-005**: The feature MUST detect the evidence-stale condition using the existing cited-evidence staleness signal and the existing artifact-identity scheme; it MUST NOT define a second staleness or identity mechanism.
 
@@ -404,7 +404,7 @@ written only under the contained output root.
 - **ChangedDecision**: an existing Decision Store record of an approved decision that is superseded or evidence-stale, read (never written) as the impact-map subject. *(Reused; spec 121.)*
 - **SupersessionChainView**: the ordered presentation of the store's existing `supersedes` / `superseded_by` pointers for the subject decision. *(Reused pointers; new read-only view.)*
 - **AffectedArtifact**: one downstream artifact resolved from the changed decision, carrying its existing artifact identity, a direct/transitive label, and the evidence path(s) establishing its dependency. *(New projection entry over reused identities/edges.)*
-- **DependencyEdge**: one traversed lineage edge from the existing lineage authorities, carrying its from/to node identities and evidence path. *(Reused edge vocabulary.)*
+- **DependencyEdge**: one traversed lineage edge from the existing lineage authorities. It is **not** a separate top-level collection in the projection; each traversed edge is represented by its evidence path within the reached artifact's `evidence_paths` chain (a transitive artifact carries the full ordered chain of the edges from the decision to it). *(Reused edge vocabulary; represented as evidence paths, not a distinct `edges[]` array.)*
 - **IncompleteLineageWarning**: one named unresolved scope tag, unfollowable edge, or dangling supersession pointer. *(New.)*
 - **AffectedReadinessStage**: an affected stage named from the existing readiness projection and flow→spine mapping. *(Reused.)*
 - **NextReviewAction**: a next human action drawn from the existing blocker-category / next-surface authority. *(Reused.)*
