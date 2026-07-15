@@ -136,6 +136,12 @@ def test_pbip_adoption_capability_truthfully_covers_the_local_route() -> None:
     assert "seshat adopt-pbip assess" in skill
 
 
+def test_impact_map_capability_covers_its_dispatch() -> None:
+    raw = {entry["id"]: entry for entry in load_manifest(_REPO_ROOT)}
+    assert raw["decision-change-impact-map"]["command"] == "impact-map"
+    assert raw["decision-change-impact-map"]["references"]["dispatch"] == "impact-map"
+
+
 # ---------------------------------------------------------------------------
 # O3 -- false-shipped (fail-closed)
 # ---------------------------------------------------------------------------

@@ -43,10 +43,10 @@ tests; this repo's convention is TDD (RED → GREEN → IMPROVE). Test tasks pre
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Create the module skeletons: empty `src/seshat/impact_map.py` and
+- [X] T001 Create the module skeletons: empty `src/seshat/impact_map.py` and
   `src/seshat/cli/commands/impact_map.py` with module docstrings stating the read-only, no-mutation,
   no-score, offline contract (mirror the docstring posture of `explorer/build.py`). No logic yet.
-- [ ] T002 [P] Materialize the fixture tree under `tests/fixtures/impact_map/` from the descriptors in
+- [X] T002 [P] Materialize the fixture tree under `tests/fixtures/impact_map/` from the descriptors in
   `contracts/fixtures/README.md` — one subdir per family (direct, transitive, cycle, stale_evidence,
   missing_ref, conflict, incomplete_lineage, dangling_pointer, absent_store, malformed_store, preview,
   no_leak, non_approved_subject). Fixtures are generic; no worked-example real values
@@ -58,12 +58,12 @@ tests; this repo's convention is TDD (RED → GREEN → IMPROVE). Test tasks pre
 
 **⚠️ CRITICAL**: Must complete before ANY user story implementation.
 
-- [ ] T003 Promote `decision_gate._evidence_stale` to an importable shared helper (visibility-only,
+- [X] T003 Promote `decision_gate._evidence_stale` to an importable shared helper (visibility-only,
   behavior-preserving) in `src/seshat/decision_gate.py`; keep existing in-module callers working.
-- [ ] T004 [P] Add guard test `tests/unit/test_evidence_stale_promotion.py` asserting the promoted
+- [X] T004 [P] Add guard test `tests/unit/test_evidence_stale_promotion.py` asserting the promoted
   helper's output is identical to the pre-promotion behavior on a stale and a fresh fixture (no
   staleness-authority fork — research.md D2).
-- [ ] T005 Implement in `src/seshat/impact_map.py` the read-only INPUT-LOADING layer that reuses (never
+- [X] T005 Implement in `src/seshat/impact_map.py` the read-only INPUT-LOADING layer that reuses (never
   re-implements): `decision_store.load_store` + `.decisions()`, `decision_store.scope_keys`,
   `decision_store.is_critical`, `decision_store.active_scope_conflicts`, `artifact_identity`,
   `readiness_projection.build_readiness_projection`, `readiness_classify.classify`/`CATEGORY_RANK`,
@@ -71,7 +71,7 @@ tests; this repo's convention is TDD (RED → GREEN → IMPROVE). Test tasks pre
   `cli.guards.resolve_local_output`. This task wires imports + a `load_subject(repo_root, decision_id)`
   that returns the subject decision or a fail-closed condition; it computes NO impact yet. Establishes
   the reuse-only, no-new-authority posture (FR-001, FR-002).
-- [ ] T006 [P] Add offline guard test `tests/unit/test_impact_map_no_driver.py` asserting the composer
+- [X] T006 [P] Add offline guard test `tests/unit/test_impact_map_no_driver.py` asserting the composer
   module source imports no DB driver (`import psycopg`, `import sqlalchemy`, `.connect(`, `DSN`) —
   mirrors HR9's `test_hr9_module_imports_no_database_driver` (NFR-002).
 
@@ -90,18 +90,18 @@ once, `relation:"direct"`, resolvable evidence path, stage from readiness projec
 
 ### Tests for US1 (write FIRST, must FAIL)
 
-- [ ] T007 [P] [US1] `tests/unit/test_impact_map.py::test_direct_impact_superseded` — `direct/` fixture:
+- [X] T007 [P] [US1] `tests/unit/test_impact_map.py::test_direct_impact_superseded` — `direct/` fixture:
   assert direct artifact, `relation:"direct"`, non-empty `evidence_paths`, affected stage read from
   `readiness_projection`, next action from `readiness_classify` (SC-001).
-- [ ] T008 [P] [US1] `tests/unit/test_impact_map.py::test_evidence_stale_trigger` — `stale_evidence/`
+- [X] T008 [P] [US1] `tests/unit/test_impact_map.py::test_evidence_stale_trigger` — `stale_evidence/`
   fixture: subject `trigger` includes `evidence_stale` via the promoted helper; directly-derived
   artifacts listed with evidence paths (FR-003b/005).
-- [ ] T009 [P] [US1] `tests/unit/test_impact_map_no_score.py` — no digit-then-`%` and no
+- [X] T009 [P] [US1] `tests/unit/test_impact_map_no_score.py` — no digit-then-`%` and no
   `score`/`confidence`/`risk`/`risk_score`/`trust`/`completeness`/`blast_radius`/`weight` key anywhere
   in the projection dict (SC-005 / INV-4).
-- [ ] T010 [P] [US1] `tests/unit/test_impact_map.py::test_no_state_written` — after producing a map, no
+- [X] T010 [P] [US1] `tests/unit/test_impact_map.py::test_no_state_written` — after producing a map, no
   decision/approval/supersession pointer/`readiness-status.yaml` changed (FR-024, FR-025).
-- [ ] T010a [P] [US1] `tests/unit/test_impact_map.py::test_non_approved_subject_reported` —
+- [X] T010a [P] [US1] `tests/unit/test_impact_map.py::test_non_approved_subject_reported` —
   `non_approved_subject/` fixture: a `proposed`/`pending` (non-approved) subject yields
   `blocking_condition.kind == "invalid_subject"` with `subject == null`, reported as *not a valid
   impact-map subject*, NOT as "no impact" and NOT a `subject` with a made-up trigger (spec Edge Case
@@ -109,19 +109,19 @@ once, `relation:"direct"`, resolvable evidence path, stage from readiness projec
 
 ### Implementation for US1
 
-- [ ] T011 [US1] Implement scope→direct-artifact resolution in `src/seshat/impact_map.py`: for the
+- [X] T011 [US1] Implement scope→direct-artifact resolution in `src/seshat/impact_map.py`: for the
   single subject decision, for each `scope_keys(subject.scope)` entry, resolve to committed downstream
   artifacts (metric contracts, gold bindings via the explorer metric→gold edge, readiness evidence),
   producing `affected[]` entries with `relation:"direct"`, `artifact_id` (via `artifact_identity`), and
   `evidence_paths` (an artifact reached by more than one path from the subject is listed once, extra
   paths folded into its `evidence_paths`). Keeps the direct set separable from the transitive set
   (FR-007, FR-008, FR-009, FR-010).
-- [ ] T012 [US1] Attach affected readiness stage(s) per affected artifact using
+- [X] T012 [US1] Attach affected readiness stage(s) per affected artifact using
   `readiness_projection.build_readiness_projection` + `decision_gate._FLOW_TO_SPINE` (READ only;
   FR-017).
-- [ ] T013 [US1] Attach next review action(s) per affected artifact using `readiness_classify.classify`
+- [X] T013 [US1] Attach next review action(s) per affected artifact using `readiness_classify.classify`
   + `CATEGORY_RANK` ordering (FR-018).
-- [ ] T014 [US1] Enforce the no-score invariant structurally in the composer (no synthesized number
+- [X] T014 [US1] Enforce the no-score invariant structurally in the composer (no synthesized number
   ever placed in the dict) and the never-write contract (FR-023/024/025).
 
 **Checkpoint**: direct-impact map works; T007–T010a pass.
@@ -138,34 +138,34 @@ never a silent drop, never an inferred edge, never a false "unaffected".
 
 ### Tests for US2 (write FIRST, must FAIL)
 
-- [ ] T015 [P] [US2] `tests/unit/test_impact_map.py::test_transitive_impact_with_edge_chain` —
+- [X] T015 [P] [US2] `tests/unit/test_impact_map.py::test_transitive_impact_with_edge_chain` —
   `transitive/` fixture: dashboard artifact `relation:"transitive"` with the full ordered
   `evidence_paths` edge chain; a transitive-only artifact is never labeled `direct` (SC-002 / INV-9).
-- [ ] T016 [P] [US2] `tests/unit/test_impact_map.py::test_unresolved_scope_tag_warns` — `missing_ref/`
+- [X] T016 [P] [US2] `tests/unit/test_impact_map.py::test_unresolved_scope_tag_warns` — `missing_ref/`
   fixture: a zero-resolution scope tag produces `incomplete_lineage[]` (`unresolved_scope_tag`);
   nothing recorded "unaffected" (FR-012 / SC-004).
-- [ ] T017 [P] [US2] `tests/unit/test_impact_map.py::test_unfollowable_edge_warns` — `missing_ref/`
+- [X] T017 [P] [US2] `tests/unit/test_impact_map.py::test_unfollowable_edge_warns` — `missing_ref/`
   fixture: a missing-target edge produces `incomplete_lineage[]` (`unfollowable_edge`); no substitute
   edge inferred (FR-013).
-- [ ] T018 [P] [US2] `tests/unit/test_impact_map.py::test_affected_and_incomplete_disjoint` —
+- [X] T018 [P] [US2] `tests/unit/test_impact_map.py::test_affected_and_incomplete_disjoint` —
   `incomplete_lineage/` fixture: `affected[]` and `incomplete_lineage[]` both non-empty and disjoint
   (FR-015 / SC-003 / INV-1); dual-reachable artifact appears once as `direct` (INV-2).
-- [ ] T019 [P] [US2] `tests/unit/test_impact_map.py::test_cycle_terminates_and_is_recorded` — `cycle/`
+- [X] T019 [P] [US2] `tests/unit/test_impact_map.py::test_cycle_terminates_and_is_recorded` — `cycle/`
   fixture: walk terminates in bounded time, records the cycle in `cycles[]`, never reports the cycle as
   a completed transitive path (FR-014 / SC-006).
 
 ### Implementation for US2
 
-- [ ] T020 [US2] Implement the transitive walk in `src/seshat/impact_map.py`: a bounded DFS/BFS over the
+- [X] T020 [US2] Implement the transitive walk in `src/seshat/impact_map.py`: a bounded DFS/BFS over the
   composed edge set (reusing `explorer._lineage` node ids + `cross-table-lineage` SKILL hop definitions
   and proven/unresolved/gap tiering — one existing lineage vocabulary only, no fourth scheme) with an
   explicit visited-set for cycle detection; label reached artifacts `transitive` with the full ordered
   edge `evidence_paths` (FR-009, FR-010, FR-011, NFR-006).
-- [ ] T021 [US2] Implement incomplete-lineage detection: every unresolved scope tag, unfollowable edge,
+- [X] T021 [US2] Implement incomplete-lineage detection: every unresolved scope tag, unfollowable edge,
   and (from Phase 5) dangling supersession pointer becomes an explicit `incomplete_lineage[]` entry;
   guarantee `affected[]`/`incomplete_lineage[]` disjointness and direct-dominance (FR-012/013/015,
   INV-1/INV-2).
-- [ ] T022 [US2] Enforce cycle handling: on re-encounter, record a named cycle condition and stop the
+- [X] T022 [US2] Enforce cycle handling: on re-encounter, record a named cycle condition and stop the
   branch; never re-traverse (FR-014).
 
 **Checkpoint**: MVP (US1+US2) complete; a truthful direct+transitive map that never reports a false
@@ -182,20 +182,20 @@ the existing `supersedes`/`superseded_by` pointer chain in order; a dangling poi
 
 ### Tests for US3 (write FIRST, must FAIL)
 
-- [ ] T023 [P] [US3] `tests/unit/test_impact_map.py::test_preview_no_mutation` — `preview/` fixture:
+- [X] T023 [P] [US3] `tests/unit/test_impact_map.py::test_preview_no_mutation` — `preview/` fixture:
   preview `affected[]` produced, `is_preview:true`, zero state writes (FR-004).
-- [ ] T024 [P] [US3] `tests/unit/test_impact_map.py::test_supersession_chain_in_order` —
+- [X] T024 [P] [US3] `tests/unit/test_impact_map.py::test_supersession_chain_in_order` —
   `dangling_pointer/` fixture: resolvable chain presented in pointer order using existing store fields
   (FR-006).
-- [ ] T025 [P] [US3] `tests/unit/test_impact_map.py::test_dangling_pointer_warns` — `dangling_pointer/`
+- [X] T025 [P] [US3] `tests/unit/test_impact_map.py::test_dangling_pointer_warns` — `dangling_pointer/`
   fixture: an unresolved `supersedes`/`superseded_by` yields `incomplete_lineage[]`
   (`dangling_supersession_pointer`); no fabricated history (FR-016 / SC-007).
 
 ### Implementation for US3
 
-- [ ] T026 [US3] Implement preview mode (run against a not-yet-superseded approved decision) with a
+- [X] T026 [US3] Implement preview mode (run against a not-yet-superseded approved decision) with a
   hard no-write guarantee (FR-004).
-- [ ] T027 [US3] Implement supersession-chain reading from the store's existing pointers, in order;
+- [X] T027 [US3] Implement supersession-chain reading from the store's existing pointers, in order;
   dangling pointers → `incomplete_lineage[]`; NO history/version model created (FR-006/016).
 
 **Checkpoint**: US3 works independently; T023–T025 pass.
@@ -212,19 +212,19 @@ evidence.
 
 ### Tests for US4 (write FIRST, must FAIL)
 
-- [ ] T028 [P] [US4] `tests/unit/test_impact_map.py::test_absent_store_blocks` — `absent_store/`:
+- [X] T028 [P] [US4] `tests/unit/test_impact_map.py::test_absent_store_blocks` — `absent_store/`:
   `blocking_condition.kind = absent_store`; not "no artifacts affected" (FR-019).
-- [ ] T029 [P] [US4] `tests/unit/test_impact_map.py::test_malformed_store_fails_closed` —
+- [X] T029 [P] [US4] `tests/unit/test_impact_map.py::test_malformed_store_fails_closed` —
   `malformed_store/`: fails closed, names the store problem, writes nothing (FR-019 / SC-008).
-- [ ] T030 [P] [US4] `tests/unit/test_impact_map.py::test_active_scope_conflict_surfaced` — `conflict/`:
+- [X] T030 [P] [US4] `tests/unit/test_impact_map.py::test_active_scope_conflict_surfaced` — `conflict/`:
   surfaces the conflict via `active_scope_conflicts`; not silently resolved (FR-020).
-- [ ] T031 [P] [US4] `tests/unit/test_impact_map.py::test_missing_cited_evidence_warns` — removed cited
+- [X] T031 [P] [US4] `tests/unit/test_impact_map.py::test_missing_cited_evidence_warns` — removed cited
   evidence → `incomplete_lineage[]` (`missing_cited_evidence`); no resolvable path reported through it
   (FR-013 / SC-008).
 
 ### Implementation for US4
 
-- [ ] T032 [US4] Implement the fail-closed layer: absent/malformed store (reuse the store's fail-closed
+- [X] T032 [US4] Implement the fail-closed layer: absent/malformed store (reuse the store's fail-closed
   load), active-scope conflict (reuse `active_scope_conflicts`), and unreadable inputs all set
   `blocking_condition` and refuse a false clean result; never crash, never traceback (FR-019/020,
   NFR-004, INV-5).
@@ -242,24 +242,24 @@ disclosure-scan before write; contained write; deterministic.
 
 ### Tests for US5 (write FIRST, must FAIL)
 
-- [ ] T033 [P] [US5] `tests/integration/test_impact_map_surface.py::test_human_machine_parity` —
+- [X] T033 [P] [US5] `tests/integration/test_impact_map_surface.py::test_human_machine_parity` —
   identical content set across both forms (SC-009).
-- [ ] T034 [P] [US5] `tests/integration/test_impact_map_surface.py::test_byte_determinism` — two runs on
+- [X] T034 [P] [US5] `tests/integration/test_impact_map_surface.py::test_byte_determinism` — two runs on
   identical inputs → byte-identical machine form modulo `generated_at` (SC-010 / INV-6).
-- [ ] T035 [P] [US5] `tests/integration/test_impact_map_surface.py::test_disclosure_blocks_write` —
+- [X] T035 [P] [US5] `tests/integration/test_impact_map_surface.py::test_disclosure_blocks_write` —
   `no_leak/` fixture: `scan_disclosure` blocks the write on a planted secret/PII/connection string; the
   projection records only repo-relative paths/identities, never raw PII, a connection string, or a
   credential (SC-011 / NFR-003 / SEC-001 / SEC-002 / SEC-003 / INV-7).
-- [ ] T036 [P] [US5] `tests/integration/test_impact_map_surface.py::test_contained_write` — every written
+- [X] T036 [P] [US5] `tests/integration/test_impact_map_surface.py::test_contained_write` — every written
   form lands only under the contained output root via `resolve_local_output` (FR-022).
 
 ### Implementation for US5
 
-- [ ] T037 [US5] Implement deterministic ordering in the composer: sort `affected[]` by
+- [X] T037 [US5] Implement deterministic ordering in the composer: sort `affected[]` by
   `(direct-first, artifact_id)`, each `affected[].evidence_paths` in traversal order,
   `incomplete_lineage[]` by `(kind,locator)`, `supersession_chain[]` in pointer order; exclude
   `generated_at` from any digest (NFR-001).
-- [ ] T038 [US5] Implement the thin read-only surface in `src/seshat/cli/commands/impact_map.py`
+- [X] T038 [US5] Implement the thin read-only surface in `src/seshat/cli/commands/impact_map.py`
   (mirror `commands/explorer.py`/`commands/passport.py`): build dict → `scan_disclosure` → render human
   form + write machine form under `resolve_local_output`; register the surface in the CLI dispatch
   (FR-021/022). Confirm this is the smallest addition consistent with research.md D9 (no broad CLI
@@ -271,23 +271,23 @@ disclosure-scan before write; contained write; deterministic.
 
 ## Phase 8: No-duplicate verification, docs & validation
 
-- [ ] T039 `tests/unit/test_impact_map_no_duplicate.py` — assert the feature IMPORTS (does not
+- [X] T039 `tests/unit/test_impact_map_no_duplicate.py` — assert the feature IMPORTS (does not
   re-implement) every reused authority (`decision_store`, `decision_gate`, `artifact_identity`,
   `readiness_projection`, `readiness_classify`, `explorer.build`, `disclosure`, `cli.guards`), adopts
   exactly one existing lineage-node vocabulary (no fourth scheme), and creates NO new Decision Store /
   readiness engine / lineage authority / approval system / status model / readiness stage / numeric
   score / broad CLI family / web UI (FR-001, FR-002, NFR-006, SC-013 / INV-11).
-- [ ] T040 [P] Run the full unit + integration suite for the feature and confirm RED→GREEN for every
+- [X] T040 [P] Run the full unit + integration suite for the feature and confirm RED→GREEN for every
   test above; confirm `ruff format --check src tests` and `ruff check src tests` pass on the new/changed
   files (repo CI gate).
-- [ ] T041 [P] `tests/unit/test_impact_map_no_leak.py` — perform the SC-012/NFR-005 no-leak scan: run
+- [X] T041 [P] `tests/unit/test_impact_map_no_leak.py` — perform the SC-012/NFR-005 no-leak scan: run
   the composer over generic fixtures and assert no worked-example table/column/policy/number/client/
   named-human token (from the enumerated worked-example token list) appears in any produced artifact.
   This is the *verification* of SC-012 (distinct from T002, which only constrains fixture authoring).
-- [ ] T041a [P] Add an additive capability note DRAFT under `specs/132-decision-change-impact-map/` (NOT
+- [X] T041a [P] Add an additive capability note DRAFT under `specs/132-decision-change-impact-map/` (NOT
   in `docs/capabilities/capabilities.yaml`) describing the shipped surface for a later, owner-gated
   capability-ledger edit; do not touch the ledger here.
-- [ ] T042 Run the `quickstart.md` walkthrough against the fixtures and confirm the described reviewer
+- [X] T042 Run the `quickstart.md` walkthrough against the fixtures and confirm the described reviewer
   experience matches actual output (direct/transitive split, incomplete-lineage warnings, cycles,
   blocking conditions, no score, no writes).
 

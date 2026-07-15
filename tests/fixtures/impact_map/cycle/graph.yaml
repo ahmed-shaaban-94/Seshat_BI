@@ -1,0 +1,8 @@
+nodes:
+  - {node_id: "metric:catalog:metric_alpha", kind: metric_contract, evidence: mappings/catalog/metrics/MetricAlpha.yaml}
+  - {node_id: "warehouse:gold.fact_catalog", kind: warehouse_table, evidence: warehouse/migrations/0001_create_gold_catalog.sql}
+  - {node_id: "dashboard_binding:mappings/catalog/design/visual-contract-binding-map.md", kind: dashboard_binding, evidence: mappings/catalog/design/visual-contract-binding-map.md}
+edges:
+  - {from: "metric:catalog:metric_alpha", to: "warehouse:gold.fact_catalog", evidence: mappings/catalog/metrics/MetricAlpha.yaml}
+  - {from: "warehouse:gold.fact_catalog", to: "dashboard_binding:mappings/catalog/design/visual-contract-binding-map.md", evidence: mappings/catalog/design/visual-contract-binding-map.md}
+  - {from: "dashboard_binding:mappings/catalog/design/visual-contract-binding-map.md", to: "metric:catalog:metric_alpha", evidence: mappings/catalog/design/visual-contract-binding-map.md}

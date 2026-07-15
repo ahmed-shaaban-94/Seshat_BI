@@ -1,0 +1,13 @@
+decisions:
+  - id: naming.metric_alpha
+    decision_type: naming
+    statement: metric_alpha is the governed label
+    scope: {kpis: [metric_alpha]}
+    status: approved
+    approval:
+      approved_by: "Alex Owner (analyst)"
+      approved_at: "2026-07-01"
+      source: interview
+      evidence: [evidence/decision.md]
+      evidence_identity: {evidence/decision.md: stale-recorded-identity}
+      reviewed_scope: {kpis: [metric_alpha]}

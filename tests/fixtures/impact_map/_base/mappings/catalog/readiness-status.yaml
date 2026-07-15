@@ -1,0 +1,34 @@
+table: catalog
+current_stage: semantic_model_ready
+stages:
+  source_ready:
+    status: pass
+    evidence: [evidence/decision.md]
+    blocking_reasons: []
+  mapping_ready:
+    status: pass
+    evidence: [evidence/decision.md]
+    blocking_reasons: []
+  silver_ready:
+    status: pass
+    evidence: [evidence/decision.md]
+    blocking_reasons: []
+  gold_ready:
+    status: pass
+    evidence: [evidence/decision.md]
+    blocking_reasons: []
+  semantic_model_ready:
+    status: blocked
+    evidence: []
+    blocking_reasons: [approval review required for the changed metric]
+  dashboard_ready:
+    status: not_started
+    evidence: []
+    blocking_reasons: []
+  publish_ready:
+    status: not_started
+    evidence: []
+    blocking_reasons: []
+blocking_reasons: [approval review required for the changed metric]
+approvals: []
+next_action: Re-confirm the named approval.

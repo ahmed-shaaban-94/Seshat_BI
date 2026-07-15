@@ -77,7 +77,7 @@ def _load_blocking_categories(repo_root: Path | str, stage: str) -> set[str] | N
     return None  # unknown stage -> fail closed
 
 
-def _evidence_stale(repo_root: Path | str, approval: dict[str, Any]) -> list[str]:
+def evidence_stale(repo_root: Path | str, approval: dict[str, Any]) -> list[str]:
     """Cited evidence whose current content identity differs from the recorded
     ``evidence_identity`` at approval time (research R-10). A missing file or an
     unresolvable reference counts as stale/mismatched."""
@@ -98,6 +98,12 @@ def _evidence_stale(repo_root: Path | str, approval: dict[str, Any]) -> list[str
         if current.get("verification") != "verified" or current.get("sha256") != want:
             stale.append(ref)
     return stale
+
+
+# Backward-compatible alias for the original module-private seam. Existing
+# callers and tests keep working while new read-only projections can import the
+# public helper instead of copying its identity comparison.
+_evidence_stale = evidence_stale
 
 
 def _decision_applies(decision: dict[str, Any], categories: set[str]) -> bool:
@@ -146,7 +152,7 @@ def _classify_approved(
     if not valid:
         return "blocked", reason
     approval = decision["approval"]
-    stale = _evidence_stale(repo_root, approval)
+    stale = evidence_stale(repo_root, approval)
     if not stale:
         return "ok", None
     if is_critical(decision.get("decision_type")):
