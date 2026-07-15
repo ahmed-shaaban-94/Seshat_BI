@@ -1,60 +1,79 @@
 <div align="center">
 
-<img src="assets/brand/seshat-bi-hero-lockup.png" alt="Seshat BI -- Retail BI Readiness System -- from messy retail data to trusted, governed BI" width="820" />
+<img src="assets/brand/seshat-bi-logo.png" alt="Seshat BI logo: a gold compass star, Seshat writing, and a teal data lineage path on deep navy" width="360" />
 
-<br/>
+# Seshat BI
 
-An agent-first Retail BI readiness system: profile the source, map its meaning,
-build the medallion warehouse, validate it, define metrics, prepare the semantic
-model, design the dashboard -- and only then publish.
+### From messy retail data to trusted Power BI -- with evidence at every gate.
 
-<br/>
+An agent-first readiness system that profiles sources, governs mappings, validates
+the medallion warehouse, binds metrics to contracts, and prepares Power BI delivery
+without skipping the human decisions that make analytics trustworthy.
 
-[![status](https://img.shields.io/badge/status-active-0B9A9A?style=flat-square&labelColor=001E35)](#what-is-built-today)
-[![warehouse](https://img.shields.io/badge/warehouse-PostgreSQL-0B9A9A?style=flat-square&logo=postgresql&logoColor=F7F1E7&labelColor=001E35)](#architecture)
-[![BI](https://img.shields.io/badge/BI-Power%20BI%20PBIP-C69214?style=flat-square&logo=powerbi&logoColor=001E35&labelColor=001E35)](#power-bi-policy)
-[![governance](https://img.shields.io/badge/gate-retail%20check-0B9A9A?style=flat-square&labelColor=001E35)](docs/glossary.md)
-[![python](https://img.shields.io/badge/python-3.13-C69214?style=flat-square&logo=python&logoColor=F7F1E7&labelColor=001E35)](#install)
-[![license](https://img.shields.io/badge/license-Apache--2.0-0B9A9A?style=flat-square&labelColor=001E35)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/seshat-bi?style=flat-square&color=0B9A9A&labelColor=001E35)](https://pypi.org/project/seshat-bi/)
+[![CI](https://img.shields.io/github/actions/workflow/status/ahmed-shaaban-94/Seshat_BI/ci.yml?branch=main&style=flat-square&label=CI&labelColor=001E35&color=0B9A9A)](https://github.com/ahmed-shaaban-94/Seshat_BI/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-C69214?style=flat-square&logo=python&logoColor=F7F1E7&labelColor=001E35)](pyproject.toml)
+[![License](https://img.shields.io/badge/License-Apache--2.0-0B9A9A?style=flat-square&labelColor=001E35)](LICENSE)
+[![PostgreSQL](https://img.shields.io/badge/Warehouse-PostgreSQL-0B9A9A?style=flat-square&logo=postgresql&logoColor=F7F1E7&labelColor=001E35)](#how-it-works)
+[![Power BI](https://img.shields.io/badge/BI-Power%20BI%20PBIP-C69214?style=flat-square&logo=powerbi&logoColor=001E35&labelColor=001E35)](#how-it-works)
 
-<br/>
-
-**From messy retail data to trusted, governed BI -- with an agent that refuses to skip a step.**
+[**Run the demo**](#see-it-work) &nbsp;&middot;&nbsp;
+[**Start contributing**](docs/contributing/first-contribution.md) &nbsp;&middot;&nbsp;
+[**Sponsor a roadmap lane**](#sponsor-seshat-bi)
 
 </div>
 
 ---
 
-## Why Seshat
+## Trust is a workflow, not a dashboard theme
 
-Ungoverned BI ships wrong numbers with total confidence. Seshat BI takes the
-opposite stance, named for the ancient Egyptian figure of writing and
-measurement: **nothing advances without recorded evidence and a passed gate.**
-Readiness is never a faked confidence score -- it is `status` + `evidence` +
-`blocking_reasons`, at every one of seven stages.
+A dashboard can look finished while its metrics are undefined, its source
+assumptions are unsafe, and its totals have never been reconciled. Seshat BI makes
+those gaps visible before they become executive decisions.
 
-> [!NOTE]
-> **Naming.** The product is **Seshat BI**. The distribution is `seshat-bi` and the
-> import module is `seshat`; `seshat` is also the primary command, with `retail`
-> kept as a deprecated compatibility command/module for one deprecation cycle.
-> It was previously developed under the internal name *Tower BI Agent Kit*; the
-> governance spine is still called the **Readiness System**. Same product, one brand.
+It answers one question:
 
----
+> **Is this retail source ready to become trusted Power BI?**
 
-## Who it's for
+The answer is never a made-up score. Readiness is recorded as
+`status + evidence + blocking_reasons`, with named human approvals for judgment
+calls such as grain, PII, business rollups, and publish safety.
 
-- **BI developers & data engineers** -- a governed medallion (`bronze -> silver -> gold`) and Power BI delivery that refuses to skip mapping, validation, or metric contracts.
-- **AI-agent builders** -- an agent-first tool (Claude Code & Codex plugins) that stays truthful on real data: it withholds PII, won't invent a mapping, and won't fake a pass.
-- **Analytics leads** -- trust and auditability by construction. Every dashboard traces to a metric contract; every stage carries its evidence.
+Named for the ancient Egyptian figure of writing, measurement, and record keeping,
+Seshat brings the same discipline to modern analytics: **map meaning, record
+evidence, then build.**
 
----
+## Seven gates between raw data and publication
 
-## See it in 15 seconds
+Each stage can begin only after the prior stage passes. The sequence is the product.
 
-No database, no Power BI Desktop. Run the bundled synthetic retail fixture offline:
+```mermaid
+flowchart LR
+    S1[1. Source] --> S2[2. Mapping] --> S3[3. Silver] --> S4[4. Gold]
+    S4 --> S5[5. Semantic Model] --> S6[6. Dashboard] --> S7[7. Publish]
+
+    classDef stage fill:#001E35,stroke:#C69214,stroke-width:1.5px,color:#F7F1E7;
+    class S1,S2,S3,S4,S5,S6,S7 stage;
+```
+
+| Before Seshat allows... | The evidence must show... |
+|---|---|
+| Silver transformation | Mapping Ready passed and the source map is cleared. |
+| Power BI over gold | Live validation passed against the real data boundary. |
+| Dashboard design | Metric contracts exist and define business meaning. |
+| Power BI execution | Semantic Model Ready and the publish gates passed. |
+
+> [!IMPORTANT]
+> Seshat never self-grants an approval, invents source meaning, or turns a green
+> static check into a claim of live semantic correctness.
+
+## See it work
+
+Try the bundled synthetic retail fixture. It needs no database and no Power BI
+Desktop:
 
 ```bash
+pipx install seshat-bi
 seshat demo init
 seshat demo run
 seshat demo report --format html
@@ -62,331 +81,205 @@ seshat demo report --format html
 
 ![Seshat BI readiness proof showing seven evidence-backed readiness stages](assets/demo/readiness-proof.png)
 
-The report shows evidence, blockers, approvals, and the next allowed action for all
-seven stages. Offline proof stops honestly at Gold Ready -- live validation needs a
-database.
+The self-contained report shows evidence, blockers, approvals, and the next allowed
+action across all seven stages. Offline proof stops honestly at **Gold Ready**;
+advancing farther requires a live database boundary and governed downstream
+artifacts.
 
----
+## Why teams choose Seshat BI
+
+| Principle | What it changes |
+|---|---|
+| **Evidence over scores** | Every pass cites evidence; every block names a concrete reason. |
+| **Human judgment stays human** | Agents surface decisions but cannot approve grain, PII, rollups, or publication. |
+| **Safe sequencing by construction** | The agent reads readiness state and performs only the next allowed action. |
+| **Power BI consumes governed truth** | Reports read `gold`; measures trace to approved metric contracts. |
+
+This makes Seshat useful to BI developers, analytics engineers, data engineers,
+analytics leaders, and teams building agents that must stay truthful around real
+business data.
+
+## How it works
+
+```mermaid
+flowchart LR
+    RAW([Retail source]) --> B[(bronze)] --> S[(silver)] --> G[(gold)] --> PBI[Power BI PBIP]
+    MAP{{Source map}} -. clears .-> S
+    CHECK{{seshat check}} -. static gates .-> S
+    CHECK -. static gates .-> G
+    LIVE{{seshat validate}} -. live boundary .-> G
+    CONTRACT{{Metric contracts}} -. govern measures .-> PBI
+    HUMAN([Named human approvals]) -. authorize decisions .-> MAP
+    HUMAN -. authorize publication .-> PBI
+```
+
+The agent is the interface. `seshat check` and `seshat validate` are gates the
+agent calls; they are helpers, not the product experience.
+
+### Choose your path
+
+| You want to... | Start here |
+|---|---|
+| Evaluate Seshat in minutes | [Run the offline demo](#see-it-work) |
+| Start a new BI workspace | `seshat init-project my-bi` |
+| Adopt an existing PBIP project | `seshat adopt-pbip assess --project <path>` |
+| Operate Seshat through an agent | [Agent Mode](docs/agent-mode.md) |
+| Make your first contribution | [First-contribution path](docs/contributing/first-contribution.md) |
+
+## What is built today
+
+Seshat BI `v0.2.0` is an active beta on PyPI. The shipped system includes:
+
+- **Static and live governance gates** over SQL, TMDL/PBIR, DAX, configuration,
+  documentation, keys, date coverage, orphan relationships, and reconciliation.
+- **Seven-stage agent control surfaces** through `seshat status` and `seshat next`,
+  grounded in committed evidence rather than a separate run-state engine.
+- **Governed source mapping and metric contracts** that stop transformation or
+  dashboard work when business meaning is unresolved.
+- **DAX governance and generation** through static rules, contract-drift checks,
+  live value proxies, and verified measure generation.
+- **Portable proof surfaces** including offline HTML, review JSON, SARIF, a GitHub
+  Action, readiness passports, and an offline portfolio explorer.
+- **A read-only MCP governor** that exposes governance state while refusing execution
+  and approval by construction.
+- **Governed extension packs** plus optional dbt and Dagster adapters that remain
+  advisory and never create readiness truth.
+- **Source-controlled Power BI workflows** with deterministic PBIR authoring helpers
+  and a read-only assessment path for existing PBIP projects.
+
+Explore the [capability inventory](docs/capabilities/capabilities.yaml),
+[release notes](RELEASE_NOTES.md), and [roadmap](docs/roadmap/roadmap.md) for the
+evidence behind each claim.
+
+> [!WARNING]
+> The Power BI execution adapter is deliberately deferred and gated. Building the
+> final approved page in Power BI Desktop remains a named human action. Neither is
+> presented as an available automated capability.
 
 ## Install
 
-`seshat-bi` `v0.2.0` is on public PyPI (clean-install verified -- see the
-[public acceptance record](docs/releases/v0.2.0-public-acceptance.md)).
-
-**Python CLI**
+### Python CLI
 
 ```bash
 pipx install seshat-bi
 seshat init-project my-bi
 ```
 
-**Claude Code plugin** (validated on Claude Code 2.1.209, Windows)
+The `seshat` command is primary. `retail` is a deprecated compatibility alias kept
+for one deprecation cycle. Live database validation needs the optional `db` extra
+and a DSN stored only in a gitignored `.env`.
+
+### Claude Code plugin
 
 ```text
 /plugin marketplace add ahmed-shaaban-94/Seshat_BI
 /plugin install seshat-bi@seshat-bi-marketplace
 ```
 
-**Codex plugin** (install/discovery validated)
+### Codex plugin
 
 ```text
 codex plugin marketplace add https://github.com/ahmed-shaaban-94/Seshat_BI
 codex plugin add seshat-bi@seshat-bi-repository
 ```
 
-Full guides: [user install](docs/install/user-install.md) - [agent install](docs/install/agent-install.md) - [support matrix](docs/install/support-matrix.md). The Python CLI (`seshat` / `retail`) and the agent plugins are separate: the CLI runs governance checks; a plugin gives an agent session the skills and commands.
-
----
-
-## The seven-star readiness spine
-
-Seven stages, each a gate: a stage is never entered before the prior one passes. This ordering is the product.
-
-```mermaid
-flowchart LR
-    RAW([raw source]):::raw
-    S1[1 - Source Ready<br/><sub>profiled and understood</sub>]:::stage
-    S2[2 - Mapping Ready<br/><sub>grain / keys / PII / placement</sub>]:::stage
-    S3[3 - Silver Ready<br/><sub>typed, cleaned, statically clean</sub>]:::stage
-    S4[4 - Gold Ready<br/><sub>Kimball mart + live-validated</sub>]:::stage
-    S5[5 - Semantic Model Ready<br/><sub>metric contracts + governed model</sub>]:::stage
-    S6[6 - Dashboard Ready<br/><sub>designed from approved metrics</sub>]:::stage
-    S7[7 - Publish Ready<br/><sub>handoff pack, approved to publish</sub>]:::stage
-
-    RAW --> S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
-
-    classDef raw fill:#E8D8BD,stroke:#001E35,stroke-width:1px,color:#001E35;
-    classDef stage fill:#001E35,stroke:#C69214,stroke-width:1.5px,color:#F7F1E7;
-```
-
-The ordering is non-negotiable, and the gates are the product:
-
-> [!IMPORTANT]
-> - No source goes directly to silver.
-> - No gold reaches Power BI before validation.
-> - No dashboard is designed before its metrics are defined.
-> - No Power BI execution runs before semantic-model readiness.
-
----
-
-## Why Seshat is different
-
-- **Evidence over scores.** Readiness is `status` + `evidence` + `blocking_reasons`, never a fabricated number.
-- **The gates are the product.** No source goes straight to silver; no gold reaches Power BI unvalidated; no dashboard is designed before its metrics are defined.
-- **Agent-safe by construction.** The `seshat mcp` governor and the plugins refuse execution and approval; they withhold PII and won't invent mappings.
-- **Power BI reads `gold` only.** Reporting is the target, never the source of truth.
-- **Honest offline proof.** The demo renders real evidence and stops truthfully at the live boundary.
-
----
-
-## What is built today
-
-Everything below is on `main`, spec-backed, and held by the `retail check` gate. Highlights:
-
-- The static `retail check` gate over SQL, TMDL/PBIR, DAX, config, and docs.
-- Live `retail validate` (PK uniqueness, date coverage, orphan FKs, reconciliation).
-- The full seven-stage readiness spine (source intelligence -> handoff pack).
-- Agent surfaces: `seshat status` / `next`, offline HTML proof, read-only MCP governor, review/SARIF output.
-- The `seshat` CLI + `init-project`, PBIR authoring adapters, and companion dbt / Dagster adapters.
-
-<details>
-<summary>Full capability list</summary>
-
-| Capability | What it gives you |
-|------------|-------------------|
-| **Spec-Kit foundation + agent constitution** | The governance law every workflow obeys (`.specify/memory/constitution.md`). |
-| **Source-mapping gate** | `source-map.yaml` must be reviewed before any silver SQL is written. |
-| **`retail check` (static gate)** | A static gate over committed SQL, TMDL/PBIR, config, docs, and repo text (rule catalog: `docs/glossary.md`); the exit code is the authority. |
-| **`retail validate` (live surface)** | PK uniqueness, date coverage, orphan FKs, reconciliation, source-map-driven checks. |
-| **DAX governance L1-L2** | DAX best-practice rules `D1`-`D11` enforced statically inside `retail check` (single-quote handling, `ALL`-variants, dollar-quote tokenizer, and more). |
-| **`retail semantic-check` (L3 contract drift)** | Detects when a committed measure's denominator drifts from its metric contract. |
-| **`retail value-check` (L4 value proxy)** | Recomputes a measure's live aggregate and compares it to an owner-approved expected value within tolerance -- never fakes a pass. |
-| **`retail generate` (DAX Generator)** | Generates a verified best-practice DAX measure from an approved metric contract, with a self-proving loop. |
-| **`retail status` (agent-control surface)** | A read-only `--format json` projection of committed readiness state (per-table `current_stage`, `evidence`, `blocking_reasons`, `next_action`) for an agent/host to poll -- a projection of committed evidence, never a computed or fabricated score. |
-| **`seshat` command + `init-project`** | `seshat` is the product-brand alias of `retail` (same entry point). `seshat init-project <name>` scaffolds a fresh, empty Retail-BI project workspace for a new user. |
-| **PBIR authoring adapters** | Deterministic, local-file, reviewable writers for committed PBIR JSON: `pbir-apply-theme`, `pbir-format-visual`, `pbir-set-page-background`, `pbir-set-geometry` -- style/lay out existing bound visuals; never create/retype a visual or grant a stage. Publish/execution stays gated (F016). |
-| **Readiness spine (F005-F015, incl. F011A)** | The full seven-stage model: source intelligence, grain confidence, metric contracts, semantic-model readiness, dashboard design + the four-surface Visual Foundation, QC control room, reconciliation ledger, drift detector. |
-| **Companion Modules & Adapters (F025-F030)** | Six docs-first skills: PR readiness reviewer, readiness viewer, approval console, evidence-pack generator, and optional **dbt** / **Dagster** adapters (advisory only -- they never create truth). |
-| **F034 authoring slice** | The trace template, Dashboard Ready evidence item, and the read-only visual-implementation-review workflow (the built page itself stays a human Power BI Desktop action). |
-| **C086 pharmacy worked example** | A complete, filled run of the pipeline -- proof of the pattern, not the universal schema. |
-| **retail_store_sales worked example** | The validated worked example -- traverses the full seven-stage spine (to Dashboard Ready, Publish Ready `warning`) -- proves the generic playbook (no returns; PII kept; English-only). |
-| **Offline readiness proof (HTML)** | `seshat demo report --format html` renders the seven-stage proof as a static, disclosure-safe page -- evidence, blockers, approvals, next action; honest stop at the live boundary (spec 120 US1). |
-| **Review integration (`--format review`/`sarif` + GitHub action)** | Stable review JSON with changed-state digest, optional SARIF 2.1.0, and a read-only composite action under `integrations/github-action/` (spec 120 US2). |
-| **`seshat mcp` (read-only agent governor)** | Optional stable MCP v1 stdio adapter exposing six read-only governance tools; refuses execution and approval by construction ([docs](docs/ecosystem/agent-governor.md), spec 120 US3). |
-| **`seshat passport export/verify`** | Portable, disclosure-safe readiness evidence snapshots with content-hash verification (verified/changed/missing/incompatible/unavailable) -- records approvals, never grants them ([docs](docs/ecosystem/readiness-passport.md), spec 120 US4). |
-| **`seshat pack scaffold/validate`** | Governed, declarative local extension packs across six knowledge categories, with fail-closed validation and three generic reference packs ([docs](docs/ecosystem/extension-packs.md), spec 120 US5). |
-| **Contributor surfaces** | Five structured issue forms, an evidence-prompting PR template, and five bounded starter lanes reachable through three documents ([start here](docs/contributing/first-contribution.md), spec 120 US6). |
-| **`seshat benchmark run/report`** | Vendor-neutral categorical agent safety benchmark with a deterministic scripted reference participant and disclosed run conditions -- never a score or leaderboard ([docs](docs/ecosystem/agent-safety-benchmark.md), spec 120 US7). |
-| **`seshat explorer build`** | Self-contained offline HTML portfolio explorer: table-by-stage status, evidence availability, blockers, approvals, metric lineage; disclosure-gated generation ([docs](docs/ecosystem/readiness-explorer.md), spec 120 US8). |
-
-A green static check is necessary but not sufficient: semantic correctness needs
-the live validation boundary when a database is available.
-
-</details>
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-    SRC([raw source]):::raw
-    B[bronze<br/><sub>landing</sub>]:::med
-    S[silver<br/><sub>cleaned</sub>]:::med
-    G[gold<br/><sub>Kimball mart</sub>]:::gold
-    PBI[Power BI PBIP<br/><sub>reads gold only</sub>]:::pbi
-
-    SRC -.->|manual load now, automated later| B
-    B --> S --> G --> PBI
-
-    subgraph DO [DigitalOcean PostgreSQL]
-        B
-        S
-        G
-    end
-
-    classDef raw fill:#E8D8BD,stroke:#001E35,color:#001E35;
-    classDef med fill:#001E35,stroke:#0B9A9A,stroke-width:1.5px,color:#F7F1E7;
-    classDef gold fill:#001E35,stroke:#C69214,stroke-width:2px,color:#F2C14E;
-    classDef pbi fill:#0B9A9A,stroke:#001E35,stroke-width:1.5px,color:#F7F1E7;
-    style DO fill:#F7F1E7,stroke:#C69214,stroke-dasharray:4 3,color:#001E35;
-```
-
-Responsibilities stay separated; Power BI is the reporting target, never the
-source of truth.
-
-| Layer | Responsibility |
-|-------|----------------|
-| **Agent Experience** | Reads readiness state, performs only the next allowed action. |
-| **Source Intelligence** | Profiles sources, detects grain, maps business meaning, tracks drift. |
-| **Mapping Governance** | Makes `source-map.yaml` reviewable before any silver SQL. |
-| **Validation & Readiness** | `retail check`, `retail validate`, QC control room, reconciliation ledger. |
-| **Metrics & Semantic Model** | KPI packs, metric contracts, semantic-model readiness. |
-| **Dashboard & Delivery** | Dashboard blueprints and handoff packs; execution adapter comes last. |
-
----
-
-## Start here as an agent
-
-**Agent Mode** -- the guarded loop (inspect -> `seshat status` -> `seshat next`
--> do only the next allowed action -> `seshat check` -> stop at the gate) is
-documented in [`docs/agent-mode.md`](docs/agent-mode.md). `seshat next
---format agent` (or `--format json` for hosts) answers: current stage,
-readiness state, evidence, blockers, next allowed action, forbidden scope,
-validation commands, and the stop point.
-
-Read in this order, then act on the target's readiness state -- and only the next
-allowed action:
-
-1. `AGENTS.md` -- the short operating contract: what the agent can and cannot do.
-2. `.specify/memory/constitution.md` -- the full governance law.
-3. `docs/readiness/readiness-model.md` -- the seven-stage spine.
-4. `docs/architecture/readiness-pipeline.md` -- how readiness sits on the kit.
-5. `docs/worked-examples/retail-store-sales.md` -- the filled worked example; the full spine to Dashboard Ready.
-6. `docs/worked-examples/README.md` -- the worked-examples index (which to read when).
-
-<details>
-<summary><b>Typical agent flow</b></summary>
-
-```text
-read readiness status
-  -> profile source
-  -> draft source-map.yaml
-  -> record assumptions / questions / issues
-  -> STOP for review if mapping is blocked
-  -> build silver only after Mapping Ready passes
-  -> build gold only after silver is clean
-  -> validate gold before Power BI
-  -> define metric contracts before dashboard design
-  -> create handoff pack before publish
-```
-
-</details>
-
----
-
-## Repository layout
-
-<details>
-<summary>Where everything lives</summary>
-
-| Path | Purpose |
-|------|---------|
-| `AGENTS.md` | Operating contract for AI agents. Read first. |
-| `.specify/` | Spec-Kit constitution and governance memory. |
-| `src/seshat/` | The `retail` CLI package: static + live governance surfaces. |
-| `warehouse/` | Tool-agnostic medallion SQL: `bronze` / `silver` / `gold` + migrations. |
-| `powerbi/` | Power BI PBIP artifacts. Power BI reads `gold` only. |
-| `specs/` | Feature specs, plans, tasks, checklists (one directory per feature; see `specs/README.md`). |
-| `mappings/` | Filled per-table source-mapping artifacts, one folder per table. |
-| `templates/` | Generic blanks: profiles, maps, contracts, readiness, dashboards, handoff packs. |
-| `reports/` | Dashboard / page / visual blueprints and delivery artifacts. |
-| `pipelines/` | Ingestion area: manual now, automated feed later. |
-| `docs/readiness/` | The seven-stage Readiness System spine. |
-| `docs/roadmap/` | Delivered ledger + the planned companion tier. |
-| `docs/brand/` | The **Seshat BI** visual identity and brand rules. |
-| `assets/brand/` | Committed brand assets (logo, Seshat star). |
-
-</details>
-
----
-
-## Power BI policy
-
-Power BI is the reporting target, not the source of truth.
-
-- Reads from `gold` only.
-- Every measure traces to a metric contract; blueprints invent no KPIs.
-- PBIP artifacts stay source-control friendly (plain-text TMDL/PBIR).
-- Existing PBIP projects start with the read-only [`seshat adopt-pbip assess`](docs/tools/pbip-adoption.md) path; it creates no readiness pass or approval.
-- Publishing / execution automation is deferred until semantic-model readiness passes.
-
----
-
-## Roadmap
-
-The originally-specified sequence (**F005-F015, including F011A**) is fully
-shipped to `main`. What remains is deliberately **human-gated** or **deferred for
-want of a consumer** -- never blocked by missing effort:
-
-> [!WARNING]
-> The items below are **not current capabilities.** Do not treat a gated or
-> deferred feature as if it were shipped.
-
-| Remaining item | State | Why it waits |
-|----------------|-------|--------------|
-| **F016 -- Power BI execution adapter** | gated, by design | Execution-only (materializes/publishes an already-approved model; cannot define metrics, mappings, semantic logic, or dashboard design). Deliberately last; not startable before `semantic_model_ready` is `pass`. |
-| **F034 built page** | human action | The agent ships the trace template + review workflow; a person builds the approved design in Power BI Desktop and commits the PBIR. |
-| **F024 + F031-F033** | spec-only | Companion architecture doc + maintenance automation -- no runtime consumer yet (the adapters they would maintain are docs-only skills). |
-| **pbi-tools extract / L3 new operators** | deferred | Revisit when a real `.pbix` + installed toolchain (pbi-tools) or a real predicate consumer (L3) appears. |
-
-> [!NOTE]
-> The **Companion Modules & Adapters** that *did* ship (F025-F030 -- PR readiness
-> reviewer, readiness viewer, approval console, evidence-pack generator, and the
-> optional **dbt** / **Dagster** adapters) are listed under
-> [What is built today](#what-is-built-today). dbt and Dagster are *optional
-> companion engines* and advisory only -- they never create truth.
-
-Guiding rules: any new feature must improve exactly one readiness stage, and
-docs / templates / checklists come before automation. Full ledger:
-[`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md).
-
----
-
-## What this is not
-
-Seshat BI is a small, governed Retail BI factory -- agent-led, evidence-based, and
-blocked by real BI gates before delivery. It is deliberately **not**:
-
-- a one-click automatic dashboard generator,
-- a Fabric deployment platform,
-- an ML / forecasting system,
-- a universal ERP connector,
-- a fully automated mapping-approval engine,
-- a Power BI execution-first tool.
-
----
-
-## Brand
-
-The public identity is **Seshat BI**: the seated Seshat figure with a stylus
-(mapping and documentation before transformation), a gold star (canonical truth and
-the seven readiness gates), and a teal data network (lineage and the BI model).
-
-<div align="center">
-<img src="assets/brand/seshat-bi-mark.png" alt="Seshat BI logo mark: seated Seshat figure, gold star, and teal data network on deep navy" width="240" />
-</div>
-
-Full guide: [`docs/brand/visual-identity.md`](docs/brand/visual-identity.md) --
-reusable mark: [`assets/brand/seshat-seven-star.svg`](assets/brand/seshat-seven-star.svg).
-
-Palette: `deep_navy #001E35` | `rich_gold #C69214` | `teal #0B9A9A` | `ivory #F7F1E7`.
-
----
+Detailed setup: [user install](docs/install/user-install.md) |
+[agent install](docs/install/agent-install.md) |
+[support matrix](docs/install/support-matrix.md)
 
 ## Contributing
 
-- Commit subjects follow `<type>: <description>` (`feat` / `fix` / `refactor` /
-  `docs` / `chore` / `build` / `ci` / `perf` / `test` / `style` / `revert` / `brand`),
-  **scope-free** -- no `docs(018):` parentheses (governance rule P2). An automated
-  `[bot] ...` subject prefix is exempt.
-- Conventions: [`docs/conventions.md`](docs/conventions.md).
-- Glossary (terms, abbreviations, rule ids): [`docs/glossary.md`](docs/glossary.md).
-- Contributing (setup, local checks, PR flow): [`CONTRIBUTING.md`](CONTRIBUTING.md).
-- First contribution (three-document newcomer path + bounded starter lanes): [`docs/contributing/first-contribution.md`](docs/contributing/first-contribution.md).
-- FAQ (common questions, with sources): [`docs/faq.md`](docs/faq.md).
-- Release notes: [`RELEASE_NOTES.md`](RELEASE_NOTES.md) -- and the v0.1 snapshot [`docs/releases/v0.1.md`](docs/releases/v0.1.md).
-- Local verification (mirrors CI intent): [`docs/quality/local-verification.md`](docs/quality/local-verification.md).
-- Guided demo (worked example): [`docs/demo/retail-store-sales-demo.md`](docs/demo/retail-store-sales-demo.md).
-- Capability snapshot: [`docs/quality/post-idea-bank-capability-state.md`](docs/quality/post-idea-bank-capability-state.md) -- what works now / planned / forbidden / needs-ruling / needs-data, by layer.
-- Net Sales end-to-end trace (paper proof of one KPI path): [`docs/demo/net-sales-end-to-end-readiness-trace.md`](docs/demo/net-sales-end-to-end-readiness-trace.md).
-- Big Data strategy (scale is a condition, not a tool): [`docs/big-data/big-data-capability-report.md`](docs/big-data/big-data-capability-report.md) + the assessment templates [`docs/big-data/data-volume-assessment.md`](docs/big-data/data-volume-assessment.md).
-- Integration smoke test for the idea-bank features: [`docs/quality/top-idea-bank-integration-smoke-test.md`](docs/quality/top-idea-bank-integration-smoke-test.md).
-- Before a PR, `retail check` must pass and committed text must be ASCII / UTF-8
-  without BOM.
-- License: Apache-2.0 (see [LICENSE](LICENSE)).
+You do not need to learn the whole readiness system before making a useful first
+contribution. Seshat provides bounded lanes with owned files, forbidden scope,
+acceptance evidence, and exact verification commands.
+
+| Starter lane | A useful contribution |
+|---|---|
+| KPI contract templates | Clarify reusable business definitions without inventing policy. |
+| Synthetic fixtures | Add realistic, disclosure-safe test cases. |
+| Dialect notes | Document compatibility behavior across supported databases. |
+| Accessibility checks | Improve dashboard and documentation usability. |
+| Blocker explanations | Make governance findings clearer and more actionable. |
+
+1. Read the [first-contribution guide](docs/contributing/first-contribution.md).
+2. Pick one lane from [contribution-lanes.yaml](docs/contributing/contribution-lanes.yaml).
+3. [Claim a starter contribution](https://github.com/ahmed-shaaban-94/Seshat_BI/issues/new?template=starter.yml).
+4. Follow the setup and pull-request checks in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Contributions are especially welcome in governance rules, database compatibility,
+synthetic fixtures, documentation, Power BI artifacts, and agent workflows.
+
+## Sponsor Seshat BI
+
+Trusted BI infrastructure is public-interest work: the rules, examples, tests, and
+documentation should remain inspectable by the teams that depend on them.
+Sponsorship can accelerate public, evidence-backed roadmap lanes such as:
+
+- database compatibility and live-validation evidence,
+- reproducible demo fixtures and cross-engine coverage,
+- documentation, onboarding, accessibility, and contributor support,
+- agent-safety research around analytics approvals and disclosure boundaries.
+
+**The guardrail is simple:** funding supports the work; it never buys a readiness
+approval, a rule exception, or an undisclosed product claim.
+
+[**Start a sponsorship conversation**](https://github.com/ahmed-shaaban-94/Seshat_BI/issues/new?title=%5Bsponsorship%5D%20Sponsor%20a%20public%20roadmap%20lane)
+
+Until a verified funding profile is published, the inquiry link is the official
+starting point. Do not include confidential procurement or client information in a
+public issue.
+
+## Repository guide
+
+<details>
+<summary><b>Where the system lives</b></summary>
+
+| Path | Responsibility |
+|---|---|
+| `AGENTS.md` | Short operating contract and hard stops for agents. |
+| `.specify/` | Constitution and feature specifications. |
+| `src/seshat/` | CLI, governance rules, validation, and agent-facing surfaces. |
+| `mappings/` | Per-table profiles, source maps, decisions, metrics, and readiness. |
+| `warehouse/` | Tool-agnostic bronze, silver, and gold SQL artifacts. |
+| `powerbi/` | Source-controlled PBIP semantic models and reports. |
+| `templates/` | Generic readiness, mapping, metric, dashboard, and handoff blanks. |
+| `skills/` | Canonical BI reasoning and workflow knowledge. |
+| `docs/` | Architecture, readiness, operations, guides, and worked examples. |
+| `tests/` | Unit, integration, contract, and optional live-database evidence. |
+
+</details>
+
+### Essential documentation
+
+| Topic | Guide |
+|---|---|
+| Readiness model | [The seven-stage spine](docs/readiness/readiness-model.md) |
+| Architecture | [Readiness pipeline](docs/architecture/readiness-pipeline.md) |
+| Agent operation | [Agent Mode](docs/agent-mode.md) |
+| Existing PBIP adoption | [Read-only adoption workflow](docs/tools/pbip-adoption.md) |
+| Governance vocabulary | [Glossary and rule catalog](docs/glossary.md) |
+| Frequently asked questions | [FAQ](docs/faq.md) |
+| Product direction | [Roadmap](docs/roadmap/roadmap.md) |
+| Release history | [Changelog](CHANGELOG.md) |
+| Brand system | [Visual identity](docs/brand/visual-identity.md) |
+
+## Deliberate boundaries
+
+Seshat BI is a governed Retail BI factory, not a one-click dashboard generator, a
+Fabric deployment platform, a universal ERP connector, or an automated approval
+engine. New automation is valuable only when it strengthens one readiness stage
+without taking a decision away from its accountable human owner.
+
+## License
+
+Seshat BI is available under the [Apache License 2.0](LICENSE).
 
 <div align="center">
-<br/>
-<sub>Seshat BI -- governed knowledge, measured structure, trusted BI.</sub>
+
+<br />
+
+**Governed knowledge. Measured structure. Trusted BI.**
+
+<sub>Seshat BI -- built in public for analytics people who would rather stop a bad number than decorate it.</sub>
+
 </div>
