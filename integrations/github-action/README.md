@@ -10,7 +10,7 @@ permissions:
 
 steps:
   - uses: actions/checkout@v4 # pin this to a full commit SHA in production
-  - uses: ahmed-shaaban-94/Seshat_BI/integrations/github-action@<full-commit-sha>
+  - uses: Kemetra/Seshat-BI/integrations/github-action@<full-commit-sha>
     with:
       seshat-version: 0.1.0
       commit-range: ${{ github.event.pull_request.base.sha }}..${{ github.sha }}

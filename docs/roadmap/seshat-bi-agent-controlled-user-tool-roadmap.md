@@ -10,7 +10,7 @@ and net-new runtime / CI pieces are spec-and-held for review rather than auto-bu
 never self-grants). The authoritative delivered ledger remains
 `docs/roadmap/roadmap.md` (F-numbered rows + commit refs) and
 `docs/roadmap/shipped-ideas.yaml`.
-**Repository:** `ahmed-shaaban-94/Seshat_BI`
+**Repository:** `Kemetra/Seshat-BI`
 **Target direction:** Turn Seshat BI into an installable, agent-controlled Retail BI readiness tool for other BI users and teams.
 
 > **Reconciliation note (2026-07-07 — git-wins-on-ship-status).** This draft's

@@ -17,7 +17,7 @@ concurrency:
 jobs:
   prepare-release-pr:
     name: Prepare synchronized Python, Claude, and Codex release PR
-    if: ${{ github.repository == 'ahmed-shaaban-94/Seshat_BI' }}
+    if: ${{ github.repository == 'Kemetra/Seshat-BI' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

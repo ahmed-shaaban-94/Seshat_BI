@@ -71,7 +71,7 @@ def sarif_document(findings: Iterable[Finding]) -> dict[str, Any]:
                 "tool": {
                     "driver": {
                         "name": "Seshat BI",
-                        "informationUri": "https://github.com/ahmed-shaaban-94/Seshat_BI",
+                        "informationUri": "https://github.com/Kemetra/Seshat-BI",
                         "rules": [
                             {"id": rule_id, "shortDescription": {"text": rule_id}}
                             for rule_id in rule_ids

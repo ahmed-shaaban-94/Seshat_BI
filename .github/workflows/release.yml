@@ -99,7 +99,7 @@ jobs:
           REF_PROTECTED: ${{ github.ref_protected }}
           RUN_REF: ${{ github.ref }}
         run: |
-          test "$ACTUAL_REPOSITORY" = "ahmed-shaaban-94/Seshat_BI"
+          test "$ACTUAL_REPOSITORY" = "Kemetra/Seshat-BI"
           test "$RUN_REF" = "$CANDIDATE_REF"
           test "$REF_PROTECTED" = "true"
           case "$CANDIDATE_REF" in

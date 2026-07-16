@@ -7,7 +7,7 @@ manifest below this integration directory.
 After the repository candidate is public, users add and install it with:
 
 ```text
-/plugin marketplace add ahmed-shaaban-94/Seshat_BI
+/plugin marketplace add Kemetra/Seshat-BI
 /plugin install seshat-bi@seshat-bi-marketplace
 /plugin marketplace update
 ```

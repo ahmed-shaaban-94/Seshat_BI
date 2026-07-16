@@ -225,8 +225,8 @@ def _all_entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 def _validate_allowlist_identity(document: Mapping[str, Any]) -> None:
     if document.get("schema_version") != 1:
         raise ExportError("allowlist schema_version must be 1")
-    if document.get("canonical_repository") != "ahmed-shaaban-94/Seshat_BI":
-        raise ExportError("allowlist canonical_repository is not Seshat_BI")
+    if document.get("canonical_repository") != "Kemetra/Seshat-BI":
+        raise ExportError("allowlist canonical_repository is not Seshat-BI")
 
 
 def _canonical_root_values(document: Mapping[str, Any]) -> list[object]:
