@@ -62,7 +62,9 @@ explicitly identifies a public release event.
   documented in the agent install guide and routed from the bundled router,
   with the governed loop protocol (next action -> act -> re-check -> stop at
   named-human gates) stated explicitly and a contract test pinning the
-  documented tool names to the server source.
+  documented tool names to the server source. The `/seshat-bi:auto` command
+  codifies that loop as a one-invocation prompt that always stops at the next
+  named-human gate.
 
 ### Fixed
 - **`capability_feeders.read_dispatch_keys` stale source path**: the feeder read

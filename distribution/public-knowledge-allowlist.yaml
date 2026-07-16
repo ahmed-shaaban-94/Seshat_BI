@@ -1962,6 +1962,16 @@ template_entries:
     required: true
     generated_notice: manifest
     review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-cmd-auto
+    source: distribution/bundle-templates/claude/commands/auto.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/auto.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
   - template_id: claude-cmd-review
     source: distribution/bundle-templates/claude/commands/review.md
     classification: generated_wrapper

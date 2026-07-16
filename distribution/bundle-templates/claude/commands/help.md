@@ -15,6 +15,7 @@ Slash commands (Claude Code namespaces them by plugin, so invoke as
 - `next` -- return the one truthful next readiness action.
 - `doctor` -- run and interpret the workspace health check.
 - `review` -- review readiness evidence and stop at the human gate.
+- `auto` -- run the governed autonomous loop until the next human gate.
 - `powerbi-design` -- guarded dashboard/page design from approved metric contracts.
 - `powerbi-review` -- screenshot review, dashboard QA, blueprint validation, PBIR review.
 - `powerbi-theme` -- theme JSON, palette, typography, filter-pane defaults, backgrounds, canvas.

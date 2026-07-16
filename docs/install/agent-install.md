@@ -53,6 +53,8 @@ Core readiness commands:
 - `/seshat-bi:next` -- the one truthful next readiness action.
 - `/seshat-bi:doctor` -- workspace health check interpretation.
 - `/seshat-bi:review` -- evidence review that stops at the human gate.
+- `/seshat-bi:auto` -- the governed autonomous loop (next action, act,
+  re-check, repeat) that always stops at the next named-human gate.
 
 Guarded Power BI commands:
 

@@ -90,6 +90,17 @@ commands:
     gates: []
     documentation: docs/install/agent-install.md
     status: shipped
+  - name: auto
+    platform: claude
+    intent: Run the governed autonomous readiness loop until the next named-human gate.
+    cli_verbs: [next, check]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/auto.md
+    bundle_destination: commands/auto.md
+    mode: mutating
+    gates: [named-human-approval]
+    documentation: docs/install/agent-install.md
+    status: shipped
   - name: review
     platform: claude
     intent: Review readiness evidence and stop at the human approval gate.

@@ -29,6 +29,15 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "commands/auto.md",
+      "output_sha256": "27457cafdb06ce0c417210a6c50ada3669dcf14603c863078eb3855f1557c4df",
+      "source": "distribution/bundle-templates/claude/commands/auto.md",
+      "source_id": "claude-cmd-auto",
+      "source_sha256": "27457cafdb06ce0c417210a6c50ada3669dcf14603c863078eb3855f1557c4df",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "commands/check.md",
       "output_sha256": "4f50d44ec449efa967f54a8d5871d09228aa9dcac9865da33823bd5d74192752",
       "source": "distribution/bundle-templates/claude/commands/check.md",
@@ -48,10 +57,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "commands/help.md",
-      "output_sha256": "86fe9b80a85f8d291e106533370e3173ae1ab08f08e2b9b3d47c94c65ea1f228",
+      "output_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
       "source": "distribution/bundle-templates/claude/commands/help.md",
       "source_id": "claude-help",
-      "source_sha256": "86fe9b80a85f8d291e106533370e3173ae1ab08f08e2b9b3d47c94c65ea1f228",
+      "source_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1658,10 +1667,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "d33beef24beac2827c01ffe5f633ef3cbfe59661cb41a37d31a3e501ef1bf32a",
+  "manifest_digest": "8a76be663ae1a8a1a29b92c26a70fbc73e1f659a3756f395f04b75ddfff702fa",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "a1ed58a6531052c9260bffc76f1c8d062185f937",
+  "source_revision": "2c4e7ee00ff862ad770184923bd6b65cab8b480e",
   "target": "claude",
   "version": "0.3.1"
 }

@@ -1514,10 +1514,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "36cac36d050d40b447e3683d0fa2f95a4802f2b6a7018600154a4fe8ba2f5b6c",
+  "manifest_digest": "bdcd85c8d3f44071e306c5f36c27be45aa6da4496b4405e365b7b94cbd6b2d0c",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "a1ed58a6531052c9260bffc76f1c8d062185f937",
+  "source_revision": "2c4e7ee00ff862ad770184923bd6b65cab8b480e",
   "target": "codex",
   "version": "0.3.1"
 }
