@@ -568,8 +568,10 @@ def _first_literal_arg(args_raw: str) -> str | None:
 
     Splits ``args_raw`` on the first comma to isolate the host and database
     arguments, and checks each against ``_STRING_ARG``. The return value is only
-    a truthiness signal for the caller (the Finding message uses the full call
-    text, not this arg).
+    a truthiness signal for the caller -- the Finding message must NEVER echo
+    the literal value (it is a connection host/database name, and check
+    findings are embedded verbatim into downstream surfaces such as the
+    ``adopt-pbip assess`` JSON).
     """
     parts = args_raw.split(",", 1)
     for part in parts[:2]:
@@ -594,13 +596,20 @@ def c1_parameterized_connection(ctx: RuleContext) -> Iterable[Finding]:
     for msrc in iter_m_sources(ctx.repo_root, ctx.tracked_files):
         for match in _DB_CALL.finditer(msrc.text):
             if _first_literal_arg(match.group(1)) is not None:
+                # Name the connector but never echo the argument list: the
+                # matched literal is a connection host/database name, and this
+                # message is embedded verbatim into downstream evidence (e.g.
+                # the adopt-pbip assessment JSON). The locator still points at
+                # the exact source position for the fix.
+                connector = match.group(0).split("(", 1)[0].strip()
                 yield Finding(
                     rule_id="C1",
                     severity=Severity.ERROR,
                     message=(
                         "Connection uses a string literal for server/database;"
                         " use Power BI parameters instead"
-                        f" (found: {match.group(0)!r})"
+                        f" (found: {connector}(...) with a string-literal"
+                        " argument; value redacted)"
                     ),
                     locator=msrc.locator,
                 )

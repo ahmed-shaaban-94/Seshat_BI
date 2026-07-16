@@ -27,6 +27,14 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Fixed
+- **C1 finding message leaked the literal connection host**: the
+  parameterized-connection rule echoed the entire matched `*.Database(...)`
+  call -- including the literal server/database values -- into its finding
+  message, which downstream surfaces such as the `adopt-pbip assess` JSON
+  embed verbatim. The message now names only the connector and redacts the
+  arguments; the locator still points at the exact source position.
+
 ## [0.3.1] -- 2026-07-14
 
 ### Fixed
