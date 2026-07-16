@@ -87,8 +87,12 @@ def _fingerprint_inputs(
 
 def _sorted_dirs(root: Path, pattern: str) -> list[Path]:
     return sorted(
-        (path for path in root.glob(pattern) if path.is_dir()),
-        key=lambda path: path.name.lower(),
+        (
+            path
+            for path in root.rglob(pattern)
+            if path.is_dir() and ".git" not in path.relative_to(root).parts
+        ),
+        key=lambda path: path.relative_to(root).as_posix().lower(),
     )
 
 
@@ -97,7 +101,10 @@ def _discover_pbip(
 ) -> tuple[list[dict[str, Any]], list[_Fact], list[_FileRecord]]:
     records, by_artifact = _fingerprint_inputs(root, files)
     ctx = _Discovery(root=root, by_artifact=by_artifact)
-    pbip_paths = sorted(root.glob("*.pbip"), key=lambda path: path.name.lower())
+    pbip_paths = sorted(
+        (path for path in files if path.suffix.lower() == ".pbip"),
+        key=lambda path: path.relative_to(root).as_posix().lower(),
+    )
     _register_projects(ctx, pbip_paths)
     fallback = by_artifact[_relative(root, pbip_paths[0])] if pbip_paths else None
     model_dirs = _sorted_dirs(root, "*.SemanticModel")
