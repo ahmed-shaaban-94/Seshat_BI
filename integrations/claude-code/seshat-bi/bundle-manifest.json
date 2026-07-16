@@ -47,6 +47,33 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "commands/dagster-doctor.md",
+      "output_sha256": "fd72195b0e47c75efaeeb8b0ef06fbbde73fb6697a9b05b4aef162103b59bed2",
+      "source": "distribution/bundle-templates/claude/commands/dagster-doctor.md",
+      "source_id": "claude-dagster-doctor",
+      "source_sha256": "fd72195b0e47c75efaeeb8b0ef06fbbde73fb6697a9b05b4aef162103b59bed2",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/dagster-evidence.md",
+      "output_sha256": "2c274bdb1d0c08c7f5fb50fc91566fa58f4bb3e26f5b4476f8f00b3cb6d955f3",
+      "source": "distribution/bundle-templates/claude/commands/dagster-evidence.md",
+      "source_id": "claude-dagster-evidence",
+      "source_sha256": "2c274bdb1d0c08c7f5fb50fc91566fa58f4bb3e26f5b4476f8f00b3cb6d955f3",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/dagster-run.md",
+      "output_sha256": "57257edce6a4770c488e1747366683494dcac2cfe4a6da80a2cc73b40bc20459",
+      "source": "distribution/bundle-templates/claude/commands/dagster-run.md",
+      "source_id": "claude-dagster-run",
+      "source_sha256": "57257edce6a4770c488e1747366683494dcac2cfe4a6da80a2cc73b40bc20459",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "commands/doctor.md",
       "output_sha256": "6cbede8f7ef16f47cabc18df8065a418276f821a05b62141b0babc8154c15e23",
       "source": "distribution/bundle-templates/claude/commands/doctor.md",
@@ -57,10 +84,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "commands/help.md",
-      "output_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "output_sha256": "4604e7143048589ec1604d10474be0850ff232b508e769848dfed0459824f9b7",
       "source": "distribution/bundle-templates/claude/commands/help.md",
       "source_id": "claude-help",
-      "source_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "source_sha256": "4604e7143048589ec1604d10474be0850ff232b508e769848dfed0459824f9b7",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1667,10 +1694,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "8a76be663ae1a8a1a29b92c26a70fbc73e1f659a3756f395f04b75ddfff702fa",
+  "manifest_digest": "596a98bfddd19edf2efb7632567b36948199599e8df387ecdcaa3841d9b0c8d4",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "2c4e7ee00ff862ad770184923bd6b65cab8b480e",
+  "source_revision": "f03d2b2c604140fe4bee21b767100752b9e1682e",
   "target": "claude",
   "version": "0.3.1"
 }
