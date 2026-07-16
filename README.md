@@ -11,7 +11,7 @@ the medallion warehouse, binds metrics to contracts, and prepares Power BI deliv
 without skipping the human decisions that make analytics trustworthy.
 
 [![PyPI](https://img.shields.io/pypi/v/seshat-bi?style=flat-square&color=0B9A9A&labelColor=001E35)](https://pypi.org/project/seshat-bi/)
-[![CI](https://img.shields.io/github/actions/workflow/status/ahmed-shaaban-94/Seshat_BI/ci.yml?branch=main&style=flat-square&label=CI&labelColor=001E35&color=0B9A9A)](https://github.com/ahmed-shaaban-94/Seshat_BI/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Kemetra/Seshat-BI/ci.yml?branch=main&style=flat-square&label=CI&labelColor=001E35&color=0B9A9A)](https://github.com/Kemetra/Seshat-BI/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.13%2B-C69214?style=flat-square&logo=python&logoColor=F7F1E7&labelColor=001E35)](pyproject.toml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-0B9A9A?style=flat-square&labelColor=001E35)](LICENSE)
 [![PostgreSQL](https://img.shields.io/badge/Warehouse-PostgreSQL-0B9A9A?style=flat-square&logo=postgresql&logoColor=F7F1E7&labelColor=001E35)](#how-it-works)
@@ -172,14 +172,14 @@ and a DSN stored only in a gitignored `.env`.
 ### Claude Code plugin
 
 ```text
-/plugin marketplace add ahmed-shaaban-94/Seshat_BI
+/plugin marketplace add Kemetra/Seshat-BI
 /plugin install seshat-bi@seshat-bi-marketplace
 ```
 
 ### Codex plugin
 
 ```text
-codex plugin marketplace add https://github.com/ahmed-shaaban-94/Seshat_BI
+codex plugin marketplace add https://github.com/Kemetra/Seshat-BI
 codex plugin add seshat-bi@seshat-bi-repository
 ```
 
@@ -203,7 +203,7 @@ acceptance evidence, and exact verification commands.
 
 1. Read the [first-contribution guide](docs/contributing/first-contribution.md).
 2. Pick one lane from [contribution-lanes.yaml](docs/contributing/contribution-lanes.yaml).
-3. [Claim a starter contribution](https://github.com/ahmed-shaaban-94/Seshat_BI/issues/new?template=starter.yml).
+3. [Claim a starter contribution](https://github.com/Kemetra/Seshat-BI/issues/new?template=starter.yml).
 4. Follow the setup and pull-request checks in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Contributions are especially welcome in governance rules, database compatibility,
@@ -223,7 +223,7 @@ Sponsorship can accelerate public, evidence-backed roadmap lanes such as:
 **The guardrail is simple:** funding supports the work; it never buys a readiness
 approval, a rule exception, or an undisclosed product claim.
 
-[**Start a sponsorship conversation**](https://github.com/ahmed-shaaban-94/Seshat_BI/issues/new?title=%5Bsponsorship%5D%20Sponsor%20a%20public%20roadmap%20lane)
+[**Start a sponsorship conversation**](https://github.com/Kemetra/Seshat-BI/issues/new?title=%5Bsponsorship%5D%20Sponsor%20a%20public%20roadmap%20lane)
 
 Until a verified funding profile is published, the inquiry link is the official
 starting point. Do not include confidential procurement or client information in a

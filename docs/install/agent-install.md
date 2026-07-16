@@ -29,7 +29,7 @@ The canonical marketplace manifest is the repository-root
 marketplace. Use Claude Code's GitHub repository marketplace flow:
 
 ```text
-/plugin marketplace add ahmed-shaaban-94/Seshat_BI
+/plugin marketplace add Kemetra/Seshat-BI
 /plugin install seshat-bi@seshat-bi-marketplace
 ```
 
@@ -80,7 +80,7 @@ points at the generated skills-only plugin in `integrations/codex/seshat-bi`.
 Configure the repository marketplace and install from it:
 
 ```text
-codex plugin marketplace add https://github.com/ahmed-shaaban-94/Seshat_BI
+codex plugin marketplace add https://github.com/Kemetra/Seshat-BI
 codex plugin add seshat-bi@seshat-bi-repository
 codex plugin list
 ```

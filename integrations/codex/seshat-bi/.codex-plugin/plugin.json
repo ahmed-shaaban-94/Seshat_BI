@@ -4,10 +4,10 @@
   "description": "Guarded Seshat BI readiness skills and public knowledge for Codex.",
   "author": {
     "name": "Ahmed Shaaban",
-    "url": "https://github.com/ahmed-shaaban-94"
+    "url": "https://github.com/Kemetra"
   },
-  "homepage": "https://github.com/ahmed-shaaban-94/Seshat_BI",
-  "repository": "https://github.com/ahmed-shaaban-94/Seshat_BI",
+  "homepage": "https://github.com/Kemetra/Seshat-BI",
+  "repository": "https://github.com/Kemetra/Seshat-BI",
   "license": "Apache-2.0",
   "keywords": [
     "business-intelligence",
@@ -23,7 +23,7 @@
     "developerName": "Ahmed Shaaban",
     "category": "Productivity",
     "capabilities": ["Skills", "Read-only guidance"],
-    "websiteURL": "https://github.com/ahmed-shaaban-94/Seshat_BI",
+    "websiteURL": "https://github.com/Kemetra/Seshat-BI",
     "defaultPrompt": "Use $seshat-bi to inspect this project's evidence and return exactly one governed next action or one blocked stop."
   }
 }

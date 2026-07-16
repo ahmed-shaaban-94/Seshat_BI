@@ -3,10 +3,10 @@
     {
       "classification": "generated_wrapper",
       "destination": ".codex-plugin/plugin.json",
-      "output_sha256": "c4a6d02cfd6b166dd37c05c1149023c775d75c9012db93b67a030e5e6a724e7e",
+      "output_sha256": "c2888dcc09d35c2fac5e99f8be07a93961259f52b799e2adcfbd99d62b237a86",
       "source": "distribution/bundle-templates/codex/.codex-plugin/plugin.json",
       "source_id": "codex-manifest",
-      "source_sha256": "fb9a71393701dd43cea93144430690f80e4ba8520fa50bd1bc95a4cd198763ff",
+      "source_sha256": "4b059202375df299347932c42c9027564370a793a40dfbcd38b2e7faab9b4bdc",
       "transform": "template-substitute-version-v1"
     },
     {
@@ -21,10 +21,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "README.md",
-      "output_sha256": "87aebdfefcdfd9fda0d5b6c643b65264f52abc15a9c4e5b6a198420e4a9e27e8",
+      "output_sha256": "4102be31179247aa4ee13b992ef9e5c28e992dcbf98bd6cac520ca9a345663c9",
       "source": "distribution/bundle-templates/codex/README.md",
       "source_id": "codex-readme",
-      "source_sha256": "87aebdfefcdfd9fda0d5b6c643b65264f52abc15a9c4e5b6a198420e4a9e27e8",
+      "source_sha256": "4102be31179247aa4ee13b992ef9e5c28e992dcbf98bd6cac520ca9a345663c9",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1505,10 +1505,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "729db26f2212441bfe9697375d3f127032b39a7e811a4ce82c226f892eacdd08",
+  "manifest_digest": "7e867f5f0d04497f5f9b1de9415ae0fca14a686cea8baa685b8c8b14228fbc42",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "5c06be952f1f9d9660951e3c5451ab9d84019ccb",
+  "source_revision": "c32aee4967cad90bea9f4c76bcf43e83ed21c0f8",
   "target": "codex",
   "version": "0.3.1"
 }

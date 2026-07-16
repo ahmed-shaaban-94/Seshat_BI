@@ -5,7 +5,7 @@ knowledge skills. It activates no app, MCP server, connector, hook, or remote
 service. Install `seshat-bi` separately for CLI helpers.
 
 After public repository availability is verified, run
-`codex plugin marketplace add https://github.com/ahmed-shaaban-94/Seshat_BI`
+`codex plugin marketplace add https://github.com/Kemetra/Seshat-BI`
 and `codex plugin add seshat-bi@seshat-bi-repository`. Start a new CLI thread or
 IDE chat, then invoke `$seshat-bi` explicitly. The plugin works in a fresh
 workspace without `AGENTS.md` or a development-repository clone.

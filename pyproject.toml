@@ -43,11 +43,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ahmed-shaaban-94/Seshat_BI"
-Repository = "https://github.com/ahmed-shaaban-94/Seshat_BI"
-Documentation = "https://github.com/ahmed-shaaban-94/Seshat_BI/tree/main/docs"
-Issues = "https://github.com/ahmed-shaaban-94/Seshat_BI/issues"
-Changelog = "https://github.com/ahmed-shaaban-94/Seshat_BI/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Kemetra/Seshat-BI"
+Repository = "https://github.com/Kemetra/Seshat-BI"
+Documentation = "https://github.com/Kemetra/Seshat-BI/tree/main/docs"
+Issues = "https://github.com/Kemetra/Seshat-BI/issues"
+Changelog = "https://github.com/Kemetra/Seshat-BI/blob/main/CHANGELOG.md"
 
 [project.scripts]
 # `seshat` is the primary command; `retail` is a deprecated compatibility alias

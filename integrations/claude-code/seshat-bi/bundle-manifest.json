@@ -3,10 +3,10 @@
     {
       "classification": "generated_wrapper",
       "destination": ".claude-plugin/plugin.json",
-      "output_sha256": "591d4b2d0b27bc2465cdfa4aea933c542c00449818a0920f70ad5d7c33a802cc",
+      "output_sha256": "f0ba9028463051edbbd6d959d37592a3b2135372d8c0ed920ca061c95c1d9424",
       "source": "distribution/bundle-templates/claude/.claude-plugin/plugin.json",
       "source_id": "claude-manifest",
-      "source_sha256": "414f8f2dbdeb715721c0b722ce36e04437d89d70ea4502bed3722821a8dcfe8b",
+      "source_sha256": "fe98a29480780444b4798ccd4cc063856ca58c628140d8b0c8a189c6216b0668",
       "transform": "template-substitute-version-v1"
     },
     {
@@ -21,10 +21,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "README.md",
-      "output_sha256": "6f859574fe83360ac86c4d2f929f4180a5941966ccabda3b737290574d13c704",
+      "output_sha256": "68f8b021903aabd3f02a24a88509096405bcf1e4755344e4b6a3de7fb96837d0",
       "source": "distribution/bundle-templates/claude/README.md",
       "source_id": "claude-readme",
-      "source_sha256": "6f859574fe83360ac86c4d2f929f4180a5941966ccabda3b737290574d13c704",
+      "source_sha256": "68f8b021903aabd3f02a24a88509096405bcf1e4755344e4b6a3de7fb96837d0",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1541,10 +1541,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "b1b99f7f2089f5c28ef01d5747860a0c4d24f0b4c4834c06dfdadc16fc949f65",
+  "manifest_digest": "fc72eeb9389e1c98f739827d132430e29fc4e4a825f74f6171494e5c762c9b92",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "5c06be952f1f9d9660951e3c5451ab9d84019ccb",
+  "source_revision": "c32aee4967cad90bea9f4c76bcf43e83ed21c0f8",
   "target": "claude",
   "version": "0.3.1"
 }
