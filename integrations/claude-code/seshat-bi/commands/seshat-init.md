@@ -1,6 +1,9 @@
 ---
-description: Initialize or inspect a fresh Seshat BI project safely
+description: Deprecated alias of /seshat-bi:init (kept for one release cycle)
 ---
+
+**Deprecated name.** Use `/seshat-bi:init`; this alias is kept for one release
+cycle and behaves identically.
 
 Initialize or inspect a fresh project with the installed `seshat` CLI. Load the
 `seshat-bi` skill, preserve any applicable workspace instructions, and report

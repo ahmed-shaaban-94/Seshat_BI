@@ -363,6 +363,19 @@ def test_json_output_ascii() -> None:
     assert render_json(build_inventory(_FIXTURES_ROOT / "good")).isascii()
 
 
+def test_feeder_reads_real_dispatch_keys() -> None:
+    """Regression (2026-07): ``read_dispatch_keys`` once read the pre-rename
+    ``src/retail/cli/__init__.py`` path and -- because every feeder reader is
+    deliberately best-effort -- silently returned an empty set instead of
+    failing. The feeder must discover the REAL ``_DISPATCH`` keys from
+    ``src/seshat/cli/__init__.py`` and agree with the oracle's independent
+    AST read of the same table."""
+    keys = feeders.read_dispatch_keys(_REPO_ROOT)
+    assert keys, "feeder found no _DISPATCH keys -- stale CLI source path?"
+    assert keys == oracle.dispatch_keys_via_ast(_REPO_ROOT)
+    assert {"check", "doctor", "status", "next", "adopt-pbip"} <= keys
+
+
 # ---------------------------------------------------------------------------
 # US3 -- human-gated / deferred / provenance truthfulness (T011)
 # ---------------------------------------------------------------------------

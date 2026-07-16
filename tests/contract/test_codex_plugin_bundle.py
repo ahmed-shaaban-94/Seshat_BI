@@ -61,15 +61,16 @@ def test_codex_manifest_is_skills_only_and_current_schema() -> None:
 
 
 def test_codex_skills_use_supported_layout_and_frontmatter() -> None:
+    surface = yaml.safe_load(
+        (ROOT / "distribution/public-command-surface.yaml").read_text(encoding="utf-8")
+    )
+    declared = sorted(
+        entry["name"]
+        for entry in surface["skills"]
+        if entry["status"] == "shipped" and "codex" in entry["platforms"]
+    )
     skills = sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md"))
-    assert [path.parent.name for path in skills] == [
-        "bi-bigdata-knowledge",
-        "bi-dax-knowledge",
-        "bi-python-knowledge",
-        "bi-sql-knowledge",
-        "retail-kpi-knowledge",
-        "seshat-bi",
-    ]
+    assert [path.parent.name for path in skills] == declared
     for skill in skills:
         text = skill.read_text(encoding="utf-8")
         assert text.startswith("---\n")

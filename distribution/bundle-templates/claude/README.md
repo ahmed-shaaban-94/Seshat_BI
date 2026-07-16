@@ -1,8 +1,10 @@
 # Seshat BI for Claude Code
 
-This generated plugin contains the portable Seshat BI operating contract,
-slash commands, and reviewed public Knowledge Bases. Install the Python package
-separately with `pipx install seshat-bi`.
+This generated plugin contains the portable Seshat BI operating contract, the
+core readiness and guarded Power BI slash commands (run `/seshat-bi:help`
+for the full map), the `seshat-bi` and `powerbi-workflows` routing skills, and
+reviewed public Knowledge Bases. Install the Python package separately with
+`pipx install seshat-bi`.
 
 In Claude Code, run `/plugin marketplace add Kemetra/Seshat-BI`, then
 `/plugin install seshat-bi@seshat-bi-marketplace`. Restart Claude Code after an

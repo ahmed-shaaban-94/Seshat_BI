@@ -1,13 +1,17 @@
 # Install Seshat BI for Claude Code or Codex
 
-> **Status:** `seshat-bi==0.2.0` is published on public PyPI. The Claude Code
-> repository plugin has passed external install, discovery, and governed-behavior
-> acceptance (Claude Code `2.1.209`, Windows), with one isolation limitation noted
-> below. The Codex repository plugin has passed install and discovery only;
-> governed behavior, update, uninstall, and IDE acceptance remain unverified.
-> Neither plugin is submitted to a public catalog. See
-> [the support matrix](support-matrix.md) and
-> [the v0.2.0 public acceptance record](../releases/v0.2.0-public-acceptance.md).
+> **Status:** the current public release is `seshat-bi==0.3.1` on public PyPI
+> (version single-sourced from `pyproject.toml` and the generated plugin
+> manifests), externally accepted per
+> [the v0.3.1 public acceptance record](../releases/v0.3.1-public-acceptance.md).
+> Against 0.3.1, the Claude Code repository plugin passed install, discovery,
+> governed-behavior, pressure/refusal, update, and uninstall acceptance
+> (Claude Code `2.1.211`, Windows; headless behavioral sessions, with the
+> profile-isolation limitation noted in the record), and the Codex CLI plugin
+> passed install, discovery, governed-behavior, pressure/refusal, update, and
+> removal acceptance (codex-cli `0.144.5`). The Codex IDE path remains
+> unverified. Neither plugin is submitted to a public catalog. See
+> [the support matrix](support-matrix.md).
 
 Install the Python helper separately:
 
@@ -34,11 +38,67 @@ marketplace. Use Claude Code's GitHub repository marketplace flow:
 ```
 
 Start a new Claude Code session after install. The plugin provides the
-`seshat-bi` router skill, reviewed knowledge skills, and the namespaced commands
-`/seshat-bi:seshat-check`, `/seshat-bi:seshat-init`, `/seshat-bi:seshat-next`, and
-`/seshat-bi:seshat-review`. Do not expect the unnamespaced forms
-(`/seshat-check`, etc.) to resolve -- Claude Code namespaces plugin-provided
-commands by plugin name.
+`seshat-bi` router skill, the guarded `powerbi-workflows` routing skill,
+reviewed knowledge skills, and namespaced slash commands. Claude Code
+namespaces plugin-provided commands by plugin name, so invoke them as
+`/seshat-bi:<name>`; do not expect the unnamespaced forms (`/seshat-check`,
+etc.) to resolve.
+
+Core readiness commands:
+
+- `/seshat-bi:help` -- the accurate installed command map.
+- `/seshat-bi:init` -- initialize or inspect a fresh project safely.
+- `/seshat-bi:check` -- run and interpret the static governance check.
+- `/seshat-bi:status` -- truthful per-table readiness status.
+- `/seshat-bi:next` -- the one truthful next readiness action.
+- `/seshat-bi:doctor` -- workspace health check interpretation.
+- `/seshat-bi:review` -- evidence review that stops at the human gate.
+
+Guarded Power BI commands:
+
+- `/seshat-bi:powerbi-design` -- dashboard/page design (layout, visuals, and
+  the slicer/filter rail) from approved metric contracts and committed
+  semantic-model evidence only, with the read-only `seshat dashboard-planner`
+  and `seshat dashboard-gaps` helpers run first.
+- `/seshat-bi:powerbi-review` -- screenshot review, dashboard QA, blueprint
+  validation (`seshat pbir-validate-blueprint`), and built-PBIR review.
+- `/seshat-bi:powerbi-theme` -- theme JSON, palette, typography, filter-pane
+  defaults, backgrounds, and canvas work (`seshat theme-gen` /
+  `theme-compile` / `pbir-apply-theme` / `pbir-set-page-background`). Themes
+  style the filter pane; what a filter binds to is a design decision, not a
+  theme.
+- `/seshat-bi:powerbi-format` -- formatting plans plus governed PBIR
+  formatting/geometry (`seshat pbir-format-visual` / `pbir-set-geometry`).
+- `/seshat-bi:powerbi-adopt` -- governed adoption of an existing PBIP project
+  (`seshat adopt-pbip assess` / `scaffold` with the human-reviewed digest).
+
+The canonical machine-readable command map is
+`distribution/public-command-surface.yaml`. Core commands use the bare verb
+name because Claude Code already namespaces them by plugin; the four names the
+v0.2.0 acceptance pass validated remain available as deprecated aliases for
+one release cycle (`/seshat-bi:seshat-init`, `/seshat-bi:seshat-check`,
+`/seshat-bi:seshat-next`, `/seshat-bi:seshat-review`) and behave identically
+to their bare forms. Commands beyond those four were added after the v0.2.0
+acceptance pass and have not yet been externally re-accepted.
+
+Slash commands, skills, and CLI verbs are three different surfaces: a slash
+command is a reviewed prompt inside the agent session, a skill is routable
+reference material the agent loads, and a CLI verb belongs to the separately
+installed `seshat` terminal program. Commands interpret CLI output but never
+replace or simulate it. Deliberately CLI-only capabilities (no slash wrapper)
+include `seshat validate`, `drift`, `semantic-check`, `generate` (approved
+metric contract to verified TMDL measure), `value-check` (live value proxy),
+`evidence-pack`, `approvals`, `pack`, and `watch`: they need a live database
+connection, write committed evidence artifacts, or are operator workflows that
+must not be blurred into an agent prompt. List every verb with `seshat --help`.
+
+An example guarded Power BI session:
+
+```text
+/seshat-bi:powerbi-adopt      # assess an existing PBIP project (read-only)
+/seshat-bi:powerbi-theme      # generate and apply a theme via seshat theme-gen
+/seshat-bi:powerbi-design     # design pages from approved metric contracts
+```
 
 Update and restart:
 
@@ -89,6 +149,13 @@ Marketplace add, plugin installation, and `codex plugin list` discovery, plus
 router invocation using `@Seshat-BI`, are verified. Start a new CLI thread and
 invoke `@Seshat-BI`, then the relevant knowledge skill (for the synthetic source,
 `@bi-sql-knowledge`).
+
+Codex deliberately exposes no slash commands; the same intents are reached
+through its native discoverable skills. `$seshat-bi` covers initialization,
+status, next-action, review, and PBIP-adoption guidance, and
+`$powerbi-workflows` covers the guarded Power BI design, review, theme, and
+formatting routes -- each backed by the same reviewed content the Claude
+commands load.
 
 The following Codex surfaces are **explicitly unverified** -- do not treat
 installation success as proof of any of them:

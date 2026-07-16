@@ -1831,6 +1831,17 @@ template_entries:
     required: true
     generated_notice: manifest
     review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: powerbi-workflows-skill
+    source: distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: skills/powerbi-workflows/SKILL.md
+      codex: skills/powerbi-workflows/SKILL.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
   - template_id: claude-manifest
     source: distribution/bundle-templates/claude/.claude-plugin/plugin.json
     classification: generated_wrapper
@@ -1860,7 +1871,7 @@ template_entries:
     transform: copy-normalized-v1
     required: true
     generated_notice: manifest
-    review_reason: Required platform wrapper or manifest for the generated public bundle.
+    review_reason: Deprecated alias of the init command, kept for one release cycle.
   - template_id: claude-next
     source: distribution/bundle-templates/claude/commands/seshat-next.md
     classification: generated_wrapper
@@ -1870,7 +1881,7 @@ template_entries:
     transform: copy-normalized-v1
     required: true
     generated_notice: manifest
-    review_reason: Required platform wrapper or manifest for the generated public bundle.
+    review_reason: Deprecated alias of the next command, kept for one release cycle.
   - template_id: claude-check
     source: distribution/bundle-templates/claude/commands/seshat-check.md
     classification: generated_wrapper
@@ -1880,13 +1891,133 @@ template_entries:
     transform: copy-normalized-v1
     required: true
     generated_notice: manifest
-    review_reason: Required platform wrapper or manifest for the generated public bundle.
+    review_reason: Deprecated alias of the check command, kept for one release cycle.
   - template_id: claude-review
     source: distribution/bundle-templates/claude/commands/seshat-review.md
     classification: generated_wrapper
     media_type: text/markdown
     targets:
       claude: commands/seshat-review.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Deprecated alias of the review command, kept for one release cycle.
+  - template_id: claude-help
+    source: distribution/bundle-templates/claude/commands/help.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/help.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-doctor
+    source: distribution/bundle-templates/claude/commands/doctor.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/doctor.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-status
+    source: distribution/bundle-templates/claude/commands/status.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/status.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-cmd-init
+    source: distribution/bundle-templates/claude/commands/init.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/init.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-cmd-check
+    source: distribution/bundle-templates/claude/commands/check.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/check.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-cmd-next
+    source: distribution/bundle-templates/claude/commands/next.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/next.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-cmd-review
+    source: distribution/bundle-templates/claude/commands/review.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/review.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-powerbi-design
+    source: distribution/bundle-templates/claude/commands/powerbi-design.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/powerbi-design.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-powerbi-review
+    source: distribution/bundle-templates/claude/commands/powerbi-review.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/powerbi-review.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-powerbi-theme
+    source: distribution/bundle-templates/claude/commands/powerbi-theme.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/powerbi-theme.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-powerbi-format
+    source: distribution/bundle-templates/claude/commands/powerbi-format.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/powerbi-format.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-powerbi-adopt
+    source: distribution/bundle-templates/claude/commands/powerbi-adopt.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/powerbi-adopt.md
     transform: copy-normalized-v1
     required: true
     generated_notice: manifest
