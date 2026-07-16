@@ -177,7 +177,7 @@ def read_dispatch_keys(repo_root: Path) -> set[str]:
     """Read the ``_DISPATCH`` key set from ``src/seshat/cli/__init__.py`` via
     stdlib ``ast`` -- NEVER by importing the module (keeps this reader
     driver-free and avoids loading any lazily-imported command handler)."""
-    path = repo_root / "src" / "retail" / "cli" / "__init__.py"
+    path = repo_root / "src" / "seshat" / "cli" / "__init__.py"
     try:
         tree = ast.parse(path.read_text(encoding="utf-8-sig"))
     except (OSError, UnicodeDecodeError, SyntaxError):

@@ -108,8 +108,36 @@ def _required_json(
     return None
 
 
+def _declared_public_skills(repo_root: Path, target: str) -> set[str] | None:
+    """The shipped bundled-skill names the canonical public command surface
+    (``distribution/public-command-surface.yaml``) declares for one target --
+    the single authority the generated bundles are reconciled against. Returns
+    ``None`` when the manifest is missing or malformed so the caller can raise
+    a concrete blocker instead of validating against an empty set."""
+    path = repo_root / "distribution" / "public-command-surface.yaml"
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    skills = payload.get("skills")
+    if not isinstance(skills, list):
+        return None
+    return {
+        str(entry["name"])
+        for entry in skills
+        if isinstance(entry, Mapping)
+        and entry.get("status") == "shipped"
+        and target in (entry.get("platforms") or [])
+    }
+
+
 def _validate_plugin(
-    spec: _BundleSpec, plugin: Mapping[str, Any], blockers: list[str]
+    spec: _BundleSpec,
+    plugin: Mapping[str, Any],
+    repo_root: Path,
+    blockers: list[str],
 ) -> None:
     actual_components = {
         value
@@ -118,9 +146,15 @@ def _validate_plugin(
     }
     if not spec.required_components.issubset(actual_components):
         blockers.append("plugin manifest does not declare its required component roots")
-    skills = sorted((spec.root / "skills").glob("*/SKILL.md"))
-    if len(skills) != 6:
-        blockers.append(f"expected six public skills, found {len(skills)}")
+    declared = _declared_public_skills(repo_root, spec.expected_target)
+    actual = {path.parent.name for path in (spec.root / "skills").glob("*/SKILL.md")}
+    if declared is None:
+        blockers.append("missing or malformed distribution/public-command-surface.yaml")
+    elif actual != declared:
+        blockers.append(
+            f"bundled skills {sorted(actual)} do not match the declared "
+            f"public surface {sorted(declared)}"
+        )
     prohibited = set(plugin).intersection({"hooks", "mcpServers", "apps"})
     if prohibited:
         blockers.append(
@@ -146,7 +180,7 @@ def validate_bundle(repo_root: Path, platform: str) -> list[str]:
     )
     if plugin is None:
         return blockers
-    _validate_plugin(spec, plugin, blockers)
+    _validate_plugin(spec, plugin, repo_root, blockers)
     return blockers
 
 

@@ -21,46 +21,163 @@
     {
       "classification": "generated_wrapper",
       "destination": "README.md",
-      "output_sha256": "68f8b021903aabd3f02a24a88509096405bcf1e4755344e4b6a3de7fb96837d0",
+      "output_sha256": "91db8216e3fa1eaac5508c1503fe8419cc978525b3830be41316a91625f2ea7c",
       "source": "distribution/bundle-templates/claude/README.md",
       "source_id": "claude-readme",
-      "source_sha256": "68f8b021903aabd3f02a24a88509096405bcf1e4755344e4b6a3de7fb96837d0",
+      "source_sha256": "91db8216e3fa1eaac5508c1503fe8419cc978525b3830be41316a91625f2ea7c",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
-      "destination": "commands/seshat-check.md",
+      "destination": "commands/auto.md",
+      "output_sha256": "27457cafdb06ce0c417210a6c50ada3669dcf14603c863078eb3855f1557c4df",
+      "source": "distribution/bundle-templates/claude/commands/auto.md",
+      "source_id": "claude-cmd-auto",
+      "source_sha256": "27457cafdb06ce0c417210a6c50ada3669dcf14603c863078eb3855f1557c4df",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/check.md",
       "output_sha256": "4f50d44ec449efa967f54a8d5871d09228aa9dcac9865da33823bd5d74192752",
-      "source": "distribution/bundle-templates/claude/commands/seshat-check.md",
-      "source_id": "claude-check",
+      "source": "distribution/bundle-templates/claude/commands/check.md",
+      "source_id": "claude-cmd-check",
       "source_sha256": "4f50d44ec449efa967f54a8d5871d09228aa9dcac9865da33823bd5d74192752",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
-      "destination": "commands/seshat-init.md",
+      "destination": "commands/doctor.md",
+      "output_sha256": "6cbede8f7ef16f47cabc18df8065a418276f821a05b62141b0babc8154c15e23",
+      "source": "distribution/bundle-templates/claude/commands/doctor.md",
+      "source_id": "claude-doctor",
+      "source_sha256": "6cbede8f7ef16f47cabc18df8065a418276f821a05b62141b0babc8154c15e23",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/help.md",
+      "output_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "source": "distribution/bundle-templates/claude/commands/help.md",
+      "source_id": "claude-help",
+      "source_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/init.md",
       "output_sha256": "88662636b2c403dc61413a646e501ffb575d0999d22e96f5996472d1a7f2bb2e",
-      "source": "distribution/bundle-templates/claude/commands/seshat-init.md",
-      "source_id": "claude-init",
+      "source": "distribution/bundle-templates/claude/commands/init.md",
+      "source_id": "claude-cmd-init",
       "source_sha256": "88662636b2c403dc61413a646e501ffb575d0999d22e96f5996472d1a7f2bb2e",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
-      "destination": "commands/seshat-next.md",
+      "destination": "commands/next.md",
       "output_sha256": "532743175f67b15c3e3ee64fe5aab870c1cc1d6f835896ada8b63709c7eb4a2f",
-      "source": "distribution/bundle-templates/claude/commands/seshat-next.md",
-      "source_id": "claude-next",
+      "source": "distribution/bundle-templates/claude/commands/next.md",
+      "source_id": "claude-cmd-next",
       "source_sha256": "532743175f67b15c3e3ee64fe5aab870c1cc1d6f835896ada8b63709c7eb4a2f",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
-      "destination": "commands/seshat-review.md",
+      "destination": "commands/powerbi-adopt.md",
+      "output_sha256": "590d9545e12adb7f08f38a2b54ddd12f5cb24e4069b219c881f756780f1e2ac6",
+      "source": "distribution/bundle-templates/claude/commands/powerbi-adopt.md",
+      "source_id": "claude-powerbi-adopt",
+      "source_sha256": "590d9545e12adb7f08f38a2b54ddd12f5cb24e4069b219c881f756780f1e2ac6",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/powerbi-design.md",
+      "output_sha256": "477f4e124c2a7bf96834ea4c9c6e87df56c3df752a3f52fb212d6c619b9ac057",
+      "source": "distribution/bundle-templates/claude/commands/powerbi-design.md",
+      "source_id": "claude-powerbi-design",
+      "source_sha256": "477f4e124c2a7bf96834ea4c9c6e87df56c3df752a3f52fb212d6c619b9ac057",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/powerbi-format.md",
+      "output_sha256": "9db9301a2f5e42a6d1e224f1e804af97f8250906bd26336c73556f6043ced928",
+      "source": "distribution/bundle-templates/claude/commands/powerbi-format.md",
+      "source_id": "claude-powerbi-format",
+      "source_sha256": "9db9301a2f5e42a6d1e224f1e804af97f8250906bd26336c73556f6043ced928",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/powerbi-review.md",
+      "output_sha256": "8bea65f01cb6952995dde4e535c925789913b1b57ab5b397e5e25e34d0787f3c",
+      "source": "distribution/bundle-templates/claude/commands/powerbi-review.md",
+      "source_id": "claude-powerbi-review",
+      "source_sha256": "8bea65f01cb6952995dde4e535c925789913b1b57ab5b397e5e25e34d0787f3c",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/powerbi-theme.md",
+      "output_sha256": "b73b9e0b81bec6d8863f17807f38ffb3cbbb7c447bdec9dab4a29d0a96b5d43a",
+      "source": "distribution/bundle-templates/claude/commands/powerbi-theme.md",
+      "source_id": "claude-powerbi-theme",
+      "source_sha256": "b73b9e0b81bec6d8863f17807f38ffb3cbbb7c447bdec9dab4a29d0a96b5d43a",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/review.md",
       "output_sha256": "3e76fad3cf6084f2b7653fbfefaeed7903f6a47cbe8fe898cb9e68c4a7d83f74",
+      "source": "distribution/bundle-templates/claude/commands/review.md",
+      "source_id": "claude-cmd-review",
+      "source_sha256": "3e76fad3cf6084f2b7653fbfefaeed7903f6a47cbe8fe898cb9e68c4a7d83f74",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/seshat-check.md",
+      "output_sha256": "f77a783b75185acf06bc63585a9e940b3f7356737461c3289d62d567eef4a4d7",
+      "source": "distribution/bundle-templates/claude/commands/seshat-check.md",
+      "source_id": "claude-check",
+      "source_sha256": "f77a783b75185acf06bc63585a9e940b3f7356737461c3289d62d567eef4a4d7",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/seshat-init.md",
+      "output_sha256": "61bc7403d6aa31e51914758e1b72cd691bcacb491710c8f57e2d1c144b0ad250",
+      "source": "distribution/bundle-templates/claude/commands/seshat-init.md",
+      "source_id": "claude-init",
+      "source_sha256": "61bc7403d6aa31e51914758e1b72cd691bcacb491710c8f57e2d1c144b0ad250",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/seshat-next.md",
+      "output_sha256": "59f64d2c198abdde3e372d7d4febb098d5f24ae46ba7faaca633a5d906b6c5c2",
+      "source": "distribution/bundle-templates/claude/commands/seshat-next.md",
+      "source_id": "claude-next",
+      "source_sha256": "59f64d2c198abdde3e372d7d4febb098d5f24ae46ba7faaca633a5d906b6c5c2",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/seshat-review.md",
+      "output_sha256": "4a75fee016391ff715260466be9e1f5f186f954ef2aa6844485bf878af338b61",
       "source": "distribution/bundle-templates/claude/commands/seshat-review.md",
       "source_id": "claude-review",
-      "source_sha256": "3e76fad3cf6084f2b7653fbfefaeed7903f6a47cbe8fe898cb9e68c4a7d83f74",
+      "source_sha256": "4a75fee016391ff715260466be9e1f5f186f954ef2aa6844485bf878af338b61",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/status.md",
+      "output_sha256": "75a120bf573a31866be59118b9e5c43ab0a7a828a07c5d52c08c9aacfe5d2708",
+      "source": "distribution/bundle-templates/claude/commands/status.md",
+      "source_id": "claude-status",
+      "source_sha256": "75a120bf573a31866be59118b9e5c43ab0a7a828a07c5d52c08c9aacfe5d2708",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1505,6 +1622,15 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "skills/powerbi-workflows/SKILL.md",
+      "output_sha256": "f4fd52b1c6e74b314e0d91fd52e8283a4ea4965bb6f1c3dd965de3bd9632bb80",
+      "source": "distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md",
+      "source_id": "powerbi-workflows-skill",
+      "source_sha256": "f4fd52b1c6e74b314e0d91fd52e8283a4ea4965bb6f1c3dd965de3bd9632bb80",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "skills/retail-kpi-knowledge/SKILL.md",
       "output_sha256": "efc39e305e1842950c96f0c191d9b6f8bdeab5dfb4b9d5c2da203384e08f3833",
       "source": "distribution/bundle-templates/shared/skills/retail-kpi-knowledge/SKILL.md",
@@ -1515,10 +1641,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "99e800482f0ac8ef97883158681a69c85af2051579a92cebb787c573f4a875d3",
+      "output_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "99e800482f0ac8ef97883158681a69c85af2051579a92cebb787c573f4a875d3",
+      "source_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1541,10 +1667,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "fc72eeb9389e1c98f739827d132430e29fc4e4a825f74f6171494e5c762c9b92",
+  "manifest_digest": "8a76be663ae1a8a1a29b92c26a70fbc73e1f659a3756f395f04b75ddfff702fa",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "c32aee4967cad90bea9f4c76bcf43e83ed21c0f8",
+  "source_revision": "2c4e7ee00ff862ad770184923bd6b65cab8b480e",
   "target": "claude",
   "version": "0.3.1"
 }

@@ -1,9 +1,12 @@
 # User installation: Seshat BI public beta
 
-> **Availability:** `seshat-bi==0.2.0` is published on public PyPI and verified by a
-> clean-room `pipx`/`pip` install. See
-> [the v0.2.0 public acceptance record](../releases/v0.2.0-public-acceptance.md) for
-> the sanitized evidence.
+> **Availability:** the current public release is `seshat-bi==0.3.1` on public
+> PyPI (the version is single-sourced from `pyproject.toml`), externally
+> verified by a clean-venv public-index install, first-success run, and
+> uninstall-preservation check; see
+> [the v0.3.1 public acceptance record](../releases/v0.3.1-public-acceptance.md)
+> for the sanitized evidence. The `pipx`-lane evidence was captured at v0.2.0
+> ([record](../releases/v0.2.0-public-acceptance.md)).
 
 Seshat BI is installed as an isolated command-line application. A first run needs Python 3.13, `pipx`, and Git; it does not need a database or Power BI Desktop.
 

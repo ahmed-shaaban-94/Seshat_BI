@@ -1,0 +1,247 @@
+# Canonical public command surface -- the single authority for what the
+# generated agent bundles advertise.
+#
+# Scope: agent-platform surfaces only (Claude Code slash commands and the
+# bundled, discoverable skills both platforms ship). CLI verbs remain owned by
+# `src/seshat/cli/__init__.py` (`_DISPATCH`) and are classified in
+# `docs/capabilities/capabilities.yaml`; entries here may REFERENCE a CLI verb
+# but never define one.
+#
+# Naming convention: core readiness commands use the bare verb name (the
+# Claude namespace already reads `/seshat-bi:<name>`, so a `seshat-` prefix is
+# redundant); Power BI commands carry the `powerbi-` domain prefix. The four
+# names the v0.2.0 external acceptance pass validated survive as deprecated
+# aliases in `command_aliases` for one release cycle.
+#
+# Reconciled by `tests/contract/test_public_command_surface.py` and consumed by
+# `scripts/external_agent_acceptance.py` (expected bundled-skill set). Every
+# shipped command must have a reviewed wrapper template, an allowlist entry
+# (`distribution/public-knowledge-allowlist.yaml`), and a generated bundle
+# file; a `deferred`/`internal` entry must have none. Adding a command here
+# without shipping its wrapper -- or shipping a wrapper absent from here --
+# fails the contract tests.
+schema_version: 1
+canonical_repository: Kemetra/Seshat-BI
+commands:
+  # -- Core readiness commands (Claude Code) --------------------------------
+  - name: help
+    platform: claude
+    intent: Show the accurate installed Seshat BI command map and surface distinctions.
+    cli_verbs: []
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/help.md
+    bundle_destination: commands/help.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: init
+    platform: claude
+    intent: Initialize or inspect a fresh Seshat BI project safely.
+    cli_verbs: [init-project, init]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/init.md
+    bundle_destination: commands/init.md
+    mode: mutating
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: check
+    platform: claude
+    intent: Run and interpret the static Seshat governance check.
+    cli_verbs: [check]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/check.md
+    bundle_destination: commands/check.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: status
+    platform: claude
+    intent: Report the truthful per-table readiness status.
+    cli_verbs: [status]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/status.md
+    bundle_destination: commands/status.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: next
+    platform: claude
+    intent: Return the one truthful next readiness action.
+    cli_verbs: [next]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/next.md
+    bundle_destination: commands/next.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: doctor
+    platform: claude
+    intent: Run and interpret the Seshat workspace health check.
+    cli_verbs: [doctor]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/doctor.md
+    bundle_destination: commands/doctor.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: auto
+    platform: claude
+    intent: Run the governed autonomous readiness loop until the next named-human gate.
+    cli_verbs: [next, check]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/auto.md
+    bundle_destination: commands/auto.md
+    mode: mutating
+    gates: [named-human-approval]
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: review
+    platform: claude
+    intent: Review readiness evidence and stop at the human approval gate.
+    # Deliberately no CLI verb: review is a governed evidence workflow, not a
+    # `seshat` subcommand (the CLI's "review" is only a `check` output format).
+    cli_verbs: []
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/review.md
+    bundle_destination: commands/review.md
+    mode: read-only
+    gates: [named-human-approval]
+    documentation: docs/install/agent-install.md
+    status: shipped
+  # -- Guarded Power BI commands (Claude Code) ------------------------------
+  - name: powerbi-design
+    platform: claude
+    intent: Route guarded Power BI dashboard and page design work.
+    cli_verbs: [dashboard-planner, dashboard-gaps]
+    skill: powerbi-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/powerbi-design.md
+    bundle_destination: commands/powerbi-design.md
+    mode: read-only
+    gates: [approved-metric-contracts, semantic-model-evidence]
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: powerbi-review
+    platform: claude
+    intent: Route Power BI screenshot review, dashboard QA, blueprint validation, and built-PBIR review.
+    cli_verbs: [pbir-validate-blueprint]
+    skill: powerbi-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/powerbi-review.md
+    bundle_destination: commands/powerbi-review.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: powerbi-theme
+    platform: claude
+    intent: Route Power BI theme JSON, palette, typography, filter-pane defaults, background, and canvas work.
+    cli_verbs: [theme-gen, theme-compile, pbir-apply-theme, pbir-set-page-background]
+    skill: powerbi-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/powerbi-theme.md
+    bundle_destination: commands/powerbi-theme.md
+    mode: mutating
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: powerbi-format
+    platform: claude
+    intent: Route Power BI visual formatting, layout, and geometry work.
+    cli_verbs: [pbir-format-visual, pbir-set-geometry]
+    skill: powerbi-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/powerbi-format.md
+    bundle_destination: commands/powerbi-format.md
+    mode: mutating
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: powerbi-adopt
+    platform: claude
+    intent: Adopt an existing PBIP project through the governed assess/scaffold path.
+    cli_verbs: [adopt-pbip]
+    skill: seshat-bi
+    wrapper_template: distribution/bundle-templates/claude/commands/powerbi-adopt.md
+    bundle_destination: commands/powerbi-adopt.md
+    mode: mutating
+    gates: [assessment-digest-human-review]
+    documentation: docs/install/agent-install.md
+    status: shipped
+command_aliases:
+  # Deprecated names kept for ONE release cycle: the v0.2.0 external
+  # acceptance pass validated these four commands under their original
+  # `seshat-*` names. Each alias wrapper carries a deprecation notice followed
+  # by the canonical command body verbatim (enforced by contract test).
+  - name: seshat-init
+    alias_of: init
+    wrapper_template: distribution/bundle-templates/claude/commands/seshat-init.md
+    bundle_destination: commands/seshat-init.md
+    status: shipped
+  - name: seshat-check
+    alias_of: check
+    wrapper_template: distribution/bundle-templates/claude/commands/seshat-check.md
+    bundle_destination: commands/seshat-check.md
+    status: shipped
+  - name: seshat-next
+    alias_of: next
+    wrapper_template: distribution/bundle-templates/claude/commands/seshat-next.md
+    bundle_destination: commands/seshat-next.md
+    status: shipped
+  - name: seshat-review
+    alias_of: review
+    wrapper_template: distribution/bundle-templates/claude/commands/seshat-review.md
+    bundle_destination: commands/seshat-review.md
+    status: shipped
+skills:
+  - name: seshat-bi
+    platforms: [claude, codex]
+    intent: Route a BI project through the governed seven-stage readiness flow.
+    wrapper_template: distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md
+    bundle_destination: skills/seshat-bi/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: powerbi-workflows
+    platforms: [claude, codex]
+    intent: Route guarded Power BI design, review, theme, formatting, and adoption work.
+    wrapper_template: distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md
+    bundle_destination: skills/powerbi-workflows/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: bi-sql-knowledge
+    platforms: [claude, codex]
+    intent: Public SQL reasoning knowledge (grain, joins, validation, reconciliation).
+    wrapper_template: distribution/bundle-templates/shared/skills/bi-sql-knowledge/SKILL.md
+    bundle_destination: skills/bi-sql-knowledge/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: bi-dax-knowledge
+    platforms: [claude, codex]
+    intent: Public DAX and semantic-measure reasoning knowledge.
+    wrapper_template: distribution/bundle-templates/shared/skills/bi-dax-knowledge/SKILL.md
+    bundle_destination: skills/bi-dax-knowledge/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: bi-python-knowledge
+    platforms: [claude, codex]
+    intent: Public Python/dataframe preparation reasoning knowledge.
+    wrapper_template: distribution/bundle-templates/shared/skills/bi-python-knowledge/SKILL.md
+    bundle_destination: skills/bi-python-knowledge/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: bi-bigdata-knowledge
+    platforms: [claude, codex]
+    intent: Public distributed-data reasoning knowledge.
+    wrapper_template: distribution/bundle-templates/shared/skills/bi-bigdata-knowledge/SKILL.md
+    bundle_destination: skills/bi-bigdata-knowledge/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: retail-kpi-knowledge
+    platforms: [claude, codex]
+    intent: Public retail KPI meaning and metric-contract knowledge.
+    wrapper_template: distribution/bundle-templates/shared/skills/retail-kpi-knowledge/SKILL.md
+    bundle_destination: skills/retail-kpi-knowledge/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped

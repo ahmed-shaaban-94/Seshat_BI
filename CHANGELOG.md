@@ -27,8 +27,55 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+- **Canonical public command surface** (`distribution/public-command-surface.yaml`):
+  the single authority for what the generated agent bundles advertise, reconciled
+  by the new `tests/contract/test_public_command_surface.py` drift gates and read
+  by `scripts/external_agent_acceptance.py` in place of a hardcoded skill count.
+- **Eight new Claude Code plugin commands** (`help`, `doctor`, `status`,
+  `powerbi-design`, `powerbi-review`, `powerbi-theme`, `powerbi-format`,
+  `powerbi-adopt`) and the shared `powerbi-workflows` bundled skill (shipped to
+  both the Claude and Codex bundles), all generated through the existing
+  allowlist/exporter; the `seshat-bi` router now routes Power BI intents to
+  `powerbi-workflows`.
+
+### Changed
+- **Normalized command names**: core readiness commands use the bare verb name
+  (`/seshat-bi:init`, `:check`, `:status`, `:next`, `:doctor`, `:review`,
+  `:help`) since Claude Code already namespaces plugin commands; the four
+  v0.2.0-accepted `seshat-*` names remain as deprecated aliases for one release
+  cycle, each carrying its canonical body verbatim (contract-tested).
+
+### Docs
+- **v0.3.1 public acceptance record** (`docs/releases/v0.3.1-public-acceptance.md`):
+  externally verified PyPI clean-install, Claude Code plugin install/behavior/
+  pressure-refusal/update/uninstall (headless, with the noted profile-isolation
+  gap), and -- newly beyond the v0.2.0 boundary -- Codex CLI governed behavior,
+  pressure/refusal, update, and removal. Install docs and the support matrix now
+  cite it.
+- **Agent self-discovery route** in the bundled `seshat-bi` router: one skill
+  name is enough -- the router points to `/seshat-bi:help`, `seshat --help`,
+  and `seshat next --format agent` so agents never need memorized command or
+  skill names.
+- **Agent-driven automation surfaced**: the previously undocumented read-only
+  MCP governor (`seshat mcp`, extra `seshat-bi[mcp]`) and its six tools are now
+  documented in the agent install guide and routed from the bundled router,
+  with the governed loop protocol (next action -> act -> re-check -> stop at
+  named-human gates) stated explicitly and a contract test pinning the
+  documented tool names to the server source. The `/seshat-bi:auto` command
+  codifies that loop as a one-invocation prompt that always stops at the next
+  named-human gate.
+
 ### Fixed
-- **C1 finding message leaked the literal connection host**: the
+- **`capability_feeders.read_dispatch_keys` stale source path**: the feeder read
+  the pre-rename `src/retail/cli/__init__.py` and silently discovered no
+  `_DISPATCH` keys; it now reads `src/seshat/cli/__init__.py`, with regression
+  coverage reconciling it against the independent test oracle.
+- **Stale `seshat-bi==0.2.0` claims in active install docs**: the current release
+  is stated as the packaged version (guarded by a contract test against
+  `pyproject.toml`), while v0.2.0 remains the cited historical external
+  acceptance evidence.
+- **C1 finding message leaked the literal connection host** (PR #298): the
   parameterized-connection rule echoed the entire matched `*.Database(...)`
   call -- including the literal server/database values -- into its finding
   message, which downstream surfaces such as the `adopt-pbip assess` JSON

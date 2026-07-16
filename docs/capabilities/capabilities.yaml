@@ -1016,7 +1016,7 @@ capabilities:
 
   - id: claude-code-plugin
     name: "Claude Code plugin & commands"
-    summary: "The generated Claude Code plugin bundle (seshat-bi router skill, five reviewed knowledge skills, and the four namespaced /seshat-bi:* commands), committed under integrations/claude-code/ with a plugin manifest and a repo-root marketplace entry. Built and locally verified; external catalog publication remains an owner action, so provenance is not publicly-released."
+    summary: "The generated Claude Code plugin bundle (seshat-bi router skill, the guarded powerbi-workflows routing skill, five reviewed knowledge skills, and the namespaced /seshat-bi:* command set -- core readiness plus guarded Power BI wrappers, enumerated in distribution/public-command-surface.yaml), committed under integrations/claude-code/ with a plugin manifest and a repo-root marketplace entry. Built and locally verified; external catalog publication remains an owner action, so provenance is not publicly-released."
     state: shipped
     authority: advisory
     surface: plugin
