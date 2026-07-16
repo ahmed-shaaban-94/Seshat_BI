@@ -96,7 +96,11 @@ def _read_readiness(table_dir: Path) -> tuple[tuple[Approval, ...], str]:
     )
     stages = data.get("stages") or {}
     publish = stages.get("publish_ready") or {}
-    publish_ready = str(publish.get("status", "missing")) if isinstance(publish, dict) else "missing"
+    publish_ready = (
+        str(publish.get("status", "missing"))
+        if isinstance(publish, dict)
+        else "missing"
+    )
     return approvals, publish_ready
 
 

@@ -1,4 +1,4 @@
-"""Gate assets: source_map [HUMAN SEAM] -> silver_tables -> gold_tables -> live_validate.
+"""Gate assets: source_map [HUMAN SEAM] -> silver -> gold -> live_validate.
 
 The human seam READS the committed approval as its only GO signal and halts if
 absent (Principle IV/V); the mechanical STOP nodes run the SAME commands CI
@@ -25,7 +25,9 @@ def _migrations(root: Path, layer: str, table: str) -> list[Path]:
     return sorted(migrations_dir.glob(f"*{layer}*{table}*.sql"))
 
 
-def _build_layer(context, *, table: str, root: Path, layer: str, asset_name: str) -> None:
+def _build_layer(
+    context, *, table: str, root: Path, layer: str, asset_name: str
+) -> None:
     """Shared silver/gold body: apply the committed migrations, then run the
     static gate; exit 0 is the ONLY green (Principle I)."""
     writer = writer_for(context, root)
@@ -53,7 +55,10 @@ def _build_layer(context, *, table: str, root: Path, layer: str, asset_name: str
             exit_code=None,
             measured={},
             outcome="blocked",
-            reason=f"no committed {layer} migration found for {table} under warehouse/migrations/",
+            reason=(
+                f"no committed {layer} migration found for {table} "
+                "under warehouse/migrations/"
+            ),
             owner="warehouse owner",
         )
     for migration in migrations:
@@ -94,7 +99,9 @@ def build_gate_assets(table: str, root: Path) -> list:
         """HUMAN SEAM (Principle IV): reads Gate status; HALTS if not CLEARED."""
         writer = writer_for(context, root)
         state = read_gate_state(root, table)
-        gate_command = f"reads Gate status from mappings/{table}/unresolved-questions.md"
+        gate_command = (
+            f"reads Gate status from mappings/{table}/unresolved-questions.md"
+        )
         if not state.silver_permitted:
             halt(
                 writer,
@@ -102,7 +109,10 @@ def build_gate_assets(table: str, root: Path) -> list:
                 table=table,
                 gate_command=gate_command,
                 exit_code=None,
-                measured={"gate_status": state.gate_status, "open_rows": state.open_rows},
+                measured={
+                    "gate_status": state.gate_status,
+                    "open_rows": state.open_rows,
+                },
                 outcome="blocked",
                 reason=(
                     f"source_map gate not CLEARED: Gate status {state.gate_status}, "
@@ -127,7 +137,9 @@ def build_gate_assets(table: str, root: Path) -> list:
         deps=[AssetKey([*prefix, "source_map"])],
     )
     def silver_tables(context) -> None:
-        _build_layer(context, table=table, root=root, layer="silver", asset_name="silver_tables")
+        _build_layer(
+            context, table=table, root=root, layer="silver", asset_name="silver_tables"
+        )
 
     @asset(
         name="gold_tables",
@@ -136,7 +148,9 @@ def build_gate_assets(table: str, root: Path) -> list:
         deps=[AssetKey([*prefix, "silver_tables"])],
     )
     def gold_tables(context) -> None:
-        _build_layer(context, table=table, root=root, layer="gold", asset_name="gold_tables")
+        _build_layer(
+            context, table=table, root=root, layer="gold", asset_name="gold_tables"
+        )
 
     @asset(
         name="live_validate",

@@ -21,8 +21,8 @@ UNRESOLVED_TEMPLATE = """# Unresolved questions -- `{table}`
 
 ## Open questions (the build is blocked until these are `answered`)
 
-| ID | Question | Why it blocks | Who must answer | Proposed default (if unanswered) | Status | Resolution |
-|----|----------|---------------|-----------------|----------------------------------|--------|------------|
+| ID | Question | Why it blocks | Who answers | Default | Status | Resolution |
+|----|----------|---------------|-------------|---------|--------|------------|
 | Q1 | A question? | It blocks. | analyst | default | `{q1_status}` | {q1_resolution} |
 """
 
@@ -62,7 +62,9 @@ def make_fixture_repo(
     table_dir = root / "mappings" / TABLE
     table_dir.mkdir(parents=True)
     (table_dir / "source-map.yaml").write_text(f"table: {TABLE}\n", encoding="utf-8")
-    (table_dir / "source-profile.md").write_text("# profile\nrows: 3\n", encoding="utf-8")
+    (table_dir / "source-profile.md").write_text(
+        "# profile\nrows: 3\n", encoding="utf-8"
+    )
     (table_dir / "unresolved-questions.md").write_text(
         UNRESOLVED_TEMPLATE.format(
             table=TABLE,
@@ -74,7 +76,9 @@ def make_fixture_repo(
     )
     approvals = APPROVAL_ROW.format(stage="mapping_ready", role="data_owner")
     if semantic_approved:
-        approvals += APPROVAL_ROW.format(stage="semantic_model_ready", role="metric_owner")
+        approvals += APPROVAL_ROW.format(
+            stage="semantic_model_ready", role="metric_owner"
+        )
     (table_dir / "readiness-status.yaml").write_text(
         READINESS_TEMPLATE.format(
             table=TABLE,
@@ -85,7 +89,9 @@ def make_fixture_repo(
         encoding="utf-8",
     )
     (table_dir / "metrics").mkdir()
-    (table_dir / "metrics" / "a-metric.yaml").write_text("metric: A\n", encoding="utf-8")
+    (table_dir / "metrics" / "a-metric.yaml").write_text(
+        "metric: A\n", encoding="utf-8"
+    )
     (table_dir / "design").mkdir()
     (table_dir / "design" / "layout.md").write_text("# layout\n", encoding="utf-8")
     (table_dir / "handoff").mkdir()

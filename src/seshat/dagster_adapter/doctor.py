@@ -59,8 +59,14 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
             DoctorFinding(
                 id="DAG-PROJ-01",
                 severity="blocker",
-                message="orchestration project absent: orchestration/dagster/pyproject.toml not found",
-                remedy="check out the full repo (the orchestration project ships with spec 134)",
+                message=(
+                    "orchestration project absent: "
+                    "orchestration/dagster/pyproject.toml not found"
+                ),
+                remedy=(
+                    "check out the full repo (the orchestration project ships "
+                    "with spec 134)"
+                ),
             )
         )
         return findings
@@ -73,10 +79,14 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
                 id="DAG-PAIR-01",
                 severity="blocker",
                 message=(
-                    "pinned pair mismatch: orchestration/dagster/pyproject.toml must pin "
-                    f"{expected[0]} and {expected[1]} TOGETHER (spec 024 auto-update posture)"
+                    "pinned pair mismatch: orchestration/dagster/pyproject.toml "
+                    f"must pin {expected[0]} and {expected[1]} TOGETHER "
+                    "(spec 024 auto-update posture)"
                 ),
-                remedy="restore the pinned pair; bumps land via PR only, never independently",
+                remedy=(
+                    "restore the pinned pair; bumps land via PR only, "
+                    "never independently"
+                ),
             )
         )
 
@@ -85,7 +95,10 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
             DoctorFinding(
                 id="DAG-VENV-01",
                 severity="blocker",
-                message="orchestration environment absent: orchestration/dagster/.venv has no interpreter",
+                message=(
+                    "orchestration environment absent: "
+                    "orchestration/dagster/.venv has no interpreter"
+                ),
                 remedy=_INSTALL_REMEDY,
             )
         )
@@ -96,7 +109,9 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
             DoctorFinding(
                 id="DAG-TBL-01",
                 severity="warning",
-                message="no mapped tables found under mappings/ (nothing to orchestrate)",
+                message=(
+                    "no mapped tables found under mappings/ (nothing to orchestrate)"
+                ),
                 remedy="onboard a table first (retail-onboard-table -> source-mapping)",
             )
         )
@@ -107,7 +122,10 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
                 DoctorFinding(
                     id="DAG-GATE-00",
                     severity="info",
-                    message=f"{table}: mapping gate CLEARED (0 open rows) -- silver build permitted",
+                    message=(
+                        f"{table}: mapping gate CLEARED (0 open rows) -- "
+                        "silver build permitted"
+                    ),
                     remedy="none",
                 )
             )
@@ -117,10 +135,15 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
                     id="DAG-GATE-01",
                     severity="warning",
                     message=(
-                        f"{table}: mapping gate not CLEARED (Gate status {state.gate_status}, "
-                        f"open rows {state.open_rows}) -- silver_tables will BLOCK fail-closed"
+                        f"{table}: mapping gate not CLEARED "
+                        f"(Gate status {state.gate_status}, "
+                        f"open rows {state.open_rows}) -- "
+                        "silver_tables will BLOCK fail-closed"
                     ),
-                    remedy="the mapping reviewer clears the gate in unresolved-questions.md",
+                    remedy=(
+                        "the mapping reviewer clears the gate in "
+                        "unresolved-questions.md"
+                    ),
                 )
             )
 
@@ -142,7 +165,9 @@ def run_doctor(root: Path) -> list[DoctorFinding]:
             DoctorFinding(
                 id="DAG-DSN-00",
                 severity="info",
-                message="database credentials PRESENT in the environment (value not shown)",
+                message=(
+                    "database credentials PRESENT in the environment (value not shown)"
+                ),
                 remedy="none",
             )
         )

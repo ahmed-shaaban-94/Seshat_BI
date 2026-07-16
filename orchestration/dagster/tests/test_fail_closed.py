@@ -8,16 +8,16 @@ one -- that NOTHING under ``mappings/`` changed (no authored truth).
 
 from __future__ import annotations
 
+from conftest import TABLE, mappings_digest, stub_green_db
 from dagster import materialize
-
 from tower_bi_orchestration import commands
 from tower_bi_orchestration.assets import build_table_assets
 from tower_bi_orchestration.evidence_writer import EvidenceWriter, finalize_run
 
-from conftest import TABLE, mappings_digest, stub_green_db
 
-
-def test_failed_gate_halts_downstream_and_fails_the_run(green_repo, monkeypatch) -> None:
+def test_failed_gate_halts_downstream_and_fails_the_run(
+    green_repo, monkeypatch
+) -> None:
     stub_green_db(monkeypatch)
 
     def failing_gate(argv: list[str], cwd) -> tuple[int, str]:
@@ -34,7 +34,9 @@ def test_failed_gate_halts_downstream_and_fails_the_run(green_repo, monkeypatch)
     )
     assert summary["run_status"] == "failed"
 
-    records = {row["asset"]: row for row in EvidenceWriter(green_repo, "testrun-001").records()}
+    records = {
+        row["asset"]: row for row in EvidenceWriter(green_repo, "testrun-001").records()
+    }
     assert records["source_map"]["outcome"] == "materialized"  # seam was CLEARED
     silver = records["silver_tables"]
     assert silver["outcome"] == "failed"
@@ -76,6 +78,8 @@ def test_green_gates_materialize_through_gold(green_repo, monkeypatch) -> None:
     ]
     result = materialize(through_gold)
     assert result.success is True
-    records = {row["asset"]: row for row in EvidenceWriter(green_repo, "testrun-001").records()}
+    records = {
+        row["asset"]: row for row in EvidenceWriter(green_repo, "testrun-001").records()
+    }
     assert records["gold_tables"]["outcome"] == "materialized"
     assert records["gold_tables"]["exit_code"] == 0

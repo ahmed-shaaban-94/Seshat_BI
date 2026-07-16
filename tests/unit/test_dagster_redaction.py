@@ -30,7 +30,9 @@ class TestRedactText:
         assert "10.1.2.3" not in out
         assert "svc" not in out
 
-    def test_env_secret_values_are_scrubbed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_env_secret_values_are_scrubbed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("DATABASE_URL", "postgresql://u:pw@h:5/d")
         monkeypatch.setenv("ANALYTICS_DB_PASSWORD", "topsecretvalue")
         text = "error: could not use topsecretvalue or postgresql://u:pw@h:5/d"
@@ -47,7 +49,9 @@ class TestRedactText:
 
 
 class TestRedactPayload:
-    def test_nested_payloads_are_scrubbed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_nested_payloads_are_scrubbed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("ANALYTICS_DB_PASSWORD", "deepsecret")
         payload = {
             "message": "auth failed with deepsecret",

@@ -81,7 +81,13 @@ def test_asset_vocabulary_is_the_spec_024_graph(schema: dict) -> None:
 
 
 def test_contract_copy_matches_canonical_schema() -> None:
-    contract = ROOT / "specs" / "134-activate-dagster-mvp" / "contracts" / "dagster-run-evidence.schema.json"
+    contract = (
+        ROOT
+        / "specs"
+        / "134-activate-dagster-mvp"
+        / "contracts"
+        / "dagster-run-evidence.schema.json"
+    )
     assert json.loads(contract.read_text(encoding="utf-8")) == json.loads(
         SCHEMA_PATH.read_text(encoding="utf-8")
     )

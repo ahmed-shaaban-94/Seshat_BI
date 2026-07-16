@@ -113,7 +113,9 @@ class EvidenceWriter:
         if outcome not in OUTCOMES:
             raise ValueError(f"outcome must be an execution word, got: {outcome}")
         if outcome in _HALTED and not (blocking_reason and owner):
-            raise ValueError(f"halted outcome {outcome} requires blocking_reason + owner")
+            raise ValueError(
+                f"halted outcome {outcome} requires blocking_reason + owner"
+            )
         row = redact_payload(
             {
                 "run_id": self.run_id,
@@ -178,7 +180,8 @@ def finalize_run(
             else:
                 reason = (
                     f"upstream STOP edge: {halted_upstream['asset']} "
-                    f"{halted_upstream['outcome']} -- {halted_upstream['blocking_reason']}"
+                    f"{halted_upstream['outcome']} -- "
+                    f"{halted_upstream['blocking_reason']}"
                 )
                 owner = halted_upstream["owner"] or "orchestration owner"
             writer.record(
@@ -234,7 +237,10 @@ def validate_records(summary: dict, records: list[dict]) -> list[str]:
     for key in sorted(set(summary) - _SUMMARY_KEYS):
         errors.append(f"summary: unknown key {key}")
     if summary.get("run_status") not in {"succeeded", "failed"}:
-        errors.append(f"summary: run_status must be succeeded|failed, got {summary.get('run_status')!r}")
+        errors.append(
+            "summary: run_status must be succeeded|failed, "
+            f"got {summary.get('run_status')!r}"
+        )
     if summary.get("trigger") not in _TRIGGERS:
         errors.append(f"summary: trigger must be one of {sorted(_TRIGGERS)}")
     if not _SHA_RE.match(str(summary.get("commit_sha", ""))):
@@ -256,7 +262,9 @@ def validate_records(summary: dict, records: list[dict]) -> list[str]:
             )
         if row.get("outcome") in _HALTED:
             if not row.get("blocking_reason") or not row.get("owner"):
-                errors.append(f"{label}: halted outcome requires blocking_reason + owner")
+                errors.append(
+                    f"{label}: halted outcome requires blocking_reason + owner"
+                )
         for key in _score_keys(row):
             errors.append(f"{label}: score-like key forbidden (hard rule #9): {key}")
     return errors
@@ -267,7 +275,10 @@ def load_run(root: Path, run_id: str) -> tuple[dict, list[dict]]:
     summary_path = directory / "summary.json"
     records_path = directory / "records.jsonl"
     if not summary_path.is_file() or not records_path.is_file():
-        raise FileNotFoundError(f"run {run_id} has no summary.json/records.jsonl under .seshat/dagster/runs/")
+        raise FileNotFoundError(
+            f"run {run_id} has no summary.json/records.jsonl "
+            "under .seshat/dagster/runs/"
+        )
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     records = [
         json.loads(line)
@@ -328,8 +339,12 @@ def render_markdown(summary: dict, records: list[dict]) -> str:
     lines.append("")
     lines.append("## Per-asset results")
     lines.append("")
-    lines.append("| # | Table | Asset | Gate command | Exit code | Measured | Outcome |")
-    lines.append("|---|-------|-------|--------------|-----------|----------|---------|")
+    lines.append(
+        "| # | Table | Asset | Gate command | Exit code | Measured | Outcome |"
+    )
+    lines.append(
+        "|---|-------|-------|--------------|-----------|----------|---------|"
+    )
     ordered = sorted(
         records,
         key=lambda row: (row["table"], ASSET_ORDER.index(row["asset"])),
@@ -347,8 +362,12 @@ def render_markdown(summary: dict, records: list[dict]) -> str:
     lines.append("## Blocked / skipped assets")
     lines.append("")
     if halted:
-        lines.append("| Table | Asset | Blocking reason | Named owner who can clear it |")
-        lines.append("|-------|-------|-----------------|------------------------------|")
+        lines.append(
+            "| Table | Asset | Blocking reason | Named owner who can clear it |"
+        )
+        lines.append(
+            "|-------|-------|-----------------|------------------------------|"
+        )
         for row in halted:
             lines.append(
                 f"| `{row['table']}` | `{row['asset']}` | {row['blocking_reason']} "
@@ -359,7 +378,9 @@ def render_markdown(summary: dict, records: list[dict]) -> str:
     lines.append("")
     lines.append("## What this run did NOT write (the no-authored-truth attestation)")
     lines.append("")
-    lines.append("- [x] No `readiness-status.yaml` stage `status` was changed by this run.")
+    lines.append(
+        "- [x] No `readiness-status.yaml` stage `status` was changed by this run."
+    )
     lines.append("- [x] No `Gate status: CLEARED` was written by this run.")
     lines.append("- [x] No `approvals[]` entry was added by this run.")
     lines.append(
@@ -389,5 +410,7 @@ def write_run_evidence(root: Path, run_id: str) -> Path:
         raise ValueError(f"invalid run evidence for {run_id}: {detail}")
     out_path = evidence_out_path(root, run_id)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(render_markdown(summary, records), encoding="utf-8", newline="\n")
+    out_path.write_text(
+        render_markdown(summary, records), encoding="utf-8", newline="\n"
+    )
     return out_path

@@ -24,8 +24,8 @@ UNRESOLVED_CLEARED = """# Unresolved questions -- `demo_table`
 
 ## Open questions (the build is blocked until these are `answered`)
 
-| ID | Question | Why it blocks | Who must answer | Proposed default (if unanswered) | Status | Resolution |
-|----|----------|---------------|-----------------|----------------------------------|--------|------------|
+| ID | Question | Why it blocks | Who answers | Default | Status | Resolution |
+|----|----------|---------------|-------------|---------|--------|------------|
 | Q1 | A question? | It blocks. | analyst | default | `answered` | resolved 2026-01-01 |
 | Q2 | Another? | It blocks. | governance | default | `answered` | resolved 2026-01-01 |
 """
@@ -37,8 +37,8 @@ UNRESOLVED_OPEN = """# Unresolved questions -- `demo_table`
 
 ## Open questions (the build is blocked until these are `answered`)
 
-| ID | Question | Why it blocks | Who must answer | Proposed default (if unanswered) | Status | Resolution |
-|----|----------|---------------|-----------------|----------------------------------|--------|------------|
+| ID | Question | Why it blocks | Who answers | Default | Status | Resolution |
+|----|----------|---------------|-------------|---------|--------|------------|
 | Q1 | A question? | It blocks. | analyst | default | `answered` | resolved |
 | Q2 | Another? | It blocks. | governance | default | `open` | |
 | Q3 | Third? | It blocks. | analyst | default | `open` | |
@@ -62,7 +62,9 @@ approvals:
 """
 
 
-def _make_table(root: Path, table: str, unresolved: str, publish_status: str = "not_started") -> None:
+def _make_table(
+    root: Path, table: str, unresolved: str, publish_status: str = "not_started"
+) -> None:
     tdir = root / "mappings" / table
     tdir.mkdir(parents=True)
     (tdir / "unresolved-questions.md").write_text(unresolved, encoding="utf-8")
@@ -107,7 +109,9 @@ class TestReadGateState:
         state = gate.read_gate_state(tmp_path, "demo_table")
         assert state.publish_ready == "pass"
 
-    def test_silver_permitted_only_when_cleared_and_zero_open(self, tmp_path: Path) -> None:
+    def test_silver_permitted_only_when_cleared_and_zero_open(
+        self, tmp_path: Path
+    ) -> None:
         _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
         assert gate.read_gate_state(tmp_path, "demo_table").silver_permitted is True
         other = tmp_path / "other"
@@ -139,16 +143,16 @@ class TestReadOnlyGuarantee:
         for name, obj in inspect.getmembers(gate, inspect.isfunction):
             if name.startswith("_"):
                 continue
-            assert not name.startswith(("write", "set_", "update", "clear", "approve", "grant")), (
-                f"gate module exposes a mutating function: {name}"
-            )
+            assert not name.startswith(
+                ("write", "set_", "update", "clear", "approve", "grant")
+            ), f"gate module exposes a mutating function: {name}"
 
     def test_module_source_never_writes_files(self) -> None:
         source = inspect.getsource(gate)
         assert ".write_text(" not in source
         assert ".write_bytes(" not in source
         assert "yaml.dump" not in source
-        assert 'open(' not in source.replace("read_text(", "")
+        assert "open(" not in source.replace("read_text(", "")
 
     def test_gate_state_is_immutable(self, tmp_path: Path) -> None:
         _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)

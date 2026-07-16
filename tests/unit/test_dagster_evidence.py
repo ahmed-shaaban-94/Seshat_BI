@@ -106,9 +106,9 @@ class TestRenderMarkdown:
         assert "## Blocked / skipped assets" in first
         assert "warehouse owner" in first
         assert "## What this run did NOT write" in first
-        assert "pass" not in first.split("## Per-asset results")[1].split("##")[0].replace(
-            "n/a -- did not run", ""
-        ).replace("did not run", "")
+        assert "pass" not in first.split("## Per-asset results")[1].split("##")[
+            0
+        ].replace("n/a -- did not run", "").replace("did not run", "")
 
     def test_rendered_outcomes_are_execution_words(self) -> None:
         text = evidence.render_markdown(_summary(), [_record()])
@@ -131,7 +131,10 @@ class TestWriteRunEvidence:
             tmp_path, "run-001", ["demo_table"], started="2026-07-17T00:00:00Z"
         )
         out = evidence.write_run_evidence(tmp_path, "run-001")
-        assert out == tmp_path / "orchestration" / "dagster" / "run-evidence" / "run-001.md"
+        assert (
+            out
+            == tmp_path / "orchestration" / "dagster" / "run-evidence" / "run-001.md"
+        )
         assert out.is_file()
         assert "# Dagster Run Evidence -- `run-001`" in out.read_text(encoding="utf-8")
 
@@ -142,9 +145,7 @@ class TestWriteRunEvidence:
             '{"run_id": "run-002", "asset": "source_map", "outcome": "pass"}\n',
             encoding="utf-8",
         )
-        (run_dir / "summary.json").write_text(
-            '{"run_id": "run-002"}', encoding="utf-8"
-        )
+        (run_dir / "summary.json").write_text('{"run_id": "run-002"}', encoding="utf-8")
         with pytest.raises(ValueError, match="invalid run evidence"):
             evidence.write_run_evidence(tmp_path, "run-002")
 

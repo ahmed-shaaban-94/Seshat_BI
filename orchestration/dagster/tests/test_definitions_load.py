@@ -3,11 +3,9 @@ and BOTH automations shipped STOPPED -- and the pinned pair is consistent."""
 
 from __future__ import annotations
 
-from dagster import DefaultScheduleStatus, DefaultSensorStatus
-
-from tower_bi_orchestration.definitions import build_definitions
-
 from conftest import make_fixture_repo
+from dagster import DefaultScheduleStatus, DefaultSensorStatus
+from tower_bi_orchestration.definitions import build_definitions
 
 
 def test_definitions_load_with_full_graph(tmp_path, monkeypatch) -> None:
@@ -15,7 +13,9 @@ def test_definitions_load_with_full_graph(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SESHAT_REPO_ROOT", str(root))
     defs = build_definitions(root)
     asset_names = {
-        key.path[-1] for asset in defs.assets for key in asset.keys  # type: ignore[union-attr]
+        key.path[-1]
+        for asset in defs.assets
+        for key in asset.keys  # type: ignore[union-attr]
     }
     assert asset_names == {
         "raw_source_file",
@@ -35,7 +35,9 @@ def test_definitions_load_with_full_graph(tmp_path, monkeypatch) -> None:
     assert {"full_sequence_job", "through_gold_job"} <= job_names
 
 
-def test_exactly_one_schedule_and_one_sensor_both_stopped(tmp_path, monkeypatch) -> None:
+def test_exactly_one_schedule_and_one_sensor_both_stopped(
+    tmp_path, monkeypatch
+) -> None:
     root = make_fixture_repo(tmp_path)
     monkeypatch.setenv("SESHAT_REPO_ROOT", str(root))
     defs = build_definitions(root)

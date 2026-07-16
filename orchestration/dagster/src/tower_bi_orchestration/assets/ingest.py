@@ -33,7 +33,10 @@ def build_ingest_assets(table: str, root: Path) -> list:
                 exit_code=None,
                 measured={},
                 outcome="failed",
-                reason=f"raw landing file not found: {path.name} (landing dir absent or empty)",
+                reason=(
+                    f"raw landing file not found: {path.name} "
+                    "(landing dir absent or empty)"
+                ),
                 owner="data owner",
             )
         writer.record(
@@ -94,8 +97,11 @@ def build_ingest_assets(table: str, root: Path) -> list:
                 exit_code=None,
                 measured={},
                 outcome="blocked",
-                reason=f"committed source profile absent: mappings/{table}/source-profile.md "
-                "(Stage-1 onboarding not done)",
+                reason=(
+                    f"committed source profile absent: "
+                    f"mappings/{table}/source-profile.md "
+                    "(Stage-1 onboarding not done)"
+                ),
                 owner="table onboarder",
             )
         writer.record(

@@ -21,7 +21,9 @@ def build_jobs(tables: list[str]) -> list:
     full_sequence_job = define_asset_job(
         name="full_sequence_job",
         selection=AssetSelection.all(),
-        description="All eleven medallion assets (plus live validate) for every mapped table.",
+        description=(
+            "All eleven medallion assets (plus live validate) for every mapped table."
+        ),
     )
     through_gold_keys = [
         AssetKey([table, name]) for table in tables for name in THROUGH_GOLD_ASSETS
@@ -31,6 +33,9 @@ def build_jobs(tables: list[str]) -> list:
         selection=AssetSelection.assets(*through_gold_keys)
         if through_gold_keys
         else AssetSelection.all(),
-        description="Ingest -> gates -> gold -> live validate; stops before the semantic/publish tail.",
+        description=(
+            "Ingest -> gates -> gold -> live validate; stops before the "
+            "semantic/publish tail."
+        ),
     )
     return [full_sequence_job, through_gold_job]

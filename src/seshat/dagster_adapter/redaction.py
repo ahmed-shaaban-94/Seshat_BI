@@ -25,7 +25,11 @@ def _secret_env_values() -> list[str]:
     for key, value in os.environ.items():
         if len(value) < 4:
             continue
-        if key == "DATABASE_URL" or key.startswith("ANALYTICS_DB_") or _SECRET_ENV_RE.search(key):
+        if (
+            key == "DATABASE_URL"
+            or key.startswith("ANALYTICS_DB_")
+            or _SECRET_ENV_RE.search(key)
+        ):
             values.append(value)
     # Longest first so substrings of longer secrets do not survive partially.
     return sorted(values, key=len, reverse=True)

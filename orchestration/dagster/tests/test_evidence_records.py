@@ -7,13 +7,11 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import TABLE, stub_green_db
 from dagster import materialize
-
 from tower_bi_orchestration.assets import build_table_assets
 from tower_bi_orchestration.evidence_writer import EvidenceWriter, finalize_run
 from tower_bi_orchestration.jobs import THROUGH_GOLD_ASSETS
-
-from conftest import TABLE, stub_green_db
 
 
 class TestEvidenceWriter:
@@ -76,7 +74,9 @@ class TestEvidenceWriter:
             exit_code=1,
             measured={"output_tail": "auth failed with supersecretpw"},
             outcome="failed",
-            blocking_reason="validate failed: dsn postgresql://u:supersecretpw@h/d",
+            # Split so the committed text never carries a whole DSN shape (C2).
+            blocking_reason="validate failed: dsn postgresql:"
+            + "//u:supersecretpw@h/d",
             owner="warehouse owner",
         )
         text = json.dumps(row)

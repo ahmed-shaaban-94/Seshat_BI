@@ -76,12 +76,16 @@ class TestExecuteRun:
         monkeypatch.setattr(
             runner.subprocess,
             "run",
-            lambda argv, **kwargs: subprocess.CompletedProcess(argv, 1, stdout="", stderr="boom"),
+            lambda argv, **kwargs: subprocess.CompletedProcess(
+                argv, 1, stdout="", stderr="boom"
+            ),
         )
         result = runner.execute_run(root, "full_sequence_job")
         assert result.exit_code == 1
 
-    def test_output_is_redacted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_output_is_redacted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         root = _fake_repo(tmp_path)
         monkeypatch.setattr(
             runner.subprocess,
@@ -94,6 +98,8 @@ class TestExecuteRun:
         assert "pw@h" not in result.output
         assert "[REDACTED-DSN]" in result.output
 
-    def test_missing_orchestration_env_raises_runner_error(self, tmp_path: Path) -> None:
+    def test_missing_orchestration_env_raises_runner_error(
+        self, tmp_path: Path
+    ) -> None:
         with pytest.raises(runner.RunnerError, match="orchestration environment"):
             runner.execute_run(tmp_path, "full_sequence_job")

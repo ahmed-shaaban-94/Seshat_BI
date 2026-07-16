@@ -31,7 +31,9 @@ class TestParserRegistration:
         assert args.dagster_cmd == "run"
         assert args.job == "through_gold_job"
         assert args.table == "demo_table"
-        args = parser.parse_args(["dagster", "evidence", "--run-id", "run-001", "--json"])
+        args = parser.parse_args(
+            ["dagster", "evidence", "--run-id", "run-001", "--json"]
+        )
         assert args.dagster_cmd == "evidence"
         assert args.run_id == "run-001"
         assert args.as_json is True
@@ -75,7 +77,9 @@ class TestEvidenceExitCodes:
     def test_no_runs_lists_nothing_and_exits_0(self, tmp_path: Path, capsys) -> None:
         from seshat.cli.commands.dagster import dagster_main
 
-        code = dagster_main(_args(dagster_cmd="evidence", repo=str(tmp_path), run_id=None))
+        code = dagster_main(
+            _args(dagster_cmd="evidence", repo=str(tmp_path), run_id=None)
+        )
         assert code == 0
         assert "no runs" in capsys.readouterr().out.lower()
 
@@ -93,7 +97,12 @@ class TestRunExitCodes:
         from seshat.cli.commands.dagster import dagster_main
 
         code = dagster_main(
-            _args(dagster_cmd="run", repo=str(tmp_path), job="full_sequence_job", table=None)
+            _args(
+                dagster_cmd="run",
+                repo=str(tmp_path),
+                job="full_sequence_job",
+                table=None,
+            )
         )
         assert code == 2
 
@@ -126,7 +135,12 @@ class TestRunExitCodes:
             lambda root, run_id: calls.setdefault("rendered", Path("run-x.md")),
         )
         code = dagster_main(
-            _args(dagster_cmd="run", repo=str(tmp_path), job="full_sequence_job", table=None)
+            _args(
+                dagster_cmd="run",
+                repo=str(tmp_path),
+                job="full_sequence_job",
+                table=None,
+            )
         )
         assert code == 3
         assert calls["finalized"] == "run-x"
@@ -157,6 +171,11 @@ class TestRunExitCodes:
             evidence, "write_run_evidence", lambda root, run_id: Path("run-y.md")
         )
         code = dagster_main(
-            _args(dagster_cmd="run", repo=str(tmp_path), job="full_sequence_job", table=None)
+            _args(
+                dagster_cmd="run",
+                repo=str(tmp_path),
+                job="full_sequence_job",
+                table=None,
+            )
         )
         assert code == 0

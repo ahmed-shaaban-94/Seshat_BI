@@ -27,17 +27,27 @@ UNRESOLVED = """- **Gate status:** `{status}`
 """
 
 
-def _repo(tmp_path: Path, *, orchestration: bool = True, venv: bool = True,
-          pyproject: str = GOOD_PYPROJECT, gate_status: str = "CLEARED") -> Path:
+def _repo(
+    tmp_path: Path,
+    *,
+    orchestration: bool = True,
+    venv: bool = True,
+    pyproject: str = GOOD_PYPROJECT,
+    gate_status: str = "CLEARED",
+) -> Path:
     root = tmp_path / "repo"
     tdir = root / "mappings" / "demo_table"
     tdir.mkdir(parents=True)
     (tdir / "source-map.yaml").write_text("table: demo\n", encoding="utf-8")
     (tdir / "unresolved-questions.md").write_text(
-        UNRESOLVED.format(status=gate_status, q="answered" if gate_status == "CLEARED" else "open"),
+        UNRESOLVED.format(
+            status=gate_status, q="answered" if gate_status == "CLEARED" else "open"
+        ),
         encoding="utf-8",
     )
-    (tdir / "readiness-status.yaml").write_text("stages: {}\napprovals: []\n", encoding="utf-8")
+    (tdir / "readiness-status.yaml").write_text(
+        "stages: {}\napprovals: []\n", encoding="utf-8"
+    )
     if orchestration:
         orch = root / "orchestration" / "dagster"
         orch.mkdir(parents=True)
