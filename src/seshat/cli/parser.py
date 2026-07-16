@@ -957,6 +957,54 @@ def _add_doctor_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_dagster_parser(sub: argparse._SubParsersAction) -> None:
+    """`dagster`: the orchestration-adapter family (spec 134). Three verbs,
+    closed argument set; exit codes 0..4 per the committed CLI contract."""
+    dagster_p = sub.add_parser(
+        "dagster",
+        help="Dagster orchestration adapter: doctor / run / evidence (spec 134)",
+    )
+    dagster_sub = dagster_p.add_subparsers(dest="dagster_cmd", required=True)
+
+    doctor_p = dagster_sub.add_parser(
+        "doctor", help="read-only preflight: environment, pinned pair, gate state"
+    )
+    doctor_p.add_argument("--repo", default=".", help="repo root to inspect")
+    doctor_p.add_argument(
+        "--json", dest="as_json", action="store_true", help="machine-readable findings"
+    )
+
+    run_p = dagster_sub.add_parser(
+        "run", help="execute one orchestration job behind the gates (fail-closed)"
+    )
+    run_p.add_argument("--repo", default=".", help="repo root to run against")
+    run_p.add_argument(
+        "--job",
+        required=True,
+        choices=("full_sequence_job", "through_gold_job"),
+        help="the closed job vocabulary (no raw dagster arguments are accepted)",
+    )
+    run_p.add_argument(
+        "--table",
+        default=None,
+        help="scope the run to one mapped table (via the discovery seam, never argv)",
+    )
+    run_p.add_argument(
+        "--json", dest="as_json", action="store_true", help="machine-readable result"
+    )
+
+    evidence_p = dagster_sub.add_parser(
+        "evidence", help="list runs or render a run's committed evidence markdown"
+    )
+    evidence_p.add_argument("--repo", default=".", help="repo root to read")
+    evidence_p.add_argument(
+        "--run-id", dest="run_id", default=None, help="render this run's evidence"
+    )
+    evidence_p.add_argument(
+        "--json", dest="as_json", action="store_true", help="machine-readable output"
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -1006,6 +1054,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_impact_map_parser(sub)
     _add_agent_parser(sub)
     _add_watch_parser(sub)
+    _add_dagster_parser(sub)
     _add_mcp_parser(sub)
 
     return parser
