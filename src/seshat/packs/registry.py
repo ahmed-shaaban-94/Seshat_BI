@@ -21,6 +21,7 @@ from typing import Any
 
 from ..artifact_identity import canonical_relative_path, resolve_within
 from ..ecosystem_contracts import validate_json_contract
+from . import resolve_schema_path
 
 # Categorical vocabulary only -- never a numeric score, rank, or percentage
 # (hard-stop never_fabricate_a_confidence_score; FR-015).
@@ -28,9 +29,7 @@ VERIFICATION_STATES = ("reviewed", "unreviewed", "deprecated")
 
 DEFAULT_REGISTRY_PATH = "packs/registry/index.yaml"
 
-_SCHEMA_PATH = Path(__file__).resolve().parents[3] / (
-    "schemas/seshat-pack-registry.schema.json"
-)
+_SCHEMA_PATH = resolve_schema_path("seshat-pack-registry.schema.json")
 
 
 class RegistryError(ValueError):

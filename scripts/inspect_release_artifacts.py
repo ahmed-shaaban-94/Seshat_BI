@@ -116,6 +116,26 @@ def _reject_development_paths(paths: list[PurePosixPath]) -> None:
         )
 
 
+_REQUIRED_WHEEL_PACKAGE_DATA = (
+    "seshat/packs/schemas/seshat-extension-pack.schema.json",
+    "seshat/packs/schemas/seshat-pack-registry.schema.json",
+)
+
+
+def _require_wheel_package_data(names: list[str]) -> None:
+    """Runtime data files the ``pack`` command family reads at call time. Their
+    canonical home is the repo-root ``schemas/`` directory (outside ``src/``),
+    so they reach the wheel ONLY via ``force-include``. A dropped force-include
+    entry would silently reintroduce the clean-install ``FileNotFoundError`` the
+    ``pack`` family had -- fail loud here instead."""
+    present = set(names)
+    missing = [asset for asset in _REQUIRED_WHEEL_PACKAGE_DATA if asset not in present]
+    if missing:
+        raise ArtifactInspectionError(
+            f"wheel is missing required package data: {missing}"
+        )
+
+
 def _require_wheel_entry_points(names: list[str]) -> None:
     if not any(name.endswith(".dist-info/entry_points.txt") for name in names):
         raise ArtifactInspectionError("wheel is missing console entry-point metadata")
@@ -132,6 +152,7 @@ def validate_wheel_inventory(names: Iterable[str]) -> None:
     _require_wheel_package(paths, "seshat")
     _require_wheel_package(paths, "retail")
     _reject_development_paths(paths)
+    _require_wheel_package_data(members)
     _require_wheel_entry_points(members)
     _require_wheel_license(members)
 
