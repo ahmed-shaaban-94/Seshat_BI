@@ -61,3 +61,14 @@ claims:
     anchor: "`../../templates/kpi-sufficiency-card.md` (categorical `ready`/`blocked` + named"
     claimed-artifact: "templates/kpi-sufficiency-card.md"
     claimed-status: "built"
+
+  # The Claude Code plugin bundle is generated and committed (its manifest is the
+  # capability-inventory ship feeder for `claude-code-plugin`). Lock the distribution
+  # source-map's "generated Claude Code plugin" claim against the committed plugin
+  # manifest so the bundle can never be deleted while the inventory still records the
+  # plugin as shipped.
+  - id: "claude-code-plugin-bundle-built"
+    doc: "distribution/README.md"
+    anchor: "`integrations/claude-code/seshat-bi/` is the generated Claude Code plugin."
+    claimed-artifact: "integrations/claude-code/seshat-bi/.claude-plugin/plugin.json"
+    claimed-status: "built"

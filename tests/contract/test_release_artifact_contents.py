@@ -51,6 +51,8 @@ def test_wheel_inventory_requires_packages_entrypoints_and_license() -> None:
     valid = [
         "seshat/__init__.py",
         "retail/__init__.py",
+        "seshat/packs/schemas/seshat-extension-pack.schema.json",
+        "seshat/packs/schemas/seshat-pack-registry.schema.json",
         "seshat_bi-0.2.0.dist-info/entry_points.txt",
         "seshat_bi-0.2.0.dist-info/licenses/LICENSE",
     ]
@@ -62,6 +64,24 @@ def test_wheel_inventory_requires_packages_entrypoints_and_license() -> None:
     ]
     with pytest.raises(ArtifactInspectionError, match="entry-point"):
         validate_wheel_inventory(disguised_entry_points)
+
+
+def test_wheel_inventory_requires_pack_runtime_schemas() -> None:
+    """The `pack` family reads these schemas at runtime; they reach the wheel
+    only via force-include, so a dropped entry must fail the artifact gate
+    rather than silently reintroduce the clean-install FileNotFoundError."""
+    base = [
+        "seshat/__init__.py",
+        "retail/__init__.py",
+        "seshat/packs/schemas/seshat-extension-pack.schema.json",
+        "seshat/packs/schemas/seshat-pack-registry.schema.json",
+        "seshat_bi-0.2.0.dist-info/entry_points.txt",
+        "seshat_bi-0.2.0.dist-info/licenses/LICENSE",
+    ]
+    validate_wheel_inventory(base)
+    without_schema = [n for n in base if "seshat-pack-registry.schema.json" not in n]
+    with pytest.raises(ArtifactInspectionError, match="required package data"):
+        validate_wheel_inventory(without_schema)
 
 
 def test_sdist_inventory_is_rebuildable_without_repo_integrations() -> None:

@@ -22,6 +22,7 @@ from typing import Any, Iterable
 from ..artifact_identity import resolve_within
 from ..disclosure import scan_disclosure
 from ..ecosystem_contracts import validate_json_contract
+from . import resolve_schema_path
 from .loader import load_pack_document
 from .model import PackError, PackManifest, manifest_from_document
 
@@ -48,9 +49,7 @@ _UNIVERSAL_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SCHEMA_PATH = Path(__file__).resolve().parents[3] / (
-    "schemas/seshat-extension-pack.schema.json"
-)
+_SCHEMA_PATH = resolve_schema_path("seshat-extension-pack.schema.json")
 
 
 def _finding(rule: str, locator: str, message: str) -> dict[str, str]:

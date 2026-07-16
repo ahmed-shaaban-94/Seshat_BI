@@ -122,6 +122,13 @@ packages = ["src/seshat", "src/retail"]
 "mappings/demo_sample_orders" = "seshat/demo/resources/demo_sample_orders"
 "tests/fixtures/demo/demo_sample_orders.csv" = "seshat/demo/resources/demo_sample_orders.csv"
 "assets/brand/seshat-seven-star.svg" = "seshat/demo/resources/seshat-seven-star.svg"
+# The `pack` command family reads these JSON schemas at runtime. Their canonical
+# home is the repo-root `schemas/` dir (not under `src/`), so a bare wheel would
+# not ship them and `pack validate`/`search`/`inspect`/`add` crashed with
+# FileNotFoundError on any non-editable install. Force-include a copy under the
+# package so `packs.resolve_schema_path` finds them in an installed layout.
+"schemas/seshat-extension-pack.schema.json" = "seshat/packs/schemas/seshat-extension-pack.schema.json"
+"schemas/seshat-pack-registry.schema.json" = "seshat/packs/schemas/seshat-pack-registry.schema.json"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -129,6 +136,11 @@ include = [
     "/mappings/demo_sample_orders",
     "/tests/fixtures/demo/demo_sample_orders.csv",
     "/assets/brand/seshat-seven-star.svg",
+    # Runtime schemas the `pack` family reads (see the wheel force-include note).
+    # The sdist must carry them so the wheel (built from the sdist) can
+    # force-include them into the package.
+    "/schemas/seshat-extension-pack.schema.json",
+    "/schemas/seshat-pack-registry.schema.json",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",

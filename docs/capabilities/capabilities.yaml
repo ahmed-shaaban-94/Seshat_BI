@@ -1014,6 +1014,20 @@ capabilities:
         - "speckit-git-validate"
         - "speckit-git-commit"
 
+  - id: claude-code-plugin
+    name: "Claude Code plugin & commands"
+    summary: "The generated Claude Code plugin bundle (seshat-bi router skill, five reviewed knowledge skills, and the four namespaced /seshat-bi:* commands), committed under integrations/claude-code/ with a plugin manifest and a repo-root marketplace entry. Built and locally verified; external catalog publication remains an owner action, so provenance is not publicly-released."
+    state: shipped
+    authority: advisory
+    surface: plugin
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: not-stage-scoped
+    command: null
+    documentation: "docs/install/agent-install.md"
+    references:
+      status_claims: "claude-code-plugin-bundle-built"
+
   # ---------------------------------------------------------------------------
   # Human-gated
   # ---------------------------------------------------------------------------
@@ -1150,19 +1164,6 @@ capabilities:
     readiness_stage: not-stage-scoped
     command: null
     documentation: "specs/044-kpi-derivation-lineage/spec.md"
-    references: {}
-
-  - id: claude-code-plugin
-    name: "Claude Code plugin & commands"
-    summary: "A packaged Claude Code plugin distribution of this kit's skills/commands. No plugin manifest is committed on this branch, so it cannot be recorded shipped or released."
-    state: spec-only
-    authority: advisory
-    surface: plugin
-    requirements: []
-    provenance: unrecorded
-    readiness_stage: not-stage-scoped
-    command: null
-    documentation: "docs/roadmap/seshat-bi-agent-controlled-user-tool-roadmap.md"
     references: {}
 
   - id: showcase-build
