@@ -67,6 +67,24 @@ def test_supported_project_is_inventory_only_deterministic_and_byte_identical(
     assert first["scaffold_plan"]["approvals"] == []
 
 
+def test_subfolder_pbip_project_is_discovered_from_governance_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    shutil.copytree(FIXTURES / "supported", root / "powerbi")
+    assessment = assess_pbip(root)
+    assert not any(fact["id"] == "missing:pbip-project" for fact in assessment["facts"])
+    kinds = {component["kind"] for component in assessment["target"]["components"]}
+    assert {"project", "semantic_model", "report", "table"} <= kinds
+    project = next(
+        component
+        for component in assessment["target"]["components"]
+        if component["kind"] == "project"
+    )
+    assert project["artifact"] == "powerbi/Adoption.pbip"
+
+
 def test_missing_model_and_multi_model_remain_explicit_boundaries(
     tmp_path: Path,
 ) -> None:
