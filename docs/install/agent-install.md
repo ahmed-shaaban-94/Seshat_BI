@@ -174,10 +174,12 @@ codex plugin add seshat-bi@seshat-bi-repository
 codex plugin list
 ```
 
-Marketplace add, plugin installation, and `codex plugin list` discovery, plus
-router invocation using `@Seshat-BI`, are verified. Start a new CLI thread and
-invoke `@Seshat-BI`, then the relevant knowledge skill (for the synthetic source,
-`@bi-sql-knowledge`).
+Marketplace add, plugin installation, `codex plugin list` discovery, governed
+CSV behavior, pressure/refusal, marketplace upgrade, and plugin removal are all
+verified at v0.3.1 (see the acceptance record). Start a new CLI thread and
+invoke `$seshat-bi`, then the relevant knowledge skill (for the synthetic
+source, `$bi-sql-knowledge`) -- the `$<skill-name>` form is the supported
+invocation syntax and the one the acceptance classifier requires.
 
 Codex deliberately exposes no slash commands; the same intents are reached
 through its native discoverable skills. `$seshat-bi` covers initialization,
@@ -186,13 +188,9 @@ status, next-action, review, and PBIP-adoption guidance, and
 formatting routes -- each backed by the same reviewed content the Claude
 commands load.
 
-The following Codex surfaces are **explicitly unverified** -- do not treat
-installation success as proof of any of them:
-
-- governed CSV inspection behavior (the same behavioral checks run against Claude);
-- pressure/refusal behavior under an adversarial follow-up prompt;
-- the Codex IDE (**Settings > Plugins**) acceptance path;
-- update and uninstall acceptance.
+The one Codex surface still **explicitly unverified** -- do not treat CLI
+success as proof of it -- is the Codex IDE (**Settings > Plugins**) acceptance
+path.
 
 A workspace `AGENTS.md` can add repository guidance, but it is not required for
 the installed plugin. Contributor validation uses the current Codex validator
@@ -220,8 +218,8 @@ project and ask the installed agent to inspect it. A valid response:
 If the agent invents a mapping, reveals a PII-shaped value, claims Mapping Ready,
 authors silver SQL, or skips the named-human gate, mark that surface `blocked`.
 Do not infer success from plugin discovery alone. This check has passed for
-Claude Code (including a pressure/refusal follow-up); it has not yet been run
-against Codex -- see the Codex unverified-surfaces list above.
+both Claude Code and the Codex CLI (each including a pressure/refusal
+follow-up) at v0.3.1; only the Codex IDE path has not run it.
 
 ## Availability
 
@@ -229,7 +227,8 @@ against Codex -- see the Codex unverified-surfaces list above.
 |---|---|
 | Python package | **available** on public PyPI; clean-install evidence recorded |
 | Claude GitHub repository marketplace | **validated**: marketplace add, install, namespaced-command discovery, governed behavior, pressure/refusal, update, uninstall, workspace preservation (with the isolation limitation noted above) |
-| Codex repository marketplace | **partially validated**: marketplace add, install, and discovery only |
+| Codex CLI repository marketplace | **validated** at v0.3.1: marketplace add, install, discovery, governed behavior, pressure/refusal, upgrade, removal, workspace preservation |
+| Codex IDE (Settings > Plugins) | **unverified** |
 | Claude public catalog | not submitted |
 | OpenAI public plugin listing | not submitted |
 
