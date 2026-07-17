@@ -261,6 +261,22 @@ def _append_model(root: Path, subdir: str, model_yaml: str) -> None:
     (model_dir / "_models.yml").write_text(model_yaml, encoding="utf-8")
 
 
+def _write_mapping_working_set(root: Path, table_id: str, complete: bool = True) -> None:
+    """Write a table's mapping dir. complete=True writes the full 3-file working set
+    (source-map + readiness-status + unresolved-questions) that resolve_working_set
+    requires; complete=False omits unresolved-questions.md (a partial mapping)."""
+    mapping = root / "mappings" / table_id
+    mapping.mkdir(parents=True, exist_ok=True)
+    (mapping / "source-map.yaml").write_text(
+        f"meta:\n  table_id: {table_id}\n", encoding="utf-8"
+    )
+    (mapping / "readiness-status.yaml").write_text("stages: {}\n", encoding="utf-8")
+    if complete:
+        (mapping / "unresolved-questions.md").write_text(
+            "Gate status: CLEARED\n", encoding="utf-8"
+        )
+
+
 def _tagged_model_yaml(name: str, tag: str, table_id: str) -> str:
     return "\n".join(
         [
@@ -320,13 +336,10 @@ def test_model_for_another_governed_table_is_out_of_scope(tmp_path: Path) -> Non
     from seshat.dbt.project import validate_project
 
     working_set = _write_project(tmp_path)  # validating table = orders
-    # A second real governed table "widgets" with its own mapping working set.
-    widgets = tmp_path / "mappings/widgets"
-    widgets.mkdir(parents=True, exist_ok=True)
-    (widgets / "source-map.yaml").write_text(
-        "meta:\n  table_id: widgets\n", encoding="utf-8"
-    )
-    (widgets / "readiness-status.yaml").write_text("stages: {}\n", encoding="utf-8")
+    # A second real governed table "widgets" with a COMPLETE working set (all 3
+    # files) -- so it can actually be validated on its own, which is what makes
+    # skipping its models here safe.
+    _write_mapping_working_set(tmp_path, "widgets", complete=True)
     _append_model(
         tmp_path,
         "staging/widgets",
@@ -337,6 +350,85 @@ def test_model_for_another_governed_table_is_out_of_scope(tmp_path: Path) -> Non
 
     # orders is fully valid; the widgets model neither validated here nor flagged.
     assert result.valid is True, [b.code for b in result.blocking_reasons]
+
+
+def test_model_for_partial_mapping_table_is_orphan_rejected(tmp_path: Path) -> None:
+    """A model tagged for a table whose mapping is INCOMPLETE must block, not skip.
+
+    Regression for a partition hole: a table with source-map + readiness-status but
+    no unresolved-questions.md cannot be validated (resolve_working_set requires all
+    three). If such a table counted as "governed" for the skip decision, its models
+    would be skipped under the current table AND never checked under their own
+    (validation always fails there), escaping every citation/contract/orphan check.
+    The governed bar must match resolve_working_set's 3-file bar exactly.
+    """
+    from seshat.dbt.project import validate_project
+
+    working_set = _write_project(tmp_path)  # validating table = orders
+    # "widgets" is only PARTIALLY mapped (missing unresolved-questions.md).
+    _write_mapping_working_set(tmp_path, "widgets", complete=False)
+    _append_model(
+        tmp_path,
+        "staging/widgets",
+        _tagged_model_yaml("stg_widgets", "seshat_table_widgets", "widgets"),
+    )
+
+    result = validate_project(tmp_path, working_set)
+
+    assert result.valid is False
+    assert "DBT_MODEL_ORPHANED" in {b.code for b in result.blocking_reasons}
+
+
+def test_model_tag_from_other_table_but_contract_cites_current_is_validated(
+    tmp_path: Path,
+) -> None:
+    """A model tagged for another table but whose contract cites THIS table is
+    validated here (and its tag/contract mismatch caught), never silently skipped.
+
+    Regression for the second partition hole: attributing by tag alone would skip a
+    model whose selector tag was copied from another real governed table, even
+    though its meta.seshat.table_id still cites the table under validation. dbt's
+    selector:seshat_table_<current> would not select it either, so the mis-tagged
+    current-table model would vanish from the build with no blocker. Attribution by
+    tag OR contract keeps it in scope, where _check_model_selector flags the tag.
+    """
+    from seshat.dbt.project import validate_project
+
+    working_set = _write_project(tmp_path)  # validating table = orders
+    # "widgets" is a real, fully-governed other table.
+    _write_mapping_working_set(tmp_path, "widgets", complete=True)
+    # A model tagged for widgets but whose contract cites orders (the current table).
+    mismatched = "\n".join(
+        [
+            "version: 2",
+            "models:",
+            "  - name: stg_mislabeled",
+            "    config:",
+            "      tags: [seshat_table_widgets]",  # foreign tag
+            "    meta:",
+            "      seshat:",
+            "        table_id: orders",  # contract cites the CURRENT table
+            "        source_map: mappings/orders/source-map.yaml",
+            f"        source_map_revision: {MAP_REVISION}",
+            "        grain: one row per order",
+            "        business_key: [order_id]",
+            "        authority: derived",
+            "    columns:",
+            "      - name: order_id",
+            "        meta:",
+            "          seshat:",
+            "            source_columns: [order_id]",
+            "",
+        ]
+    )
+    _append_model(tmp_path, "staging/mislabeled", mismatched)
+
+    result = validate_project(tmp_path, working_set)
+
+    # In scope for orders (contract cites it), so the foreign tag is caught here --
+    # not silently skipped as "widgets' model".
+    assert result.valid is False
+    assert "DBT_MODEL_SELECTOR_MISSING" in {b.code for b in result.blocking_reasons}
 
 
 def test_missing_column_citation_is_rejected(tmp_path: Path) -> None:

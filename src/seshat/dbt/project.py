@@ -295,14 +295,36 @@ def _model_name(row: Any) -> str | None:
 _SESHAT_TABLE_TAG = re.compile(r"^seshat_table_([a-z][a-z0-9_]*)$")
 
 
+# The mapping working-set files a table must have to be validatable, mirroring
+# gate._require_mapping_files. Kept as one predicate so the "governed enough to
+# skip another table's models" bar can never drift below the "governed enough to
+# validate" bar -- a table validatable via resolve_working_set() only if all
+# three exist, so only such a table may absorb models skipped under it.
+_MAPPING_WORKING_SET_FILES = (
+    "source-map.yaml",
+    "readiness-status.yaml",
+    "unresolved-questions.md",
+)
+
+
+def _has_mapping_working_set(root: Path, table_id: str) -> bool:
+    mapping_dir = root / "mappings" / table_id
+    return mapping_dir.is_dir() and all(
+        (mapping_dir / name).is_file() for name in _MAPPING_WORKING_SET_FILES
+    )
+
+
 def _governed_table_ids(root: Path) -> frozenset[str]:
-    """Table ids that have a committed mapping working set under mappings/<id>/.
+    """Table ids with a COMPLETE committed mapping working set under mappings/<id>/.
 
     The authoritative set of tables a governed dbt model may legitimately belong
-    to: a directory under ``mappings/`` carrying both a source map and a readiness
-    status. Used to attribute each model to a real table during validation --
-    a model tagged for a table absent from this set is an orphan, not merely
-    "another table's" model.
+    to: a directory under ``mappings/`` carrying the full working set
+    (``source-map.yaml`` + ``readiness-status.yaml`` + ``unresolved-questions.md``)
+    that ``resolve_working_set`` requires. The full bar matters: a model is skipped
+    here only when it is attributed to another table that can ACTUALLY be validated
+    on its own. A table with a partial mapping cannot be validated (it fails
+    ``resolve_working_set``), so its models must not be silently skipped -- they are
+    treated as orphans instead, keeping every model reachable by some check.
     """
     mappings_dir = root / "mappings"
     if not mappings_dir.is_dir():
@@ -310,9 +332,7 @@ def _governed_table_ids(root: Path) -> frozenset[str]:
     return frozenset(
         child.name
         for child in mappings_dir.iterdir()
-        if child.is_dir()
-        and (child / "source-map.yaml").is_file()
-        and (child / "readiness-status.yaml").is_file()
+        if child.is_dir() and _has_mapping_working_set(root, child.name)
     )
 
 
@@ -510,30 +530,51 @@ def _row_contract(
 
     Partitions models so a multi-table dbt project validates each table's models
     under that table's own working set (spec 133: validate covers ONE working set;
-    models are isolated under the worked selector). A model tagged for THIS table is
-    validated in full. A model tagged for ANOTHER table that has a real committed
-    mapping is out of scope here (it is validated when its own table runs). A model
-    that belongs to no real governed table -- a phantom/mistyped tag, or no
-    ``seshat_table_*`` tag at all -- is an orphan and blocks: every model must be
-    attributable to some governed table, or governance can never reach it.
+    models are isolated under the worked selector).
+
+    Attribution uses BOTH the model's ``seshat_table_*`` tag AND its
+    ``meta.seshat.table_id`` contract, so a model belongs to THIS table if either
+    names it. That is deliberate: a model whose tag was accidentally copied from
+    another table but whose contract still cites this table is validated here (not
+    skipped), where ``_check_model_selector`` then catches the tag/contract
+    mismatch -- otherwise such a model would be skipped under this table AND
+    excluded from dbt's ``selector:seshat_table_<this>`` build, vanishing silently.
+
+    A model belonging to this table -> validated in full. A model belonging only to
+    ANOTHER table that has a COMPLETE committed working set (see
+    ``_governed_table_ids``) -> out of scope here, validated when its own table
+    runs. Anything else -- a phantom/mistyped tag, a partial-mapping table that can
+    never be validated, or no seshat attribution at all -> orphan blocker: every
+    model must be reachable by some table's checks, or governance never sees it.
     """
     name = _model_name(row)
     if name is None:
         return None
-    model_tables = _model_table_tags(row)
-    if table_id in model_tables:
+    model_tags = _model_table_tags(row)
+    contract_table = _model_contract_table_id(row)
+    # Owns THIS table if either the tag or the committed contract names it.
+    if table_id in model_tags or contract_table == table_id:
         return _model_contract(context, row, blockers)
-    if model_tables & governed_tables:
-        # Belongs to another real governed table -- validated under that table.
+    # Owned only by another table that can actually be validated on its own.
+    other_tables = model_tags | ({contract_table} if contract_table else set())
+    if other_tables & governed_tables:
         return None
     blockers.append(
         Blocker(
             "DBT_MODEL_ORPHANED",
-            f"model {name} is not tagged for any governed table "
-            "(no seshat_table_<table> tag matches a committed mapping working set)",
+            f"model {name} is not attributable to any governed table "
+            "(no seshat_table_<table> tag or meta.seshat.table_id matches a "
+            "complete committed mapping working set)",
         )
     )
     return None
+
+
+def _model_contract_table_id(row: dict[str, Any]) -> str | None:
+    """The table id a model row declares in its ``meta.seshat.table_id`` contract."""
+    seshat = _model_metadata(row)
+    table_id = seshat.get("table_id") if isinstance(seshat, dict) else None
+    return table_id if isinstance(table_id, str) and table_id else None
 
 
 def _generic_example_leaks(project_dir: Path) -> bool:
