@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import PINNED_DAGSTER, PINNED_DAGSTER_DBT
+from . import PINNED_DAGSTER
 from .gate import GateState, list_mapped_tables, read_gate_state
 
 _INSTALL_REMEDY = (
@@ -58,15 +58,15 @@ _PROJECT_ABSENT = DoctorFinding(
     remedy="check out the full repo (the orchestration project ships with spec 134)",
 )
 
-_PAIR_MISMATCH = DoctorFinding(
+_PIN_MISMATCH = DoctorFinding(
     id="DAG-PAIR-01",
     severity="blocker",
     message=(
-        "pinned pair mismatch: orchestration/dagster/pyproject.toml must pin "
-        f"dagster=={PINNED_DAGSTER} and dagster-dbt=={PINNED_DAGSTER_DBT} "
-        "TOGETHER (spec 024 auto-update posture)"
+        "pinned dagster mismatch: orchestration/dagster/pyproject.toml must pin "
+        f"dagster=={PINNED_DAGSTER} (spec 024 auto-update posture; the dagster-dbt "
+        "pin was dropped by spec 135 FR-011)"
     ),
-    remedy="restore the pinned pair; bumps land via PR only, never independently",
+    remedy="restore the dagster pin; bumps land via PR only, never independently",
 )
 
 _VENV_ABSENT = DoctorFinding(
@@ -111,9 +111,8 @@ def _project_findings(root: Path) -> list[DoctorFinding]:
         return [_PROJECT_ABSENT]
     findings: list[DoctorFinding] = []
     pyproject = (orch / "pyproject.toml").read_text(encoding="utf-8")
-    expected = (f"dagster=={PINNED_DAGSTER}", f"dagster-dbt=={PINNED_DAGSTER_DBT}")
-    if not all(pin in pyproject for pin in expected):
-        findings.append(_PAIR_MISMATCH)
+    if f"dagster=={PINNED_DAGSTER}" not in pyproject:
+        findings.append(_PIN_MISMATCH)
     if orchestration_python(root) is None:
         findings.append(_VENV_ABSENT)
     return findings
