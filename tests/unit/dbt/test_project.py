@@ -261,7 +261,9 @@ def _append_model(root: Path, subdir: str, model_yaml: str) -> None:
     (model_dir / "_models.yml").write_text(model_yaml, encoding="utf-8")
 
 
-def _write_mapping_working_set(root: Path, table_id: str, complete: bool = True) -> None:
+def _write_mapping_working_set(
+    root: Path, table_id: str, complete: bool = True
+) -> None:
     """Write a table's mapping dir. complete=True writes the full 3-file working set
     (source-map + readiness-status + unresolved-questions) that resolve_working_set
     requires; complete=False omits unresolved-questions.md (a partial mapping)."""
