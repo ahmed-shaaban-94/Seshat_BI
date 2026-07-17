@@ -116,25 +116,34 @@ class TestRenderMarkdown:
         assert "ASCII" not in text  # rendered doc, not the template's guidance prose
 
 
+def _finalized_green_run(
+    root: Path, run_id: str, child_exit_code: int | None = None
+) -> dict:
+    """Record one materialized seam asset and finalize -- the shared green-run
+    setup for the write/list/child-exit tests."""
+    evidence.EvidenceWriter(root, run_id).record(
+        evidence.AssetOutcome(
+            asset="source_map",
+            table="demo_table",
+            gate_command="reads Gate status",
+            exit_code=None,
+            measured={},
+            outcome="materialized",
+        )
+    )
+    return evidence.finalize_run(
+        root,
+        run_id,
+        ["demo_table"],
+        evidence.RunMeta(
+            started="2026-07-17T00:00:00Z", child_exit_code=child_exit_code
+        ),
+    )
+
+
 class TestWriteRunEvidence:
     def test_writes_committed_markdown_from_raw_records(self, tmp_path: Path) -> None:
-        writer = evidence.EvidenceWriter(tmp_path, "run-001")
-        writer.record(
-            evidence.AssetOutcome(
-                asset="source_map",
-                table="demo_table",
-                gate_command="reads Gate status",
-                exit_code=None,
-                measured={"gate_status": "CLEARED", "open_rows": 0},
-                outcome="materialized",
-            )
-        )
-        evidence.finalize_run(
-            tmp_path,
-            "run-001",
-            ["demo_table"],
-            evidence.RunMeta(started="2026-07-17T00:00:00Z"),
-        )
+        _finalized_green_run(tmp_path, "run-001")
         out = evidence.write_run_evidence(tmp_path, "run-001")
         assert (
             out
@@ -171,23 +180,7 @@ class TestWriteRunEvidence:
         assert all(row["outcome"] == "skipped" for row in records)
 
     def test_green_child_exit_keeps_succeeded(self, tmp_path: Path) -> None:
-        writer = evidence.EvidenceWriter(tmp_path, "run-ok")
-        writer.record(
-            evidence.AssetOutcome(
-                asset="source_map",
-                table="demo_table",
-                gate_command="reads Gate status",
-                exit_code=None,
-                measured={},
-                outcome="materialized",
-            )
-        )
-        summary = evidence.finalize_run(
-            tmp_path,
-            "run-ok",
-            ["demo_table"],
-            evidence.RunMeta(started="2026-07-17T00:00:00Z", child_exit_code=0),
-        )
+        summary = _finalized_green_run(tmp_path, "run-ok", child_exit_code=0)
         assert summary["run_status"] == "succeeded"
 
     def test_commit_sha_survives_a_hung_git(
@@ -202,23 +195,7 @@ class TestWriteRunEvidence:
         assert evidence.commit_sha(tmp_path) == "0000000"
 
     def test_list_runs_reports_known_runs(self, tmp_path: Path) -> None:
-        writer = evidence.EvidenceWriter(tmp_path, "run-003")
-        writer.record(
-            evidence.AssetOutcome(
-                asset="source_map",
-                table="demo_table",
-                gate_command="reads Gate status",
-                exit_code=None,
-                measured={},
-                outcome="materialized",
-            )
-        )
-        evidence.finalize_run(
-            tmp_path,
-            "run-003",
-            ["demo_table"],
-            evidence.RunMeta(started="2026-07-17T00:00:00Z"),
-        )
+        _finalized_green_run(tmp_path, "run-003")
         runs = evidence.list_runs(tmp_path)
         assert [run["run_id"] for run in runs] == ["run-003"]
         assert runs[0]["run_status"] == "succeeded"
