@@ -155,6 +155,21 @@ dependency; the doctor edit lives in the existing control layer.
    the committed control layer is what makes the governance identical to
    `seshat dbt build`.)
 
+   Note on the `dagster-dbt` LIBRARY (naming vs mechanism). This seam is named the
+   "dagster-dbt engine seam" and the documented contract says the build runs "via
+   dagster-dbt", but the EXECUTION PATH deliberately goes through `seshat.dbt`
+   (plan + accept-plan digest + shadow build), NOT through native `dagster-dbt`
+   asset wiring (`@dbt_assets` / a raw `DbtCliResource`). Native dagster-dbt wiring
+   would run dbt directly and BYPASS the accept-plan digest recompute and the
+   governed gate (spec 133 FR-023/FR-025) -- so it is intentionally NOT used. The
+   `dagster-dbt` pin therefore remains an INHERITED pin from spec 134 (already in
+   `orchestration/dagster/pyproject.toml`, kept because dagster requires a
+   compatible dagster-dbt in the same environment); this feature does NOT put the
+   `dagster-dbt` library on a new execution path. What lands on the dbt engine's
+   execution path is `seshat-bi[dbt]` (the governed control layer), not the
+   `dagster-dbt` library. This is the one place naming and mechanism could read as
+   disagreeing; the mechanism is the authority.
+
 4. **Deferred boundary and unavailability (FR-006).** When the resolved engine is
    `dbt` and `db.resolve_dsn()` is None, the asset records `deferred` with a
    timestamp and blocks fail-closed (same shape as the migrations path and

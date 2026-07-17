@@ -62,7 +62,12 @@ orchestration project is not). Recommendation: the plan should at least CONSTRAI
 the location to the human-reviewed per-table working set so the engine choice
 inherits mapping-gate review, or explicitly surface "where the engine flag lives"
 as an open-for-human item. Currently it is neither answered nor surfaced -- a
-genuine hole.
+genuine hole. This is governance-relevant, not merely a HOW detail: WHERE the flag
+lives decides whether flipping to dbt inherits human review, so it ties directly
+to the open-for-human item "whether flipping the build engine to dbt needs its own
+named-human approval, and where it is recorded". Recommend the plan constrain the
+flag to the human-reviewed per-table working set, closing both this hole and that
+approval seam in one place.
 
 ### F3 (LOW) -- asset-name terminology: schema uses `bronze_table`, prose uses `bronze_<table>`
 
@@ -113,6 +118,15 @@ artifacts and honestly deferred -- no fabricated confidence. No action.
   existing term found.
 - The evidence outcome vocabulary (`materialized|failed|skipped|blocked|deferred`)
   matches the committed schema exactly; the feature adds none. Consistent.
+- Naming-vs-mechanism ("dagster-dbt engine seam" vs `seshat.dbt` execution path):
+  the seam is NAMED for dagster-dbt and the documented contract says the build runs
+  "via dagster-dbt", but the execution path deliberately routes through `seshat.dbt`
+  (plan + accept-plan digest + shadow build), NOT native dagster-dbt asset wiring --
+  because native wiring would bypass the accept-plan digest and the governed gate
+  (spec 133 FR-023/FR-025). The `dagster-dbt` pin stays an inherited spec-134 pin,
+  not a new execution-path dependency. plan.md Approach 3 now states this
+  explicitly; recorded here so the framing (name) and the mechanism (path) are not
+  read as a contradiction. Resolved coherence note, not an open finding.
 
 ## Contradiction check
 
