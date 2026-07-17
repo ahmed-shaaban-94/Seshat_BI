@@ -1739,10 +1739,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "f90523eb5f6403bdfd84393738b51fa48828207cff5fb8b08eb8eaee095f12de",
+  "manifest_digest": "1969c4c5064b167cf9bbf365f054f24b9e359c2df549f3db36e16ffdda32f1ab",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "c108be5ea5a8c088479094962bb9436e64906155",
+  "source_revision": "e93fdeb6b3675cd8a7a3364fba2ff734ba132b71",
   "target": "claude",
   "version": "0.3.1"
 }
