@@ -60,8 +60,10 @@ exit code and the named human decide whether a stage passed.
 
 - exit 0: command completed; run evidence remains derived, not an approval.
 - exit 1: usage error (unknown verb or flag).
-- exit 2: preflight blocker, prerequisite unavailable, or evidence refused
-  schema validation (nothing executed).
-- exit 3: the run failed or halted fail-closed on a gate; evidence is still
-  rendered and must be reported.
-- exit 4: artifact or run-evidence integrity failure.
+- exit 2: preflight or gate refusal -- doctor blockers, a gate not CLEARED, a
+  missing prerequisite, or evidence records refused schema validation
+  (nothing executed).
+- exit 3: the run failed or halted fail-closed on a gate (the CI signal);
+  evidence is still rendered and must be reported.
+- exit 4: unexpected internal error, already redacted; report it verbatim --
+  it is not a fixable evidence-record problem.
