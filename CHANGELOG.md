@@ -28,6 +28,20 @@ explicitly identifies a public release event.
 ## [Unreleased]
 
 ### Added
+- **Dagster orchestration MVP** (spec 134, activates spec 024 / F030): a real
+  `orchestration/dagster/` runtime project (`tower_bi_orchestration`,
+  `dagster==1.13.14` + `dagster-dbt==0.29.14` pinned together, own venv) running
+  the full 11-asset medallion graph behind every gate -- fail-closed STOP edges,
+  read-only HUMAN-SEAM approval reads, a publish wall that only TRIGGERS F016 and
+  fails closed while F016 is absent, and one daily schedule + one raw-landing
+  sensor both shipped STOPPED. New `seshat dagster doctor|run|evidence` lazy CLI
+  family (exit codes 0..4), `src/seshat/dagster_adapter/` control layer (gate
+  readers, shell-free closed-argv runner, redaction, schema-validated derived
+  run-evidence rendered per `templates/dagster-run-evidence.md`),
+  `schemas/dagster-run-evidence.schema.json`, three Claude plugin commands
+  (`dagster-doctor`, `dagster-run`, `dagster-evidence`), and the
+  `.github/workflows/dagster-smoke.yml` definitions-load CI gate (no DB, no
+  secrets). The `dagster-dbt` engine seam activates after spec 133 merges.
 - **Governed dbt transformation MVP** (spec `133`): exact optional
   `dbt-core==1.12.0` + `dbt-postgres==1.10.2` runtime, a tracked eight-model
   `retail_store_sales` shadow graph with 24 selected tests, Mapping Ready and

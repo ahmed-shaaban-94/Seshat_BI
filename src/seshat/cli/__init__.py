@@ -181,6 +181,7 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "impact-map": _lazy(".commands.impact_map", "impact_map_main"),
     "agent": _lazy(".commands.agent_verify", "agent_verify_main"),
     "watch": _lazy(".commands.watch", "watch_main"),
+    "dagster": _lazy(".commands.dagster", "dagster_main"),
     "mcp": _run_mcp,
 }
 
