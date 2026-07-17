@@ -747,6 +747,13 @@ capabilities:
       roadmap: "F030"
       skill: "dagster-orchestration-adapter"
       dispatch: "dagster"
+      runtime_project: "orchestration/dagster/pyproject.toml"
+      public_skill: "dagster-workflows"
+      evidence_schema: "schemas/dagster-run-evidence.schema.json"
+      verified_by:
+        - "tests/contract/test_dagster_evidence_schema.py"
+        - "tests/unit/test_dagster_runner.py"
+        - "tests/unit/test_dagster_gate.py"
 
   - id: pbir-authoring-adapter-skill
     name: "pbir-authoring-adapter (skill)"
