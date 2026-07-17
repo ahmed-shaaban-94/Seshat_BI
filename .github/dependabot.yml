@@ -3,17 +3,53 @@ updates:
   # Python dependencies (runtime + optional extras declared in pyproject.toml).
   # The runtime surface is minimal (pyyaml only); most of the surface is the
   # dev/db/mssql/... extras used in CI. Weekly is enough for a beta package.
+  #
+  # commit-message.prefix "build" (spec 136, FR-014): Dependabot emits a
+  # SCOPE-FREE subject (`build: bump X from A to B`). `build` is in the P2
+  # governance allow-list and `prefix` without `include: scope` yields no
+  # parenthesized scope, so a bot pip PR passes the P2 SUBJECT_RE with NO human
+  # edit (the old `chore(deps):` default tripped P2 on every bot PR).
   - package-ecosystem: pip
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    labels:
+      - dependencies
+
+  # Orchestration project (spec 136, FR-013): the /orchestration/dagster pip
+  # environment was UNWATCHED before this change -- the exact coverage hole that
+  # let the spec-134 dagster pin drift unseen. Dependabot parses this manifest
+  # today: its `dependencies` are all NAMED PyPI distributions (dagster,
+  # dagster-dbt, psycopg2-binary, pyyaml); the repo-local seshat-bi dependency is
+  # supplied at INSTALL time (`uv pip install -e ../..`), not declared in the
+  # pyproject metadata, so there is no local/direct reference for Dependabot to
+  # refuse (plan-review D4). Should spec 135 later add a repository-local
+  # `seshat-bi[dbt]` reference to this pyproject's metadata and Dependabot then
+  # refuse the whole manifest, the fallback is to keep this directory watched for
+  # its remaining NAMED pins and record the local-reference limitation here --
+  # partial coverage recorded honestly, never claimed as full.
+  - package-ecosystem: pip
+    directory: "/orchestration/dagster"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
     labels:
       - dependencies
 
   # GitHub Actions. The workflows pin actions by commit SHA (see the security
   # scan finding `actions-tag-pinned-not-sha`); Dependabot keeps those SHAs
   # current and surfaces a re-pointed / compromised action as a reviewable PR.
+  #
+  # NOTE (spec 136 A3): the github-actions ecosystem is OUT of this feature's
+  # stated pip scope. Its default subject shape has not tripped P2 on this
+  # repo; if a future github-actions bot subject were to carry a scoped
+  # `chore(deps):`-shaped prefix, add the same `commit-message.prefix: build`
+  # here. Left unchanged deliberately (honest under-commitment, analysis A3).
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
