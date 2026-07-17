@@ -11,8 +11,11 @@ Turnover `Planned (needs COGS + average inventory cost)`; no seeded contract.
 Trip 1 (first contact, no approved decisions):
 1. Registry lookup: Inventory Turnover -> `generic_kpi_ref: KPI-MC-<NN>`,
    `custom: false`.
-2. Answerability for the sales-only source: `Out of scope` or
-   `Blocked -- missing field` (no inventory snapshot fact).
+2. Source-coverage signal: `derive_answerability` returns `Planned` for this
+   `lifecycle: planned` entry (it short-circuits before source checks), so read the
+   real gap from the registry entry's `blockers` / `source_roles` instead -- the
+   sales-only source has no inventory snapshot fact, so the required
+   snapshot/COGS/average-inventory-cost roles are absent.
 3. Decision Store: no approved `kpi_definition` for turnover -> engine would
    raise; do not call it.
 4. Preview business body (clean):

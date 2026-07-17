@@ -60,7 +60,7 @@ confidence scores, or registry entries.
 | Transcribes generic KPI *meaning* verbatim from `retail-kpi-knowledge` (registry-known KPI) | Invents `formula_intent`; writes DAX/SQL into it |
 | Proposes `binds_to` gold columns from the read-only source profile | Binds to silver/bronze; fabricates a column absent from the profile; treats a profile-proposed binding as justified |
 | Opens each applicable A1–A11 number-moving ambiguity as a `blocked` ledger entry | Auto-resolves a number-moving ambiguity |
-| Emits `readiness.status: not_started` (or `blocked`), blank `owner`, empty `approvals` | Sets `readiness: pass`; fills `owner`; promotes Planned→Seeded |
+| Emits `readiness.status: blocked` (materialization blocker), a required named `owner`, empty `approvals` | Sets `readiness: pass`; fills `approvals`; promotes Planned→Seeded |
 | Reads `registry.yaml` to cite `generic_kpi_ref` (registry-known only) | Writes to `registry.yaml`; suggests an id for a custom KPI |
 | Records per-field origin in a separate `field_provenance` block | Emits any numeric confidence score; inlines provenance into a business value |
 
@@ -118,10 +118,14 @@ exists):**
 8. The shipped `draft_project_metric_contract` returns `readiness.status: blocked`
    with the reason `physical gold binding is not materialized` (it never binds gold
    at draft time), so a freshly-drafted contract is always `blocked` until gold is
-   materialized and `finalize_project_metric_contract` promotes it. The builder never
-   sets `pass` itself and never fills `owner` / `approvals`. (An entirely
-   pre-decision preview that is never drafted is conceptually `not_started`, but the
-   engine never emits that status.)
+   materialized and `finalize_project_metric_contract` promotes it. The draft
+   carries a REQUIRED named `owner` (the engine refuses an empty one and persists
+   it) — that owner is a human answer identified before Trip 2, not an agent
+   invention. What the builder never does is fill `approvals` or set
+   `readiness.status: pass` itself; `pass` is the named-human promotion step in
+   `finalize_project_metric_contract`. (An entirely pre-decision preview that is
+   never drafted is conceptually `not_started`, but the engine never emits that
+   status.)
 
 ## 5. Field-by-field composition
 
@@ -136,7 +140,8 @@ Each field is filled from exactly one origin, recorded in the separate
 | `generic_kpi_ref` | `KPI-MC-NN` | omitted (`custom: true`) |
 | `ambiguities[]` (A1–A11) | each applicable number-moving item ⇒ `blocked` entry | same |
 | `readiness.status` | `not_started`, or `blocked` if any required field unresolved | same |
-| `owner`, `approvals` | left blank (builder never fills) | same |
+| `owner` | REQUIRED named owner (human answer; engine refuses empty) | same |
+| `approvals`, `readiness: pass` | never filled by the builder (named-human step via `finalize`) | same |
 
 ### The gap rule (unresolved field without invalid YAML)
 

@@ -47,10 +47,17 @@ owner, and committed source evidence; without them it raises
 1. Identify the KPI. Registry-known -> resolve its `generic_kpi_ref: KPI-MC-NN`
    from `skills/retail-kpi-knowledge/registry.yaml` (`custom: false`).
    User-supplied -> `custom: true`, no ref, no suggested id.
-2. Consume answerability (read-only): use `derive_answerability` /
-   `render_answerability_artifact` for this (KPI, table). Its coverage status is
-   an INPUT SIGNAL only (e.g. `Blocked -- missing field` -> a `binds_to` gap).
-   Never persist or re-decide it -- contract authoring is a separate concern.
+2. Read the source-coverage signal (read-only). NOTE: for a `lifecycle: planned`
+   registry entry -- the primary case for this skill -- `derive_answerability`
+   short-circuits to `Planned` before it inspects source roles, mapped concepts,
+   domain, or evidence, so its status alone CANNOT tell you which fields are
+   present. For a planned KPI, take the coverage signal from the registry entry's
+   own `blockers` and `source_roles` / `required_concepts` metadata (and a
+   committed source profile / source-map, if present) -- that is what surfaces a
+   `binds_to` gap. Use `derive_answerability` /
+   `render_answerability_artifact` only for its designed purpose (a coverage
+   scorecard for SEEDED KPIs); consume it read-only, never persist or re-decide it
+   -- contract authoring is a separate concern.
 3. Check the Decision Store for the required `kpi_definition` + applicable
    `policy_ruling` decisions. If any is missing/unapproved, do NOT call the
    engine (it will raise).
@@ -97,7 +104,12 @@ blocked`.
 
 ## Hard stops
 
-- Never self-grant an approval; `owner` and `approvals` are named-human fields.
+- Never self-grant an approval. The `owner` is REQUIRED at draft time
+  (`draft_project_metric_contract` refuses an empty owner and persists the one you
+  supply) -- so a named eligible owner must be identified before Trip 2; that is a
+  human answer, not an agent invention. What the skill never fills is `approvals`
+  and never sets `readiness.status: pass` -- promotion to `pass` is the named-human
+  step performed by `finalize_project_metric_contract`.
 - Never fabricate a confidence score or percentage.
 - Never write DAX / SQL / a silver or bronze binding into any field.
 - Never mutate `registry.yaml`; never suggest a `KPI-MC` id for a custom KPI;
