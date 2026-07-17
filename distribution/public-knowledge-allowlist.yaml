@@ -1853,6 +1853,17 @@ template_entries:
     required: true
     generated_notice: manifest
     review_reason: Required governed dbt workflow for both public bundles.
+  - template_id: dagster-workflows-skill
+    source: distribution/bundle-templates/shared/skills/dagster-workflows/SKILL.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: skills/dagster-workflows/SKILL.md
+      codex: skills/dagster-workflows/SKILL.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required governed Dagster orchestration workflow for both public bundles.
   - template_id: claude-manifest
     source: distribution/bundle-templates/claude/.claude-plugin/plugin.json
     classification: generated_wrapper

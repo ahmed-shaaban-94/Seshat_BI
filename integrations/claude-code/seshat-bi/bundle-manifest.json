@@ -48,28 +48,28 @@
     {
       "classification": "generated_wrapper",
       "destination": "commands/dagster-doctor.md",
-      "output_sha256": "fd72195b0e47c75efaeeb8b0ef06fbbde73fb6697a9b05b4aef162103b59bed2",
+      "output_sha256": "4a53dc5712479f103e347451a63ae97f3a47bb50dc6f880bfcdfe9f4172ff15d",
       "source": "distribution/bundle-templates/claude/commands/dagster-doctor.md",
       "source_id": "claude-dagster-doctor",
-      "source_sha256": "fd72195b0e47c75efaeeb8b0ef06fbbde73fb6697a9b05b4aef162103b59bed2",
+      "source_sha256": "4a53dc5712479f103e347451a63ae97f3a47bb50dc6f880bfcdfe9f4172ff15d",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
       "destination": "commands/dagster-evidence.md",
-      "output_sha256": "2c274bdb1d0c08c7f5fb50fc91566fa58f4bb3e26f5b4476f8f00b3cb6d955f3",
+      "output_sha256": "c66ed633624dd6de7a12d97dd9c9cab73bd2a1e4d0c9db181d51188b701a94ab",
       "source": "distribution/bundle-templates/claude/commands/dagster-evidence.md",
       "source_id": "claude-dagster-evidence",
-      "source_sha256": "2c274bdb1d0c08c7f5fb50fc91566fa58f4bb3e26f5b4476f8f00b3cb6d955f3",
+      "source_sha256": "c66ed633624dd6de7a12d97dd9c9cab73bd2a1e4d0c9db181d51188b701a94ab",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
       "destination": "commands/dagster-run.md",
-      "output_sha256": "57257edce6a4770c488e1747366683494dcac2cfe4a6da80a2cc73b40bc20459",
+      "output_sha256": "75b64752d6c04d8b8e730d1681be7ddbbde48900b54074b88792e153aeac9890",
       "source": "distribution/bundle-templates/claude/commands/dagster-run.md",
       "source_id": "claude-dagster-run",
-      "source_sha256": "57257edce6a4770c488e1747366683494dcac2cfe4a6da80a2cc73b40bc20459",
+      "source_sha256": "75b64752d6c04d8b8e730d1681be7ddbbde48900b54074b88792e153aeac9890",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1685,6 +1685,15 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "skills/dagster-workflows/SKILL.md",
+      "output_sha256": "dfefc62ce0c850a9a850e522e7f9b07dec51996bc7557d207336825a9f423c7b",
+      "source": "distribution/bundle-templates/shared/skills/dagster-workflows/SKILL.md",
+      "source_id": "dagster-workflows-skill",
+      "source_sha256": "dfefc62ce0c850a9a850e522e7f9b07dec51996bc7557d207336825a9f423c7b",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "skills/dbt-workflows/SKILL.md",
       "output_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
       "source": "distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md",
@@ -1713,10 +1722,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
+      "output_sha256": "1d306033d8d08269884cf8751d4154370daa3ee754f006745074a167ecfe6bc2",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
+      "source_sha256": "1d306033d8d08269884cf8751d4154370daa3ee754f006745074a167ecfe6bc2",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1739,10 +1748,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "1969c4c5064b167cf9bbf365f054f24b9e359c2df549f3db36e16ffdda32f1ab",
+  "manifest_digest": "66eeaec33db18c9a9002e8b255586a549168d6bb013347462b5ae31b2eb32d5f",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "e93fdeb6b3675cd8a7a3364fba2ff734ba132b71",
+  "source_revision": "42eca9fcd79337a601b97ebd01c49033a5b88f43",
   "target": "claude",
   "version": "0.3.1"
 }

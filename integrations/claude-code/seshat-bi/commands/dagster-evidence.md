@@ -2,7 +2,8 @@
 description: List Dagster runs or render a run's committed evidence
 ---
 
-Run `seshat dagster evidence` to list recorded orchestration runs, or
+Load the `dagster-workflows` skill. Run `seshat dagster evidence` to list
+recorded orchestration runs, or
 `seshat dagster evidence --run-id <id>` to validate and render one run's
 committed evidence markdown. The record is DERIVED evidence about an execution
 (per-asset gate command, exit code, measured numbers, blocked/skipped reasons
