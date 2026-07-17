@@ -719,11 +719,13 @@ def _substituted_requirements(
     project_path = manifest.root / loc.env.pyproject
     target = _canonical(loc.dist)
     substitute = f"{loc.dist}=={proposed}"
-    requirements = (
-        _base_requirements(project_path)
-        if loc.extra is None
-        else _extra_requirements(project_path, loc.extra)
-    )
+    # Installing `.[extra]` also installs [project].dependencies, so the
+    # solve-proof for an extra-located pin must union BASE + extra -- otherwise
+    # a proposal conflicting with a base runtime constraint would be reported
+    # as resolving (Codex review on PR #308, second pass).
+    requirements = _base_requirements(project_path)
+    if loc.extra is not None:
+        requirements = requirements + _extra_requirements(project_path, loc.extra)
     return [
         substitute if _canonical(_requirement_dist(req)) == target else req
         for req in requirements

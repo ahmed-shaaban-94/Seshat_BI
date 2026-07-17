@@ -10,7 +10,11 @@ name: dep-integrity
 permissions: {}
 
 on:
-  push:
+  # pull_request (not bare push): the gate's question is "does the PR's MERGED
+  # result resolve" -- the pull_request merge ref answers exactly that, while a
+  # bare-push run resolves the branch tree alone and red-flags a PR whose
+  # conflict is already fixed on main (seen live: the pre-spec-135 branch tree
+  # reproduced the historical incident on push while the merge ref resolved).
   pull_request:
   workflow_dispatch:
   schedule:

@@ -309,3 +309,55 @@ def test_governed_pin_in_base_dependencies_is_found_and_proposed(
     assert proposals[0].latest_stable == "1.14.0"
     # the solve-proof substituted into the BASE requirement list
     assert any("dagster==1.14.0" in " ".join(c) for c in stub_resolve.state["calls"])
+
+
+def test_extra_pin_solve_proof_includes_base_dependencies(
+    stub_resolve, stub_pypi, tmp_path
+):
+    """The solve-proof for an extra-located pin unions BASE deps + the extra:
+    installing `.[extra]` installs [project].dependencies too, so omitting the
+    base list could report a proposal as resolving when the real environment
+    would conflict (Codex review on PR #308, second pass)."""
+    import scripts.dep_coresolve as dc
+
+    pyproject = "\n".join(
+        [
+            "[project]",
+            'name = "rooty"',
+            'version = "0"',
+            'dependencies = ["pyyaml>=6"]',
+            "[project.optional-dependencies]",
+            'dbt = ["dbt-core==1.12.0"]',
+        ]
+    )
+    (tmp_path / "pyproject.toml").write_text(pyproject + "\n", encoding="utf-8")
+    manifest_text = "\n".join(
+        [
+            "version: 1",
+            "environments:",
+            "  - id: root-dbt",
+            "    pyproject: pyproject.toml",
+            "    extras: [dbt]",
+            "    local: true",
+            "    path: '.'",
+            "governed_pins:",
+            "  - dist: dbt-core",
+        ]
+    )
+    (tmp_path / "manifest.yaml").write_text(manifest_text + "\n", encoding="utf-8")
+    stub_pypi(
+        "dbt-core",
+        _pypi_json(
+            "dbt-core",
+            {"1.12.0": [{"yanked": False}], "1.13.0": [{"yanked": False}]},
+            {"version": "1.13.0"},
+        ),
+    )
+    manifest = dc.load_manifest(tmp_path / "manifest.yaml")
+    proposals = dc.propose_bumps(manifest)
+    assert len(proposals) == 1
+    solve_calls = [c for c in stub_resolve.state["calls"] if "dbt-core==1.13.0" in c]
+    assert solve_calls, "the solve-proof must substitute the proposed version"
+    assert any(req.startswith("pyyaml") for req in solve_calls[0]), (
+        "base [project].dependencies must be part of the solve-proof"
+    )
