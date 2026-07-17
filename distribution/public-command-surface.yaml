@@ -220,7 +220,7 @@ commands:
     platform: claude
     intent: Preflight the Dagster orchestration adapter read-only (environment, pinned pair, gate state).
     cli_verbs: [dagster]
-    skill: seshat-bi
+    skill: dagster-workflows
     wrapper_template: distribution/bundle-templates/claude/commands/dagster-doctor.md
     bundle_destination: commands/dagster-doctor.md
     mode: read-only
@@ -231,7 +231,7 @@ commands:
     platform: claude
     intent: Execute one governed orchestration job behind every gate, fail-closed, and record run evidence.
     cli_verbs: [dagster]
-    skill: seshat-bi
+    skill: dagster-workflows
     wrapper_template: distribution/bundle-templates/claude/commands/dagster-run.md
     bundle_destination: commands/dagster-run.md
     mode: mutating
@@ -242,7 +242,7 @@ commands:
     platform: claude
     intent: List orchestration runs or render a run's committed derived evidence.
     cli_verbs: [dagster]
-    skill: seshat-bi
+    skill: dagster-workflows
     wrapper_template: distribution/bundle-templates/claude/commands/dagster-evidence.md
     bundle_destination: commands/dagster-evidence.md
     mode: read-only
@@ -294,6 +294,13 @@ skills:
     intent: Route governed dbt prerequisite, plan, shadow execution, and evidence-review work.
     wrapper_template: distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md
     bundle_destination: skills/dbt-workflows/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: dagster-workflows
+    platforms: [claude, codex]
+    intent: Route governed Dagster preflight, gated medallion runs, and run-evidence review.
+    wrapper_template: distribution/bundle-templates/shared/skills/dagster-workflows/SKILL.md
+    bundle_destination: skills/dagster-workflows/SKILL.md
     documentation: docs/install/agent-install.md
     status: shipped
   - name: bi-sql-knowledge

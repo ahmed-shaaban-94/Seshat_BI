@@ -2,7 +2,8 @@
 description: Execute one governed Dagster orchestration job (fail-closed)
 ---
 
-Run `seshat dagster run --job <full_sequence_job|through_gold_job>` (add
+Load the `dagster-workflows` skill. Run
+`seshat dagster run --job <full_sequence_job|through_gold_job>` (add
 `--table <table>` to scope one mapped table) and interpret the result. The run
 executes ONLY already-approved steps behind every gate: a failed gate halts all
 downstream assets and the command exits 3 -- report that as the honest

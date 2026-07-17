@@ -24,6 +24,8 @@ For subject reasoning, load only the relevant bundled skill:
   `powerbi-workflows`
 - governed dbt prerequisite, plan, shadow build, and evidence review:
   `dbt-workflows`
+- governed Dagster preflight, gated medallion runs, and run-evidence review:
+  `dagster-workflows`
 
 End with one next action or one blocked stop. Cite evidence and named blockers;
 never invent a pass or score.

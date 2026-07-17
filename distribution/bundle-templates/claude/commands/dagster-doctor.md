@@ -2,7 +2,8 @@
 description: Preflight the Dagster orchestration adapter (read-only)
 ---
 
-Run the installed `seshat dagster doctor` helper and interpret its findings as
+Load the `dagster-workflows` skill. Run the installed
+`seshat dagster doctor` helper and interpret its findings as
 orchestration preflight facts: is the orchestration project present, does its
 environment resolve, is the dagster/dagster-dbt pinned pair consistent, which
 tables have a cleared mapping gate, and are database credentials present
