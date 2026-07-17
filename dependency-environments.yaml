@@ -1,0 +1,70 @@
+# Declared install environments the co-resolution gate protects (spec 136).
+#
+# This file is committed DATA, not code (FR-001): the gate script reads it, it
+# hardcodes nothing. Each environment names a pyproject and the extras to
+# include; a cross_product names two or more environments that MUST resolve
+# together as one install. governed_pins lists which DISTRIBUTIONS the freshness
+# reporter tracks -- by NAME only, never by version. Versions are read from the
+# referenced pyproject files at run time, so this manifest stays correct across
+# a pin change (FR-015): when spec 135 drops dagster-dbt and adds seshat-bi[dbt]
+# to the orchestration project, a maintainer edits THIS file, not the script.
+#
+# local: true marks a repository-local project. The gate assembles a local
+# member as a LOCAL PATH requirement (the checkout dir + its extras), NEVER by
+# distribution name (plan-review D1). Resolving `seshat-bi` by name would prove
+# PyPI's PUBLISHED copy resolves, not the PR's working tree -- defeating the
+# whole point. `path` is the directory pip installs (`<path>[extras]`).
+#
+# HISTORICAL-INCIDENT NOTE (spec 136, SC-001): while spec 135 (PR #307) is
+# unmerged on its own branch, the orchestration project here still pins
+# dagster-dbt==0.29.14, which declares dbt-core<1.12, while the root `dbt` extra
+# pins dbt-core==1.12.0. The `root-dbt-plus-orchestration` cross-product below
+# therefore genuinely FAILS to resolve (ResolutionImpossible). That is the
+# historical incident reproducing -- it is the PROOF the gate works (SC-001),
+# NOT a defect in the gate. The co-resolution CI job goes green only after
+# PR #307 merges and the cross-product resolves; the gate is never weakened and
+# the cross-product is never dropped to force a local pass.
+version: 1
+
+environments:
+  - id: root-dev
+    pyproject: pyproject.toml
+    extras: [dev]
+    local: true
+    path: "."
+  - id: root-dbt
+    pyproject: pyproject.toml
+    extras: [dbt]
+    local: true
+    path: "."
+  - id: root-db
+    pyproject: pyproject.toml
+    extras: [db]
+    local: true
+    path: "."
+  - id: root-mcp
+    pyproject: pyproject.toml
+    extras: [mcp]
+    local: true
+    path: "."
+  - id: orchestration
+    pyproject: orchestration/dagster/pyproject.toml
+    extras: [dev]
+    local: true
+    path: "orchestration/dagster"
+
+cross_products:
+  # The spec-133 / spec-134 incident shape: the root dbt extra
+  # (dbt-core==1.12.0) unioned with the orchestration project
+  # (dagster-dbt==0.29.14 -> dbt-core<1.12). Nothing ever resolved these two
+  # together, so the ResolutionImpossible conflict sat unseen on main.
+  - id: root-dbt-plus-orchestration
+    combine: [root-dbt, orchestration]
+
+governed_pins:
+  - dist: dbt-core # spec 133 (root `dbt` extra)
+  - dist: dbt-postgres # spec 133 (root `dbt` extra)
+  - dist: dagster # spec 134 (orchestration)
+  - dist: dagster-dbt # spec 134 (orchestration; removed by spec 135 -- manifest edit only)
+  - dist: psycopg2-binary # root `db` extra + orchestration
+  - dist: mcp # root `mcp` extra (upper-bounded <2)

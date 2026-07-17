@@ -32,13 +32,13 @@ and tested independently. US1 (co-resolution proof) is the MVP.
 
 **Purpose**: Establish the committed DATA the gate reads and the test scaffolding.
 
-- [ ] T001 [P] Create the committed environments manifest `dependency-environments.yaml`
+- [x] T001 [P] Create the committed environments manifest `dependency-environments.yaml`
       at the repo root with the shape in plan.md section 1 (declared environments,
       cross_products, governed_pins). ASCII, UTF-8 no BOM. List the root extras, the
       orchestration project, the root-dbt + orchestration cross-product, and the
       governed pins by DISTRIBUTION name (no version strings -- versions are read
       from pyproject at run time, FR-001/FR-015).
-- [ ] T002 [P] Add the test module skeleton `tests/unit/test_dep_coresolve.py` with
+- [x] T002 [P] Add the test module skeleton `tests/unit/test_dep_coresolve.py` with
       the `unit` marker and a fixture that stubs (a) the resolve subprocess and (b)
       the PyPI JSON index, so all Phase-3+ tests are deterministic and offline
       (FR-017). No assertions yet.
