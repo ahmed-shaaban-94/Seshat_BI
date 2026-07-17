@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -126,7 +127,13 @@ def test_exact_versions_and_governed_commands_are_documented() -> None:
     assert "[PENDING LIVE PROFILE]" in combined
 
 
-def test_active_spec_kit_markers_point_to_feature_133() -> None:
-    expected = "specs/133-activate-dbt-mvp/plan.md"
-    assert expected in _text("AGENTS.md")
-    assert expected in _text("CLAUDE.md")
+def test_active_spec_kit_markers_agree_and_resolve() -> None:
+    # The active plan moves with each merged feature (133 -> 134 -> ...);
+    # the durable contract is that AGENTS.md and CLAUDE.md name the SAME
+    # plan and that the plan file exists on disk.
+    pattern = re.compile(r"specs/\d{3}-[a-z0-9-]+/plan\.md")
+    agents_refs = set(pattern.findall(_text("AGENTS.md")))
+    claude_refs = set(pattern.findall(_text("CLAUDE.md")))
+    assert len(agents_refs) == 1, agents_refs
+    assert agents_refs == claude_refs
+    assert (ROOT / agents_refs.pop()).is_file()
