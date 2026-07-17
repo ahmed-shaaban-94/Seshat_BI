@@ -147,6 +147,20 @@ def test_patch_release_does_not_accept_the_series_release_note(tmp_path: Path) -
     )
 
 
+@pytest.mark.parametrize("version", ["0.5.0-rc.1", "0.5.1+build.7"])
+def test_non_stable_versions_use_the_series_release_note(
+    tmp_path: Path, version: str
+) -> None:
+    revision = _repository(tmp_path, version=version)
+    report = audit_versions(tmp_path, source_revision=revision, tags={})
+    release_note = next(
+        item for item in report["projections"] if item["surface"] == "release_note"
+    )
+    assert report["status"] == "pass"
+    assert release_note["path"] == "docs/releases/v0.5.md"
+    assert release_note["expected"] == "0.5"
+
+
 def test_existing_tag_at_another_revision_blocks_reuse(tmp_path: Path) -> None:
     revision = _repository(tmp_path)
     report = audit_versions(
@@ -248,3 +262,10 @@ def test_coordinated_release_commits_version_before_bundle_export() -> None:
     assert "Do not squash or rebase" in workflow
     assert "from scripts.release_note_gate import validate_release_note" in workflow
     assert "validate_release_note(Path.cwd(), version)" in workflow
+    assert 'r"seshat-bi==\\d+\\.\\d+\\.\\d+"' in workflow
+    for install_doc in (
+        "docs/install/agent-install.md",
+        "docs/install/support-matrix.md",
+        "docs/install/user-install.md",
+    ):
+        assert install_doc in workflow
