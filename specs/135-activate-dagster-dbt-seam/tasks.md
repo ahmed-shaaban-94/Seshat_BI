@@ -37,7 +37,11 @@ the main package unchanged.
 - [ ] T001 [SETUP] Add `seshat-bi[dbt]` to the orchestration venv dependencies in
   `orchestration/dagster/pyproject.toml` (dagster + dagster-dbt already pinned
   together); do NOT touch the main package `pyproject.toml`. Record the exact
-  added line.
+  added line. FIRST prove the four pins co-resolve in a fresh venv solve
+  (dagster 1.13.14 + dagster-dbt 0.29.14 + dbt-core 1.12.0 + dbt-postgres
+  1.10.2) and record the solver output; on a solve failure STOP and surface to
+  the owner -- bumping either pinned pair is spec-133/134 governance, never an
+  implementer call (plan-review R3).
 - [ ] T002 [P] [SETUP] Confirm the `.gitignore` baseline still ignores raw dbt
   `target/`/`logs/`/local lock files and `.seshat/dagster/runs/` (spec 133 FR-030
   / spec 134); add nothing that ignores a committed `definition/`, `dbt/models`,
@@ -108,7 +112,9 @@ no readiness/`Gate status`/`approvals[]` changed.
   `resolve_build_engine(...)`: keep the DSN/deferred preamble and the trailing
   `commands.run_gate_command(commands.checker_argv(), cwd=root)` gate UNCHANGED;
   `migrations` -> existing migration loop; `dbt` -> `dbt_build.build_layer(...)`.
-  Record `engine` in `measured`. Turn T006/T007 GREEN. (FR-004/FR-005)
+  Record `engine` in `measured`; under the dbt engine also record
+  `warehouse_updated: false` and the self-accepted-plan marker (FR-014/FR-015).
+  Turn T006/T007 GREEN. (FR-004/FR-005)
 
 **Checkpoint**: the dbt engine builds through the governed path with the gate
 identical to migrations, proven in-process with no DB.
@@ -154,7 +160,12 @@ readiness pass.
   `orchestration/dagster/tests/test_dbt_engine_deferred.py` (RED): `engine: dbt`
   + no DSN -> `deferred` outcome with timestamp, blocked fail-closed, no pass;
   `engine: dbt` + dbt runtime unimportable -> `blocked` with concrete
-  `blocking_reason` + named owner, no traceback. (SC-004)
+  `blocking_reason` + named owner, no traceback. ALSO (plan-review F4/R6): a dbt
+  error containing a fake DSN/host must be absent from the dagster record
+  (redaction fixture on the dbt path), and lock contention must surface as a
+  concrete redacted `blocking_reason` per `seshat.dbt` bounded-lock semantics --
+  a stale-lock gap found in `seshat.dbt` is surfaced to the owner, not patched
+  here. (SC-004)
 
 ### Implementation for User Story 3
 
@@ -182,7 +193,9 @@ resolved engine and dbt availability; no score, no fabricated live pass.
   `tests/unit/dagster_adapter/test_doctor_engine_mode.py` (RED): fixtures with
   `engine: dbt` and `engine: migrations` -> assert the categorical engine finding
   per table, plus a deferred/enable finding under `dbt` when the runtime or DSN is
-  absent; assert no numeric score and DSN never echoed. (FR-010)
+  absent; assert no numeric score and DSN never echoed. ALSO (plan-review R2 /
+  FR-015): a table whose layers resolve to MIXED engines produces a WARNING
+  finding naming the mix. (FR-010)
 
 ### Implementation for User Story 4
 
@@ -226,18 +239,31 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
 
 **Purpose**: reconcile the documented seam and prove the invariants.
 
-- [ ] T018 [POLISH] Edit `docs/integrations/dagster-adapter.md` section "The
-  dagster-dbt engine seam (activates after spec 133 merges)" to the activated
-  selectable-engine reality: fail-closed default, `[PENDING LIVE PROFILE]` live
-  status, history preserved, no live-pass claim. (FR-013)
+- [ ] T018 [POLISH] Reconcile EVERY living doc claiming the seam is future:
+  `docs/integrations/dagster-adapter.md` section "The dagster-dbt engine seam
+  (activates after spec 133 merges)" AND `orchestration/dagster/README.md`, plus
+  a grep-sweep for remaining "activates after spec 133" / seam-as-future claims
+  in living docs -- activated selectable-engine reality, fail-closed default,
+  `[PENDING LIVE PROFILE]` live status, history preserved, no live-pass claim.
+  Frozen artifacts (specs/134 dir, CHANGELOG history, docs/releases/*) MUST NOT
+  be reworded. (FR-013, plan-review R4)
 - [ ] T019 [P] [POLISH] Add a schema-and-topology invariant test (RED->GREEN):
   assert `git diff` shows no change to `schemas/dagster-run-evidence.schema.json`
   and no change to asset deps/edges; assert a dbt-engine evidence record still
-  validates against the unchanged schema (only `gate_command`/`measured` differ).
-  (SC-006/FR-008)
+  validates against the unchanged schema (only `gate_command`/`measured` differ,
+  including the new `engine`, `warehouse_updated`, and self-accepted-plan
+  measured fields). ALSO the STATIC no-bypass oracle (plan-review R5): assert no
+  module in `tower_bi_orchestration` imports `dagster_dbt` execution APIs
+  (`DbtCliResource` / `@dbt_assets`) and the bridge invokes dbt only through
+  `seshat.dbt.runner`. (SC-006/FR-008)
 - [ ] T020 [P] [POLISH] Add an evidence-distinctness assertion: the dagster record
   may cite the `mappings/<table>/dbt-evidence/` path but never merges/overwrites
   it. (FR-009)
+- [ ] T022 [P] [POLISH] Readiness-no-write negative test on the dbt path
+  (plan-review F1, the spec-134 US3 git-diff oracle): after a full dbt-engine
+  fixture run, assert `git diff` shows ZERO changes to readiness `status:`
+  fields, `Gate status:` lines, `approvals[]` entries, mappings, and metric
+  definitions -- the oracle sits ON the untrusted write path. (FR-007/SC-005)
 - [ ] T021 [POLISH] Full verification: run the main pytest suite + the
   orchestration tests, ruff format/lint, `seshat check`, and the base-import guard;
   record the dagster-dbt 0.29.14 <-> dbt-core 1.12.0 live-drive status as

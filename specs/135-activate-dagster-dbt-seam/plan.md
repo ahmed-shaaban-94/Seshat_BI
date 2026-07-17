@@ -127,10 +127,12 @@ dependency; the doctor edit lives in the existing control layer.
    reads an explicit committed configuration value per table+layer. Allowed
    values: `migrations` (default) and `dbt`. Absent, unrecognized, or malformed
    -> `migrations`. The resolver never infers from the presence of the `dbt/`
-   project; only the exact `dbt` value engages dbt. (Config source: the mapped
-   table's committed working set; the exact key/location is a resolver
-   implementation detail selected at build time, kept generic and placeholder-
-   driven per Principle VII.)
+   project; only the exact `dbt` value engages dbt. Config source (CONSTRAINED
+   per plan-review R1/F2): a committed file inside the table's human-reviewed
+   working set (`mappings/<table>/`), so the engine flip inherits mapping-review
+   attribution; environment variables, CLI flags, and any runtime input are
+   FORBIDDEN as engine selectors. The exact key name stays generic and
+   placeholder-driven per Principle VII.
 
 2. **The build body branch (FR-004/FR-005 -- gate unchanged, action changes).**
    `_build_layer` keeps its current preamble (resolve DSN; deferred boundary when
@@ -215,10 +217,32 @@ dependency; the doctor edit lives in the existing control layer.
   today. Live drive is verified only when a disposable Postgres profile exists;
   this feature does not claim it.
 
-- **Digest drift is a real fail-closed path.** The asset recomputes the plan and
-  passes its own digest; if any bound input drifted (map revision, project
-  fingerprint, versions, selection, target), `seshat.dbt` refuses and the asset
-  blocks -- the drift-guard must not be short-circuited by the unattended caller.
+- **Digest drift is a real fail-closed path -- and a drift-guard ONLY.** The
+  asset recomputes the plan and passes its own digest; if any bound input drifted
+  (map revision, project fingerprint, versions, selection, target), `seshat.dbt`
+  refuses and the asset blocks. Per plan-review R1 this self-recompute removes
+  the per-run human plan review; the compensating control is the reviewed
+  committed engine flag (FR-001), and the evidence records the self-acceptance
+  (FR-014). The drift-guard must not be short-circuited by the unattended caller.
+
+- **The dbt engine is a rehearsal; the real warehouse is not refreshed.** Shadow-
+  only writes (spec 133 FR-005) mean a dbt-engine run leaves real `silver`/`gold`
+  exactly as the last migrations run built them, while downstream assets validate
+  that REAL warehouse. Evidence records `warehouse_updated: false` under dbt, and
+  doctor warns on mixed-engine tables (FR-015, plan-review R2).
+
+- **The four pins must co-resolve BEFORE anything is built on them.** dagster
+  1.13.14 + dagster-dbt 0.29.14 + dbt-core 1.12.0 + dbt-postgres 1.10.2 land in
+  ONE venv; dagster-dbt declares its own dbt-core range. T001 proves the fresh
+  solve first and records it; a solve failure STOPS the feature and goes to the
+  owner (bumping either pinned pair is spec-133/134 governance, not an
+  implementer call) -- plan-review R3.
+
+- **Lock semantics under unattended kill.** The bridge inherits
+  `seshat.dbt.runner`'s bounded cross-process lock. Contention or a stale holder
+  must surface as a concrete redacted `blocking_reason` (never a traceback or a
+  silent hang); a stale-lock gap discovered in `seshat.dbt` is surfaced to the
+  owner, not silently patched here -- plan-review R6.
 
 - **Redaction must cover dbt output.** dbt logs can echo profile-derived values;
   every surfaced error passes the shared redaction before reaching dagster

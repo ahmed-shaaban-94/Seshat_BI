@@ -267,7 +267,17 @@ exactly as it did before this feature.
   reaches dagster run-evidence or console (Principle IX; shared redaction).
 - A table is `engine: dbt` for silver but `migrations` for gold (or vice versa):
   each asset resolves its own engine independently; a mixed configuration is
-  allowed and recorded per asset.
+  allowed, recorded per asset, flagged as a doctor WARNING, and marked in the
+  evidence record (a migrations layer may be reading a real relation this run's
+  dbt layer never rebuilt -- FR-015).
+- A dbt-engine run completes green but the operator believes the real warehouse
+  was refreshed: the evidence record states `warehouse_updated: false` under the
+  dbt engine; the real `silver`/`gold` were last built by a migrations run
+  (FR-015).
+- The unattended dagster child is killed (timeout, CI cancellation) while holding
+  the `seshat.dbt` cross-process lock: a subsequent run must surface a concrete
+  redacted lock `blocking_reason` (never a traceback, never a silent hang), per
+  the bounded-lock semantics inherited from spec 133.
 - Secrets in errors: any DSN/host/credential in a child-process error is redacted
   before it reaches evidence or console output, identical to the migrations path.
 
@@ -278,7 +288,11 @@ exactly as it did before this feature.
 - **FR-001**: The `silver_tables` and `gold_tables` assets MUST resolve a build
   engine per table from explicit committed configuration with allowed values
   `migrations` (default) and `dbt`. The engine MUST NOT be inferred; any absent,
-  unrecognized, or malformed value MUST fail closed to `migrations`.
+  unrecognized, or malformed value MUST fail closed to `migrations`. The engine
+  flag MUST live inside the table's human-reviewed committed working set
+  (`mappings/<table>/`), so flipping an engine is itself a reviewed, committed,
+  attributable change; an environment variable, CLI flag, or any runtime input
+  MUST NOT select the engine (plan-review R1/F2).
 - **FR-002**: When the resolved engine is `dbt`, the build asset MUST run the
   governed dbt build through the existing `seshat.dbt` machinery -- resolve the
   working set and gate, compute an execution plan, recompute and honor the
@@ -331,10 +345,25 @@ exactly as it did before this feature.
   `retail_store_sales` appears only as the filled first instance), ASCII-only,
   UTF-8 without BOM; secrets only via the git-ignored `.env`. Every surfaced error
   MUST pass the shared redaction (DSN/host/user/password/paths) before output.
-- **FR-013**: The documented seam in `docs/integrations/dagster-adapter.md`
-  (section "The dagster-dbt engine seam") MUST be reconciled from "activates after
-  spec 133 merges" to the activated, selectable-engine reality, without erasing
-  history and without claiming a live pass that is still `[PENDING LIVE PROFILE]`.
+- **FR-013**: Every LIVING document claiming the seam is future/documentation-only
+  MUST be reconciled to the activated, selectable-engine reality -- at minimum
+  `docs/integrations/dagster-adapter.md` (section "The dagster-dbt engine seam")
+  and `orchestration/dagster/README.md` -- without erasing history and without
+  claiming a live pass that is still `[PENDING LIVE PROFILE]`. Frozen artifacts
+  (the spec 134 directory, CHANGELOG history, `docs/releases/*`) MUST NOT be
+  reworded (plan-review R4).
+- **FR-014**: Under the dbt engine the accept-plan digest functions as a
+  DRIFT-GUARD ONLY, not a review record: the unattended asset recomputes the plan
+  and self-accepts its own digest, so no per-run human review occurs. The
+  compensating control is FR-001's reviewed committed engine flag. The run
+  evidence MUST record that the plan was self-accepted-by-recompute
+  (plan-review R1).
+- **FR-015**: The dbt engine is a governed REHEARSAL into shadow schemas: it does
+  NOT rebuild the real `silver`/`gold` relations, and downstream assets continue
+  to validate the migration-built warehouse. The run evidence MUST record this
+  truthfully (a `warehouse_updated: false` measured field or equivalent) under
+  the dbt engine, and `seshat dagster doctor` MUST emit a WARNING finding for any
+  table whose layers resolve to MIXED engines (plan-review R2).
 
 ### Key Entities
 
@@ -414,7 +443,10 @@ anything are left UNANSWERED under "Open for human".
   A: It recomputes the plan and passes its own digest; the drift-guard still holds
   (a stale digest refuses). Reasoning: spec 133 FR-023/FR-025 forbid raw dbt
   pass-through and require digest recompute; the asset must go through
-  `seshat.dbt` planning, not a raw `dagster-dbt` CliResource.
+  `seshat.dbt` planning, not a raw `dagster-dbt` CliResource. AMENDED per
+  plan-review R1: this makes the digest a drift-guard only (no per-run human
+  review); the compensating control is the reviewed committed engine flag
+  (FR-001), and evidence records the self-acceptance (FR-014).
 
 - **Q: Where does the dbt runtime dependency live?**
   A: In the orchestration project environment only (`seshat-bi[dbt]` plus the
@@ -435,7 +467,11 @@ anything are left UNANSWERED under "Open for human".
 - **Q: Can silver and gold have different engines for the same table?**
   A: Yes; each asset resolves its own engine independently and records it.
   Reasoning: the assets are distinct build steps; a mixed configuration is a valid
-  intermediate state and is simpler than a coupled table-wide flag.
+  intermediate state and is simpler than a coupled table-wide flag. AMENDED per
+  plan-review R2: a mixed configuration has a semantic trap (a migrations layer
+  can read a real relation this run's dbt layer never rebuilt), so doctor MUST
+  warn on mixed engines and the evidence record marks the mix (FR-015); mixed
+  stays allowed but never silent.
 
 ### Open for human (UNANSWERED -- Principle V)
 
