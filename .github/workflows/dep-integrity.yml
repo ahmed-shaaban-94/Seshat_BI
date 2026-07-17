@@ -1,0 +1,46 @@
+name: dep-integrity
+
+# Spec 136: the network-dependent dependency-integrity checks live in their OWN
+# workflow, deliberately SEPARATE from the offline stdlib-only `seshat check`
+# core in ci.yml (Principle VIII). Nothing here installs an optional extra into
+# the job interpreter -- every resolve happens in a per-environment ephemeral
+# venv via `pip install --dry-run --report`, so the lazy-import isolation proof
+# (SC-002) is untouched.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, mirroring the Dependabot cadence -- drives the advisory freshness
+    # report (the co-resolution gate also runs, harmlessly, on the schedule).
+    - cron: "17 6 * * 1"
+
+jobs:
+  co-resolution:
+    # The fail-closed co-resolution proof (US1). Resolves every declared
+    # environment and cross-product in dependency-environments.yaml.
+    #
+    # HISTORICAL-INCIDENT NOTE (SC-001): while spec 135 (PR #307) is unmerged,
+    # the orchestration project still pins dagster-dbt==0.29.14 (dbt-core<1.12)
+    # while the root `dbt` extra pins dbt-core==1.12.0, so the
+    # `root-dbt-plus-orchestration` cross-product genuinely FAILS to resolve
+    # (ResolutionImpossible). That failure IS the proof the gate works -- it is
+    # the historical incident reproducing, not a gate defect. The job's stdout
+    # names the failing cross-product and prints the resolver's own text. This
+    # job goes green only after PR #307 merges and the cross-product resolves;
+    # the gate is never weakened and the cross-product is never dropped to force
+    # a local pass.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      # No `pip install -e .` and NO optional extra installed into THIS
+      # interpreter (SC-002). Only pip itself is upgraded so the resolver is
+      # current; every declared resolve runs in its own ephemeral venv.
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Co-resolution gate (fail-closed)
+        run: python scripts/dep_coresolve.py --check

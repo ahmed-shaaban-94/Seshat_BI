@@ -469,8 +469,53 @@ def _fetch_pypi_json(dist: str) -> dict:
         raise InfraError(f"PyPI fetch failed for {dist}: {exc}") from exc
 
 
-def run_check(manifest_path: Path) -> int:  # implemented in T013
-    raise NotImplementedError
+def _print_result(result: ResolveResult) -> None:
+    if result.outcome is ResolveOutcome.PASS:
+        print(f"[PASS] {result.target_id}: {result.detail}")
+    else:
+        label = result.outcome.value.upper()
+        print(f"[{label}] {result.target_id}: {result.detail}")
+
+
+def _exit_code_for(results: list[ResolveResult]) -> int:
+    """Fail closed: any RESOLUTION or CONFIG -> EXIT_RESOLUTION; else if any
+    INFRA -> the distinct EXIT_INFRA; else EXIT_OK (FR-003/FR-004/SC-004)."""
+    outcomes = {r.outcome for r in results}
+    if ResolveOutcome.RESOLUTION in outcomes or ResolveOutcome.CONFIG in outcomes:
+        return EXIT_RESOLUTION
+    if ResolveOutcome.INFRA in outcomes:
+        return EXIT_INFRA
+    return EXIT_OK
+
+
+def run_check(manifest_path: Path) -> int:
+    """The fail-closed co-resolution gate (T013, FR-006).
+
+    Loads the manifest, resolves every declared environment and cross-product
+    in an ephemeral venv, prints one line per target, and returns a distinct
+    exit code by the worst outcome seen (a real conflict is never masked by a
+    co-occurring network blip).
+    """
+    manifest = load_manifest(manifest_path)
+    results: list[ResolveResult] = []
+    for env in manifest.environments:
+        result = resolve_environment(manifest, env)
+        results.append(result)
+        _print_result(result)
+    for cp in manifest.cross_products:
+        result = resolve_cross_product(manifest, cp)
+        results.append(result)
+        _print_result(result)
+    code = _exit_code_for(results)
+    summary = (
+        "ok"
+        if code == EXIT_OK
+        else "infra-only"
+        if code == EXIT_INFRA
+        else "conflict/config"
+    )
+    print(f"\n{len(results)} target(s) resolved; exit {code} ({summary})")
+    return code
 
 
 def run_freshness(manifest_path: Path, out: str | None) -> int:  # implemented in T022

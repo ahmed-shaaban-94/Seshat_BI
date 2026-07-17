@@ -89,34 +89,34 @@ a mutually-compatible manifest -> exit zero.
 
 ### Tests for User Story 1 (RED first)
 
-- [ ] T007 [P] [US1] Write FAILING unit test: given a stubbed resolve subprocess
+- [x] T007 [P] [US1] Write FAILING unit test: given a stubbed resolve subprocess
       returning a `ResolutionImpossible` error, the resolve function classifies the
       environment as RESOLUTION and captures the (redacted) resolver text (FR-003).
-- [ ] T008 [P] [US1] Write FAILING unit test: a stubbed successful `--dry-run
+- [x] T008 [P] [US1] Write FAILING unit test: a stubbed successful `--dry-run
       --report` classifies as PASS and records the resolved set; assert the function
       NEVER installs into the current interpreter (the ephemeral-venv path is used,
       SC-002 / FR-002).
-- [ ] T009 [P] [US1] Write FAILING unit test: a stubbed network/index failure
+- [x] T009 [P] [US1] Write FAILING unit test: a stubbed network/index failure
       classifies as INFRA with a DISTINCT machine-readable status and a DISTINCT
       exit code from RESOLUTION (FR-004, SC-004).
-- [ ] T010 [P] [US1] Write FAILING unit test: a cross-product unions its members'
+- [x] T010 [P] [US1] Write FAILING unit test: a cross-product unions its members'
       requirement sets and resolves them together as ONE install; the historical
       dbt-core (<1.12 via dagster-dbt) vs ==1.12.0 shape resolves to RESOLUTION.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Implement the per-environment ephemeral-venv resolve in
+- [x] T011 [US1] Implement the per-environment ephemeral-venv resolve in
       `scripts/dep_coresolve.py`: create a temp venv, run `pip install --dry-run
       --report`, parse the report, classify PASS/RESOLUTION/INFRA, tear down the
       venv. Make T007-T009 GREEN (FR-002, FR-003, FR-004).
-- [ ] T012 [US1] Implement cross-product requirement-union resolution to make T010
+- [x] T012 [US1] Implement cross-product requirement-union resolution to make T010
       GREEN; a cross-product resolves the union of its members' requirement sets.
-- [ ] T013 [US1] Implement the `--check` entry mode: load the manifest, resolve every
+- [x] T013 [US1] Implement the `--check` entry mode: load the manifest, resolve every
       declared environment + cross-product, print one PASS line per environment,
       print the redacted resolver text for each RESOLUTION/CONFIG, and exit non-zero
       if any RESOLUTION or CONFIG occurred; exit with the distinct INFRA code if only
       INFRA occurred (FR-003, FR-006).
-- [ ] T014 [US1] Add the `co-resolution` CI job to `.github/workflows/ci.yml` (or a
+- [x] T014 [US1] Add the `co-resolution` CI job to `.github/workflows/ci.yml` (or a
       new `.github/workflows/dep-integrity.yml`): `ubuntu-latest`, Python 3.13,
       `python scripts/dep_coresolve.py --check`. Do NOT install any optional extra
       into the job interpreter (FR-006, SC-002). Verify the existing `check` job is
