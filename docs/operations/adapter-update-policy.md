@@ -65,6 +65,15 @@ Lane B adapter update pulls a Lane C transitive change (e.g. a publish-capable o
 credential dependency), the PR is reclassified UP to Lane C. The highest blast radius
 wins.
 
+The activated feature-133 compatibility boundary is the exact pair
+`dbt-core==1.12.0` + `dbt-postgres==1.10.2`. Change the pair together, regenerate the
+sanitized manifest fixture, rerun `seshat dbt doctor`, `seshat dbt validate`,
+`seshat dbt plan`, the accepted-plan build/test path, and
+`seshat dbt inspect-run`, then update the compatibility matrix. Static parse/list
+evidence does not satisfy the live boundary; absent a database, record
+`[PENDING LIVE PROFILE]`. No dependency update may grant a migration switch or
+compatibility attestation.
+
 ## The compatibility-review trigger (the F031 / F032 boundary)
 
 A major-version bump (Lane B/C) or any adapter update triggers an explicit

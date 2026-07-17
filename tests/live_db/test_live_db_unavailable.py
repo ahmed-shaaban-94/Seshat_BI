@@ -113,3 +113,18 @@ def test_all_five_reasons_are_distinct_strings():
         conftest.REASON_SEED,
     ]
     assert len(set(reasons)) == len(reasons)
+
+
+def test_dbt_runtime_absent_skips_before_starting_docker(monkeypatch):
+    monkeypatch.setattr(conftest, "dbt_runtime_available", lambda: False)
+
+    def must_not_probe_docker():
+        raise AssertionError("Docker must not start when dbt is unavailable")
+
+    monkeypatch.setattr(conftest, "docker_available", must_not_probe_docker)
+    generator = conftest.live_dbt_project.__wrapped__(None)
+
+    with pytest.raises(pytest.skip.Exception) as exc:
+        next(generator)
+
+    assert conftest.REASON_DBT_PENDING in str(exc.value)

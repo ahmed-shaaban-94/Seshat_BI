@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: stg_retail_store_sales
+    config:
+      tags: [seshat_table_retail_store_sales]
+    meta:
+      seshat:
+        table_id: retail_store_sales
+        source_map: mappings/retail_store_sales/source-map.yaml
+        source_map_revision: 1815a59abadf2ce7752f99444a0b403d717e100d
+        grain: one row = one retail transaction
+        business_key: [transaction_id]
+        authority: derived
+    columns:
+      - name: transaction_id
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.transaction_id]
+        data_tests:
+          - unique:
+              config:
+                tags: [seshat_table_retail_store_sales]
+          - not_null:
+              config:
+                tags: [seshat_table_retail_store_sales]
+      - name: customer_id
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.customer_id]
+      - name: item
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.item]
+      - name: category
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.category]
+      - name: price_per_unit
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.price_per_unit]
+      - name: quantity
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.quantity]
+      - name: total_spent
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.total_spent]
+      - name: payment_method
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.payment_method]
+      - name: location
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.location]
+      - name: transaction_date
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.transaction_date]
+      - name: discount_applied
+        meta:
+          seshat:
+            source_columns: [bronze.retail_store_sales.discount_applied]

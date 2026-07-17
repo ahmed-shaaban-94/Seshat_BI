@@ -186,7 +186,7 @@ sequences before it or assumes it exists.
 | **F026** | Readiness Viewer | Product Module (read-only) | `020` | **SHIPPED** -- `.claude/skills/readiness-viewer/` |
 | **F027** | Approval Console | Product Module (artifact-writing) | `021` | **SHIPPED** -- `.claude/skills/approval-console/` |
 | **F028** | Evidence Pack Generator | Product Module (artifact-writing) | `022` | **SHIPPED** -- `.claude/skills/evidence-pack-generator/` |
-| **F029** | dbt Transformation Adapter | Execution Adapter (DB-connected) | `023` | **SHIPPED** -- `.claude/skills/dbt-transformation-adapter/` (+ ADR `0009`) |
+| **F029** | dbt Transformation Adapter | Execution Adapter (DB-connected) | `023`, activation `133` | **IMPLEMENTED / ACTIVATION DEFERRED** -- governed `seshat dbt` CLI, tracked shadow project, exact optional runtime, immutable plans, normalized evidence, and public `dbt-workflows` skill are implemented; mandatory compile/live parity and named-owner compatibility attestation remain `[PENDING LIVE PROFILE]`, so the adapter is not yet classified as shipped |
 | **F030** | Dagster Orchestration Adapter | Execution Adapter (orchestrator) | `024` | **SHIPPED** -- `.claude/skills/dagster-orchestration-adapter/` (+ ADR `0010`) |
 | **F031** | Adapter Maintenance & Auto-Update Policy | Maintenance Automation | `025` | spec-only -- **no consumer yet** (the dbt/dagster adapters are docs-only skills + templates; there is no running runtime to maintain). Defer until an adapter has a runtime. ADR `0011` allotted. |
 | **F032** | Adapter Compatibility Matrix | Maintenance Automation | `026` | spec-only -- same no-consumer reason as F031 |

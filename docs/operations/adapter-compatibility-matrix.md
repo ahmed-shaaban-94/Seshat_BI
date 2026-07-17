@@ -90,6 +90,50 @@ fills them from attested evidence via `templates/adapter-version-record.md`.
 | Power BI PBIP/TMDL assumptions | `<assumed PBIP/TMDL shape; floor tested, ceiling unknown>` | `<pbip-tmdl-smoke>` | `<status>` | `<YYYY-MM-DD \| unknown>` | `<named owner \| UNASSIGNED>` |
 | Power BI MCP adapter status (F016, parked) | `<unknown -- not yet exercised>` | `<pbi-mcp-smoke>` | `unknown` | `unknown` | `UNASSIGNED` |
 
+### Feature 133 dbt candidate verification (derived evidence only)
+
+This candidate record does not replace the named-owner attestation required by
+the matrix. The agent ran the reproducible checks and records their derived
+outcome; it does not self-promote the adapter to supported.
+
+| Candidate | Exact version | Derived check | Status | Verified | Owner |
+|---|---|---|---|---|---|
+| Python | `3.13.12` | editable `.[dev,dbt]` install | `blocked` | `2026-07-16` | `UNASSIGNED` |
+| dbt Core | `1.12.0` | governed parse/list and repeated `seshat dbt plan` | `blocked` | `2026-07-16` | `UNASSIGNED` |
+| dbt Postgres | `1.10.2` | adapter load plus manifest v12 parse | `blocked` | `2026-07-16` | `UNASSIGNED` |
+
+Derived evidence:
+
+- exact optional dependency resolution succeeded on Python 3.13.12;
+- `dbt parse` emitted manifest schema v12 with 8 governed models and 24 tests;
+- the sanitized fixture is
+  `tests/fixtures/dbt_artifacts/manifest-pinned-v12.json`;
+- repeated planning kept the semantic graph fingerprint and plan digest stable
+  while dbt's raw manifest checksum changed with invocation metadata;
+- strict fixture readers accept manifest v12 and run-results v6;
+- `tests/live_db/test_dbt_retail_store_sales.py` now defines one-container matching
+  parity plus fact-row, business-key, money-total, and dimension-member divergence
+  proofs through the real `seshat dbt` CLI and a temporary local Git clone;
+- the existing mocked precondition suite remains green (8 tests), and the new live
+  module self-skipped with the explicit `[PENDING LIVE PROFILE]` reason.
+
+`blocking_reasons[]`:
+
+- `[PENDING LIVE PROFILE]` -- `dbt compile` opens a Postgres connection for
+  this graph even with `--no-introspect`; no DSN was available;
+- `[PENDING LIVE PROFILE]` -- Docker is not installed/on `PATH` and the isolated
+  environment does not contain the `livetest` extra, so the ephemeral-Postgres
+  proof did not execute and is not counted as a live pass;
+- live build/test/parity and run-results v6 production are not yet verified;
+- a named compatibility owner has not attested the candidate rows.
+
+Enable the disposable proof by installing Docker Desktop with its Linux engine,
+installing `.[db,dbt,livetest]`, and rerunning
+`python -m pytest tests/live_db/test_dbt_retail_store_sales.py -m live_db -v`.
+For an operator-provided database, put only `SESHAT_DBT_*` values in the gitignored
+`.env` and rerun compile/live parity. Until then, these rows remain `blocked`, not
+`pass`.
+
 ### Per-row evidence and blocking reasons
 
 Each row's `evidence[]` (for a `pass`) and `blocking_reasons[]` (for `blocked` / `unknown`)

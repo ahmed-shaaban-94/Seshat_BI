@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seshat-bi.local/schemas/dbt-run-evidence.schema.json",
+  "title": "Seshat BI dbt run evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authority",
+    "invocation_id",
+    "table_id",
+    "command",
+    "outcome",
+    "seshat_exit_code",
+    "started_at",
+    "completed_at",
+    "elapsed_seconds",
+    "plan_digest",
+    "project_fingerprint",
+    "mapping_path",
+    "mapping_revision",
+    "runtime",
+    "target",
+    "selected_unique_ids",
+    "executed_unique_ids",
+    "tests",
+    "parity",
+    "artifacts",
+    "blocking_reasons",
+    "readiness_effect"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "authority": {"const": "derived-evidence-only"},
+    "invocation_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$"
+    },
+    "table_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "command": {"enum": ["build", "test", "inspect-run"]},
+    "outcome": {"enum": ["pass", "blocked", "failed", "unavailable"]},
+    "seshat_exit_code": {"type": "integer", "minimum": 0, "maximum": 4},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "elapsed_seconds": {"type": "number", "minimum": 0},
+    "plan_digest": {"$ref": "#/$defs/sha256"},
+    "project_fingerprint": {"$ref": "#/$defs/sha256"},
+    "mapping_path": {
+      "type": "string",
+      "pattern": "^mappings/[a-z][a-z0-9_]*/source-map\\.yaml$"
+    },
+    "mapping_revision": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dbt_core", "dbt_adapter", "dbt_adapter_version"],
+      "properties": {
+        "dbt_core": {"const": "1.12.0"},
+        "dbt_adapter": {"const": "dbt-postgres"},
+        "dbt_adapter_version": {"const": "1.10.2"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "schemas"],
+      "properties": {
+        "name": {"const": "shadow"},
+        "schemas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["silver", "gold", "audit"],
+          "properties": {
+            "silver": {"$ref": "#/$defs/schemaName"},
+            "gold": {"$ref": "#/$defs/schemaName"},
+            "audit": {"$ref": "#/$defs/schemaName"}
+          }
+        }
+      }
+    },
+    "selected_unique_ids": {"$ref": "#/$defs/uniqueIds"},
+    "executed_unique_ids": {"$ref": "#/$defs/uniqueIds"},
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failed", "errored", "skipped"],
+      "properties": {
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "errored": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0}
+      }
+    },
+    "parity": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/parityAssertion"}
+    },
+    "artifacts": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "manifest.json",
+          "run_results.json",
+          "parity_manifest.json",
+          "parity_run_results.json"
+        ]
+      },
+      "additionalProperties": {"$ref": "#/$defs/sha256"}
+    },
+    "blocking_reasons": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/blocker"}
+    },
+    "readiness_effect": {"const": "none; named-human approval required"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "schemaName": {"type": "string", "pattern": "^[a-z_][a-z0-9_]*$"},
+    "uniqueIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 3, "maxLength": 300}
+    },
+    "decimalString": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "parityAssertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_id",
+        "assertion_class",
+        "subject",
+        "expected",
+        "actual",
+        "delta",
+        "tolerance",
+        "passed"
+      ],
+      "properties": {
+        "assertion_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "assertion_class": {
+          "enum": [
+            "fact_row_count",
+            "business_key_count",
+            "additive_money_total",
+            "dimension_member_count"
+          ]
+        },
+        "subject": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$"},
+        "expected": {"$ref": "#/$defs/decimalString"},
+        "actual": {"$ref": "#/$defs/decimalString"},
+        "delta": {"$ref": "#/$defs/decimalString"},
+        "tolerance": {"$ref": "#/$defs/decimalString"},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^DBT_[A-Z0-9_]+$"},
+        "message": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "assertion_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+      }
+    }
+  }
+}

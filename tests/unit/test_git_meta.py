@@ -130,6 +130,17 @@ def test_p1_accepts_good_layout() -> None:
 
 
 @pytest.mark.unit
+def test_p1_accepts_governed_dbt_sql_layout() -> None:
+    tracked = GOOD_LAYOUT + (
+        "dbt/macros/generate_schema_name.sql",
+        "dbt/models/staging/retail_store_sales/stg_retail_store_sales.sql",
+        "dbt/models/marts/retail_store_sales/fct_sales_rss.sql",
+    )
+    ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)
+    assert _findings(rule_p1_layout, ctx) == []
+
+
+@pytest.mark.unit
 def test_p1_flags_misplaced_sql_and_pbip() -> None:
     tracked = GOOD_LAYOUT + ("scripts/adhoc.sql", "reports/Sales.pbip")
     ctx = RuleContext(repo_root=Path("."), tracked_files=tracked)

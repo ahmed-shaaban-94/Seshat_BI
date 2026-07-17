@@ -709,19 +709,28 @@ capabilities:
       verb: "retail-govern"
 
   - id: dbt-transformation-adapter
-    name: "dbt advisory adapter"
-    summary: "Runs dbt as the build engine for silver/gold behind the Mapping Ready gate; records run/test/parity output as derived evidence."
-    state: shipped
-    authority: advisory
+    name: "dbt transformation adapter"
+    summary: "Implemented governed dbt candidate; runtime activation awaits mandatory compile/live proof and named-owner compatibility attestation."
+    state: deferred
+    authority: agent-runnable
     surface: execution-adapter
-    requirements: [optional-dependency]
-    provenance: locally-verified
+    requirements: [database, optional-dependency]
+    provenance: unrecorded
     readiness_stage: not-stage-scoped
-    command: null
+    command: dbt
     documentation: ".claude/skills/dbt-transformation-adapter/SKILL.md"
     references:
       roadmap: "F029"
       skill: "dbt-transformation-adapter"
+      dispatch: "dbt"
+      runtime_project: "dbt/dbt_project.yml"
+      public_skill: "dbt-workflows"
+      package_extra: "dbt"
+      activation_status: "docs/operations/dbt-activation-status.yaml"
+      tests:
+        - "tests/contract/test_dbt_project.py"
+        - "tests/contract/test_dbt_public_surface.py"
+        - "tests/integration/test_dbt_artifact_flow.py"
 
   - id: dagster-orchestration-adapter
     name: "Dagster advisory adapter"

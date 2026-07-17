@@ -43,7 +43,7 @@
 - **Connectivity level:** `DB-connected`  *(exactly one -- the STRONGEST it uses; dbt is NEVER publish-capable; it stops at gold)*
 - **Product layer:** `<2-3>`  *(the functional axis -- silver/gold transformation; see docs/roadmap/roadmap.md; orthogonal to category)*
 - **Roadmap feature:** F029  **On-disk spec:** `specs/023-dbt-transformation-adapter`
-- **Engine:** `dbt-core + dbt-postgres`  *(pinned together -- see Auto-update policy)*
+- **Engine:** `dbt-core==1.12.0 + dbt-postgres==1.10.2`  *(pinned together -- see Auto-update policy)*
 - **Owner:** `<named human or role>`
 - **Status:** `<Planned | Authored | Shipped>`
 
@@ -94,7 +94,8 @@ An adapter may write a RUN RECORD as derived evidence. This is never a new truth
 > A green `dbt test` MUST NOT move Silver Ready or Gold Ready to `pass`. Tower readiness
 > + a named human decide that, citing the dbt evidence + the recorded approval.
 
-- the `dbt build` / `dbt test` run record (what ran, when, with what pass/fail counts).
+- the `seshat dbt build` / `seshat dbt test` normalized run record (what ran,
+  when, with what pass/fail counts), written under `.seshat/dbt/runs/<invocation-id>/`.
 - the reconciliation parity result (the four assertions below + measured deltas).
 - these flow into the EXISTING `mappings/<table>/readiness-status.yaml` `evidence[]` /
   `blocking_reasons[]`; the stage status is decided by Tower readiness + a named human.
@@ -126,7 +127,7 @@ later named-human decision, never a side effect of the switch.
 
 ## Auto-update policy (pin dbt-core + dbt-postgres together)
 
-- `dbt-core` and `dbt-postgres` are pinned TOGETHER (never one without the other).
+- `dbt-core==1.12.0` and `dbt-postgres==1.10.2` are pinned TOGETHER (never one without the other).
 - patch / minor versions open a PR; a major version requires named-human review.
 - NO automerge for a dbt minor or major bump until compatibility tests exist.
 - record any bump as `<adapter-version-record>`; a major (and, until compatibility tests
@@ -134,8 +135,9 @@ later named-human decision, never a side effect of the switch.
 
 ## Secrets handling (Principle IX)
 
-- **Credentials:** the real `profiles.yml` is git-ignored and supplied by the operator;
-  it holds the host / DSN / credentials. NEVER inline real values in any tracked file.
+- **Credentials:** the real `profiles.yml` and `.env` are gitignored and supplied by the
+  operator; `profiles.yml` contains only `env_var()` references and real
+  `SESHAT_DBT_*` values live only in `.env`. NEVER inline real values in tracked files.
 - **Committed example only:** `profiles.example.yml` with placeholder values only
   (NO host, NO DSN, NO credential, NO token).
 
@@ -161,6 +163,8 @@ These hold for EVERY dbt Transformation Adapter:
 - MUST NOT commit `profiles.yml` or any real hostname / DSN / credential / token
   (Principle IX).
 - MUST NOT automerge any dbt-core / dbt-postgres minor or major bump.
+- MUST NOT invoke raw dbt for a governed run; use `seshat dbt` so the fixed selector,
+  target, shadow schema, accepted-plan digest, lock, redaction, and artifact checks apply.
 
 ## How it handles a missing definition or approval
 

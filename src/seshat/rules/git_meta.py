@@ -60,6 +60,7 @@ def rule_g5_path_length(ctx: RuleContext) -> Iterable[Finding]:
 REQUIRED_PATHS = ("README.md", "warehouse/README.md", "powerbi/README.md")
 PBIP_SIGNATURES = (".pbip", "definition.pbir")
 PBIP_DIR_MARKERS = (".SemanticModel/", ".Report/")
+SQL_ROOTS = ("warehouse/", "dbt/")
 
 
 def _is_pbip_signature(path: str) -> bool:
@@ -93,11 +94,11 @@ def _pbip_placement_finding(path: str) -> Finding | None:
 
 
 def _sql_placement_finding(path: str) -> Finding | None:
-    if path.endswith(".sql") and not path.startswith("warehouse/"):
+    if path.endswith(".sql") and not path.startswith(SQL_ROOTS):
         return Finding(
             rule_id="P1",
             severity=Severity.ERROR,
-            message="*.sql must live under warehouse/",
+            message="*.sql must live under warehouse/ or dbt/",
             locator=path,
         )
     return None
@@ -109,7 +110,8 @@ def rule_p1_layout(ctx: RuleContext) -> Iterable[Finding]:
     for path in ctx.tracked_files:
         # Committed test fixtures (e.g. tests/fixtures/golden_pbip/*.pbip and any
         # test *.sql) are not the live model and must not be forced under
-        # powerbi/ or warehouse/. Skip them before the production-layout checks.
+        # powerbi/, warehouse/, or dbt/. Skip them before the production-layout
+        # checks.
         if is_test_path(path):
             continue
         # A single path can trip both checks (a PBIP-signature *.sql outside both
