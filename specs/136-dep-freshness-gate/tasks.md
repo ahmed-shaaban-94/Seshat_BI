@@ -51,12 +51,12 @@ and tested independently. US1 (co-resolution proof) is the MVP.
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 [US1] Write FAILING unit tests for the manifest loader in
+- [x] T003 [US1] Write FAILING unit tests for the manifest loader in
       `tests/unit/test_dep_coresolve.py`: a valid manifest parses into typed
       environment/cross-product/governed-pin records; a manifest pointing at a
       MISSING pyproject or an UNDEFINED extra yields a CONFIG outcome (FR-005).
       Assert RED.
-- [ ] T004 [US1] Implement the manifest loader + the `ResolveOutcome` classification
+- [x] T004 [US1] Implement the manifest loader + the `ResolveOutcome` classification
       enum (PASS / RESOLUTION / INFRA / CONFIG) in `scripts/dep_coresolve.py` to make
       T003 GREEN. Loader reads pins from the referenced pyproject via `tomllib` (no
       duplicated version strings, FR-015). Classification defaults to RESOLUTION on
@@ -65,12 +65,12 @@ and tested independently. US1 (co-resolution proof) is the MVP.
       strings for repository-local members MUST be LOCAL PATHS, never distribution
       names -- add the pinning unit test (plan-review D1). An ephemeral-venv pip
       too old for `--report` yields CONFIG, not a crash (plan-review D5).
-- [ ] T005 [US1] Write FAILING unit tests for the resolver-error REDACTION helper:
+- [x] T005 [US1] Write FAILING unit tests for the resolver-error REDACTION helper:
       a resolver error text carrying a credential-shaped token is masked before it
       is surfaced; a clean conflict message is passed through unchanged (FR-016).
       Reuse the repo's existing C2 secret-shape posture (import from
       `src/seshat/rules/git_meta.py` or a shared helper). Assert RED.
-- [ ] T006 [US1] Implement the redaction helper in `scripts/dep_coresolve.py`
+- [x] T006 [US1] Implement the redaction helper in `scripts/dep_coresolve.py`
       (delegating to the existing C2 shapes, not re-implementing them) to make T005
       GREEN.
 
