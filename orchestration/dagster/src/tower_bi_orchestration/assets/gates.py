@@ -8,6 +8,7 @@ readiness ``status``, or an ``approvals[]`` entry -- ever.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from dagster import AssetKey, asset
@@ -27,26 +28,36 @@ def _migrations(root: Path, layer: str, table: str) -> list[Path]:
     return sorted(migrations_dir.glob(f"*{layer}*{table}*.sql"))
 
 
-def _produce_migrations(
-    writer, base: dict, root: Path, layer: str, table: str, dsn: str
-) -> dict:
+@dataclass(frozen=True)
+class _Produce:
+    """One layer-build request: the writer/base evidence plumbing plus the
+    (root, layer, table) coordinates every engine needs."""
+
+    writer: object
+    base: dict
+    root: Path
+    layer: str
+    table: str
+
+
+def _produce_migrations(produce: _Produce, dsn: str) -> dict:
     """Apply the committed migration SQL; return the measured produce fields.
 
     Unchanged from the pre-feature migrations path (US5): flipping back to
     ``engine: migrations`` reproduces this behavior byte-for-byte.
     """
-    migrations = _migrations(root, layer, table)
+    migrations = _migrations(produce.root, produce.layer, produce.table)
     if not migrations:
         halt(
-            writer,
+            produce.writer,
             AssetOutcome(
-                **base,
+                **produce.base,
                 exit_code=None,
                 measured={"engine": "migrations"},
                 outcome="blocked",
                 blocking_reason=(
-                    f"no committed {layer} migration found for {table} "
-                    "under warehouse/migrations/"
+                    f"no committed {produce.layer} migration found for "
+                    f"{produce.table} under warehouse/migrations/"
                 ),
                 owner="warehouse owner",
             ),
@@ -59,7 +70,7 @@ def _produce_migrations(
     }
 
 
-def _produce_dbt(writer, base: dict, root: Path, layer: str, table: str) -> dict:
+def _produce_dbt(produce: _Produce) -> dict:
     """Run the governed table-wide dbt build (shadow-only rehearsal).
 
     The dbt engine does NOT rebuild the real ``silver``/``gold`` relations
@@ -70,7 +81,7 @@ def _produce_dbt(writer, base: dict, root: Path, layer: str, table: str) -> dict
     fail-closed with the bridge's redacted reason (FR-006) -- never a traceback.
     """
     exit_code, measured, evidence_path = dbt_build.build_layer(
-        context=None, table=table, layer=layer, root=root
+        context=None, table=produce.table, layer=produce.layer, root=produce.root
     )
     measured = {
         **measured,
@@ -80,9 +91,9 @@ def _produce_dbt(writer, base: dict, root: Path, layer: str, table: str) -> dict
     }
     if exit_code != 0:
         halt(
-            writer,
+            produce.writer,
             AssetOutcome(
-                **base,
+                **produce.base,
                 exit_code=exit_code,
                 measured=measured,
                 outcome=measured.get("outcome", "blocked"),
@@ -121,10 +132,11 @@ def _build_layer(context, table: str, root: Path, layer: str) -> None:
             ),
         )
     engine = resolve_build_engine(root, table, layer)
+    produce = _Produce(writer=writer, base=base, root=root, layer=layer, table=table)
     if engine == "dbt":
-        produced = _produce_dbt(writer, base, root, layer, table)
+        produced = _produce_dbt(produce)
     else:
-        produced = _produce_migrations(writer, base, root, layer, table, dsn)
+        produced = _produce_migrations(produce, dsn)
     exit_code, output = commands.run_gate_command(commands.checker_argv(), cwd=root)
     if exit_code != 0:
         halt(

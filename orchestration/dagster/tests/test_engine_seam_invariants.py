@@ -139,25 +139,36 @@ def _orch_sources() -> list[Path]:
     return list(_ORCH_SRC.rglob("*.py"))
 
 
+def _import_hits(node) -> list[str]:
+    import ast
+
+    if isinstance(node, ast.Import):
+        return [
+            a.name for a in node.names if a.name.split(".")[0] in _FORBIDDEN_IMPORTS
+        ]
+    if isinstance(node, ast.ImportFrom):
+        root = (node.module or "").split(".")[0]
+        from_module = [node.module or ""] if root in _FORBIDDEN_IMPORTS else []
+        return from_module + [a.name for a in node.names if a.name in _FORBIDDEN_NAMES]
+    return []
+
+
+def _name_hits(node) -> list[str]:
+    import ast
+
+    if isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
+        return [node.id]
+    if isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_NAMES:
+        return [node.attr]
+    return []
+
+
 def _forbidden_uses(source: str) -> list[str]:
     import ast
 
-    tree = ast.parse(source)
     hits: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            hits += [
-                a.name for a in node.names if a.name.split(".")[0] in _FORBIDDEN_IMPORTS
-            ]
-        elif isinstance(node, ast.ImportFrom):
-            root = (node.module or "").split(".")[0]
-            if root in _FORBIDDEN_IMPORTS:
-                hits.append(node.module or "")
-            hits += [a.name for a in node.names if a.name in _FORBIDDEN_NAMES]
-        elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
-            hits.append(node.id)
-        elif isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_NAMES:
-            hits.append(node.attr)
+    for node in ast.walk(ast.parse(source)):
+        hits += _import_hits(node) + _name_hits(node)
     return hits
 
 
