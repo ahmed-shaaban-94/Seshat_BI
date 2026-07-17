@@ -29,6 +29,27 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak beyond the governed public surface
 
+## Acceptance evidence (recorded 2026-07-17, implementation complete)
+
+- SC-001: `dagster definitions validate` PASSED locally; 24 assets load (12 x 2
+  discovered tables); `orchestration/dagster/tests/test_definitions_load.py`
+  asserts the 12-name set, both jobs, and STOPPED schedule + sensor.
+- SC-002: `orchestration/dagster/tests/{test_fail_closed,test_human_seam,
+  test_evidence_records}.py` -- 15 tests green in-process with zero DB creds;
+  mappings-digest assertions prove zero readiness-truth writes.
+- SC-003: live `seshat dagster doctor` run on this repo: exit 0, gate state per
+  table reported truthfully, DSN absence reported as a deferred-boundary warning.
+- SC-004: `tests/contract/test_public_command_surface.py` +
+  `test_generated_agent_bundles.py` green (66 passed) after regeneration --
+  including the bundle-equality test that FAILED at baseline on main.
+- SC-005: gate module read-only guard tests (no write functions, no file-write
+  calls); evidence schema/validator reject `pass` outcomes and score-like keys.
+- SC-006: `.github/workflows/dagster-smoke.yml` runs the same commands proven
+  locally, with no DB service and no secrets (verified on the PR).
+- SC-007: full suite 2705 passed / 7 pre-existing failures (baseline was 9 --
+  two REPAIRED, zero new); ruff format+check clean; `seshat check` exit 0;
+  kit-lint no drift; CodeScene delta quality gate PASSED.
+
 ## Notes
 
 - Path/command names (orchestration/dagster/, seshat dagster, public-command-surface.yaml)
