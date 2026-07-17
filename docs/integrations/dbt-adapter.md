@@ -1,7 +1,6 @@
 # dbt as a Transformation Adapter -- how it plugs in behind the gate
 
-- **Status:** Planned (the integration posture is authored here; the dbt project itself is
-  a PLANNED future output -- this slice creates NO dbt files).
+- **Status:** Activated by feature 133 as a governed shadow execution adapter.
 - **Roadmap feature:** F029 (on-disk spec `023-dbt-transformation-adapter`). When the
   spec-dir number and the F-number disagree, the roadmap F-number wins.
 - **Authority category (F024):** Execution Adapter / `DB-connected` (NOT publish-capable).
@@ -12,7 +11,7 @@
 
 ## One line
 
-> dbt is the build ENGINE for silver/gold; Tower BI is the brain. dbt may build only
+> dbt is the build ENGINE for silver/gold; Seshat BI is the brain. dbt may build only
 > after Mapping Ready = `pass`, every model cites the approved map, dbt tests are
 > evidence (never an approval), and migrations stay the default until a reconciliation
 > parity test proves the dbt mart reproduces the existing gold tables.
@@ -23,8 +22,9 @@ The warehouse already builds silver and gold as numbered, idempotent SQL migrati
 `warehouse/migrations/`. That hand-authored SQL is the DEFAULT build path and it is
 approved and live. dbt is an OPTIONAL ALTERNATIVE engine for the same silver/gold build --
 it does not replace migrations. dbt plugs in at one seam: AFTER Mapping Ready = `pass`, the
-agent may invoke dbt (via the skill) to materialize silver/gold and run tests, then records
-the results as DERIVED evidence into the table's `readiness-status.yaml`. Tower readiness +
+agent may invoke dbt only through `seshat dbt` to materialize shadow silver/gold objects
+and run tests, then records sanitized DERIVED evidence under `.seshat/dbt/runs/`.
+Seshat readiness +
 a named human still decide Silver Ready / Gold Ready. dbt STOPS at gold (Principle III);
 publishing Power BI is the parked F016 adapter, gated separately.
 
@@ -66,22 +66,20 @@ path; the parity test RE-RUNS on EVERY dbt build while the oracle is retained (n
 one-time-at-switch). Retiring a retained migration is a separate, later named-human
 decision. The cent tolerance is the stated default -- it is NOT a score.
 
-## The planned dbt project shape (ENUMERATED -- NOT created this slice)
+## The activated dbt project shape
 
-This slice creates NO dbt files. The build slice will create a top-level `dbt/` directory
-(its own home, parallel to `warehouse/`, so the two build paths stay clearly separate):
+The tracked top-level `dbt/` project stays parallel to `warehouse/`, so the
+shadow and migration build paths remain visibly separate:
 
 ```text
-dbt/                                  # PLANNED -- not created this slice
-|- dbt_project.yml                    #   project config (profile: a generic profile name)
-|- profiles.example.yml               #   -> committed at repo root; real profiles.yml git-ignored
-|- models/
-|  |- sources/                        #   sources -> the already-built bronze/silver; cite the approved map
-|  |- staging/                        #   staging models: clean/type per the approved map (stg_<table>)
-|  |- intermediate/                   #   intermediate transforms (only if a model needs one)
-|  |- marts/                          #   marts that reproduce the gold star (<table>_mart -> gold.<fact>)
-|- tests/                             #   schema + data tests + the reconciliation parity test
-|- macros/                            #   shared macros (e.g. the parity-assertion macro)
+dbt/
+|- dbt_project.yml                    # fixed profile, model roots, and shadow defaults
+|- selectors.yml                      # one governed selector per table
+|- macros/generate_schema_name.sql    # enforces dbt_shadow_<invocation> schemas
+|- models/sources/                    # approved migration-built sources
+|- models/staging/<table>/            # cited staging/silver transformation
+|- models/marts/<table>/              # cited gold star shadow models
+|- models/audit/<table>/              # parity audit model
 ```
 
 **Model layers (staging -> silver -> gold):**
@@ -106,10 +104,9 @@ Every model carries a filled `templates/dbt-model-contract.md` citing the approv
 
 ## The first MVP (the CITED worked example -- generic templates stay clean)
 
-The first table to PLAN (not implement) is the `retail_store_sales` worked example: one
-`retail_store_sales` staging model + one mart model + the basic test set above, with the
-reconciliation parity test against that table's migration-built gold fact. The filled dbt
-models for the worked example will live under the planned `dbt/models/` tree; the GENERIC
+The first implemented table is the `retail_store_sales` worked example: one staging
+model, six mart models, one parity audit model, and 24 governed tests. The filled dbt
+models live under `dbt/models/`; the GENERIC
 templates (`templates/dbt-adapter-contract.md`, `templates/dbt-model-contract.md`), the
 ADR, and the skill carry NO `retail_store_sales` / C086 values (Principle VII). The filled
 instance is documented in a filled worked example under `docs/worked-examples/`; its column / table
@@ -117,27 +114,39 @@ specifics are never inlined into the generic artifacts.
 
 ## Connection + secrets (Principle IX)
 
-dbt connects via a `profiles.yml`. Only `profiles.example.yml` (placeholders -- NO host,
-NO DSN, NO credential, NO token) is committed at the repo root. The real `profiles.yml`
-is git-ignored and supplied by the operator: copy `profiles.example.yml` to `profiles.yml`,
-fill the real values, and keep `profiles.yml` OUT of version control. No connection string,
-credential, or host MAY appear in any tracked file.
+dbt connects via `profiles.yml`. Only `profiles.example.yml`, containing `env_var()`
+references and no real host/DSN/credential/token, is committed. Both `profiles.yml` and
+`.env` are gitignored; real `SESHAT_DBT_*` values belong only in `.env`.
 
-> Human-gated: this slice does NOT edit `.gitignore`. Before the build slice creates a
-> real `profiles.yml`, a `profiles.yml` ignore entry must be added to `.gitignore`
-> (no `profiles.yml` entry exists today; `.gitignore` ignores `.env*`, the `.pbi/`
-> workspace files, `data/raw/`, Python/build caches, and agent scratch dirs, but
-> nothing matching `profiles.yml`).
+## Governed command sequence
+
+Install the exact tested pair with `pip install -e ".[dbt]"`:
+`dbt-core==1.12.0` and `dbt-postgres==1.10.2`.
+
+```text
+seshat dbt doctor --format json
+seshat dbt validate --table <table> --format json
+seshat dbt plan --table <table> --format json
+seshat dbt build --table <table> --accept-plan <digest> --format json
+seshat dbt inspect-run --table <table> --artifacts <run-directory> --format json
+```
+
+`doctor` opens no database. `validate` proves the static gate/citation contract.
+`plan` binds the mapping identity, exact selected graph, versions, and shadow target to
+an immutable digest. `build` recomputes that plan before DB access. `inspect-run` is an
+optional offline revalidation of an existing run directory, not a second execution.
+Missing runtime/profile/DSN/database prerequisites are `[PENDING LIVE PROFILE]`; they
+never become fabricated compile, build, test, or parity success.
 
 ## Auto-update policy
 
-`dbt-core` + `dbt-postgres` are pinned TOGETHER. Patch / minor versions open a PR; a major
+`dbt-core==1.12.0` + `dbt-postgres==1.10.2` are pinned TOGETHER. Any version change opens a PR; a major
 version requires named-human review. NO automerge for a dbt minor or major bump until
 compatibility tests exist. (Recorded in `templates/dbt-adapter-contract.md` and ADR 0009.)
 
 ## What dbt does NOT do (the scope wall)
 
-- does NOT replace Tower BI's authority -- a green `dbt build` / `dbt test` never moves a
+- does NOT replace Seshat BI's authority -- a green `dbt build` / `dbt test` never moves a
   stage to `pass` (Tower readiness + a named human do).
 - does NOT define source mapping, metric contracts, business rollups, segment mappings,
   semantic logic, or dashboard design -- it cites the approved map / reads F009 contracts.
@@ -145,7 +154,7 @@ compatibility tests exist. (Recorded in `templates/dbt-adapter-contract.md` and 
   that is the parked F016 adapter).
 - does NOT resolve a Principle V judgment call (grain ambiguity, sentinel-vs-null, PII
   publish-safety, business rollup) and never silently changes the declared grain.
-- creates NO dbt file or runtime code in THIS planning-only slice.
+- does NOT write outside invocation-scoped shadow schemas or persist raw adapter output.
 
 ## See also
 
@@ -157,5 +166,6 @@ compatibility tests exist. (Recorded in `templates/dbt-adapter-contract.md` and 
   declaration: `templates/adapter-contract.md`.
 - The parity target + the worked example: `warehouse/migrations/`,
   a filled worked example under `docs/worked-examples/`.
-- The spec / plan / tasks: `specs/023-dbt-transformation-adapter/{spec,plan,tasks}.md`.
+- Planning history: `specs/023-dbt-transformation-adapter/`; runtime activation:
+  `specs/133-activate-dbt-mvp/`.
 - `.specify/memory/constitution.md` (Principles III, IV, V, VI, VII, VIII, IX).

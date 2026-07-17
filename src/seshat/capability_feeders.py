@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import json
+import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
@@ -190,6 +191,107 @@ def read_dispatch_keys(repo_root: Path) -> set[str]:
         for key in dispatch_dict.keys
         if isinstance(key, ast.Constant) and isinstance(key.value, str)
     }
+
+
+_DBT_EXACT_EXTRA = ["dbt-core==1.12.0", "dbt-postgres==1.10.2"]
+_DBT_PUBLIC_COMMANDS = {"dbt-doctor", "dbt-plan", "dbt-build", "dbt-review"}
+_DBT_REQUIRED_TESTS = (
+    "tests/contract/test_dbt_project.py",
+    "tests/contract/test_dbt_public_surface.py",
+    "tests/integration/test_dbt_artifact_flow.py",
+)
+_DBT_ACTIVATION_STATUS = "docs/operations/dbt-activation-status.yaml"
+
+
+def _has_exact_dbt_extra(repo_root: Path) -> bool:
+    try:
+        document = tomllib.loads((repo_root / "pyproject.toml").read_text("utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return False
+    project = document.get("project")
+    if not isinstance(project, dict):
+        return False
+    optional = project.get("optional-dependencies")
+    return isinstance(optional, dict) and optional.get("dbt") == _DBT_EXACT_EXTRA
+
+
+def _has_public_dbt_workflows(repo_root: Path) -> bool:
+    surface = _load_yaml_mapping(
+        repo_root / "distribution" / "public-command-surface.yaml"
+    )
+    if surface is None:
+        return False
+    commands = surface.get("commands")
+    skills = surface.get("skills")
+    if not isinstance(commands, list) or not isinstance(skills, list):
+        return False
+    shipped_commands = {
+        row.get("name")
+        for row in commands
+        if isinstance(row, dict)
+        and row.get("status") == "shipped"
+        and row.get("skill") == "dbt-workflows"
+    }
+    skill_is_shipped = any(
+        isinstance(row, dict)
+        and row.get("name") == "dbt-workflows"
+        and row.get("status") == "shipped"
+        and row.get("platforms") == ["claude", "codex"]
+        for row in skills
+    )
+    bundles = (
+        "integrations/claude-code/seshat-bi/skills/dbt-workflows/SKILL.md",
+        "integrations/codex/seshat-bi/skills/dbt-workflows/SKILL.md",
+    )
+    return (
+        skill_is_shipped
+        and _DBT_PUBLIC_COMMANDS <= shipped_commands
+        and all((repo_root / relative).is_file() for relative in bundles)
+    )
+
+
+def _named_compatibility_owner(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    return bool(value.strip()) and value != "UNASSIGNED"
+
+
+def _activation_record_passes(status: dict) -> bool:
+    required = {"parse": "pass", "compile": "pass", "live_parity": "pass"}
+    checks = (
+        status.get("status") == "pass",
+        _named_compatibility_owner(status.get("owner")),
+        status.get("evidence") == required,
+        status.get("blockers") == [],
+    )
+    return all(checks)
+
+
+def _has_dbt_activation_proof(repo_root: Path) -> bool:
+    status = _load_yaml_mapping(repo_root / _DBT_ACTIVATION_STATUS)
+    return status is not None and _activation_record_passes(status)
+
+
+def read_dbt_adapter_state(repo_root: Path) -> str:
+    """Compute dbt activation from all independent committed feeder classes.
+
+    ``shipped`` requires the CLI dispatch, runtime project, reviewed public
+    workflow bundles, exact optional dependency pair, required tests, and a
+    fail-closed compile/live activation record with a named owner. Any incomplete
+    activation is ``partial``; no signal at all remains ``planned``. This function
+    opens no database connection.
+    """
+    signals = (
+        "dbt" in read_dispatch_keys(repo_root),
+        (repo_root / "dbt" / "dbt_project.yml").is_file(),
+        _has_public_dbt_workflows(repo_root),
+        _has_exact_dbt_extra(repo_root),
+        all((repo_root / relative).is_file() for relative in _DBT_REQUIRED_TESTS),
+        _has_dbt_activation_proof(repo_root),
+    )
+    if all(signals):
+        return "shipped"
+    return "partial" if any(signals) else "planned"
 
 
 def read_roadmap_text(repo_root: Path) -> str:

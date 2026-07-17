@@ -1842,6 +1842,17 @@ template_entries:
     required: true
     generated_notice: manifest
     review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: dbt-workflows-skill
+    source: distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: skills/dbt-workflows/SKILL.md
+      codex: skills/dbt-workflows/SKILL.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Required governed dbt workflow for both public bundles.
   - template_id: claude-manifest
     source: distribution/bundle-templates/claude/.claude-plugin/plugin.json
     classification: generated_wrapper
@@ -1942,6 +1953,46 @@ template_entries:
     required: true
     generated_notice: manifest
     review_reason: Required platform wrapper or manifest for the generated public bundle.
+  - template_id: claude-dbt-doctor
+    source: distribution/bundle-templates/claude/commands/dbt-doctor.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/dbt-doctor.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Thin governed route to the dbt prerequisite check.
+  - template_id: claude-dbt-plan
+    source: distribution/bundle-templates/claude/commands/dbt-plan.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/dbt-plan.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Thin governed route to immutable dbt planning.
+  - template_id: claude-dbt-build
+    source: distribution/bundle-templates/claude/commands/dbt-build.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/dbt-build.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Thin governed route to accepted-plan dbt execution.
+  - template_id: claude-dbt-review
+    source: distribution/bundle-templates/claude/commands/dbt-review.md
+    classification: generated_wrapper
+    media_type: text/markdown
+    targets:
+      claude: commands/dbt-review.md
+    transform: copy-normalized-v1
+    required: true
+    generated_notice: manifest
+    review_reason: Thin governed route to normalized dbt evidence review.
   - template_id: claude-doctor
     source: distribution/bundle-templates/claude/commands/doctor.md
     classification: generated_wrapper

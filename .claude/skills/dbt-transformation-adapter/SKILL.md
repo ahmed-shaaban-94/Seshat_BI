@@ -5,7 +5,7 @@ description: >-
   and record its run/test/parity output as DERIVED evidence -- never as an approval.
   Use when someone asks to build silver/gold for a mapped table with dbt, run dbt
   tests, or check dbt parity against the existing gold tables in the Seshat BI repo.
-  dbt is the engine; Tower BI is the brain. This skill READS the approved map,
+  dbt is the engine; Seshat BI is the brain. This skill READS the approved map,
   EXECUTES approved dbt steps behind the gate, and WRITES evidence; it never defines
   meaning, never moves a stage to pass, and HARD-STOPS at every human judgment call.
 ---
@@ -15,7 +15,7 @@ description: >-
 - **Authority category (F024):** Execution Adapter / `DB-connected` (NOT publish-capable).
 - **Roadmap feature:** F029  **On-disk spec:** `specs/023-dbt-transformation-adapter`.
 
-dbt is the build ENGINE: it compiles SQL, materializes models, and runs tests. Tower BI
+dbt is the build ENGINE: it compiles SQL, materializes models, and runs tests. Seshat BI
 is the brain: it owns the approved source-map, the metric contracts, and the readiness
 spine, and routes every judgment call to a named human. This skill is how the agent runs
 dbt without letting it become the brain. You (the agent reading this) ARE the runtime; this
@@ -23,11 +23,10 @@ skill is procedure, not an engine -- there is no daemon, no scheduler, no auto-a
 See `docs/decisions/0009-dbt-is-transformation-adapter.md` and
 `templates/dbt-adapter-contract.md`.
 
-> NOTE: This skill's PROCEDURE is authored now; the dbt RUNTIME project it drives does not
-> exist yet. The dbt project (`dbt/` -- models, tests, macros, `dbt_project.yml`) is a
-> PLANNED future output (the build slice creates it) -- see the enumerated shape in
-> `docs/integrations/dbt-adapter.md`. Until the dbt project exists, treat every "run dbt
-> ..." step below as a seam to report, not a command to fake.
+> ACTIVATED: feature 133 added the governed runtime under `dbt/`, the pinned
+> `dbt-core==1.12.0` + `dbt-postgres==1.10.2` extra, and the `seshat dbt`
+> command family. Use that wrapper only; raw dbt commands bypass the accepted-plan,
+> selector, shadow-schema, redaction, lock, and evidence contracts.
 
 ## Scope boundary (read first)
 
@@ -68,17 +67,17 @@ file to create:
 You may READ Mapping Ready; you may NOT write `pass` to any stage (that is the named human's
 action). Read the approved map by path + git ref; every model must cite it.
 
-## Fixed sequence (run dbt only behind the gate)
+## Fixed sequence (use the governed wrapper only)
 
 | Step | What you do | Authority note |
 |------|-------------|----------------|
-| 1 Check the gate | Read `mappings/<table>/readiness-status.yaml`. If `stages.mapping_ready.status` != `pass`, its `approvals[]` entry is absent, or the `Gate status: CLEARED` mirror does not agree -> REFUSE + record `blocking_reason`. | Entry gate (Principle IV). |
-| 2 Verify citations | Confirm each planned model carries a model contract (`templates/dbt-model-contract.md`) citing the approved map (path + git ref + rows for grain/PK/each column). A column with no citation is a DEFECT -> block. | dbt reads truth; never authors it. |
-| 3 Build | Run `dbt build` (staging -> silver -> gold) for the table. | Execute an approved step. |
-| 4 Test | Run `dbt test` (`unique` / `not_null` / `relationships` + the reconciliation parity test). | Evidence, never approval. |
-| 5 Parity | Run the reconciliation parity test vs the migration-built gold fact (four assertions below). | Evidence; a human approves any switch. |
-| 6 Record evidence | Write the run/test/parity results as `evidence[]` / `blocking_reasons[]` into `mappings/<table>/readiness-status.yaml`. Leave the stage status unchanged. | DERIVED evidence only. |
-| 7 Recommend + STOP | Recommend a stage transition or a build-path switch; STOP for a named human to decide. | Never self-approve. |
+| 1 Prerequisites | Run `seshat dbt doctor --format json`. It queries no database. | Missing runtime/profile values -> `[PENDING LIVE PROFILE]`. |
+| 2 Gate + citations | Run `seshat dbt validate --table <table> --format json`. | Refuses before planning unless Mapping Ready has the named-human approval and every selected model cites it. |
+| 3 Immutable plan | Run `seshat dbt plan --table <table> --format json`; review the exact nodes, target, versions, mapping identity, and shadow schemas. | The returned digest accepts execution, not business meaning or readiness. |
+| 4 Build | Run `seshat dbt build --table <table> --accept-plan <digest> --format json`. | Recomputes the plan before DB access; drift refuses execution. |
+| 5 Test-only rerun | When needed, run `seshat dbt test --table <table> --accept-plan <digest> --format json`. | Evidence, never approval. |
+| 6 Offline review | For an existing run directory, run `seshat dbt inspect-run --table <table> --artifacts <run-directory> --format json`. | Revalidates artifacts; it is not a second build. |
+| 7 Recommend + STOP | Report normalized evidence and `blocking_reasons`, then stop for a named human. | Never self-approve or switch away from migrations. |
 
 ## The reconciliation parity test (four assertions, exact to the cent)
 
@@ -113,15 +112,12 @@ STOP and escalate to a named human; record an owner row -- do not edit around an
 - any dbt-core / dbt-postgres major (and, until compatibility tests exist, minor) version
   bump -- a named reviewer approves; no automerge.
 
-## Seams (deferred by design -- report and park, never fake)
+## Live and downstream seams (report and stop, never fake)
 
-- **The dbt project itself** -- `dbt/` (models, tests, macros, `dbt_project.yml`) is a
-  PLANNED future output (see `docs/integrations/dbt-adapter.md`). Until it exists, state
-  that the build slice creates it and STOP; never fabricate a dbt run.
-- **A live dbt run** -- needs the DB + a git-ignored `profiles.yml` (only
-  `profiles.example.yml` with placeholders is committed; Principle IX). Without it, report
-  the boundary + the enable steps (supply `profiles.yml` from the example); never traceback,
-  never fake a pass.
+- **A live dbt run** -- needs the `dbt` extra, a DB, and `SESHAT_DBT_*` values
+  in the gitignored `.env`; committed `profiles.example.yml` contains only
+  `env_var()` references. Without them, report `[PENDING LIVE PROFILE]`, the
+  enable steps, and no compile/build/test/parity success.
 - **The Power BI build** -- F016 (parked, publish-capable, gated on Semantic Model Ready);
   dbt stops at gold and does not touch it.
 
@@ -131,10 +127,11 @@ At a seam: state plainly what is deferred, what would unblock it, and STOP.
 
 - The decision record: `docs/decisions/0009-dbt-is-transformation-adapter.md`.
 - The contracts: `templates/dbt-adapter-contract.md`, `templates/dbt-model-contract.md`.
-- The integration doc + the enumerated `dbt/` shape: `docs/integrations/dbt-adapter.md`.
+- The integration doc + the governed `dbt/` runtime: `docs/integrations/dbt-adapter.md`.
 - The example connection profile: `profiles.example.yml` (placeholders only).
 - The category contract: `docs/architecture/product-modules.md`; the copy-me Adapter
   declaration: `templates/adapter-contract.md`.
-- The spec / plan / tasks: `specs/023-dbt-transformation-adapter/{spec,plan,tasks}.md`.
+- The planning history: `specs/023-dbt-transformation-adapter/`; the activation
+  implementation: `specs/133-activate-dbt-mvp/`.
 - `.specify/memory/constitution.md` (Principles III, IV, V, VI, VII, VIII, IX).
 - The filled first-MVP instance is CITED, never inlined: a worked example under `docs/worked-examples/`.

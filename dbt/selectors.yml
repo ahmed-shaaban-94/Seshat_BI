@@ -1,0 +1,6 @@
+selectors:
+  - name: seshat_table_retail_store_sales
+    description: Governed shadow graph for the approved retail store sales map.
+    definition:
+      method: tag
+      value: seshat_table_retail_store_sales

@@ -20,6 +20,12 @@ pipx install seshat-bi
 seshat init-project my-bi
 ```
 
+For governed dbt shadow execution, install the pinned optional runtime instead:
+
+```text
+pipx install "seshat-bi[dbt]"
+```
+
 The agent bundles carry the portable operating contract and reviewed Knowledge
 Bases. A fresh project does not need this development repository, `AGENTS.md`, or
 `CLAUDE.md`. The CLI helper is useful but does not grant a readiness pass or human
@@ -38,8 +44,9 @@ marketplace. Use Claude Code's GitHub repository marketplace flow:
 ```
 
 Start a new Claude Code session after install. The plugin provides the
-`seshat-bi` router skill, the guarded `powerbi-workflows` routing skill,
-reviewed knowledge skills, and namespaced slash commands. Claude Code
+`seshat-bi` router skill, the governed `dbt-workflows` transformation skill,
+the guarded `powerbi-workflows` routing skill, reviewed knowledge skills, and
+namespaced slash commands. Claude Code
 namespaces plugin-provided commands by plugin name, so invoke them as
 `/seshat-bi:<name>`; do not expect the unnamespaced forms (`/seshat-check`,
 etc.) to resolve.
@@ -55,6 +62,21 @@ Core readiness commands:
 - `/seshat-bi:review` -- evidence review that stops at the human gate.
 - `/seshat-bi:auto` -- the governed autonomous loop (next action, act,
   re-check, repeat) that always stops at the next named-human gate.
+
+Governed dbt commands:
+
+- `/seshat-bi:dbt-doctor` -- check the pinned runtime and local profile
+  prerequisites without querying a database.
+- `/seshat-bi:dbt-plan` -- validate Mapping Ready and prepare the immutable
+  selected graph plus acceptance digest.
+- `/seshat-bi:dbt-build` -- run the fixed shadow build only with the exact
+  reviewed `--accept-plan` digest.
+- `/seshat-bi:dbt-review` -- inspect normalized evidence and stop for a named
+  human; passing evidence does not switch the active build path.
+
+These commands were added after the v0.3.1 external acceptance record and have
+not yet been externally re-accepted. If the dbt extra, profile, DSN, or live
+database is absent, report `[PENDING LIVE PROFILE]`; do not simulate a pass.
 
 Guarded Power BI commands:
 
@@ -189,7 +211,8 @@ invocation syntax and the one the acceptance classifier requires.
 
 Codex deliberately exposes no slash commands; the same intents are reached
 through its native discoverable skills. `$seshat-bi` covers initialization,
-status, next-action, review, and PBIP-adoption guidance, and
+status, next-action, review, and PBIP-adoption guidance, `$dbt-workflows`
+covers the governed dbt doctor/validate/plan/build/test/evidence sequence, and
 `$powerbi-workflows` covers the guarded Power BI design, review, theme, and
 formatting routes -- each backed by the same reviewed content the Claude
 commands load.

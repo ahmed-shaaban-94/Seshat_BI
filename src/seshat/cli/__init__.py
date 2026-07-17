@@ -161,6 +161,7 @@ _DISPATCH: dict[str, Callable[[object], int]] = {
     "init": _lazy(".commands.init", "run_init"),
     "init-project": _lazy(".commands.init_project", "init_project_main"),
     "adopt-pbip": _lazy(".commands.adopt_pbip", "adopt_pbip_main"),
+    "dbt": _lazy(".commands.dbt", "dbt_main"),
     "kit-lint": _lazy(".commands.kit_lint", "run_kit_lint"),
     "status": _lazy(".commands.status", "status_main"),
     "next": _lazy(".commands.next", "next_main"),

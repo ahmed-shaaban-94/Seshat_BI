@@ -114,6 +114,51 @@ commands:
     gates: [named-human-approval]
     documentation: docs/install/agent-install.md
     status: shipped
+  # -- Governed dbt shadow commands (Claude Code) -------------------------
+  - name: dbt-doctor
+    platform: claude
+    intent: Check and explain the local governed dbt runtime prerequisites.
+    cli_verbs: [dbt]
+    skill: dbt-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/dbt-doctor.md
+    bundle_destination: commands/dbt-doctor.md
+    mode: read-only
+    gates: []
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: dbt-plan
+    platform: claude
+    intent: Validate one approved mapping and produce an immutable dbt acceptance digest.
+    cli_verbs: [dbt]
+    skill: dbt-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/dbt-plan.md
+    bundle_destination: commands/dbt-plan.md
+    mode: read-only
+    gates: [mapping-approval]
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: dbt-build
+    platform: claude
+    intent: Execute the fixed shadow dbt graph only under an accepted plan.
+    cli_verbs: [dbt]
+    skill: dbt-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/dbt-build.md
+    bundle_destination: commands/dbt-build.md
+    mode: mutating
+    gates: [mapping-approval, accepted-plan]
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: dbt-review
+    platform: claude
+    intent: Inspect normalized dbt evidence and stop for named-human review.
+    cli_verbs: [dbt]
+    skill: dbt-workflows
+    wrapper_template: distribution/bundle-templates/claude/commands/dbt-review.md
+    bundle_destination: commands/dbt-review.md
+    mode: read-only
+    gates: [named-human-approval]
+    documentation: docs/install/agent-install.md
+    status: shipped
   # -- Guarded Power BI commands (Claude Code) ------------------------------
   - name: powerbi-design
     platform: claude
@@ -242,6 +287,13 @@ skills:
     intent: Route guarded Power BI design, review, theme, formatting, and adoption work.
     wrapper_template: distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md
     bundle_destination: skills/powerbi-workflows/SKILL.md
+    documentation: docs/install/agent-install.md
+    status: shipped
+  - name: dbt-workflows
+    platforms: [claude, codex]
+    intent: Route governed dbt prerequisite, plan, shadow execution, and evidence-review work.
+    wrapper_template: distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md
+    bundle_destination: skills/dbt-workflows/SKILL.md
     documentation: docs/install/agent-install.md
     status: shipped
   - name: bi-sql-knowledge

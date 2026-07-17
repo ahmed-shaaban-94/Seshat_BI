@@ -41,6 +41,18 @@ jobs:
       - name: Unit tests
         run: pytest -m unit
 
+      - name: Governed dbt adapter contract
+        # The dbt unit slice runs above via the unit marker. These credential-free
+        # contract/integration tests pin packaging, docs, public imports, artifact
+        # integrity, and the exact plan/evidence flow without contacting a database.
+        run: >-
+          pytest
+          tests/contract/test_dbt_documentation.py
+          tests/contract/test_dbt_package_contract.py
+          tests/contract/test_dbt_project.py
+          tests/contract/test_dbt_public_surface.py
+          tests/integration/test_dbt_artifact_flow.py
+
       - name: Public distribution contract tests
         # Explicit blocking gate for version/evidence/export contract behavior.
         # The repository may truthfully report a candidate as blocked before an

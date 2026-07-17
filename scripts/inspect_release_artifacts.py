@@ -432,7 +432,19 @@ def _matching_metadata(wheel: Path, sdist: Path) -> dict[str, Any]:
 
 def _rebuild_sdist(wheel: Path, sdist: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="seshat-sdist-rebuild-") as temp:
-        rebuilt_dir = Path(temp)
+        temp_dir = Path(temp)
+        source_parent = temp_dir / "source"
+        rebuilt_dir = temp_dir / "dist"
+        files = _sdist_files(sdist)
+        roots = {PurePosixPath(name).parts[0] for name in files}
+        if len(roots) != 1:
+            raise ArtifactInspectionError("sdist must contain exactly one source root")
+        for name, data in files.items():
+            relative = PurePosixPath(name)
+            destination = source_parent.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
+        source_root = source_parent / next(iter(roots))
         subprocess.run(
             [
                 sys.executable,
@@ -441,7 +453,7 @@ def _rebuild_sdist(wheel: Path, sdist: Path) -> None:
                 "--wheel",
                 "--outdir",
                 str(rebuilt_dir),
-                str(sdist),
+                str(source_root),
             ],
             check=True,
         )

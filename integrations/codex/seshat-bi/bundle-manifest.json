@@ -21,10 +21,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "README.md",
-      "output_sha256": "85a4f5229ffa141208b1fe31abceb70667f1b622560d44c53c86a0a62c721ff9",
+      "output_sha256": "d0628e950ba63acc6c0d87e96725564e53fde8a39b35fdc58ea646a6ca3f842b",
       "source": "distribution/bundle-templates/codex/README.md",
       "source_id": "codex-readme",
-      "source_sha256": "85a4f5229ffa141208b1fe31abceb70667f1b622560d44c53c86a0a62c721ff9",
+      "source_sha256": "d0628e950ba63acc6c0d87e96725564e53fde8a39b35fdc58ea646a6ca3f842b",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1469,6 +1469,15 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "skills/dbt-workflows/SKILL.md",
+      "output_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
+      "source": "distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md",
+      "source_id": "dbt-workflows-skill",
+      "source_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "skills/powerbi-workflows/SKILL.md",
       "output_sha256": "f4fd52b1c6e74b314e0d91fd52e8283a4ea4965bb6f1c3dd965de3bd9632bb80",
       "source": "distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md",
@@ -1488,10 +1497,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
+      "output_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
+      "source_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1514,10 +1523,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "193a173bcb89d25a8d7a095c6ece2234d45ef0460f168975ac183a726a9ded28",
+  "manifest_digest": "e55d3a63c6ec31caf1338fa6b1bd9c6b2951f9e1cf5f87c77b2a7bb76ffd14ed",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "f03d2b2c604140fe4bee21b767100752b9e1682e",
+  "source_revision": "c108be5ea5a8c088479094962bb9436e64906155",
   "target": "codex",
   "version": "0.3.1"
 }

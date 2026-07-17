@@ -40,6 +40,8 @@
 - **Roadmap feature:** F029  **On-disk spec:** `specs/023-dbt-transformation-adapter`
 - **Owner:** `<named human or role>`
 - **Status:** `<Planned | Authored | Shipped>`
+- **Governed selector/tag:** `<selector and tags that bind this model to one table>`
+- **Schema contract:** `<dbt/models/<layer>/<table>/_models.yml:models[name=<model_name>].meta.seshat>`
 
 ## What it does (one line)
 
@@ -81,6 +83,10 @@ a named human do). List the schema + data tests on this model.
 - `<e.g. not_null(<business_key>)>`
 - `<e.g. relationships from each fact FK to its dimension>`  *(mart models)*
 - `<e.g. the reconciliation parity test vs the migration-built gold fact>`  *(mart of a migration-built table)*
+
+The governed `seshat dbt plan` must list this model and its tests explicitly. A selected
+node not covered by the accepted plan, or a plan whose mapping identity has drifted,
+refuses execution before database access.
 
 ## Forbidden operations (the matrix says NO)
 

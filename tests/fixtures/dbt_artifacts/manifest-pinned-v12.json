@@ -1,0 +1,852 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "dbt_version": "1.12.0",
+    "fixture_kind": "sanitized-pinned-parse"
+  },
+  "nodes": {
+    "model.seshat_bi.audit_retail_store_sales_parity": {
+      "alias": "audit_retail_store_sales_parity",
+      "config": {
+        "materialized": "view"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_customer_rss",
+          "model.seshat_bi.dim_date_rss",
+          "model.seshat_bi.dim_location_rss",
+          "model.seshat_bi.dim_payment_method_rss",
+          "model.seshat_bi.dim_product_rss",
+          "model.seshat_bi.fct_sales_rss",
+          "source.seshat_bi.migration_gold.dim_customer_rss",
+          "source.seshat_bi.migration_gold.dim_date_rss",
+          "source.seshat_bi.migration_gold.dim_location_rss",
+          "source.seshat_bi.migration_gold.dim_payment_method_rss",
+          "source.seshat_bi.migration_gold.dim_product_rss",
+          "source.seshat_bi.migration_gold.fct_sales_rss"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "assertion_id"
+          ],
+          "grain": "one row per required migration-versus-shadow parity assertion",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "audit_retail_store_sales_parity",
+      "original_file_path": "models\\audit\\retail_store_sales\\audit_retail_store_sales_parity.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_audit\".\"audit_retail_store_sales_parity\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.audit_retail_store_sales_parity"
+    },
+    "model.seshat_bi.dim_customer_rss": {
+      "alias": "dim_customer_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "customer_id"
+          ],
+          "grain": "one row per governed customer member",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "dim_customer_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\dim_customer_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"dim_customer_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.dim_customer_rss"
+    },
+    "model.seshat_bi.dim_date_rss": {
+      "alias": "dim_date_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": []
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "full_date"
+          ],
+          "grain": "one row per calendar date in the approved span",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "dim_date_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\dim_date_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"dim_date_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.dim_date_rss"
+    },
+    "model.seshat_bi.dim_location_rss": {
+      "alias": "dim_location_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "location"
+          ],
+          "grain": "one row per governed location member",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "dim_location_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\dim_location_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"dim_location_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.dim_location_rss"
+    },
+    "model.seshat_bi.dim_payment_method_rss": {
+      "alias": "dim_payment_method_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "payment_method"
+          ],
+          "grain": "one row per governed payment method member",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "dim_payment_method_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\dim_payment_method_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"dim_payment_method_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.dim_payment_method_rss"
+    },
+    "model.seshat_bi.dim_product_rss": {
+      "alias": "dim_product_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "item"
+          ],
+          "grain": "one row per governed item member",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "dim_product_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\dim_product_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"dim_product_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.dim_product_rss"
+    },
+    "model.seshat_bi.fct_sales_rss": {
+      "alias": "fct_sales_rss",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_customer_rss",
+          "model.seshat_bi.dim_date_rss",
+          "model.seshat_bi.dim_location_rss",
+          "model.seshat_bi.dim_payment_method_rss",
+          "model.seshat_bi.dim_product_rss",
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "transaction_id"
+          ],
+          "grain": "one row = one retail transaction",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "fct_sales_rss",
+      "original_file_path": "models\\marts\\retail_store_sales\\fct_sales_rss.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"fct_sales_rss\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_gold",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.fct_sales_rss"
+    },
+    "model.seshat_bi.stg_retail_store_sales": {
+      "alias": "stg_retail_store_sales",
+      "config": {
+        "materialized": "table"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "source.seshat_bi.bronze.retail_store_sales"
+        ]
+      },
+      "meta": {
+        "seshat": {
+          "authority": "derived",
+          "business_key": [
+            "transaction_id"
+          ],
+          "grain": "one row = one retail transaction",
+          "source_map": "mappings/retail_store_sales/source-map.yaml",
+          "source_map_revision": "1815a59abadf2ce7752f99444a0b403d717e100d",
+          "table_id": "retail_store_sales"
+        }
+      },
+      "name": "stg_retail_store_sales",
+      "original_file_path": "models\\staging\\retail_store_sales\\stg_retail_store_sales.sql",
+      "package_name": "seshat_bi",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_silver\".\"stg_retail_store_sales\"",
+      "resource_type": "model",
+      "schema": "seshat_dbt_shadow_silver",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "model.seshat_bi.stg_retail_store_sales"
+    },
+    "test.seshat_bi.not_null_audit_retail_store_sales_parity_assertion_id.9c96a2ba81": {
+      "alias": "not_null_audit_retail_store_sales_parity_assertion_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.audit_retail_store_sales_parity"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_audit_retail_store_sales_parity_assertion_id",
+      "original_file_path": "models\\audit\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_audit_retail_store_sales_parity_assertion_id.9c96a2ba81"
+    },
+    "test.seshat_bi.not_null_dim_customer_rss_customer_sk.fc57200be5": {
+      "alias": "not_null_dim_customer_rss_customer_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_customer_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_dim_customer_rss_customer_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_dim_customer_rss_customer_sk.fc57200be5"
+    },
+    "test.seshat_bi.not_null_dim_date_rss_date_sk.53239d5af1": {
+      "alias": "not_null_dim_date_rss_date_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_date_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_dim_date_rss_date_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_dim_date_rss_date_sk.53239d5af1"
+    },
+    "test.seshat_bi.not_null_dim_location_rss_location_sk.2d848effe0": {
+      "alias": "not_null_dim_location_rss_location_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_location_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_dim_location_rss_location_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_dim_location_rss_location_sk.2d848effe0"
+    },
+    "test.seshat_bi.not_null_dim_payment_method_rss_payment_method_sk.6e0e6e2b69": {
+      "alias": "not_null_dim_payment_method_rss_payment_method_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_payment_method_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_dim_payment_method_rss_payment_method_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_dim_payment_method_rss_payment_method_sk.6e0e6e2b69"
+    },
+    "test.seshat_bi.not_null_dim_product_rss_product_sk.447406e7db": {
+      "alias": "not_null_dim_product_rss_product_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_product_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_dim_product_rss_product_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_dim_product_rss_product_sk.447406e7db"
+    },
+    "test.seshat_bi.not_null_fct_sales_rss_date_sk.0bd75e71fd": {
+      "alias": "not_null_fct_sales_rss_date_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_fct_sales_rss_date_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_fct_sales_rss_date_sk.0bd75e71fd"
+    },
+    "test.seshat_bi.not_null_fct_sales_rss_fct_sales_rss_sk.2c363cf9c1": {
+      "alias": "not_null_fct_sales_rss_fct_sales_rss_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_fct_sales_rss_fct_sales_rss_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_fct_sales_rss_fct_sales_rss_sk.2c363cf9c1"
+    },
+    "test.seshat_bi.not_null_fct_sales_rss_transaction_id.46eb1d8cec": {
+      "alias": "not_null_fct_sales_rss_transaction_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_fct_sales_rss_transaction_id",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_fct_sales_rss_transaction_id.46eb1d8cec"
+    },
+    "test.seshat_bi.not_null_stg_retail_store_sales_transaction_id.a03e8ee92a": {
+      "alias": "not_null_stg_retail_store_sales_transaction_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {},
+      "name": "not_null_stg_retail_store_sales_transaction_id",
+      "original_file_path": "models\\staging\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.not_null_stg_retail_store_sales_transaction_id.a03e8ee92a"
+    },
+    "test.seshat_bi.relationships_fct_sales_rss_customer_sk__customer_sk___ref_dim_customer_rss_.81cf6135a2": {
+      "alias": "relationships_fct_sales_rss_d8efe5c18a6bed86d155c7425f5005ef",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_customer_rss",
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "relationships_fct_sales_rss_customer_sk__customer_sk___ref_dim_customer_rss_",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.relationships_fct_sales_rss_customer_sk__customer_sk___ref_dim_customer_rss_.81cf6135a2"
+    },
+    "test.seshat_bi.relationships_fct_sales_rss_date_sk__date_sk___ref_dim_date_rss_.426ead827f": {
+      "alias": "relationships_fct_sales_rss_b9289fe102ce7b4b7dd746b6bfbf17ff",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_date_rss",
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "relationships_fct_sales_rss_date_sk__date_sk___ref_dim_date_rss_",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.relationships_fct_sales_rss_date_sk__date_sk___ref_dim_date_rss_.426ead827f"
+    },
+    "test.seshat_bi.relationships_fct_sales_rss_location_sk__location_sk___ref_dim_location_rss_.4f78f262f5": {
+      "alias": "relationships_fct_sales_rss_f00fa108d6b278d7911017a55b109215",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_location_rss",
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "relationships_fct_sales_rss_location_sk__location_sk___ref_dim_location_rss_",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.relationships_fct_sales_rss_location_sk__location_sk___ref_dim_location_rss_.4f78f262f5"
+    },
+    "test.seshat_bi.relationships_fct_sales_rss_payment_method_sk__payment_method_sk___ref_dim_payment_method_rss_.615320a5bf": {
+      "alias": "relationships_fct_sales_rss_5c0ee6983d9064319cadc31662ce6c28",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_payment_method_rss",
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "relationships_fct_sales_rss_payment_method_sk__payment_method_sk___ref_dim_payment_method_rss_",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.relationships_fct_sales_rss_payment_method_sk__payment_method_sk___ref_dim_payment_method_rss_.615320a5bf"
+    },
+    "test.seshat_bi.relationships_fct_sales_rss_product_sk__product_sk___ref_dim_product_rss_.7c5ca63e72": {
+      "alias": "relationships_fct_sales_rss_6c41e4709360a684117a3d13da97f10e",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_product_rss",
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "relationships_fct_sales_rss_product_sk__product_sk___ref_dim_product_rss_",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.relationships_fct_sales_rss_product_sk__product_sk___ref_dim_product_rss_.7c5ca63e72"
+    },
+    "test.seshat_bi.unique_audit_retail_store_sales_parity_assertion_id.5308cace9d": {
+      "alias": "unique_audit_retail_store_sales_parity_assertion_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.audit_retail_store_sales_parity"
+        ]
+      },
+      "meta": {},
+      "name": "unique_audit_retail_store_sales_parity_assertion_id",
+      "original_file_path": "models\\audit\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_audit_retail_store_sales_parity_assertion_id.5308cace9d"
+    },
+    "test.seshat_bi.unique_dim_customer_rss_customer_sk.c0e852de05": {
+      "alias": "unique_dim_customer_rss_customer_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_customer_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_dim_customer_rss_customer_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_dim_customer_rss_customer_sk.c0e852de05"
+    },
+    "test.seshat_bi.unique_dim_date_rss_date_sk.96d68beab9": {
+      "alias": "unique_dim_date_rss_date_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_date_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_dim_date_rss_date_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_dim_date_rss_date_sk.96d68beab9"
+    },
+    "test.seshat_bi.unique_dim_location_rss_location_sk.fc454da5c9": {
+      "alias": "unique_dim_location_rss_location_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_location_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_dim_location_rss_location_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_dim_location_rss_location_sk.fc454da5c9"
+    },
+    "test.seshat_bi.unique_dim_payment_method_rss_payment_method_sk.362471fe72": {
+      "alias": "unique_dim_payment_method_rss_payment_method_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_payment_method_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_dim_payment_method_rss_payment_method_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_dim_payment_method_rss_payment_method_sk.362471fe72"
+    },
+    "test.seshat_bi.unique_dim_product_rss_product_sk.6ebfc29482": {
+      "alias": "unique_dim_product_rss_product_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.dim_product_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_dim_product_rss_product_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_dim_product_rss_product_sk.6ebfc29482"
+    },
+    "test.seshat_bi.unique_fct_sales_rss_fct_sales_rss_sk.bbe800eae4": {
+      "alias": "unique_fct_sales_rss_fct_sales_rss_sk",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_fct_sales_rss_fct_sales_rss_sk",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_fct_sales_rss_fct_sales_rss_sk.bbe800eae4"
+    },
+    "test.seshat_bi.unique_fct_sales_rss_transaction_id.9f9983f781": {
+      "alias": "unique_fct_sales_rss_transaction_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.fct_sales_rss"
+        ]
+      },
+      "meta": {},
+      "name": "unique_fct_sales_rss_transaction_id",
+      "original_file_path": "models\\marts\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_fct_sales_rss_transaction_id.9f9983f781"
+    },
+    "test.seshat_bi.unique_stg_retail_store_sales_transaction_id.5967fcc4b8": {
+      "alias": "unique_stg_retail_store_sales_transaction_id",
+      "config": {
+        "materialized": "test"
+      },
+      "database": "seshat_verify",
+      "depends_on": {
+        "nodes": [
+          "model.seshat_bi.stg_retail_store_sales"
+        ]
+      },
+      "meta": {},
+      "name": "unique_stg_retail_store_sales_transaction_id",
+      "original_file_path": "models\\staging\\retail_store_sales\\_models.yml",
+      "package_name": "seshat_bi",
+      "relation_name": null,
+      "resource_type": "test",
+      "schema": "seshat_dbt_shadow_dbt_test__audit",
+      "tags": [
+        "seshat_table_retail_store_sales"
+      ],
+      "unique_id": "test.seshat_bi.unique_stg_retail_store_sales_transaction_id.5967fcc4b8"
+    }
+  }
+}

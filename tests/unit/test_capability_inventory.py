@@ -159,7 +159,7 @@ def test_o3_real_shipped_entries_all_have_positive_signal() -> None:
 def test_o3_spec_only_f_number_gives_no_ship_signal() -> None:
     """A roadmap F-number whose OWN row is spec-only must NOT read as a ship
     signal, even if SHIPPED rows sit nearby (the fragile-window hole)."""
-    assert oracle.roadmap_row_is_shipped("F029", _REPO_ROOT) is True
+    assert oracle.roadmap_row_is_shipped("F029", _REPO_ROOT) is False
     assert oracle.roadmap_row_is_shipped("F030", _REPO_ROOT) is True
     for spec_only in ("F031", "F032", "F033"):
         assert oracle.roadmap_row_is_shipped(spec_only, _REPO_ROOT) is False
