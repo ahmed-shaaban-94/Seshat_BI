@@ -115,8 +115,13 @@ exists):**
 6. Re-assess; re-render the now-writable contract.
 7. Human confirms ⇒ write **one** `metric-contract.yaml` to
    `mappings/<table>/metrics/<Name>.yaml`.
-8. `readiness.status` = `not_started`, or `blocked` if a required field is still
-   gapped. The builder never sets `pass` and never fills `owner` / `approvals`.
+8. The shipped `draft_project_metric_contract` returns `readiness.status: blocked`
+   with the reason `physical gold binding is not materialized` (it never binds gold
+   at draft time), so a freshly-drafted contract is always `blocked` until gold is
+   materialized and `finalize_project_metric_contract` promotes it. The builder never
+   sets `pass` itself and never fills `owner` / `approvals`. (An entirely
+   pre-decision preview that is never drafted is conceptually `not_started`, but the
+   engine never emits that status.)
 
 ## 5. Field-by-field composition
 
