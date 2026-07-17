@@ -267,7 +267,7 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
   fixture run, assert `git diff` shows ZERO changes to readiness `status:`
   fields, `Gate status:` lines, `approvals[]` entries, mappings, and metric
   definitions -- the oracle sits ON the untrusted write path. (FR-007/SC-005)
-- [ ] T021 [POLISH] Full verification: run the main pytest suite + the
+- [x] T021 [POLISH] Full verification: run the main pytest suite + the
   orchestration tests, ruff format/lint, `seshat check`, and the base-import guard;
   record the dagster-dbt 0.29.14 <-> dbt-core 1.12.0 live-drive status as
   `[PENDING LIVE PROFILE]` (compile still pending per
