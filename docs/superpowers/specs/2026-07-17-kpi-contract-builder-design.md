@@ -68,11 +68,29 @@ All four kit `hard_stops` are honored: `never_self_grant_approval`,
 `no_dashboard_before_metric_contracts`, `never_fabricate_a_confidence_score`, and the
 gold-only/no-silver posture.
 
-## 4. Workflow (two-trip)
+> **Correction (2026-07-17, post-grounding).** Spec 124 already shipped the runtime
+> engine this design assumed was unbuilt: `src/seshat/kpi_contracts.py` provides
+> `draft_project_metric_contract()` (Checkpoint A) and `finalize_project_metric_contract()`
+> (Checkpoint B), plus `kpi_answerability.py` and a documented quickstart. Consequences
+> for this design: (1) the shipped `draft_project_metric_contract` **already requires**
+> approved decisions + a named owner + committed evidence and **raises
+> `ContractDraftRefused`** without them — so it is the **Trip 2** engine call, NOT Trip 1;
+> (2) **Trip 1** (the common first-contact case with no approved decisions) has no engine
+> support by design and is the skill's genuine unbuilt job — assess, list the exact
+> decisions to get approved, preview; (3) `finalize_project_metric_contract` is the
+> gold-materialized promotion to `pass`. This capability therefore builds an **agent skill
+> that drives the shipped engine**, not a new runtime module. `field_provenance` (§6) is
+> **skill-composed in the preview only**; the persisted contract keeps 124's existing
+> `decision_refs` / `source_evidence`, and the tested `kpi_contracts.py` runtime is not
+> modified.
+
+## 4. Workflow (two-trip) — driving the shipped engine
 
 The builder runs the same **assess → compose-preview** sequence every time; whether it
-can *write* depends solely on the Decision Store gate (`decision_gate.py`, fail-closed:
-any `open`/missing/unrecognized decision ⇒ not writable).
+can *write* depends solely on the shipped engine's precondition (approved decisions +
+named owner + committed evidence), enforced by `draft_project_metric_contract` reusing
+the Decision Store approval predicate (fail-closed: any `open`/missing decision ⇒
+`ContractDraftRefused`).
 
 **Trip 1 — Assess & Preview (the default; no write):**
 
