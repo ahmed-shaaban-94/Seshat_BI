@@ -40,12 +40,36 @@ class _Produce:
     table: str
 
 
-def _produce_migrations(produce: _Produce, dsn: str) -> dict:
+def _halt_deferred(produce: _Produce, blocking_reason: str) -> None:
+    """Halt fail-closed on an absent credential contract, before anything runs.
+
+    Each engine defers on ITS OWN contract (Codex review on PR #307):
+    migrations on the ANALYTICS_DB_*/DATABASE_URL DSN, the governed dbt build
+    on the SESHAT_DBT_* live profile. Neither gate weakens.
+    """
+    halt(
+        produce.writer,
+        AssetOutcome(
+            **produce.base,
+            exit_code=None,
+            measured={},
+            outcome="blocked",
+            blocking_reason=blocking_reason,
+            owner="platform owner",
+        ),
+    )
+
+
+def _produce_migrations(produce: _Produce) -> dict:
     """Apply the committed migration SQL; return the measured produce fields.
 
     Unchanged from the pre-feature migrations path (US5): flipping back to
-    ``engine: migrations`` reproduces this behavior byte-for-byte.
+    ``engine: migrations`` reproduces this behavior byte-for-byte, including
+    the DSN deferred boundary.
     """
+    dsn = db.resolve_dsn()
+    if dsn is None:
+        _halt_deferred(produce, db.DEFERRED_BOUNDARY)
     migrations = _migrations(produce.root, produce.layer, produce.table)
     if not migrations:
         halt(
@@ -80,6 +104,8 @@ def _produce_dbt(produce: _Produce) -> dict:
     (FR-014); that is recorded too. A governed refusal / absent runtime HALTS
     fail-closed with the bridge's redacted reason (FR-006) -- never a traceback.
     """
+    if not dbt_build.profile_present(produce.root):
+        _halt_deferred(produce, dbt_build.DBT_DEFERRED_BOUNDARY)
     exit_code, measured, evidence_path = dbt_build.build_layer(
         context=None, table=produce.table, layer=produce.layer, root=produce.root
     )
@@ -118,25 +144,12 @@ def _build_layer(context, table: str, root: Path, layer: str) -> None:
     writer = writer_for(context, root)
     gate_command = " ".join(commands.checker_argv()[-3:])
     base = dict(asset=asset_name, table=table, gate_command=gate_command)
-    dsn = db.resolve_dsn()
-    if dsn is None:
-        halt(
-            writer,
-            AssetOutcome(
-                **base,
-                exit_code=None,
-                measured={},
-                outcome="blocked",
-                blocking_reason=db.DEFERRED_BOUNDARY,
-                owner="platform owner",
-            ),
-        )
     engine = resolve_build_engine(root, table, layer)
     produce = _Produce(writer=writer, base=base, root=root, layer=layer, table=table)
     if engine == "dbt":
         produced = _produce_dbt(produce)
     else:
-        produced = _produce_migrations(produce, dsn)
+        produced = _produce_migrations(produce)
     exit_code, output = commands.run_gate_command(commands.checker_argv(), cwd=root)
     if exit_code != 0:
         halt(

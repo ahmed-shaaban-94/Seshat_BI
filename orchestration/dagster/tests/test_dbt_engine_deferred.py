@@ -1,7 +1,8 @@
 """US3 (SC-004): the dbt engine degrades TRUTHFULLY -- never a fabricated pass.
 
-* No DSN under `engine: dbt` -> the deferred boundary is recorded and the asset
-  blocks fail-closed (same preamble as migrations; the dbt bridge never runs).
+* No live dbt profile (SESHAT_DBT_*) under `engine: dbt` -> the dbt deferred
+  boundary is recorded and the asset blocks fail-closed (the dbt bridge never
+  runs); the migrations DSN is NOT the dbt engine's credential contract.
 * The dbt runtime absent (DbtUnavailable) -> the asset blocks with a concrete
   redacted reason + named owner, no traceback.
 * A dbt error carrying a fake DSN/host is REDACTED before it reaches the dagster
@@ -17,7 +18,7 @@ from pathlib import Path
 import pytest
 from conftest import TABLE, mappings_digest
 from dagster import Failure, build_asset_context
-from tower_bi_orchestration import commands, db
+from tower_bi_orchestration import commands
 from tower_bi_orchestration.assets import build_table_assets
 from tower_bi_orchestration.evidence_writer import EvidenceWriter
 
@@ -39,12 +40,15 @@ def _records(root: Path) -> dict:
     return {row["asset"]: row for row in EvidenceWriter(root, "testrun-001").records()}
 
 
-def test_dbt_engine_no_dsn_records_deferred_boundary_and_blocks(
+def test_dbt_engine_no_profile_records_deferred_boundary_and_blocks(
     green_repo, monkeypatch
 ) -> None:
     _dbt_engine(green_repo)
-    # No DSN, and a green gate so ONLY the deferred boundary can stop the asset.
-    monkeypatch.setattr(db, "resolve_dsn", lambda: None)
+    from tower_bi_orchestration.assets import gates
+
+    # No live dbt profile, and a green gate so ONLY the dbt deferred boundary
+    # can stop the asset (the migrations DSN is deliberately irrelevant here).
+    monkeypatch.setattr(gates.dbt_build, "profile_present", lambda root: False)
     monkeypatch.setattr(commands, "run_gate_command", lambda argv, cwd: (0, "ok"))
     before = mappings_digest(green_repo)
 
@@ -53,7 +57,7 @@ def test_dbt_engine_no_dsn_records_deferred_boundary_and_blocks(
 
     silver = _records(green_repo)["silver_tables"]
     assert silver["outcome"] == "blocked"
-    assert db.DEFERRED_BOUNDARY in silver["blocking_reason"]  # the deferred boundary
+    assert gates.dbt_build.DBT_DEFERRED_BOUNDARY in silver["blocking_reason"]
     assert silver["owner"]  # named owner, fail-closed
     assert silver["ts"]  # timestamped record
     assert silver["measured"].get("engine") != "dbt"  # bridge never ran (no fabricate)
@@ -64,7 +68,9 @@ def test_dbt_runtime_absent_blocks_with_concrete_reason_no_traceback(
     green_repo, monkeypatch
 ) -> None:
     _dbt_engine(green_repo)
-    monkeypatch.setattr(db, "resolve_dsn", lambda: "postgresql://stub")
+    from tower_bi_orchestration.assets import gates
+
+    monkeypatch.setattr(gates.dbt_build, "profile_present", lambda root: True)
     monkeypatch.setattr(commands, "run_gate_command", lambda argv, cwd: (0, "ok"))
 
     from tower_bi_orchestration.assets import gates
@@ -98,7 +104,9 @@ def test_dbt_error_with_a_fake_dsn_is_redacted_everywhere(
     green_repo, monkeypatch
 ) -> None:
     _dbt_engine(green_repo)
-    monkeypatch.setattr(db, "resolve_dsn", lambda: "postgresql://stub")
+    from tower_bi_orchestration.assets import gates
+
+    monkeypatch.setattr(gates.dbt_build, "profile_present", lambda root: True)
     monkeypatch.setattr(commands, "run_gate_command", lambda argv, cwd: (0, "ok"))
 
     # Assembled from parts via interpolation so this committed source never holds
@@ -135,7 +143,9 @@ def test_lock_contention_surfaces_a_concrete_redacted_reason(
     green_repo, monkeypatch
 ) -> None:
     _dbt_engine(green_repo)
-    monkeypatch.setattr(db, "resolve_dsn", lambda: "postgresql://stub")
+    from tower_bi_orchestration.assets import gates
+
+    monkeypatch.setattr(gates.dbt_build, "profile_present", lambda root: True)
     monkeypatch.setattr(commands, "run_gate_command", lambda argv, cwd: (0, "ok"))
 
     import seshat.cli.commands.dbt as dbt_cli

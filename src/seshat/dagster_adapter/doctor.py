@@ -10,6 +10,7 @@ still works without one.
 from __future__ import annotations
 
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from .gate import GateState, list_mapped_tables, read_gate_state
 
 _INSTALL_REMEDY = (
     "cd orchestration/dagster && uv venv .venv && "
-    'uv pip install -p .venv -e ../.. -e ".[dev]"'
+    'uv pip install -p .venv -e "../..[dbt]" -e ".[dev]"'
 )
 
 
@@ -141,29 +142,56 @@ def _gate_finding(table: str, state: GateState) -> DoctorFinding:
     )
 
 
-def _dbt_runtime_present() -> bool:
-    """True when the pinned dbt runtime is importable in THIS environment.
+def _dbt_runtime_present(root: Path) -> bool:
+    """True when the dbt runtime is importable in the ORCHESTRATION venv.
 
-    Read-only metadata probe (no dbt module import); mirrors the seshat dbt
-    doctor's version check without asserting the exact version here.
+    ``seshat dagster run`` launches the Dagster child through the orchestration
+    interpreter, so THAT environment -- not this parent process -- is the one
+    the preflight must probe (Codex review on PR #307). Read-only metadata
+    probe; an absent venv, a failing interpreter, or a missing distribution all
+    read as not-present.
     """
-    import importlib.metadata
+    interpreter = orchestration_python(root)
+    if interpreter is None:
+        return False
+    probe = "import importlib.metadata as m; m.version('dbt-core')"
+    try:
+        result = subprocess.run(
+            [str(interpreter), "-c", probe],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _dbt_profile_present(root: Path) -> bool:
+    """True when the governed dbt live profile (SESHAT_DBT_*) resolves.
+
+    The dbt engine reads its credentials from the SESHAT_DBT_* child
+    environment (spec 133), not the migrations DSN -- report on the contract
+    the dbt build actually uses. A malformed .env reads as absent here (the
+    doctor is read-only; the concrete error surfaces when the build runs).
+    """
+    from seshat.cli.commands.dbt import EnvironmentConfigError, load_child_environment
 
     try:
-        importlib.metadata.version("dbt-core")
-    except importlib.metadata.PackageNotFoundError:
+        environment = load_child_environment(root)
+    except EnvironmentConfigError:
         return False
-    return True
+    return bool(environment.get("SESHAT_DBT_HOST"))
 
 
-def _engine_availability_finding(table: str) -> DoctorFinding:
+def _engine_availability_finding(root: Path, table: str) -> DoctorFinding:
     """Under the dbt engine: is the dbt runtime + a live profile available?
 
     Truthful and categorical -- never a fabricated live pass. An absent runtime
-    or DSN is a concrete deferred/enable finding, not a blocker (everything
-    static still works); the DSN is reported present/absent only.
+    or profile is a concrete deferred/enable finding, not a blocker (everything
+    static still works); credentials are reported present/absent only.
     """
-    if not _dbt_runtime_present():
+    if not _dbt_runtime_present(root):
         return DoctorFinding(
             id="DAG-ENG-DBT-01",
             severity="warning",
@@ -173,15 +201,19 @@ def _engine_availability_finding(table: str) -> DoctorFinding:
             ),
             remedy=_INSTALL_REMEDY,
         )
-    if not _dsn_present():
+    if not _dbt_profile_present(root):
         return DoctorFinding(
             id="DAG-ENG-DBT-02",
             severity="warning",
             message=(
-                f"{table}: engine dbt but no database credentials -- the dbt "
-                "build will record a deferred boundary and block fail-closed"
+                f"{table}: engine dbt but no live dbt profile (SESHAT_DBT_*) -- "
+                "the dbt build will record a deferred boundary and block "
+                "fail-closed"
             ),
-            remedy="put the DSN in the git-ignored .env; never commit a real value",
+            remedy=(
+                "put the SESHAT_DBT_* values in the git-ignored .env; never "
+                "commit a real value"
+            ),
         )
     return DoctorFinding(
         id="DAG-ENG-DBT-00",
@@ -219,7 +251,7 @@ def _engine_mode_findings(root: Path, table: str) -> list[DoctorFinding]:
                     "mappings/<table>/build-engine.yaml unless the mix is intended"
                 ),
             ),
-            _engine_availability_finding(table),
+            _engine_availability_finding(root, table),
         ]
     if silver == "dbt":
         return [
@@ -229,7 +261,7 @@ def _engine_mode_findings(root: Path, table: str) -> list[DoctorFinding]:
                 message=f"{table}: build engine dbt (both layers)",
                 remedy="none",
             ),
-            _engine_availability_finding(table),
+            _engine_availability_finding(root, table),
         ]
     return [
         DoctorFinding(

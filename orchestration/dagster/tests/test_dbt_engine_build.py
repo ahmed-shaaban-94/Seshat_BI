@@ -188,6 +188,9 @@ def _stub_dbt_bridge(monkeypatch, *, exit_code: int) -> dict:
 def test_engine_dbt_takes_the_governed_branch_and_gate_and_materializes(
     green_repo, monkeypatch
 ) -> None:
+    from tower_bi_orchestration.assets import gates as _gates
+
+    monkeypatch.setattr(_gates.dbt_build, "profile_present", lambda root: True)
     stub_green_db(monkeypatch)
     _set_engine(green_repo, "dbt", "migrations")
     calls = _stub_dbt_bridge(monkeypatch, exit_code=0)
@@ -228,6 +231,9 @@ def test_engine_dbt_takes_the_governed_branch_and_gate_and_materializes(
 def test_engine_dbt_nonzero_gate_fails_and_skips_downstream(
     green_repo, monkeypatch
 ) -> None:
+    from tower_bi_orchestration.assets import gates as _gates
+
+    monkeypatch.setattr(_gates.dbt_build, "profile_present", lambda root: True)
     stub_green_db(monkeypatch)
     _set_engine(green_repo, "dbt", "dbt")
     _stub_dbt_bridge(monkeypatch, exit_code=0)

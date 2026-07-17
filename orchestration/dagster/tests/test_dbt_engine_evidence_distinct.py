@@ -58,6 +58,9 @@ def _full_dbt_run(root: Path):
 def test_dagster_record_cites_but_does_not_merge_the_dbt_evidence(
     green_repo, monkeypatch
 ) -> None:
+    from tower_bi_orchestration.assets import gates as _gates
+
+    monkeypatch.setattr(_gates.dbt_build, "profile_present", lambda root: True)
     stub_green_db(monkeypatch)
     _set_all_dbt(green_repo)
     _stub_dbt_bridge(monkeypatch)

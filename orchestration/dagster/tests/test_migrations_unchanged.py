@@ -65,6 +65,9 @@ def _stub_dbt_bridge(monkeypatch) -> dict:
 
 
 def test_dbt_engine_run_touches_no_migration_file(green_repo, monkeypatch) -> None:
+    from tower_bi_orchestration.assets import gates as _gates
+
+    monkeypatch.setattr(_gates.dbt_build, "profile_present", lambda root: True)
     stub_green_db(monkeypatch)
     _set_engine(green_repo, "dbt", "dbt")
 

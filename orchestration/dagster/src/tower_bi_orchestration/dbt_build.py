@@ -32,11 +32,13 @@ from seshat.cli.commands.dbt import (
     ArtifactIntegrityError,
     CommandResult,
     DbtUnavailable,
+    EnvironmentConfigError,
     GovernanceError,
     HandledDbtFailure,
     LockUnavailable,
     Operation,
     PlanDrift,
+    load_child_environment,
     run_governed_build,
 )
 from seshat.dagster_adapter.redaction import redact_text
@@ -45,6 +47,30 @@ from seshat.dagster_adapter.redaction import redact_text
 # owner; a completed-but-failed governed run (tests/parity/artifacts) is a
 # FAILED asset. Neither ever fabricates a pass.
 _BLOCK_OWNER = "the dbt runtime owner"
+
+# The dbt engine's deferred boundary: the governed dbt build reads its live
+# profile from the SESHAT_DBT_* child environment (spec 133), NOT from the
+# migrations DSN -- so its absence, not the migrations DSN's, is what defers
+# the dbt path (Codex review on PR #307).
+DBT_DEFERRED_BOUNDARY = (
+    "deferred: no live dbt profile (SESHAT_DBT_* absent); the governed dbt "
+    "build stays [PENDING LIVE PROFILE]"
+)
+
+
+def profile_present(root: Path) -> bool:
+    """True when the governed dbt live profile resolves for this checkout.
+
+    Reads the same child environment the governed runner reads (.env included).
+    A MALFORMED .env deliberately returns True: the build then proceeds into
+    ``run_governed_build``, whose ``EnvironmentConfigError`` this bridge maps to
+    a redacted ``blocked`` outcome -- one handling site, never a traceback.
+    """
+    try:
+        environment = load_child_environment(Path(root))
+    except EnvironmentConfigError:
+        return True
+    return bool(environment.get("SESHAT_DBT_HOST"))
 
 
 # The seshat.dbt CommandResult.outcome uses the readiness word "pass" for its
@@ -124,7 +150,13 @@ def build_layer(
     """
     try:
         result = run_governed_build(Path(root), table, Operation.BUILD)
-    except (DbtUnavailable, PlanDrift, GovernanceError, LockUnavailable) as exc:
+    except (
+        DbtUnavailable,
+        EnvironmentConfigError,
+        GovernanceError,
+        LockUnavailable,
+        PlanDrift,
+    ) as exc:
         # Governed refusal or absent/unavailable dbt runtime -> BLOCK fail-closed
         # with a concrete redacted reason and a named owner (FR-006). No traceback.
         return _blocked(str(exc), exit_code=1)
