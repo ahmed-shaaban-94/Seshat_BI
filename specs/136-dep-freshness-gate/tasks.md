@@ -187,17 +187,17 @@ matches the P2 `SUBJECT_RE`.
 
 ### Tests for User Story 3 (RED first)
 
-- [ ] T024 [P] [US3] Write FAILING unit test asserting a Dependabot-produced subject
+- [x] T024 [P] [US3] Write FAILING unit test asserting a Dependabot-produced subject
       of the form `build: bump <dist> from <a> to <b>` matches the P2 `SUBJECT_RE`
       imported from `src/seshat/rules/git_meta.py` (guards FR-014 against P2 drift).
-- [ ] T025 [P] [US3] Write FAILING unit test that parses `.github/dependabot.yml` and
+- [x] T025 [P] [US3] Write FAILING unit test that parses `.github/dependabot.yml` and
       asserts: (a) a pip block for `directory: "/orchestration/dagster"` exists
       (FR-013), and (b) every pip block sets `commit-message.prefix` to a P2-allowed
       type WITHOUT `include: scope` (FR-014).
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Edit `.github/dependabot.yml`: add the orchestration pip ecosystem
+- [x] T026 [US3] Edit `.github/dependabot.yml`: add the orchestration pip ecosystem
       block (`directory: "/orchestration/dagster"`, weekly, `dependencies` label) to
       make the T025 coverage assertion GREEN (FR-013). Verify Dependabot accepts the
       orchestration manifest as it exists at implementation time (it may carry a
@@ -205,7 +205,7 @@ matches the P2 `SUBJECT_RE`.
       is refused, record the limitation in a manifest comment and keep the directory
       watched for its remaining named pins -- partial coverage recorded honestly
       (plan-review D4).
-- [ ] T027 [US3] Edit `.github/dependabot.yml`: add `commit-message: { prefix: "build" }`
+- [x] T027 [US3] Edit `.github/dependabot.yml`: add `commit-message: { prefix: "build" }`
       to every pip block (no `include: scope`) to make the T024/T025 subject
       assertions GREEN (FR-014). Confirm against a produced subject that P2 passes.
 
