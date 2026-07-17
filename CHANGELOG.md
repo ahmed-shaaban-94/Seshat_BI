@@ -28,6 +28,13 @@ explicitly identifies a public release event.
 ## [Unreleased]
 
 ### Added
+- **`dagster-workflows` public skill and Dagster surface parity** (PR #303):
+  the governed Dagster workflow (doctor -> run -> evidence, hard boundaries,
+  exit meanings) ships as a dedicated shared skill in BOTH the Claude and
+  Codex bundles; the three `dagster-*` commands and the `seshat-bi` router
+  route to it, and the `dagster-orchestration-adapter` capability entry now
+  carries dbt-standard references (`runtime_project`, `public_skill`,
+  `evidence_schema`, `verified_by`).
 - **Dagster orchestration MVP** (spec 134, activates spec 024 / F030): a real
   `orchestration/dagster/` runtime project (`tower_bi_orchestration`,
   `dagster==1.13.14` + `dagster-dbt==0.29.14` pinned together, own venv) running
@@ -90,6 +97,12 @@ explicitly identifies a public release event.
   named-human gate.
 
 ### Fixed
+- **Bundle provenance vs squash-merge** (PRs #301, #302): every bundle-touching
+  PR broke main CI after squash-merge because the committed manifests recorded
+  the (squashed-away) branch commit as `source_revision`. The everyday
+  export/regeneration posture now validates the manifest version claim against
+  HEAD's canonical `pyproject.toml` when the recorded revision is orphaned;
+  the coordinated-release audit keeps strict ancestry.
 - **`capability_feeders.read_dispatch_keys` stale source path**: the feeder read
   the pre-rename `src/retail/cli/__init__.py` and silently discovered no
   `_DISPATCH` keys; it now reads `src/seshat/cli/__init__.py`, with regression
