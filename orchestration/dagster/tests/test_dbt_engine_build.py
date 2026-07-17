@@ -122,6 +122,42 @@ def test_bridge_maps_governed_refusals_to_blocked_without_traceback(
     assert measured["blocking_reason"]  # a concrete reason, not a traceback
 
 
+def test_bridge_maps_a_completed_failed_run_to_failed_with_a_concrete_reason(
+    monkeypatch,
+) -> None:
+    # A dbt run that COMPLETES with model/test failures: _execute RETURNS a
+    # CommandResult(outcome="failed") rather than raising. The dagster record
+    # must read `failed` (ran-and-failed), NOT the generic `blocked`
+    # (precondition-refusal) -- the distinction matters on the live surface.
+    from tower_bi_orchestration import dbt_build
+
+    import seshat.cli.commands.dbt as dbt_cli
+
+    def completed_failed(root, table, operation=dbt_cli.Operation.BUILD):
+        return dbt_cli.CommandResult(
+            command="build",
+            table_id=table,
+            outcome="failed",
+            exit_code=1,
+            message="derived dbt evidence completed; models/tests failed",
+            evidence_path=f"mappings/{table}/dbt-evidence/inv.json",
+            blocking_reasons=(
+                {"code": "DBT_EXECUTION_FAILED", "message": "a governed test failed"},
+            ),
+        )
+
+    monkeypatch.setattr(dbt_build, "run_governed_build", completed_failed)
+
+    exit_code, measured, evidence_path = dbt_build.build_layer(
+        context=None, table="retail_store_sales", layer="silver", root=Path(".")
+    )
+    assert exit_code == 1
+    assert measured["outcome"] == "failed"  # NOT the generic "blocked"
+    assert measured["blocking_reason"]  # a concrete reason
+    assert measured["owner"]
+    assert evidence_path == "mappings/retail_store_sales/dbt-evidence/inv.json"
+
+
 # --------------------------------------------------------------------------
 # Asset branch (SC-001): engine dbt -> dbt branch, gate unchanged, exit 0.
 # --------------------------------------------------------------------------

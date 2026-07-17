@@ -66,10 +66,11 @@ def _measured_from_result(result: CommandResult, table: str) -> dict:
     a numeric score (hard rule #9). The dbt run-evidence JSON stays a DISTINCT
     artifact (FR-009); we cite its path, never merge it.
     """
+    dbt_result = _DBT_OUTCOME_TO_EXECUTION.get(result.outcome, "built")
     measured: dict = {
         "engine": "dbt",
         "selector": f"seshat_table_{table}",
-        "dbt_result": _DBT_OUTCOME_TO_EXECUTION.get(result.outcome, "built"),
+        "dbt_result": dbt_result,
         "dbt_evidence_path": result.evidence_path,
     }
     if result.blocking_reasons:
@@ -77,7 +78,25 @@ def _measured_from_result(result: CommandResult, table: str) -> dict:
             {k: redact_text(str(v)) for k, v in reason.items()}
             for reason in result.blocking_reasons
         ]
+    if result.exit_code != 0:
+        # A COMPLETED-but-non-green governed run (dbt models/tests failed, or a
+        # parity block): _execute RETURNS this rather than raising. Surface the
+        # dagster-facing outcome the caller halts on -- `failed` (ran-and-failed)
+        # or `blocked` (precondition), NOT the generic default -- with a concrete
+        # redacted reason and a named owner (evidence fidelity on the live path).
+        measured["outcome"] = dbt_result
+        measured["blocking_reason"] = redact_text(_first_reason(result))
+        measured["owner"] = _BLOCK_OWNER
     return measured
+
+
+def _first_reason(result: CommandResult) -> str:
+    """The most concrete reason a completed non-green run can offer."""
+    for reason in result.blocking_reasons:
+        message = reason.get("message")
+        if message:
+            return f"governed dbt build {result.outcome}: {message}"
+    return f"governed dbt build {result.outcome}"
 
 
 def _blocked(reason: str, exit_code: int) -> tuple[int, dict, None]:
