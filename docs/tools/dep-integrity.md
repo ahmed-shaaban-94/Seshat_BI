@@ -48,11 +48,12 @@ Each resolve attempt classifies to exactly one:
 - **CONFIG** -- a bad manifest entry (missing pyproject, undefined extra, or an
   ephemeral-venv pip too old for `--report`). Distinct label; fails closed.
 
-Exit codes: `0` (all PASS), `1` (any RESOLUTION or CONFIG -- both fail closed and
-neither is retryable), `3` (INFRA only -- the one retryable/annotatable case). The
-CONFIG-vs-RESOLUTION distinction lives in the machine-readable outcome and the
-printed `[CONFIG]` / `[RESOLUTION]` label; the exit-code space is two-valued for
-the coarse fail/retry decision CI actually makes.
+Exit codes (each outcome distinct, FR-004/FR-005/SC-004): `0` (all PASS), `1`
+(RESOLUTION -- a real conflict), `2` (CONFIG -- a bad manifest entry), `3` (INFRA
+-- network/index only). Precedence when several occur: RESOLUTION > CONFIG >
+INFRA, so a real conflict is never masked by a co-occurring lesser signal.
+RESOLUTION and CONFIG both fail CLOSED and are not retryable; INFRA is the one
+retryable/annotatable case.
 
 ## Running it
 

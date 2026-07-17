@@ -66,10 +66,14 @@ class ResolveOutcome(Enum):
     CONFIG = "config"
 
 
-# Distinct process exit codes so CI can tell the outcomes apart from the code
-# alone (FR-004, SC-004).
+# Distinct process exit codes so CI can tell the four outcomes apart from the
+# code alone (FR-004/FR-005, SC-004). CONFIG gets its OWN code so it is
+# distinguishable from BOTH RESOLUTION and INFRA at the exit-code level, not
+# only in the printed label -- both CONFIG and RESOLUTION still fail CLOSED
+# (non-zero, not retryable); INFRA is the one retryable/annotatable case.
 EXIT_OK = 0
-EXIT_RESOLUTION = 1  # a real conflict OR a bad manifest -- fail closed
+EXIT_RESOLUTION = 1  # a real dependency conflict -- fail closed
+EXIT_CONFIG = 2  # a bad manifest entry (missing pyproject / undefined extra)
 EXIT_INFRA = 3  # network/index only -- distinct so a flake is not a conflict
 
 # pip >= 22.2 introduced `--report` (plan-review D5).
@@ -338,33 +342,41 @@ from seshat.rules.git_meta import (  # noqa: E402
 
 _REDACT_TOKEN = "[REDACTED]"
 
-# The URI/endpoint/ODBC/cluster-slug C2 shapes are safe to apply as a plain
-# substitution. CONN_URI_RE / MYSQL_URI_RE match up to and including the `@`, so
-# the credential (userinfo) is what gets masked; extend the URI masking a little
-# past the `@` to also drop the host so a full DSN never survives.
-_CONN_URI_FULL = re.compile(r"postgres(?:ql)?://[^\s]+")
-_MYSQL_URI_FULL = re.compile(r"mysql://[^\s]+")
+# The exact C2 DETECTION shapes, applied by substitution -- NOT re-implemented
+# (the reuse-only rule). CONN_URI_RE / MYSQL_URI_RE match up to and including
+# the `@`, so the credential (userinfo) -- the thing FR-016 protects -- is what
+# gets masked; the host after the `@` is not a credential and is deliberately
+# left, matching C2's own posture (C2 masks a DigitalOcean host via
+# DO_ENDPOINT_RE / DO_CLUSTER_SLUG_RE specifically, not a generic host).
+_C2_SUBSTITUTION_SHAPES = (
+    CONN_URI_RE,
+    MYSQL_URI_RE,
+    DO_ENDPOINT_RE,
+    ODBC_SECRET_RE,
+    DO_CLUSTER_SLUG_RE,
+)
 
 
 def redact(text: str) -> str:
     """Mask any C2 connection-string / secret shape in ``text`` before it is
     surfaced (FR-016). A clean conflict message is returned unchanged.
 
-    Reuses the repository's C2 secret-shape posture: the same detection regexes
-    ``seshat check``'s C2 rule uses, applied by substitution (mirroring the
-    masking style in ``seshat.pr_summary.mask``). Idempotent -- the replacement
-    token matches none of the shapes.
+    Reuses the repository's C2 secret-shape posture: the SAME detection regexes
+    ``seshat check``'s C2 rule uses (imported from ``git_meta``, never copied),
+    applied by substitution (mirroring the masking style in
+    ``seshat.pr_summary.mask``). Idempotent -- the ``[REDACTED]`` token matches
+    none of the shapes.
+
+    Non-coverage (documented, like pr_summary.mask's own DSN gap): the C2
+    Snowflake account/password PAIR detector (``_has_snowflake_secret_pair``)
+    is line-level pairing logic, not a substitutable regex, and is NOT applied
+    here -- a resolver error is not a place a Snowflake kwargs pair is emitted,
+    and lifting that pair logic would be a new redaction primitive the
+    reuse-only rule forbids.
     """
     out = text
-    # Full-DSN forms first (so the trailing host is dropped too, not just the
-    # userinfo the bare C2 detection regex stops at).
-    out = _CONN_URI_FULL.sub(_REDACT_TOKEN, out)
-    out = _MYSQL_URI_FULL.sub(_REDACT_TOKEN, out)
-    # Then the exact C2 detection shapes (belt-and-suspenders; also covers any
-    # userinfo-only match the full forms missed).
-    for pattern in (CONN_URI_RE, MYSQL_URI_RE, DO_ENDPOINT_RE, ODBC_SECRET_RE):
+    for pattern in _C2_SUBSTITUTION_SHAPES:
         out = pattern.sub(_REDACT_TOKEN, out)
-    out = DO_CLUSTER_SLUG_RE.sub(_REDACT_TOKEN, out)
     return out
 
 
@@ -831,23 +843,21 @@ def _print_result(result: ResolveResult) -> None:
 
 
 def _exit_code_for(results: list[ResolveResult]) -> int:
-    """Fail closed: any RESOLUTION or CONFIG -> EXIT_RESOLUTION; else if any
-    INFRA -> the distinct EXIT_INFRA; else EXIT_OK (FR-003/FR-004/SC-004).
+    """Fail closed with a DISTINCT exit code per outcome (FR-003/FR-004/FR-005,
+    SC-004). Precedence: a real conflict is never masked by a co-occurring
+    lesser signal, so RESOLUTION > CONFIG > INFRA > OK.
 
-    Conscious call on FR-005's "CONFIG distinguishable from both INFRA and
-    RESOLUTION": the four OUTCOMES are distinct (the machine-readable
-    ``ResolveOutcome`` enum + the ``[CONFIG]``/``[RESOLUTION]`` output label),
-    which is where FR-005's distinction lives. The EXIT CODE space is
-    deliberately two-valued for the fail/retry decision CI actually makes:
-    CONFIG and RESOLUTION both fail CLOSED (a bad manifest and a real conflict
-    both block, non-zero, and neither is retryable), while INFRA alone earns a
-    distinct code because it is the one retryable/annotatable case (SC-004). A
-    reviewer reading the printed ``[CONFIG]`` line still tells a bad-manifest
-    from a conflict; only the coarse retry signal is shared.
+    - any RESOLUTION -> EXIT_RESOLUTION (a real conflict wins over everything)
+    - else any CONFIG -> EXIT_CONFIG (bad manifest; fails closed, own code so
+      it is distinguishable from both RESOLUTION and INFRA)
+    - else any INFRA -> EXIT_INFRA (the one retryable/annotatable case)
+    - else EXIT_OK
     """
     outcomes = {r.outcome for r in results}
-    if ResolveOutcome.RESOLUTION in outcomes or ResolveOutcome.CONFIG in outcomes:
+    if ResolveOutcome.RESOLUTION in outcomes:
         return EXIT_RESOLUTION
+    if ResolveOutcome.CONFIG in outcomes:
+        return EXIT_CONFIG
     if ResolveOutcome.INFRA in outcomes:
         return EXIT_INFRA
     return EXIT_OK
@@ -872,14 +882,16 @@ def run_check(manifest_path: Path) -> int:
         results.append(result)
         _print_result(result)
     code = _exit_code_for(results)
-    summary = (
-        "ok"
-        if code == EXIT_OK
-        else "infra-only"
-        if code == EXIT_INFRA
-        else "conflict/config"
+    labels = {
+        EXIT_OK: "ok",
+        EXIT_RESOLUTION: "conflict",
+        EXIT_CONFIG: "config",
+        EXIT_INFRA: "infra-only",
+    }
+    print(
+        f"\n{len(results)} target(s) resolved; exit {code} "
+        f"({labels.get(code, 'unknown')})"
     )
-    print(f"\n{len(results)} target(s) resolved; exit {code} ({summary})")
     return code
 
 

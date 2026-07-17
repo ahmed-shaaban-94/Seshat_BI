@@ -524,7 +524,12 @@ def test_check_config_error_exits_nonzero(tmp_path, capsys):
     code = dc.run_check(manifest)
     out = capsys.readouterr().out
 
-    assert code == dc.EXIT_RESOLUTION
+    # CONFIG has its OWN exit code -- distinguishable from RESOLUTION and INFRA
+    # (FR-005) -- but still fails closed (non-zero).
+    assert code == dc.EXIT_CONFIG
+    assert code != dc.EXIT_RESOLUTION
+    assert code != dc.EXIT_INFRA
+    assert code != dc.EXIT_OK
     assert "nope.toml" in out
 
 
