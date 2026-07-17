@@ -159,7 +159,7 @@ readiness pass.
 
 ### Tests for User Story 3 (write first, must fail)
 
-- [ ] T012 [P] [US3] Write
+- [x] T012 [P] [US3] Write
   `orchestration/dagster/tests/test_dbt_engine_deferred.py` (RED): `engine: dbt`
   + no DSN -> `deferred` outcome with timestamp, blocked fail-closed, no pass;
   `engine: dbt` + dbt runtime unimportable -> `blocked` with concrete
@@ -172,7 +172,7 @@ readiness pass.
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Ensure `_build_layer` records `deferred` when
+- [x] T013 [US3] Ensure `_build_layer` records `deferred` when
   `db.resolve_dsn()` is None under the dbt engine (reuse the existing preamble),
   and `dbt_build.build_layer` maps an unimportable dbt runtime / `seshat.dbt`
   `unavailable` to a dagster `blocked` outcome with a redacted reason. Turn T012

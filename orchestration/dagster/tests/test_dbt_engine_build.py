@@ -20,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from conftest import TABLE, make_fixture_repo, mappings_digest, stub_green_db
+from conftest import TABLE, mappings_digest, stub_green_db
 from dagster import materialize
 from tower_bi_orchestration import commands
 from tower_bi_orchestration.assets import build_table_assets
@@ -45,10 +45,10 @@ def _set_engine(root: Path, silver: str, gold: str) -> None:
 def test_bridge_runs_the_full_governed_plan_and_self_accepts_the_digest(
     monkeypatch,
 ) -> None:
+    from tower_bi_orchestration import dbt_build
+
     import seshat.cli.commands.dbt as dbt_cli
     from seshat.dbt.contracts import Operation
-
-    from tower_bi_orchestration import dbt_build
 
     seen: dict[str, object] = {}
 
@@ -104,9 +104,9 @@ def test_bridge_runs_the_full_governed_plan_and_self_accepts_the_digest(
 def test_bridge_maps_governed_refusals_to_blocked_without_traceback(
     monkeypatch,
 ) -> None:
-    import seshat.cli.commands.dbt as dbt_cli
-
     from tower_bi_orchestration import dbt_build
+
+    import seshat.cli.commands.dbt as dbt_cli
 
     def raise_drift(root, table, runner):
         raise dbt_cli.PlanDrift("accepted plan has drifted")
