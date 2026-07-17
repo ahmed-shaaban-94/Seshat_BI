@@ -57,16 +57,16 @@ the main package unchanged.
 **Purpose**: the guard that keeps the main package clean, and the engine resolver
 every build branch depends on. BLOCKS all user stories.
 
-- [ ] T003 [FOUND] Extend/confirm the base-import guard test so importing base
+- [x] T003 [FOUND] Extend/confirm the base-import guard test so importing base
   `seshat` (and running a non-dbt CLI path) loads NO `dagster`, `dagster_dbt`, or
   `dbt` module -- in `tests/unit/dagster_adapter/` or the existing import-guard
   test module. RED first (assert the modules are absent), then keep it green by
   NOT adding any main-package dependency.
-- [ ] T004 [FOUND] Write `orchestration/dagster/tests/test_engine_resolution.py`
+- [x] T004 [FOUND] Write `orchestration/dagster/tests/test_engine_resolution.py`
   (RED): fixtures for `absent`, `engine: migrations`, `engine: dbt`,
   `engine: <malformed>` -> assert only exact `dbt` resolves to `dbt` and all others
   to `migrations`; assert no exception leaks a path/secret. (US2/SC-003)
-- [ ] T005 [FOUND] Implement
+- [x] T005 [FOUND] Implement
   `orchestration/dagster/src/tower_bi_orchestration/engine.py`:
   `resolve_build_engine(root, table, layer) -> "migrations" | "dbt"`, fail-closed
   default `migrations`, exact-match only, generic/placeholder config source
