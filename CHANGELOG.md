@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.4.0] -- 2026-07-17
+
 ### Added
 - **`dagster-workflows` public skill and Dagster surface parity** (PR #303):
   the governed Dagster workflow (doctor -> run -> evidence, hard boundaries,
