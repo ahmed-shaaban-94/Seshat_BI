@@ -30,6 +30,12 @@ class TestRedactText:
         assert "10.1.2.3" not in out
         assert "svc" not in out
 
+    def test_odbc_style_credentials_are_scrubbed(self) -> None:
+        text = "Driver=x;Server=y;UID=svcuser;PWD=odbcsecret;Database=gold"
+        out = redaction.redact_text(text)
+        assert "odbcsecret" not in out
+        assert "svcuser" not in out
+
     def test_env_secret_values_are_scrubbed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

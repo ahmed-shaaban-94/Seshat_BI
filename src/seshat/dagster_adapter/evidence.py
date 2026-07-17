@@ -57,7 +57,7 @@ def commit_sha(root: Path) -> str:
         sha = proc.stdout.strip()
         if proc.returncode == 0 and sha:
             return sha
-    except OSError:
+    except (OSError, subprocess.SubprocessError):
         pass
     return "0000000"
 
@@ -93,10 +93,18 @@ class AssetOutcome:
 
 @dataclass(frozen=True)
 class RunMeta:
-    """When a run started and what triggered it (never a per-run human ruling)."""
+    """When a run started, what triggered it, and how the child process exited
+    (never a per-run human ruling). ``child_exit_code`` keeps the run
+    fail-closed even when the orchestration child dies before writing a single
+    asset record -- a crash must never finalize as ``succeeded``."""
 
     started: str
     trigger: str = "manual-CI"
+    child_exit_code: int | None = None
+
+    @property
+    def child_failed(self) -> bool:
+        return self.child_exit_code not in (None, 0)
 
 
 class EvidenceWriter:
@@ -192,6 +200,10 @@ def finalize_run(root: Path, run_id: str, tables: list[str], meta: RunMeta) -> d
     writer = EvidenceWriter(root, run_id)
     _backfill_skipped(writer, tables)
     halted = any(row["outcome"] in {"failed", "blocked"} for row in writer.records())
+    # Fail closed on the CHILD's exit too: a run whose process died before
+    # recording anything must never read as succeeded (review finding, spec
+    # 024 FR-013 -- the failed run status is the CI signal).
+    halted = halted or meta.child_failed
     summary = {
         "run_id": run_id,
         "commit_sha": commit_sha(root),

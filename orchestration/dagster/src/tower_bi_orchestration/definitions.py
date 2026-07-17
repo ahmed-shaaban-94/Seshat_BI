@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dagster import Definitions
+from dagster import Definitions, in_process_executor
 
 from .assets import build_table_assets
 from .jobs import build_jobs
@@ -28,6 +28,12 @@ def build_definitions(root: Path | None = None) -> Definitions:
         jobs=jobs,
         schedules=[build_daily_schedule(full_sequence_job)],
         sensors=[build_raw_landing_sensor(full_sequence_job)],
+        # MVP scope: single-process execution. The shared per-run
+        # records.jsonl is appended by every asset; the multiprocess default
+        # executor could interleave concurrent cross-table writes (review
+        # finding). Per-asset record files + merge is the follow-up seam if
+        # parallel tables are ever needed.
+        executor=in_process_executor,
     )
 
 

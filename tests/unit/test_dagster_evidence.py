@@ -154,6 +154,53 @@ class TestWriteRunEvidence:
         with pytest.raises(ValueError, match="invalid run evidence"):
             evidence.write_run_evidence(tmp_path, "run-002")
 
+    def test_child_crash_with_zero_records_finalizes_failed(
+        self, tmp_path: Path
+    ) -> None:
+        """A child that died before recording ANY asset must never read as
+        succeeded -- the back-filled all-skipped set alone would (review
+        finding); the child exit code keeps the run fail-closed."""
+        summary = evidence.finalize_run(
+            tmp_path,
+            "run-crash",
+            ["demo_table"],
+            evidence.RunMeta(started="2026-07-17T00:00:00Z", child_exit_code=1),
+        )
+        assert summary["run_status"] == "failed"
+        records = evidence.EvidenceWriter(tmp_path, "run-crash").records()
+        assert all(row["outcome"] == "skipped" for row in records)
+
+    def test_green_child_exit_keeps_succeeded(self, tmp_path: Path) -> None:
+        writer = evidence.EvidenceWriter(tmp_path, "run-ok")
+        writer.record(
+            evidence.AssetOutcome(
+                asset="source_map",
+                table="demo_table",
+                gate_command="reads Gate status",
+                exit_code=None,
+                measured={},
+                outcome="materialized",
+            )
+        )
+        summary = evidence.finalize_run(
+            tmp_path,
+            "run-ok",
+            ["demo_table"],
+            evidence.RunMeta(started="2026-07-17T00:00:00Z", child_exit_code=0),
+        )
+        assert summary["run_status"] == "succeeded"
+
+    def test_commit_sha_survives_a_hung_git(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import subprocess
+
+        def hung_git(argv, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=argv, timeout=10)
+
+        monkeypatch.setattr(evidence.subprocess, "run", hung_git)
+        assert evidence.commit_sha(tmp_path) == "0000000"
+
     def test_list_runs_reports_known_runs(self, tmp_path: Path) -> None:
         writer = evidence.EvidenceWriter(tmp_path, "run-003")
         writer.record(

@@ -14,7 +14,8 @@ import re
 
 _DSN_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9+.-]*://[^\s'\"]+")
 _KEYWORD_RE = re.compile(
-    r"\b(host|hostaddr|port|user|username|password|passwd|dbname)\s*=\s*[^\s;'\"]+",
+    r"\b(host|hostaddr|port|user|username|password|passwd|dbname|pwd|uid)"
+    r"\s*=\s*[^\s;'\"]+",
     re.IGNORECASE,
 )
 _SECRET_ENV_RE = re.compile(r"(PASSWORD|SECRET|TOKEN|_KEY$)", re.IGNORECASE)

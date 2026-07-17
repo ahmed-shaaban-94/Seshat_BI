@@ -85,6 +85,21 @@ class TestExecuteRun:
         assert "pw@h" not in result.output
         assert "[REDACTED-DSN]" in result.output
 
+    def test_hung_child_maps_to_failed_result_not_an_exception(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A timed-out child is a FAILED run result (fail-closed), never a
+        raw TimeoutExpired the caller might mishandle (review finding)."""
+        root = _fake_repo(tmp_path)
+
+        def hung_child(argv, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=argv, timeout=1)
+
+        monkeypatch.setattr(runner.subprocess, "run", hung_child)
+        result = runner.execute_run(root, "full_sequence_job")
+        assert result.exit_code == 124
+        assert "timed out" in result.output
+
     def test_missing_orchestration_env_raises_runner_error(
         self, tmp_path: Path
     ) -> None:

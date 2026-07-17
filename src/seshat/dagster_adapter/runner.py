@@ -21,6 +21,7 @@ from .doctor import orchestration_python
 from .redaction import redact_text
 
 _TAIL_CHARS = 4000
+_RUN_TIMEOUT_SECONDS = 7200
 
 
 class RunnerError(RuntimeError):
@@ -76,15 +77,24 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
         env["SESHAT_DAGSTER_TABLES"] = table
     else:
         env.pop("SESHAT_DAGSTER_TABLES", None)
-    proc = subprocess.run(
-        argv,
-        cwd=root,
-        env=env,
-        capture_output=True,
-        text=True,
-        shell=False,
-        timeout=7200,
-    )
+    try:
+        proc = subprocess.run(
+            argv,
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            shell=False,
+            timeout=_RUN_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        # Fail closed: a hung child is a FAILED run, never an exception the
+        # caller might swallow into a green result (review finding).
+        return RunResult(
+            run_id=run_id,
+            exit_code=124,
+            output=f"child run timed out after {_RUN_TIMEOUT_SECONDS}s (killed)",
+        )
     combined = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
     return RunResult(
         run_id=run_id,

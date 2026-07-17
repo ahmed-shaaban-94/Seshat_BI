@@ -94,7 +94,10 @@ def _run_run(args) -> int:
         return 2
     tables = [args.table] if args.table else list_mapped_tables(root)
     summary = evidence.finalize_run(
-        root, result.run_id, tables, evidence.RunMeta(started=started)
+        root,
+        result.run_id,
+        tables,
+        evidence.RunMeta(started=started, child_exit_code=result.exit_code),
     )
     rendered = _render_evidence(root, result.run_id)
     _print_run_outcome(args, result, summary, rendered)
