@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-17
 
-**Status**: Draft -- awaiting ratification
+**Status**: Ratified (Ahmed Shaaban, 2026-07-17)
 
 **Roadmap identity**: A follow-up ACTIVATION of the documented engine seam that
 already lives in F030 (Dagster, spec 134, SHIPPED) and F029 (dbt, spec 133,
