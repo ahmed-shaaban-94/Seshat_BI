@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-17
 
-**Status**: Draft -- awaiting ratification
+**Status**: Ratified (Ahmed Shaaban, 2026-07-17)
 
 **Input**: User description: "Governed dependency freshness and co-resolution: keep
 dependencies proposed at the latest stable versions and CONFIRM the declared pin
