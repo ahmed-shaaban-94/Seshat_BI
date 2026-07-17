@@ -256,10 +256,10 @@ exactly as it did before this feature.
 - The accepted plan digest drifts between plan and build (source map revision,
   project fingerprint, versions, selection, target changed): `seshat.dbt` refuses
   the stale digest; the asset blocks fail-closed.
-- dagster-dbt 0.29.14 cannot drive dbt-core 1.12.0 at runtime (unproven pair):
-  the build fails closed with the concrete error (redacted); definitions-load
-  smoke proves import only, not live drive; live execution stays
-  `[PENDING LIVE PROFILE]`.
+- (RESOLVED by the FR-011 owner decision) dagster-dbt was found to EXCLUDE
+  dbt-core 1.12 at solve time (ResolutionImpossible); the unused library is
+  removed from the orchestration environment instead of downgrading dbt. Live
+  dbt execution stays `[PENDING LIVE PROFILE]`.
 - A raw dbt selector, schema override, profile, or arbitrary dbt argument is
   attempted through the asset: rejected by the governed `seshat.dbt` runner before
   dbt is invoked (spec 133 FR-023); the asset never accepts pass-through.
@@ -337,10 +337,16 @@ exactly as it did before this feature.
   available, as categorical findings with concrete remedies. It MUST NOT emit a
   numeric score and MUST NOT fabricate a live pass when a prerequisite is absent.
 - **FR-011**: The orchestration project environment MUST gain the dbt runtime it
-  needs (`seshat-bi[dbt]` bringing the pinned dbt-core/dbt-postgres pair, plus
-  `dagster-dbt` already pinned with `dagster`). The main `seshat` package MUST
-  gain NO dagster or dagster-dbt dependency, and its static core import path MUST
-  stay stdlib-only.
+  needs (`seshat-bi[dbt]` bringing the pinned dbt-core/dbt-postgres pair) and
+  MUST DROP the `dagster-dbt` pin -- OWNER DECISION (Ahmed Shaaban, 2026-07-17,
+  resolving plan-review R3): no released dagster-dbt accepts dbt-core 1.12, and
+  the seam's execution path never imports dagster-dbt (the R5 static oracle
+  forbids it), so the unused library is removed rather than downgrading the
+  spec-133 dbt pins. Every surface asserting the dagster/dagster-dbt "pinned
+  pair" (doctor findings, definitions-load smoke, docs, contract tests) MUST be
+  reconciled to the dagster-only reality, recording the removal as deliberate.
+  The main `seshat` package MUST gain NO dagster or dagster-dbt dependency, and
+  its static core import path MUST stay stdlib-only.
 - **FR-012**: All added surfaces MUST be generic (placeholders like `<table>`;
   `retail_store_sales` appears only as the filled first instance), ASCII-only,
   UTF-8 without BOM; secrets only via the git-ignored `.env`. Every surfaced error
@@ -508,9 +514,9 @@ anything are left UNANSWERED under "Open for human".
   pending, compatibility-owner attestation missing). This feature ships the
   selectable-engine WIRING; live dbt execution stays deferred and records
   `deferred` without a live profile.
-- dagster-dbt 0.29.14 driving dbt-core 1.12.0 is an unproven live surface; the
-  definitions-load smoke proves import only. Live drive is verified only when a
-  disposable Postgres profile is available.
+- dagster-dbt is REMOVED from the orchestration environment (FR-011 owner
+  decision); the seam executes through `seshat.dbt` only. Live dbt drive is
+  verified only when a disposable Postgres profile is available.
 - Python 3.13 is the floor for both the main package and the orchestration
   project.
 - Enabling schedules/sensors, F016 publish, dbt-as-default, real-gold writes, and
