@@ -17,7 +17,7 @@ def test_dbt_extra_is_an_exact_tested_pair() -> None:
 
     assert payload["project"]["optional-dependencies"]["dbt"] == [
         "dbt-core==1.12.0",
-        "dbt-postgres==1.10.2",
+        "dbt-postgres==1.11.0",
     ]
 
 
