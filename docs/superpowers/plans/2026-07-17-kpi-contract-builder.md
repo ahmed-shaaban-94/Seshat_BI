@@ -344,59 +344,63 @@ Projects the verb to Claude + Codex via kit-source; kit-lint clean."
 
 ---
 
-### Task 4: Advertise on the public command surface
+### Task 4: Confirm distribution parity with the sibling flow-skills
 
-Add the capability to `public-command-surface.yaml` so the installed `seshat` package/help surface advertises it, with a command wrapper for Claude.
+> **Revised 2026-07-17 after a BLOCKED implementer.** The original Task 4 added a
+> `public-command-surface.yaml` command entry. That was wrong: it failed the
+> CI-enforced contract test `tests/contract/test_public_command_surface.py` (6 of
+> its checks), and investigation of the two sibling flow-skills
+> (`business-knowledge-interview`, `source-mapping`) showed the surface is a curated
+> list of umbrella/workflow commands — **individual medallion flow-stage skills are
+> NOT surface commands.** Verified distribution model: the `seshat` **wheel**
+> (`pyproject.toml`) ships only `src/seshat` + `src/retail` + a few resources (the
+> already-shipped `kpi_contracts.py` engine rides in here). The agent flow-skills ship
+> as repo `.claude/skills/` dirs surfaced through the kit-source verb router; they are
+> absent from the wheel, from `scripts/export_agent_bundles.py`'s entry list, and from
+> the `.claude-plugin/marketplace.json` bundle. So after Tasks 1 + 3,
+> `kpi-contract-builder` ALREADY matches its siblings exactly. Task 4 is therefore a
+> verification-and-documentation task, not a surface addition.
 
 **Files:**
-- Modify: `distribution/public-command-surface.yaml`
-- Create: `distribution/bundle-templates/claude/commands/kpi-contract-builder.md`
-- Reference: the shipped `review` entry (a skill-backed, no-CLI-verb command) as the shape to copy.
+- Modify (docs only): `docs/superpowers/specs/2026-07-17-kpi-contract-builder-design.md` §7 (packaging note) if not already reconciled.
+- Reference (read-only, do NOT edit): `distribution/public-command-surface.yaml`, `scripts/export_agent_bundles.py`, `.claude-plugin/marketplace.json`, `.claude/skills/business-knowledge-interview/`, `.claude/skills/source-mapping/`.
 
 **Interfaces:**
-- Consumes: the Task-1 skill name; the Task-3 verb id.
-- Produces: a surface entry with `name: kpi-contract-builder`, `platform: claude`, `cli_verbs: []`, `skill: kpi-contract-builder`, `mode: preview-then-write`, `gates: [named-human-approval]`.
+- Consumes: Task-1 skill dir, Task-3 kit-source verb.
+- Produces: evidence that `kpi-contract-builder` ships identically to its sibling flow-skills, and NO public-surface command entry (by design).
 
-- [ ] **Step 1: Add the command wrapper**
-
-Create `distribution/bundle-templates/claude/commands/kpi-contract-builder.md`:
-
-```markdown
-Drive the kpi-contract-builder skill: assess a planned or custom KPI's
-answerability, list the exact Decision Store decisions to get approved, and
-preview a governed project metric-contract (with per-field provenance). Writes a
-contract only after the approved decisions, a named owner, and committed source
-evidence exist. Never self-grants an approval, fabricates a score, or promotes a
-KPI to Seeded.
-```
-
-- [ ] **Step 2: Add the public-surface entry**
-
-In `distribution/public-command-surface.yaml`, append a new command entry (matching the `review` shape):
-
-```yaml
-  - name: kpi-contract-builder
-    platform: claude
-    intent: Draft a governed project metric-contract for a planned or custom KPI, gated on approved decisions.
-    cli_verbs: []
-    skill: kpi-contract-builder
-    wrapper_template: distribution/bundle-templates/claude/commands/kpi-contract-builder.md
-    bundle_destination: commands/kpi-contract-builder.md
-    mode: preview-then-write
-    gates: [named-human-approval]
-    documentation: docs/install/agent-install.md
-    status: shipped
-```
-
-- [ ] **Step 3: Verify the surface entry parses and references resolve**
+- [ ] **Step 1: Prove the sibling flow-skills are not public-surface commands**
 
 Run:
 ```bash
-python -c "import yaml; d=yaml.safe_load(open('distribution/public-command-surface.yaml',encoding='utf-8')); e=[c for c in d.get('commands',d) if isinstance(c,dict) and c.get('name')=='kpi-contract-builder']; assert e, 'entry missing'; import os; assert os.path.exists(e[0]['wrapper_template']), 'wrapper missing'; print('surface entry OK')"
+grep -n "business-knowledge-interview\|source-mapping" distribution/public-command-surface.yaml distribution/public-knowledge-allowlist.yaml || echo "siblings absent from surface + allowlist (expected)"
 ```
-Expected: `surface entry OK`. (If the top-level key is not `commands`, adjust the accessor to the file's actual shape.)
+Expected: `siblings absent from surface + allowlist (expected)`.
 
-- [ ] **Step 4: Run the full static gate + kit-lint**
+- [ ] **Step 2: Prove kpi-contract-builder matches the sibling packaging**
+
+Run:
+```bash
+ls -d .claude/skills/kpi-contract-builder .claude/skills/business-knowledge-interview .claude/skills/source-mapping
+grep -c "kpi-contract-builder" .seshat/kit-source.yaml
+```
+Expected: all three skill dirs listed; the grep count ≥ 1 (verb registered, from Task 3).
+
+- [ ] **Step 3: Prove the contract test is green (no surface entry present)**
+
+Run: `python -m pytest tests/contract/test_public_command_surface.py -q --no-cov`
+Expected: all pass (14 as of this writing) — confirming we did NOT add a surface entry that would break it.
+
+- [ ] **Step 4: Confirm the wheel ships the engine, not the skill (distribution is correct)**
+
+Run:
+```bash
+grep -nE "packages =|force-include" pyproject.toml | head
+grep -c "kpi-contract-builder\|business-knowledge-interview" scripts/export_agent_bundles.py || echo "flow-skills not in the export entry list (expected — they ship via .claude/skills, not the wheel/marketplace bundle)"
+```
+Expected: wheel packages are `src/seshat` + `src/retail`; the export grep prints the "expected" message (flow-skills absent from the bundle entry list, matching siblings).
+
+- [ ] **Step 5: Full gate**
 
 Run:
 ```bash
@@ -405,11 +409,11 @@ python -m seshat.cli kit-lint --repo .
 ```
 Expected: `check` exit 0; `kit-lint: no projection drift.`
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit (if the design §7 needed reconciling; else no-op)**
 
 ```bash
-git add distribution/public-command-surface.yaml distribution/bundle-templates/claude/commands/kpi-contract-builder.md
-git commit -m "feat: advertise kpi-contract-builder on the public command surface"
+git add docs/superpowers/specs/2026-07-17-kpi-contract-builder-design.md
+git commit -m "docs: reconcile kpi-contract-builder packaging with sibling flow-skill convention" || echo "no doc change needed"
 ```
 
 ---

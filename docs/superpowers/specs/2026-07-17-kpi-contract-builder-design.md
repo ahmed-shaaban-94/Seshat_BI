@@ -165,19 +165,28 @@ field_provenance:
 `resolved: false` on any required field forces `readiness.status: blocked` with a
 matching `blocking_reason`. `provisional` and `gap` are never `resolved: true`.
 
-## 7. Packaging (Claude + Codex + wheel)
+## 7. Packaging (matches the sibling flow-skill convention)
 
-Authored once in kit source, projected to both harnesses, advertised in the wheel:
+> **Corrected 2026-07-17 (post-implementation).** The original §7 called for a
+> `distribution/public-command-surface.yaml` entry. That was wrong and is removed: the
+> public command surface is a curated list of umbrella/workflow commands (help, init,
+> check, review, dbt/powerbi/dagster families), and the CI-enforced contract test
+> `tests/contract/test_public_command_surface.py` rejects an individual medallion
+> flow-stage skill there. The two sibling flow-skills this design modeled itself on —
+> `business-knowledge-interview` and `source-mapping` — are NOT surface commands; they
+> ship purely as repo `.claude/skills/` dirs surfaced through the kit-source verb router.
 
-- Add a `verbs[]` entry `kpi-contract-builder` to `.seshat/kit-source.yaml`; the
-  declared `integrations: [claude, codex]` project it to `integrations/claude-code/`
-  **and** `integrations/codex/`.
-- The canonical skill body lives under `.claude/skills/kpi-contract-builder/`, matching
-  `business-knowledge-interview` and `source-mapping`.
-- Add a `distribution/public-command-surface.yaml` entry so `seshat help` and the wheel
-  advertise it.
-- `kit-lint` enforces that the projections and the public surface stay in sync with
-  `kit-source.yaml` (fail-loud on drift).
+`kpi-contract-builder` ships exactly like its siblings:
+
+- The skill body + walkthrough live under `.claude/skills/kpi-contract-builder/`
+  (matching `business-knowledge-interview` and `source-mapping`).
+- A `verbs[]` entry in `.seshat/kit-source.yaml` registers it; the projection
+  (single fenced `SESHAT-KIT` region in `AGENTS.md`/`CLAUDE.md` + `.seshat/compass.yaml`)
+  surfaces it to the agent. `kit-lint` fails loud on projection drift.
+- The `seshat` **wheel** (`pyproject.toml` ships `src/seshat` + `src/retail`) carries the
+  already-shipped `kpi_contracts.py` engine this skill drives — the Python "package
+  upgrade." Individual flow-skills are not wheel or `.claude-plugin` marketplace-bundle
+  members (neither are the siblings); there is no per-skill surface or bundle entry to add.
 
 ## 8. Reuse (rebuilds nothing)
 
