@@ -242,7 +242,7 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
 
 **Purpose**: reconcile the documented seam and prove the invariants.
 
-- [ ] T018 [POLISH] Reconcile EVERY living doc claiming the seam is future:
+- [x] T018 [POLISH] Reconcile EVERY living doc claiming the seam is future:
   `docs/integrations/dagster-adapter.md` section "The dagster-dbt engine seam
   (activates after spec 133 merges)" AND `orchestration/dagster/README.md`, plus
   a grep-sweep for remaining "activates after spec 133" / seam-as-future claims
@@ -250,7 +250,7 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
   `[PENDING LIVE PROFILE]` live status, history preserved, no live-pass claim.
   Frozen artifacts (specs/134 dir, CHANGELOG history, docs/releases/*) MUST NOT
   be reworded. (FR-013, plan-review R4)
-- [ ] T019 [P] [POLISH] Add a schema-and-topology invariant test (RED->GREEN):
+- [x] T019 [P] [POLISH] Add a schema-and-topology invariant test (RED->GREEN):
   assert `git diff` shows no change to `schemas/dagster-run-evidence.schema.json`
   and no change to asset deps/edges; assert a dbt-engine evidence record still
   validates against the unchanged schema (only `gate_command`/`measured` differ,
@@ -259,10 +259,10 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
   module in `tower_bi_orchestration` imports `dagster_dbt` execution APIs
   (`DbtCliResource` / `@dbt_assets`) and the bridge invokes dbt only through
   `seshat.dbt.runner`. (SC-006/FR-008)
-- [ ] T020 [P] [POLISH] Add an evidence-distinctness assertion: the dagster record
+- [x] T020 [P] [POLISH] Add an evidence-distinctness assertion: the dagster record
   may cite the `mappings/<table>/dbt-evidence/` path but never merges/overwrites
   it. (FR-009)
-- [ ] T022 [P] [POLISH] Readiness-no-write negative test on the dbt path
+- [x] T022 [P] [POLISH] Readiness-no-write negative test on the dbt path
   (plan-review F1, the spec-134 US3 git-diff oracle): after a full dbt-engine
   fixture run, assert `git diff` shows ZERO changes to readiness `status:`
   fields, `Gate status:` lines, `approvals[]` entries, mappings, and metric

@@ -90,9 +90,7 @@ def test_dbt_engine_reports_the_engine_and_a_deferred_finding_when_dsn_absent(
     assert "demo_table" in messages
     assert "dbt" in messages
     # a concrete deferred/enable finding under dbt when the DSN is absent
-    assert any(
-        f.severity in {"warning", "info"} and "dbt" in f.message for f in eng
-    )
+    assert any(f.severity in {"warning", "info"} and "dbt" in f.message for f in eng)
     assert all(not _looks_like_a_score(f.message) for f in findings)
 
 

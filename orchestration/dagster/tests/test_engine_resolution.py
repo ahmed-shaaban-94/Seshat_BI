@@ -31,9 +31,7 @@ def test_absent_file_resolves_to_migrations(tmp_path: Path, layer: str) -> None:
 
 
 @pytest.mark.parametrize("layer", ["silver", "gold"])
-def test_explicit_migrations_resolves_to_migrations(
-    tmp_path: Path, layer: str
-) -> None:
+def test_explicit_migrations_resolves_to_migrations(tmp_path: Path, layer: str) -> None:
     _write_engine_file(tmp_path, "silver: migrations\ngold: migrations\n")
     assert resolve_build_engine(tmp_path, TABLE, layer) == "migrations"
 
