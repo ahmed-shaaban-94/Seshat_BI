@@ -220,7 +220,7 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
 
 ### Tests for User Story 5 (write first, must fail)
 
-- [ ] T016 [P] [US5] Write
+- [x] T016 [P] [US5] Write
   `orchestration/dagster/tests/test_migrations_unchanged.py` (RED): assert a
   dbt-engine run touches no `warehouse/migrations/*.sql` file and requests only
   shadow-schema targets from the fake dbt runner; assert a reverted
@@ -229,7 +229,7 @@ and dbt wrote shadow only; flip to `migrations` -> pre-feature behavior reproduc
 
 ### Implementation for User Story 5
 
-- [ ] T017 [US5] Verify no code path in `dbt_build.py` or `gates.py` deletes,
+- [x] T017 [US5] Verify no code path in `dbt_build.py` or `gates.py` deletes,
   edits, or supersedes a migration or targets migration-owned `silver`/`gold`;
   add an explicit guard/assertion if the fake-runner test surfaces a gap. Turn
   T016 GREEN. (FR-003)
