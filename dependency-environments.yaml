@@ -65,6 +65,6 @@ governed_pins:
   - dist: dbt-core # spec 133 (root `dbt` extra)
   - dist: dbt-postgres # spec 133 (root `dbt` extra)
   - dist: dagster # spec 134 (orchestration)
-  - dist: dagster-dbt # spec 134 (orchestration; removed by spec 135 -- manifest edit only)
+  - dist: dagster-dbt # spec 134; spec 135 (PR #307, MERGED) removed the pin -- entry goes inert on merge (unpinned dists are skipped) and can be dropped in a follow-up manifest edit
   - dist: psycopg2-binary # root `db` extra + orchestration
   - dist: mcp # root `mcp` extra (upper-bounded <2)

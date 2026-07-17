@@ -7,6 +7,8 @@ name: dep-integrity
 # venv via `pip install --dry-run --report`, so the lazy-import isolation proof
 # (SC-002) is untouched.
 
+permissions: {}
+
 on:
   push:
   pull_request:
@@ -32,6 +34,8 @@ jobs:
     # the gate is never weakened and the cross-product is never dropped to force
     # a local pass.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -52,6 +56,8 @@ jobs:
     # CI artifact (FR-011). It is NEVER merge-blocking -- the job always exits 0.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
