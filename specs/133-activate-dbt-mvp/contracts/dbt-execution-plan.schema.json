@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seshat-bi.local/schemas/dbt-execution-plan.schema.json",
+  "title": "Seshat BI dbt execution plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "table_id",
+    "mapping",
+    "project",
+    "runtime",
+    "schemas",
+    "manifest",
+    "selected_unique_ids"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "table_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "git_blob",
+        "sha256",
+        "readiness_sha256",
+        "unresolved_questions_sha256",
+        "approval_id"
+      ],
+      "properties": {
+        "path": {"type": "string", "pattern": "^mappings/[a-z][a-z0-9_]*/source-map\\.yaml$"},
+        "git_blob": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "readiness_sha256": {"$ref": "#/$defs/sha256"},
+        "unresolved_questions_sha256": {"$ref": "#/$defs/sha256"},
+        "approval_id": {"type": "string", "minLength": 1, "maxLength": 160}
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"const": "dbt"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dbt_core",
+        "dbt_adapter",
+        "dbt_adapter_version",
+        "profile",
+        "target",
+        "selector"
+      ],
+      "properties": {
+        "dbt_core": {"const": "1.12.0"},
+        "dbt_adapter": {"const": "dbt-postgres"},
+        "dbt_adapter_version": {"const": "1.10.2"},
+        "profile": {"const": "seshat_bi_warehouse"},
+        "target": {"const": "shadow"},
+        "selector": {"type": "string", "pattern": "^seshat_table_[a-z][a-z0-9_]*$"}
+      }
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["silver", "gold", "audit"],
+      "properties": {
+        "silver": {"$ref": "#/$defs/shadowSchema"},
+        "gold": {"$ref": "#/$defs/shadowSchema"},
+        "audit": {"$ref": "#/$defs/shadowSchema"}
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_uri", "sha256"],
+      "properties": {
+        "schema_uri": {"const": "https://schemas.getdbt.com/dbt/manifest/v12.json"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "selected_unique_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(model|test)\\.seshat_bi\\.[A-Za-z0-9_.-]+$"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "shadowSchema": {
+      "type": "string",
+      "pattern": "^[a-z_][a-z0-9_]*_(silver|gold|audit)$",
+      "not": {"enum": ["bronze", "silver", "gold", "public"]}
+    }
+  }
+}

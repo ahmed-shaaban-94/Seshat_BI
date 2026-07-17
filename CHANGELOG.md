@@ -28,6 +28,15 @@ explicitly identifies a public release event.
 ## [Unreleased]
 
 ### Added
+- **Governed dbt transformation MVP** (spec `133`): exact optional
+  `dbt-core==1.12.0` + `dbt-postgres==1.10.2` runtime, a tracked eight-model
+  `retail_store_sales` shadow graph with 24 selected tests, Mapping Ready and
+  source-map citation validation, immutable accepted plans, invocation locks,
+  redacted subprocess handling, normalized parity evidence, `seshat dbt`
+  doctor/validate/plan/build/test/inspect-run commands, and the shared
+  `dbt-workflows` Claude/Codex skill. Static parse/list and artifact compatibility
+  are locally verified; live compile/build/test/parity and named-owner compatibility
+  attestation remain `[PENDING LIVE PROFILE]`. Migrations remain the default.
 - **Canonical public command surface** (`distribution/public-command-surface.yaml`):
   the single authority for what the generated agent bundles advertise, reconciled
   by the new `tests/contract/test_public_command_surface.py` drift gates and read

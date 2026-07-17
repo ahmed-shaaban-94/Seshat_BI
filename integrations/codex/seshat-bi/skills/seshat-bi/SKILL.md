@@ -22,6 +22,8 @@ For subject reasoning, load only the relevant bundled skill:
 - retail KPI meaning and contracts: `retail-kpi-knowledge`
 - Power BI design, review, theme, formatting, and PBIP adoption:
   `powerbi-workflows`
+- governed dbt prerequisite, plan, shadow build, and evidence review:
+  `dbt-workflows`
 
 End with one next action or one blocked stop. Cite evidence and named blockers;
 never invent a pass or score.

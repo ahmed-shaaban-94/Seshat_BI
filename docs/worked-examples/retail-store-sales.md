@@ -193,6 +193,20 @@ reconcile before declaring Gold Ready. *Watch:* `retail validate` reads the gold
 names from `source-map.yaml` **verbatim** (it does not prepend `gold.`), so the names
 there must be schema-qualified and match the migration exactly.
 
+### Optional governed dbt shadow proof
+
+Feature 133 expresses this table's approved transformation as one staging model, six
+star-schema mart models, one parity audit model, and 24 selected tests under `dbt/`.
+This is a shadow proof only: `warehouse/migrations/` remains the active build path and
+parity oracle.
+
+The agent runs `seshat dbt doctor`, `seshat dbt validate`, and `seshat dbt plan`, reviews
+the returned immutable digest, then may run `seshat dbt build --accept-plan <digest>`.
+Normalized evidence is written under `.seshat/dbt/runs/`; an existing run may be checked
+offline with `seshat dbt inspect-run`. Static parse/list and artifact contracts are locally
+verified. Live compile/build/test/parity remains `[PENDING LIVE PROFILE]`, so this worked
+example records no parity pass and no migration-switch approval.
+
 ## 5. Semantic Model Ready — contracts + a governed model
 
 **What this table did.** Five **metric contracts** were authored and owner-approved

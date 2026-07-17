@@ -1,10 +1,9 @@
 # 0009 -- dbt is a transformation ADAPTER (the build engine), not the brain
 
 - **Date:** 2026-06-26
-- **Status:** Accepted -- this ADR, the two contract templates
-  (`templates/dbt-adapter-contract.md`, `templates/dbt-model-contract.md`), the skill, and
-  the integration doc are AUTHORED in this build slice; the dbt RUNTIME project (models,
-  tests, macros, `dbt_project.yml`) is ENUMERATED as a future output and ships NO dbt files.
+- **Status:** Accepted. Feature 023 was the 2026-06-26 planning slice: it authored this
+  decision, contracts, skill, and integration boundary while enumerating the runtime for
+  a later implementation.
 - **Roadmap feature:** F029 (on-disk spec `023-dbt-transformation-adapter`). When the
   spec-dir number and the F-number disagree, the roadmap F-number wins.
 - **Authority category (F024):** Execution Adapter / `DB-connected` (NOT publish-capable).
@@ -15,16 +14,30 @@
   path and it is approved and live. Teams that already standardize on dbt for warehouse
   transformation want the same silver/gold build expressed as dbt models -- gaining dbt's
   dependency graph, incremental materialization, test framework, and docs site -- WITHOUT
-  giving up Tower BI's gate-enforced readiness. The open question this ADR closes: how can
-  dbt build silver/gold while Tower BI -- not dbt -- remains the authority that decides
+  giving up Seshat BI's gate-enforced readiness. The open question this ADR closes: how can
+  dbt build silver/gold while Seshat BI -- not dbt -- remains the authority that decides
   whether Silver Ready and Gold Ready are `pass`? A green `dbt test` is EVIDENCE, never an
   approval. This ADR records the terms of entry.
 
+## Activation note -- feature 133 (2026-07-16)
+
+Feature 133 activated the planned boundary without changing this decision. It added the
+tracked `dbt/` project, exact optional pair `dbt-core==1.12.0` +
+`dbt-postgres==1.10.2`, `seshat dbt` doctor/validate/plan/build/test/inspect-run routes,
+invocation-scoped shadow schemas, accepted-plan drift protection, normalized evidence,
+and the public `dbt-workflows` skill. The historical decision date remains 2026-06-26;
+the runtime did not exist during feature 023.
+
+Static parse/list and pinned artifact compatibility are locally verified. Live compile,
+build, test, and parity remain `[PENDING LIVE PROFILE]` until a database is available,
+and the candidate compatibility rows still require a named owner. Migrations remain the
+default and parity oracle; feature 133 grants no switch approval.
+
 ## Decision
 
-### 1. dbt is the build ENGINE; Tower BI is the brain
+### 1. dbt is the build ENGINE; Seshat BI is the brain
 
-dbt compiles SQL, materializes models, and runs tests. Tower BI owns the approved
+dbt compiles SQL, materializes models, and runs tests. Seshat BI owns the approved
 source-map (the only legal source of what each model means), owns the metric contracts,
 owns the readiness spine, and routes every judgment call to a named human. dbt is an
 Execution Adapter under F024: it READS truth (the approved map), EXECUTES approved steps
@@ -153,11 +166,13 @@ and `dbt_project.yml` are NOT created now. The enumerated shape lives in
 - The category contract: `docs/architecture/product-modules.md` (the F029 row declares
   Execution Adapter / `DB-connected`); the copy-me declaration `templates/adapter-contract.md`.
 - The dbt-specific contracts: `templates/dbt-adapter-contract.md`,
-  `templates/dbt-model-contract.md` (planned generic templates, no `retail_store_sales`).
-- The integration doc + the enumerated `dbt/` shape: `docs/integrations/dbt-adapter.md`.
+  `templates/dbt-model-contract.md` (generic templates, no `retail_store_sales`).
+- The integration doc + activated `dbt/` shape: `docs/integrations/dbt-adapter.md`.
 - The skill: `.claude/skills/dbt-transformation-adapter/SKILL.md`.
 - The example connection profile: `profiles.example.yml` (placeholders only, Principle IX).
 - The parity target + the worked example: `warehouse/migrations/` + `docs/worked-examples/c086-pharmacy.md`.
 - `.specify/memory/constitution.md` (Principles III, IV, V, VI, VII, VIII, IX).
 - The append-only ADR allotment for this tier: 0008 (F024), **0009 (F029, this)**,
   0010 (F030), 0011 (F031). Shipped ADRs are never reused.
+- Planning history: `specs/023-dbt-transformation-adapter/`; activation implementation:
+  `specs/133-activate-dbt-mvp/`.

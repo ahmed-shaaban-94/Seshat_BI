@@ -21,10 +21,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "README.md",
-      "output_sha256": "91db8216e3fa1eaac5508c1503fe8419cc978525b3830be41316a91625f2ea7c",
+      "output_sha256": "53bc6af151a662d4911582dc06e91fb93d78c39f720fefc99c3b87fb8ff8401d",
       "source": "distribution/bundle-templates/claude/README.md",
       "source_id": "claude-readme",
-      "source_sha256": "91db8216e3fa1eaac5508c1503fe8419cc978525b3830be41316a91625f2ea7c",
+      "source_sha256": "53bc6af151a662d4911582dc06e91fb93d78c39f720fefc99c3b87fb8ff8401d",
       "transform": "copy-normalized-v1"
     },
     {
@@ -47,6 +47,42 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "commands/dbt-build.md",
+      "output_sha256": "956936e0ca3ef31c1ec45187f2c0d6cc6ef0a37c84ff29f469e3068b8890a4d1",
+      "source": "distribution/bundle-templates/claude/commands/dbt-build.md",
+      "source_id": "claude-dbt-build",
+      "source_sha256": "956936e0ca3ef31c1ec45187f2c0d6cc6ef0a37c84ff29f469e3068b8890a4d1",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/dbt-doctor.md",
+      "output_sha256": "180b1b0d09279d7c2126c621a37ab912f192a308fc7bd6c2b2456eb3d5232952",
+      "source": "distribution/bundle-templates/claude/commands/dbt-doctor.md",
+      "source_id": "claude-dbt-doctor",
+      "source_sha256": "180b1b0d09279d7c2126c621a37ab912f192a308fc7bd6c2b2456eb3d5232952",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/dbt-plan.md",
+      "output_sha256": "d493ee37bd79cb1130c5fe8323edda55e2c3533e34bd765653501f1027a4fdbd",
+      "source": "distribution/bundle-templates/claude/commands/dbt-plan.md",
+      "source_id": "claude-dbt-plan",
+      "source_sha256": "d493ee37bd79cb1130c5fe8323edda55e2c3533e34bd765653501f1027a4fdbd",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
+      "destination": "commands/dbt-review.md",
+      "output_sha256": "c6667073e15e6448c87a447ae9da2ec6ee467da14eac67a1568305e2eff04e87",
+      "source": "distribution/bundle-templates/claude/commands/dbt-review.md",
+      "source_id": "claude-dbt-review",
+      "source_sha256": "c6667073e15e6448c87a447ae9da2ec6ee467da14eac67a1568305e2eff04e87",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "commands/doctor.md",
       "output_sha256": "6cbede8f7ef16f47cabc18df8065a418276f821a05b62141b0babc8154c15e23",
       "source": "distribution/bundle-templates/claude/commands/doctor.md",
@@ -57,10 +93,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "commands/help.md",
-      "output_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "output_sha256": "b8bcd2d0b4becff59d84012c5c974000d8c6f847c89ffbbb562c8cfab9df884b",
       "source": "distribution/bundle-templates/claude/commands/help.md",
       "source_id": "claude-help",
-      "source_sha256": "40187288ae2b127582f7964c91facf26d648d3fb6c6e9b5d359a6a0bf705c03c",
+      "source_sha256": "b8bcd2d0b4becff59d84012c5c974000d8c6f847c89ffbbb562c8cfab9df884b",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1622,6 +1658,15 @@
     },
     {
       "classification": "generated_wrapper",
+      "destination": "skills/dbt-workflows/SKILL.md",
+      "output_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
+      "source": "distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md",
+      "source_id": "dbt-workflows-skill",
+      "source_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
+      "transform": "copy-normalized-v1"
+    },
+    {
+      "classification": "generated_wrapper",
       "destination": "skills/powerbi-workflows/SKILL.md",
       "output_sha256": "f4fd52b1c6e74b314e0d91fd52e8283a4ea4965bb6f1c3dd965de3bd9632bb80",
       "source": "distribution/bundle-templates/shared/skills/powerbi-workflows/SKILL.md",
@@ -1641,10 +1686,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
+      "output_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "4b06c4be7df8e2b329796d6ea6b8026a66df77c9f87b4e48b41118c7d91b06e2",
+      "source_sha256": "63e310efdd3d961fb947ff3593aad110c7b9b8f40808222fd9ca27241e7c6a04",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1667,10 +1712,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "8a76be663ae1a8a1a29b92c26a70fbc73e1f659a3756f395f04b75ddfff702fa",
+  "manifest_digest": "d2274ddb6914704ab696e795a32769f431cfee7de7f6f31ca4f66dddd8688207",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "2c4e7ee00ff862ad770184923bd6b65cab8b480e",
+  "source_revision": "ed5a477a50ba3c955588cc457195ac2beeec5a92",
   "target": "claude",
   "version": "0.3.1"
 }

@@ -101,3 +101,12 @@ specs/038-tabular-editor-bpa-adapter/evidence/smoke-*.md
 # that wants a reviewable committed baseline may deliberately un-ignore/commit
 # their own .seshat/watch/snapshot.json.
 .seshat/watch/
+
+# Governed dbt adapter local state (spec 133). The example profile is tracked;
+# the local profile contains env_var() references only and real values stay in
+# the already-ignored .env.
+/profiles.yml
+/.user.yml
+/dbt/target/
+/dbt/logs/
+/.seshat/dbt/

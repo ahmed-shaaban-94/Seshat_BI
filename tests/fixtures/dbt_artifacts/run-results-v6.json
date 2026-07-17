@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+    "dbt_version": "1.12.0",
+    "generated_at": "2026-07-16T12:01:00Z"
+  },
+  "args": {"which": "build"},
+  "results": [
+    {
+      "unique_id": "model.seshat_bi.fact_retail_store_sales",
+      "status": "success",
+      "failures": null,
+      "execution_time": 0.21,
+      "message": "private adapter message"
+    },
+    {
+      "unique_id": "model.seshat_bi.stg_retail_store_sales",
+      "status": "success",
+      "failures": null,
+      "execution_time": 0.11,
+      "message": "private adapter message"
+    },
+    {
+      "unique_id": "test.seshat_bi.not_null_fact_transaction_id.abc123",
+      "status": "pass",
+      "failures": 0,
+      "execution_time": 0.03,
+      "message": "private adapter message"
+    }
+  ]
+}

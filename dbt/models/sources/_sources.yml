@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    tables:
+      - name: retail_store_sales
+
+  - name: migration_gold
+    schema: gold
+    tables:
+      - name: fct_sales_rss
+      - name: dim_customer_rss
+      - name: dim_product_rss
+      - name: dim_payment_method_rss
+      - name: dim_location_rss
+      - name: dim_date_rss

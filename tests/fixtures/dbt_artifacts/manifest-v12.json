@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+    "dbt_version": "1.12.0",
+    "generated_at": "2026-07-16T12:00:00Z"
+  },
+  "nodes": {
+    "model.seshat_bi.fact_retail_store_sales": {
+      "unique_id": "model.seshat_bi.fact_retail_store_sales",
+      "resource_type": "model",
+      "name": "fact_retail_store_sales",
+      "package_name": "seshat_bi",
+      "original_file_path": "models/gold/fact_retail_store_sales.sql",
+      "depends_on": {
+        "nodes": ["model.seshat_bi.stg_retail_store_sales"]
+      },
+      "tags": ["seshat_table_retail_store_sales"],
+      "schema": "seshat_dbt_shadow_gold",
+      "database": "seshat_verify",
+      "alias": "fact_retail_store_sales",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_gold\".\"fact_retail_store_sales\"",
+      "config": {"materialized": "table"},
+      "meta": {"seshat": {"authority": "derived"}},
+      "compiled_code": "select secret_raw_sql"
+    },
+    "model.seshat_bi.stg_retail_store_sales": {
+      "unique_id": "model.seshat_bi.stg_retail_store_sales",
+      "resource_type": "model",
+      "name": "stg_retail_store_sales",
+      "package_name": "seshat_bi",
+      "original_file_path": "models/staging/stg_retail_store_sales.sql",
+      "depends_on": {"nodes": []},
+      "tags": ["seshat_table_retail_store_sales"],
+      "schema": "seshat_dbt_shadow_silver",
+      "database": "seshat_verify",
+      "alias": "stg_retail_store_sales",
+      "relation_name": "\"seshat_verify\".\"seshat_dbt_shadow_silver\".\"stg_retail_store_sales\"",
+      "config": {"materialized": "table"},
+      "meta": {"seshat": {"authority": "derived"}}
+    },
+    "test.seshat_bi.not_null_fact_transaction_id.abc123": {
+      "unique_id": "test.seshat_bi.not_null_fact_transaction_id.abc123",
+      "resource_type": "test",
+      "name": "not_null_fact_transaction_id",
+      "package_name": "seshat_bi",
+      "original_file_path": "models/gold/_models.yml",
+      "depends_on": {
+        "nodes": ["model.seshat_bi.fact_retail_store_sales"]
+      },
+      "tags": ["seshat_table_retail_store_sales"],
+      "schema": "seshat_dbt_shadow_gold",
+      "meta": {}
+    }
+  }
+}

@@ -1,0 +1,14 @@
+schema_version: 1
+status: blocked
+owner: UNASSIGNED
+versions:
+  dbt_core: 1.12.0
+  dbt_postgres: 1.10.2
+evidence:
+  parse: pass
+  compile: pending
+  live_parity: pending
+blockers:
+  - "[PENDING LIVE PROFILE]: dbt compile needs disposable Postgres connectivity"
+  - "[PENDING LIVE PROFILE]: live parity has not executed against disposable Postgres"
+  - "Named compatibility owner attestation is missing"

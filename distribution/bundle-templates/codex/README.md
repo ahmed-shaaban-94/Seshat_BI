@@ -1,9 +1,10 @@
 # Seshat BI for Codex
 
 This generated skills-only Codex plugin contains the `$seshat-bi` readiness
-router, the guarded `$powerbi-workflows` Power BI routing skill, and five
-public knowledge skills. It activates no app, MCP server, connector, hook, or
-remote service. Install `seshat-bi` separately for CLI helpers.
+router, the governed `$dbt-workflows` transformation skill, the guarded
+`$powerbi-workflows` Power BI routing skill, and five public knowledge skills.
+It activates no app, MCP server, connector, hook, or remote service. Install
+`seshat-bi` separately for CLI helpers; use the `dbt` extra for dbt execution.
 
 After public repository availability is verified, run
 `codex plugin marketplace add https://github.com/Kemetra/Seshat-BI`

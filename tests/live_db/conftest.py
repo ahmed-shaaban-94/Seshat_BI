@@ -18,8 +18,15 @@ skip -- the lazy import + importorskip is what keeps the honest-skip promise rea
 
 from __future__ import annotations
 
+import importlib.metadata
+import json
+import os
 import pathlib
+import shutil
+import subprocess
+import sys
 from dataclasses import dataclass
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
@@ -33,6 +40,29 @@ REASON_DRIVER = "driver not installed"
 REASON_CONTAINER = "container failed to start"
 REASON_PORT = "port conflict"
 REASON_SEED = "seed failed"
+REASON_DBT_PENDING = "[PENDING LIVE PROFILE]"
+
+
+def dbt_runtime_available() -> bool:
+    """Return whether the exact governed dbt pair and executable are installed."""
+
+    try:
+        from seshat.dbt import DBT_CORE_VERSION, DBT_POSTGRES_VERSION
+        from seshat.dbt.runner import resolve_dbt_executable
+
+        installed = (
+            importlib.metadata.version("dbt-core"),
+            importlib.metadata.version("dbt-postgres"),
+        )
+        resolve_dbt_executable()
+    except (
+        ImportError,
+        importlib.metadata.PackageNotFoundError,
+        OSError,
+        RuntimeError,
+    ):
+        return False
+    return installed == (DBT_CORE_VERSION, DBT_POSTGRES_VERSION)
 
 
 @dataclass(frozen=True)
@@ -43,6 +73,170 @@ class ContainerHandle:
     """
 
     dsn: str
+
+
+@dataclass(frozen=True)
+class LiveParityRow:
+    assertion_id: str
+    passed: bool
+
+
+@dataclass(frozen=True)
+class LiveBlocker:
+    assertion_id: str | None
+
+
+@dataclass(frozen=True)
+class LiveDbtEvidence:
+    outcome: str
+    parity: tuple[LiveParityRow, ...]
+    blocking_reasons: tuple[LiveBlocker, ...]
+
+
+class LiveDbtProject:
+    """Disposable Git checkout bound to one ephemeral Postgres database."""
+
+    _MUTATIONS = {
+        "delete_fact": """
+            DELETE FROM gold.fct_sales_rss
+            WHERE transaction_id = (
+                SELECT min(transaction_id) FROM gold.fct_sales_rss
+            );
+        """,
+        "duplicate_business_key": """
+            ALTER TABLE gold.fct_sales_rss
+                DROP CONSTRAINT uq_fct_rss_transaction_id;
+            WITH ids AS (
+                SELECT min(transaction_id) AS keep_id,
+                       max(transaction_id) AS change_id
+                FROM gold.fct_sales_rss
+            )
+            UPDATE gold.fct_sales_rss AS fact
+            SET transaction_id = ids.keep_id
+            FROM ids
+            WHERE fact.transaction_id = ids.change_id;
+        """,
+        "change_money": """
+            UPDATE gold.fct_sales_rss
+            SET total_spent = total_spent + 1.00
+            WHERE transaction_id = (
+                SELECT min(transaction_id) FROM gold.fct_sales_rss
+            );
+        """,
+        "remove_unknown_member": """
+            ALTER TABLE gold.fct_sales_rss
+                DROP CONSTRAINT fk_fct_rss_product;
+            DELETE FROM gold.dim_product_rss WHERE product_sk = -1;
+        """,
+    }
+
+    def __init__(
+        self,
+        repo_root: pathlib.Path,
+        dsn: str,
+        environment: dict[str, str],
+    ) -> None:
+        self.repo_root = repo_root
+        self.dsn = dsn
+        self.environment = environment
+
+    def _cli(
+        self,
+        command: str,
+        *arguments: str,
+        expected_codes: set[int] | None = None,
+    ) -> dict:
+        expected = expected_codes or {0}
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "seshat.cli",
+                "dbt",
+                command,
+                *arguments,
+                "--repo",
+                str(self.repo_root),
+                "--format",
+                "json",
+            ],
+            cwd=self.repo_root,
+            env=self.environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            shell=False,
+            timeout=300,
+        )
+        assert completed.returncode in expected, (
+            f"governed dbt {command} returned {completed.returncode}"
+        )
+        try:
+            payload = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise AssertionError(f"governed dbt {command} did not return JSON") from exc
+        assert isinstance(payload, dict)
+        return payload
+
+    def verify_prerequisites(self) -> None:
+        self._cli("doctor")
+        self._cli("validate", "--table", "retail_store_sales")
+
+    def _reset_migration_oracle(self) -> None:
+        _run_sql_file(
+            self.dsn,
+            self.repo_root
+            / "warehouse/migrations/0003_create_silver_retail_store_sales.sql",
+        )
+        _run_sql_file(
+            self.dsn,
+            self.repo_root
+            / "warehouse/migrations/0004_create_gold_retail_store_sales_star.sql",
+        )
+
+    def _evidence(self, result: dict) -> LiveDbtEvidence:
+        relative = result.get("evidence_path")
+        assert isinstance(relative, str) and relative
+        payload = json.loads((self.repo_root / relative).read_text(encoding="utf-8"))
+        return LiveDbtEvidence(
+            outcome=payload["outcome"],
+            parity=tuple(
+                LiveParityRow(row["assertion_id"], row["passed"])
+                for row in payload["parity"]
+            ),
+            blocking_reasons=tuple(
+                LiveBlocker(row.get("assertion_id"))
+                for row in payload["blocking_reasons"]
+            ),
+        )
+
+    def _build(self, table_id: str, mutation: str | None) -> LiveDbtEvidence:
+        assert table_id == "retail_store_sales"
+        self._reset_migration_oracle()
+        plan = self._cli("plan", "--table", table_id)
+        digest = plan.get("digest")
+        assert isinstance(digest, str) and len(digest) == 64
+        if mutation is not None:
+            sql = self._MUTATIONS[mutation]
+            _run_sql(self.dsn, sql)
+        result = self._cli(
+            "build",
+            "--table",
+            table_id,
+            "--accept-plan",
+            digest,
+            expected_codes={0, 1},
+        )
+        return self._evidence(result)
+
+    def build(self, table_id: str) -> LiveDbtEvidence:
+        return self._build(table_id, None)
+
+    def build_with_mutation(
+        self, mutation: str, table_id: str = "retail_store_sales"
+    ) -> LiveDbtEvidence:
+        assert mutation in self._MUTATIONS
+        return self._build(table_id, mutation)
 
 
 def docker_available() -> tuple[bool, str | None]:
@@ -91,6 +285,19 @@ def _run_sql_file(dsn: str, sql_path: pathlib.Path) -> None:
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(sql_path.read_text(encoding="utf-8"))
+    finally:
+        conn.close()
+
+
+def _run_sql(dsn: str, sql: str) -> None:
+    """Execute inline synthetic-test SQL without exposing the ephemeral DSN."""
+    import psycopg2  # lazy
+
+    conn = psycopg2.connect(dsn)
+    try:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute(sql)
     finally:
         conn.close()
 
@@ -161,5 +368,82 @@ def live_db_container(request):
         except Exception:
             pytest.skip(REASON_SEED)
         yield handle
+    finally:
+        stop()
+
+
+def _dbt_child_environment(dsn: str, repo_root: pathlib.Path) -> dict[str, str]:
+    parsed = urlsplit(dsn)
+    assert parsed.hostname and parsed.port and parsed.username and parsed.password
+    database = parsed.path.lstrip("/")
+    assert database
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "SESHAT_DBT_HOST": parsed.hostname,
+            "SESHAT_DBT_PORT": str(parsed.port),
+            "SESHAT_DBT_USER": unquote(parsed.username),
+            "SESHAT_DBT_PASSWORD": unquote(parsed.password),
+            "SESHAT_DBT_DBNAME": database,
+            "SESHAT_DBT_SCHEMA": "seshat_live_shadow",
+            "SESHAT_DBT_SSLMODE": "disable",
+            "PYTHONPATH": str(repo_root / "src"),
+        }
+    )
+    return environment
+
+
+@pytest.fixture(scope="module")
+def live_dbt_project(tmp_path_factory):
+    """One disposable database + checkout for the feature-133 parity suite."""
+    if not dbt_runtime_available():
+        pytest.skip(f"{REASON_DBT_PENDING}: install the pinned dbt extra")
+    ok, reason = docker_available()
+    if not ok:
+        pytest.skip(f"{REASON_DBT_PENDING}: {reason}")
+    ok, reason = driver_available()
+    if not ok:
+        pytest.skip(f"{REASON_DBT_PENDING}: {reason}")
+
+    try:
+        dsn, stop = _start_container()
+    except Exception as exc:
+        text = str(exc).lower()
+        detail = (
+            REASON_PORT
+            if ("port" in text or "address already in use" in text or "bind" in text)
+            else REASON_CONTAINER
+        )
+        pytest.skip(f"{REASON_DBT_PENDING}: {detail}")
+
+    source_root = pathlib.Path(__file__).resolve().parents[2]
+    checkout = tmp_path_factory.mktemp("dbt-live") / "repo"
+    handle = ContainerHandle(dsn=dsn)
+    try:
+        seed_container(handle, "dbt_retail_store_sales.sql")
+        clone = subprocess.run(
+            [
+                "git",
+                "clone",
+                "--quiet",
+                "--no-hardlinks",
+                str(source_root),
+                str(checkout),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            shell=False,
+            timeout=120,
+        )
+        assert clone.returncode == 0, "temporary local Git clone failed"
+        shutil.copy2(checkout / "profiles.example.yml", checkout / "profiles.yml")
+        project = LiveDbtProject(
+            checkout,
+            dsn,
+            _dbt_child_environment(dsn, source_root),
+        )
+        project.verify_prerequisites()
+        yield project
     finally:
         stop()
