@@ -66,7 +66,10 @@ def _measured_from_result(result: CommandResult, table: str) -> dict:
     a numeric score (hard rule #9). The dbt run-evidence JSON stays a DISTINCT
     artifact (FR-009); we cite its path, never merge it.
     """
-    dbt_result = _DBT_OUTCOME_TO_EXECUTION.get(result.outcome, "built")
+    # An outcome word this map does not know is treated as BLOCKED, never as a
+    # success word: a future seshat.dbt outcome must fail closed here, not be
+    # translated into "built" (evidence fidelity; Fable review).
+    dbt_result = _DBT_OUTCOME_TO_EXECUTION.get(result.outcome, "blocked")
     measured: dict = {
         "engine": "dbt",
         "selector": f"seshat_table_{table}",
