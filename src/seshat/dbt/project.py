@@ -295,36 +295,34 @@ def _model_name(row: Any) -> str | None:
 _SESHAT_TABLE_TAG = re.compile(r"^seshat_table_([a-z][a-z0-9_]*)$")
 
 
-# The mapping working-set files a table must have to be validatable, mirroring
-# gate._require_mapping_files. Kept as one predicate so the "governed enough to
-# skip another table's models" bar can never drift below the "governed enough to
-# validate" bar -- a table validatable via resolve_working_set() only if all
-# three exist, so only such a table may absorb models skipped under it.
-_MAPPING_WORKING_SET_FILES = (
-    "source-map.yaml",
-    "readiness-status.yaml",
-    "unresolved-questions.md",
-)
+def _is_validatable_table(root: Path, table_id: str) -> bool:
+    """True iff ``resolve_working_set`` would succeed for this table -- i.e. the
+    table can ACTUALLY be validated on its own run.
 
+    This is the single authority for "governed enough to absorb another table's
+    skipped models": it delegates to the exact predicate a real validate run uses
+    (``gate.resolve_working_set``), which checks the full mapping working set AND
+    that the source map is git-tracked, clean, and revision-resolvable. Delegating
+    -- rather than re-listing those requirements here -- guarantees the skip bar
+    and the validate bar are the same code and cannot drift: a table whose map is
+    present-but-untracked/dirty is NOT validatable, so its models are never
+    silently skipped; they orphan-block instead, staying reachable by some check.
+    Read-only; the table being resolved is always another table, never the one
+    under validation, so there is no recursion.
+    """
+    from seshat.dbt.gate import GovernanceError, resolve_working_set
 
-def _has_mapping_working_set(root: Path, table_id: str) -> bool:
-    mapping_dir = root / "mappings" / table_id
-    return mapping_dir.is_dir() and all(
-        (mapping_dir / name).is_file() for name in _MAPPING_WORKING_SET_FILES
-    )
+    try:
+        resolve_working_set(root, table_id)
+    except GovernanceError:
+        return False
+    return True
 
 
 def _governed_table_ids(root: Path) -> frozenset[str]:
-    """Table ids with a COMPLETE committed mapping working set under mappings/<id>/.
-
-    The authoritative set of tables a governed dbt model may legitimately belong
-    to: a directory under ``mappings/`` carrying the full working set
-    (``source-map.yaml`` + ``readiness-status.yaml`` + ``unresolved-questions.md``)
-    that ``resolve_working_set`` requires. The full bar matters: a model is skipped
-    here only when it is attributed to another table that can ACTUALLY be validated
-    on its own. A table with a partial mapping cannot be validated (it fails
-    ``resolve_working_set``), so its models must not be silently skipped -- they are
-    treated as orphans instead, keeping every model reachable by some check.
+    """Table ids that can actually be validated on their own (see
+    ``_is_validatable_table``) -- the authoritative set a governed dbt model may be
+    attributed to when deciding whether to skip it under a different table.
     """
     mappings_dir = root / "mappings"
     if not mappings_dir.is_dir():
@@ -332,7 +330,7 @@ def _governed_table_ids(root: Path) -> frozenset[str]:
     return frozenset(
         child.name
         for child in mappings_dir.iterdir()
-        if child.is_dir() and _has_mapping_working_set(root, child.name)
+        if child.is_dir() and _is_validatable_table(root, child.name)
     )
 
 

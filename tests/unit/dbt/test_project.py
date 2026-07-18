@@ -261,12 +261,30 @@ def _append_model(root: Path, subdir: str, model_yaml: str) -> None:
     (model_dir / "_models.yml").write_text(model_yaml, encoding="utf-8")
 
 
+def _git(root: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _init_repo(root: Path) -> None:
+    _git(root, "init", "-q")
+
+
 def _write_mapping_working_set(
-    root: Path, table_id: str, complete: bool = True
+    root: Path, table_id: str, complete: bool = True, committed: bool = False
 ) -> None:
     """Write a table's mapping dir. complete=True writes the full 3-file working set
     (source-map + readiness-status + unresolved-questions) that resolve_working_set
-    requires; complete=False omits unresolved-questions.md (a partial mapping)."""
+    requires; complete=False omits unresolved-questions.md (a partial mapping).
+    committed=True git-adds + commits the source map so it is tracked and clean
+    (resolve_working_set also requires that); committed=False leaves it untracked."""
     mapping = root / "mappings" / table_id
     mapping.mkdir(parents=True, exist_ok=True)
     (mapping / "source-map.yaml").write_text(
@@ -277,6 +295,9 @@ def _write_mapping_working_set(
         (mapping / "unresolved-questions.md").write_text(
             "Gate status: CLEARED\n", encoding="utf-8"
         )
+    if committed:
+        _git(root, "add", f"mappings/{table_id}/source-map.yaml")
+        _git(root, "commit", "-q", "-m", f"add {table_id} map")
 
 
 def _tagged_model_yaml(name: str, tag: str, table_id: str) -> str:
@@ -337,11 +358,12 @@ def test_model_for_another_governed_table_is_out_of_scope(tmp_path: Path) -> Non
     """
     from seshat.dbt.project import validate_project
 
+    _init_repo(tmp_path)
     working_set = _write_project(tmp_path)  # validating table = orders
-    # A second real governed table "widgets" with a COMPLETE working set (all 3
-    # files) -- so it can actually be validated on its own, which is what makes
-    # skipping its models here safe.
-    _write_mapping_working_set(tmp_path, "widgets", complete=True)
+    # A second real governed table "widgets" with a COMPLETE working set that is
+    # also git-tracked + clean -- so resolve_working_set succeeds for it, which is
+    # what makes skipping its models here safe.
+    _write_mapping_working_set(tmp_path, "widgets", complete=True, committed=True)
     _append_model(
         tmp_path,
         "staging/widgets",
@@ -352,6 +374,36 @@ def test_model_for_another_governed_table_is_out_of_scope(tmp_path: Path) -> Non
 
     # orders is fully valid; the widgets model neither validated here nor flagged.
     assert result.valid is True, [b.code for b in result.blocking_reasons]
+
+
+def test_model_for_uncommitted_mapping_table_is_orphan_rejected(tmp_path: Path) -> None:
+    """A model tagged for a table whose map is present but NOT git-committed must
+    block, not skip.
+
+    Regression for the deepest partition hole (the same class as the phantom-tag
+    and partial-mapping holes): a table can have all three mapping files yet still
+    be non-validatable because resolve_working_set also requires the source map to
+    be git-tracked and clean. If "governed" checked only file existence, such a
+    table's models would be skipped under the current table AND never validated
+    under their own (validation stops at the untracked/dirty gate). The governed
+    bar therefore delegates to resolve_working_set itself, not a file check.
+    """
+    from seshat.dbt.project import validate_project
+
+    _init_repo(tmp_path)
+    working_set = _write_project(tmp_path)  # validating table = orders
+    # "widgets" has all 3 files but its map is NOT committed (untracked).
+    _write_mapping_working_set(tmp_path, "widgets", complete=True, committed=False)
+    _append_model(
+        tmp_path,
+        "staging/widgets",
+        _tagged_model_yaml("stg_widgets", "seshat_table_widgets", "widgets"),
+    )
+
+    result = validate_project(tmp_path, working_set)
+
+    assert result.valid is False
+    assert "DBT_MODEL_ORPHANED" in {b.code for b in result.blocking_reasons}
 
 
 def test_model_for_partial_mapping_table_is_orphan_rejected(tmp_path: Path) -> None:
