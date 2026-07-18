@@ -424,6 +424,52 @@ def _subject_root(subject: str) -> str:
 _FACT_CLASSES = ("fact_row_count", "business_key_count", "additive_money_total")
 
 
+def _validate_fact_assertions(
+    fact_subjects: list[str],
+    fact_counts: dict[str, int],
+    selected_unique_ids: tuple[str, ...],
+) -> None:
+    """Exactly one of each fact class, each subject rooting at the built fact."""
+    if fact_counts != {cls: 1 for cls in _FACT_CLASSES}:
+        raise ArtifactIntegrityError(
+            "parity fact-level assertions are not the exact governed set "
+            f"(expected one each of {sorted(_FACT_CLASSES)}, got {fact_counts})"
+        )
+    fact_model = _selected_fact_model(selected_unique_ids)
+    wrong_fact = sorted({s for s in fact_subjects if _subject_root(s) != fact_model})
+    if wrong_fact:
+        raise ArtifactIntegrityError(
+            "parity fact assertions do not reference the built fact model "
+            f"{fact_model!r}: {', '.join(wrong_fact)}"
+        )
+
+
+def _validate_dimension_assertions(
+    dim_subjects: list[str],
+    selected_unique_ids: tuple[str, ...],
+) -> None:
+    """The set of dimension subjects must equal the built dim_* models exactly."""
+    seen_dims = frozenset(dim_subjects)
+    if len(dim_subjects) != len(seen_dims):
+        duplicates = sorted({s for s in dim_subjects if dim_subjects.count(s) > 1})
+        raise ArtifactIntegrityError(
+            "parity has duplicate dimension_member_count subjects: "
+            + ", ".join(duplicates)
+        )
+    expected_dims = _selected_dimension_subjects(selected_unique_ids)
+    if seen_dims == expected_dims:
+        return
+    detail = []
+    if expected_dims - seen_dims:
+        detail.append("missing " + ", ".join(sorted(expected_dims - seen_dims)))
+    if seen_dims - expected_dims:
+        detail.append("unexpected " + ", ".join(sorted(seen_dims - expected_dims)))
+    raise ArtifactIntegrityError(
+        "parity dimension assertions do not match the built dimensions: "
+        + "; ".join(detail)
+    )
+
+
 def _validate_parity_set(
     parity: tuple[ParityAssertion, ...],
     selected_unique_ids: tuple[str, ...],
@@ -431,13 +477,12 @@ def _validate_parity_set(
     """Prove the parity audit covers exactly what was built.
 
     Fact-level: exactly one each of fact_row_count / business_key_count /
-    additive_money_total, and each one's subject must reference the built fact
-    model (checking the subject, not just the class count, so a malformed audit
-    cannot reconcile the wrong fact relation). Dimensions: the SET of
-    dimension_member_count subjects must equal the set of dim_* models in
-    selected_unique_ids -- checking subjects, not just the count, so a malformed
-    audit cannot pass by duplicating one dimension's check and omitting another
-    (two dim_customer + zero dim_date has the right count but the wrong set).
+    additive_money_total, each one's subject rooting at the built fact model
+    (subject, not just count, so a malformed audit cannot reconcile the wrong
+    fact relation). Dimensions: the SET of dimension_member_count subjects must
+    equal the set of built dim_* models (subject set, not just count, so a
+    malformed audit cannot pass by duplicating one dimension and omitting
+    another). Partition once here; each side is checked by its own helper.
     """
     fact_counts: dict[str, int] = {cls: 0 for cls in _FACT_CLASSES}
     fact_subjects: list[str] = []
@@ -449,40 +494,8 @@ def _validate_parity_set(
         elif row.assertion_class == "dimension_member_count":
             dim_subjects.append(row.subject)
 
-    expected_fact_counts = {cls: 1 for cls in _FACT_CLASSES}
-    if fact_counts != expected_fact_counts:
-        raise ArtifactIntegrityError(
-            "parity fact-level assertions are not the exact governed set "
-            f"(expected one each of {sorted(_FACT_CLASSES)}, got {fact_counts})"
-        )
-
-    fact_model = _selected_fact_model(selected_unique_ids)
-    wrong_fact = sorted({s for s in fact_subjects if _subject_root(s) != fact_model})
-    if wrong_fact:
-        raise ArtifactIntegrityError(
-            "parity fact assertions do not reference the built fact model "
-            f"{fact_model!r}: {', '.join(wrong_fact)}"
-        )
-
-    expected_dims = _selected_dimension_subjects(selected_unique_ids)
-    seen_dims = frozenset(dim_subjects)
-    if len(dim_subjects) != len(seen_dims):
-        raise ArtifactIntegrityError(
-            "parity has duplicate dimension_member_count subjects: "
-            + ", ".join(sorted({s for s in dim_subjects if dim_subjects.count(s) > 1}))
-        )
-    if seen_dims != expected_dims:
-        missing = expected_dims - seen_dims
-        extra = seen_dims - expected_dims
-        detail = []
-        if missing:
-            detail.append("missing " + ", ".join(sorted(missing)))
-        if extra:
-            detail.append("unexpected " + ", ".join(sorted(extra)))
-        raise ArtifactIntegrityError(
-            "parity dimension assertions do not match the built dimensions: "
-            + "; ".join(detail)
-        )
+    _validate_fact_assertions(fact_subjects, fact_counts, selected_unique_ids)
+    _validate_dimension_assertions(dim_subjects, selected_unique_ids)
 
 
 def _execution_blocker(invocation: InvocationResult) -> Blocker | None:
