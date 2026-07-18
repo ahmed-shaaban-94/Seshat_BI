@@ -26,6 +26,7 @@ from seshat.dbt.artifacts import (
 )
 from seshat.dbt.contracts import (
     ExecutionPlan,
+    FactBinding,
     GateDecision,
     InvocationResult,
     ManifestBinding,
@@ -42,12 +43,14 @@ from seshat.dbt.contracts import (
     ShadowSchemas,
     WorkingSet,
 )
+from seshat.dbt.fact_semantics import load_fact_semantics
 from seshat.dbt.gate import evaluate_mapping_gate, resolve_working_set
 from seshat.dbt.project import validate_project
 from seshat.dbt.redaction import load_child_environment
 from seshat.dbt.runner import build_dbt_argv, target_lock
 
 _TABLE_ID = re.compile(r"^[a-z][a-z0-9_]*$")
+_COLUMN_ID = re.compile(r"^[a-z][a-z0-9_]*$")
 _UNIQUE_ID = re.compile(r"^(model|test)\.seshat_bi\.[A-Za-z0-9_.-]+$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _GIT_BLOB = re.compile(r"^[0-9a-f]{40,64}$")
@@ -85,6 +88,7 @@ class _PlanBuildContext:
     table_id: str
     working_set: WorkingSet
     approval: MappingApproval
+    fact: FactBinding
     project: ProjectValidation
     manifest: ManifestSummary
     selected: tuple[str, ...]
@@ -109,8 +113,10 @@ def plan_digest(plan: ExecutionPlan) -> str:
 
 
 def _validate_plan_identity(plan: ExecutionPlan) -> None:
-    if plan.schema_version != 1:
-        raise PlanDrift("plan schema_version must be 1")
+    # v2 added the required fact binding (issue #331); a v1 plan predates it
+    # and must be re-planned, never silently reinterpreted.
+    if plan.schema_version != 2:
+        raise PlanDrift("plan schema_version must be 2")
     if not _TABLE_ID.fullmatch(plan.table_id):
         raise PlanDrift("plan table_id is unsafe")
 
@@ -135,6 +141,47 @@ def _validate_plan_hashes(plan: ExecutionPlan) -> None:
         raise PlanDrift("plan contains an invalid mapping Git blob")
     if not plan.mapping.approval_id:
         raise PlanDrift("plan has no named-human approval identity")
+
+
+def _canonical_money(money: tuple[str, ...]) -> bool:
+    # Identifier-check FIRST: a malformed stored plan may carry non-string
+    # (even unhashable) elements, and sorting/set-building those must yield a
+    # handled PlanDrift, never an uncaught TypeError.
+    if not all(
+        isinstance(measure, str) and _COLUMN_ID.fullmatch(measure) for measure in money
+    ):
+        return False
+    # Empty is canonical: a factless fact declares zero money measures.
+    return money == tuple(sorted(set(money)))
+
+
+def _require_canonical_money(money: tuple[str, ...]) -> None:
+    if not _canonical_money(money):
+        raise PlanDrift(
+            "plan fact additive_money_measures must be sorted, unique identifiers"
+        )
+
+
+def _canonical_business_key(key: tuple[str, ...]) -> bool:
+    # Identifier-check FIRST (see _canonical_money). Ordered and non-empty;
+    # order is the grain declaration, so uniqueness is required but sorting
+    # is NOT.
+    if not all(
+        isinstance(column, str) and _COLUMN_ID.fullmatch(column) for column in key
+    ):
+        return False
+    return bool(key) and len(key) == len(set(key))
+
+
+def _validate_fact_binding(plan: ExecutionPlan) -> None:
+    name = plan.fact.name
+    if not (isinstance(name, str) and _COLUMN_ID.fullmatch(name)):
+        raise PlanDrift("plan fact name is unsafe")
+    if not _canonical_business_key(plan.fact.business_key):
+        raise PlanDrift("plan fact business_key is unsafe")
+    _require_canonical_money(plan.fact.additive_money_measures)
+    if set(plan.fact.business_key) & set(plan.fact.additive_money_measures):
+        raise PlanDrift("plan fact business_key cannot be an additive money measure")
 
 
 def _validate_runtime_binding(plan: ExecutionPlan) -> None:
@@ -202,6 +249,7 @@ def _valid_plan(plan: ExecutionPlan) -> None:
     _validate_plan_identity(plan)
     _validate_mapping_binding(plan)
     _validate_plan_hashes(plan)
+    _validate_fact_binding(plan)
     _validate_runtime_binding(plan)
     _validate_manifest_binding(plan)
     _validate_selected_ids(plan)
@@ -253,6 +301,15 @@ def load_plan(repo_root: Path, table_id: str) -> PlanEnvelope:
     return envelope
 
 
+def _stored_columns(value: object) -> tuple[object, ...]:
+    """Normalize a stored plan's column list without char-splitting a string.
+
+    JSON stores the columns as a list; a hand-edited scalar must become a
+    1-tuple (not iterated character-by-character) so _valid_plan judges the
+    actual value and returns a handled PlanDrift."""
+    return tuple(value) if isinstance(value, list) else (value,)
+
+
 def _load_plan_payload(path: Path) -> object:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -267,6 +324,13 @@ def _plan_envelope(payload: object) -> PlanEnvelope:
             schema_version=raw["schema_version"],
             table_id=raw["table_id"],
             mapping=MappingBinding(**raw["mapping"]),
+            fact=FactBinding(
+                name=raw["fact"]["name"],
+                business_key=_stored_columns(raw["fact"]["business_key"]),
+                additive_money_measures=_stored_columns(
+                    raw["fact"]["additive_money_measures"]
+                ),
+            ),
             project=ProjectBinding(**raw["project"]),
             runtime=RuntimeBinding(**raw["runtime"]),
             schemas=ShadowSchemas(**raw["schemas"]),
@@ -652,7 +716,7 @@ def _build_plan(context: _PlanBuildContext) -> ExecutionPlan:
     manifest = context.manifest
     mapping_path = working_set.source_map.relative_to(context.root).as_posix()
     return ExecutionPlan(
-        schema_version=1,
+        schema_version=2,
         table_id=context.table_id,
         mapping=MappingBinding(
             path=mapping_path,
@@ -662,6 +726,7 @@ def _build_plan(context: _PlanBuildContext) -> ExecutionPlan:
             unresolved_questions_sha256=_sha256(working_set.unresolved_questions),
             approval_id=context.approval.approval_id,
         ),
+        fact=context.fact,
         project=ProjectBinding(path="dbt", sha256=project.project_fingerprint),
         runtime=RuntimeBinding(
             dbt_core=DBT_CORE_VERSION,
@@ -685,6 +750,7 @@ def create_plan(repo_root: Path, table_id: str, runner: DbtRunner) -> ExecutionP
 
     root = Path(repo_root).resolve()
     working_set, approval = _approved_mapping(root, table_id)
+    fact = load_fact_semantics(working_set.source_map)
     environment = load_child_environment(root)
     target_schema = environment.get("SESHAT_DBT_SCHEMA") or None
     project = _validated_project(root, working_set, target_schema)
@@ -708,6 +774,7 @@ def create_plan(repo_root: Path, table_id: str, runner: DbtRunner) -> ExecutionP
             table_id=table_id,
             working_set=working_set,
             approval=approval,
+            fact=fact,
             project=project,
             manifest=manifest,
             selected=selected,

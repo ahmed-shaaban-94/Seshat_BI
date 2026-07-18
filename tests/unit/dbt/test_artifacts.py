@@ -22,6 +22,7 @@ def _write_mutation(tmp_path: Path, fixture: str, mutate) -> Path:
 def _sample_plan():
     from seshat.dbt.contracts import (
         ExecutionPlan,
+        FactBinding,
         ManifestBinding,
         MappingBinding,
         ProjectBinding,
@@ -30,8 +31,13 @@ def _sample_plan():
     )
 
     return ExecutionPlan(
-        schema_version=1,
+        schema_version=2,
         table_id="retail_store_sales",
+        fact=FactBinding(
+            name="fct_sales_rss",
+            business_key=("transaction_id",),
+            additive_money_measures=("total_spent",),
+        ),
         mapping=MappingBinding(
             path="mappings/retail_store_sales/source-map.yaml",
             git_blob="b" * 40,
