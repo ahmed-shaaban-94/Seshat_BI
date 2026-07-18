@@ -15,8 +15,12 @@ this project keeps its own environment:
 ```text
 cd orchestration/dagster
 uv venv .venv
-uv pip install -p .venv -e "../..[dbt]" -e ".[dev]"
+uv pip install -p .venv "seshat-bi[dbt]" -e ".[dev]"
 ```
+
+In a Seshat *development checkout* (this project living inside the Seshat
+repository), install the local engine editably instead of from the package
+index: replace `"seshat-bi[dbt]"` with `-e "../..[dbt]"`.
 
 Installed runtime (spec 024 auto-update posture): `dagster==1.13.14`, plus
 `seshat-bi[dbt]` (the governed dbt control layer: `dbt-core==1.12.0` +
