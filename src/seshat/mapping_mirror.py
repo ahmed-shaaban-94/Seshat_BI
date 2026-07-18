@@ -154,8 +154,12 @@ def _committed_readiness(repo_root: Path, table_id: str) -> dict[str, Any]:
 def _mapping_ready_passed(document: dict[str, Any]) -> bool:
     stages = document.get("stages")
     mapping = stages.get("mapping_ready") if isinstance(stages, dict) else None
-    status = mapping.get("status") if isinstance(mapping, dict) else None
-    return status == "pass"
+    if not isinstance(mapping, dict) or mapping.get("status") != "pass":
+        return False
+    # RS1 (readiness_status._check_evidence) rejects every evidence-free pass;
+    # an invalid readiness state must never mint a clearance downstream trusts.
+    evidence = mapping.get("evidence")
+    return isinstance(evidence, list) and bool(evidence)
 
 
 def _named_owner(row: Any) -> bool:

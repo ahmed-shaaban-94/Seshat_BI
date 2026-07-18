@@ -25,6 +25,8 @@ _APPROVED_READINESS = """\
 stages:
   mapping_ready:
     status: pass
+    evidence:
+      - "mappings/orders_raw/source-map.yaml reviewed and approved"
 approvals:
   - stage: mapping_ready
     owner: "Dana Analyst (data_owner)"
@@ -142,6 +144,22 @@ def test_dirty_committed_readiness_never_mints_a_clearance(tmp_path: Path) -> No
         pytest.param(
             _APPROVED_READINESS.replace("stage: mapping_ready", "stage: source_ready"),
             id="approval-for-a-different-stage",
+        ),
+        pytest.param(
+            _APPROVED_READINESS.replace(
+                "    evidence:\n"
+                '      - "mappings/orders_raw/source-map.yaml reviewed and'
+                ' approved"\n',
+                "",
+            ),
+            id="evidence-free-pass",
+        ),
+        pytest.param(
+            _APPROVED_READINESS.replace(
+                '      - "mappings/orders_raw/source-map.yaml reviewed and approved"\n',
+                "      []\n",
+            ).replace("    evidence:\n      []", "    evidence: []"),
+            id="empty-evidence-list-pass",
         ),
         pytest.param("not: [valid yaml\n", id="unreadable-readiness"),
     ),
