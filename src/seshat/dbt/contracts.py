@@ -224,6 +224,22 @@ class MappingBinding:
 
 
 @dataclass(frozen=True, slots=True)
+class FactBinding:
+    """Owner-declared fact column semantics bound into an execution plan.
+
+    Read from the approved source map's ``gold_star.fact`` section: which
+    column is the grain/business key parity counts distinct, and which
+    columns are the additive money measures parity reconciles by sum. These
+    make the expected fact-subject set derivable EXACTLY (issue #331) --
+    fact measures/keys are columns, not model nodes, so unlike dimensions
+    the built graph alone cannot enumerate them.
+    """
+
+    business_key: str
+    additive_money_measures: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ProjectBinding:
     """Exact dbt project identity bound into an execution plan."""
 
@@ -258,6 +274,7 @@ class ExecutionPlan:
     schema_version: int
     table_id: str
     mapping: MappingBinding
+    fact: FactBinding
     project: ProjectBinding
     runtime: RuntimeBinding
     schemas: ShadowSchemas
