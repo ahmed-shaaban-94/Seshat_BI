@@ -20,7 +20,8 @@ from .gate import GateState, list_mapped_tables, read_gate_state
 
 _INSTALL_REMEDY = (
     "cd orchestration/dagster && uv venv .venv && "
-    'uv pip install -p .venv -e "../..[dbt]" -e ".[dev]"'
+    'uv pip install -p .venv "seshat-bi[dbt]" -e ".[dev]" '
+    '(a development checkout uses -e "../..[dbt]" instead of "seshat-bi[dbt]")'
 )
 
 

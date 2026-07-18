@@ -59,6 +59,21 @@ def test_dbt_init_appends_only_missing_ignore_rules(tmp_path: Path) -> None:
         assert required in lines
 
 
+def test_both_inits_protect_the_credential_file(tmp_path: Path) -> None:
+    """Every next-step instruction points the user at .env for SESHAT_DBT_* /
+    DSN credentials, so a fresh workspace's generated .gitignore must cover it
+    (and the dagster run records) -- `git add .` may never stage a secret."""
+    from seshat.governed_projects import dagster_init, dbt_init
+
+    dbt_init(tmp_path)
+    dagster_init(tmp_path)
+
+    lines = (tmp_path / ".gitignore").read_text(encoding="utf-8").splitlines()
+    for required in (".env", ".env.*", ".seshat/dagster/"):
+        assert required in lines
+    assert lines.count(".env") == 1  # the second init appends only what is missing
+
+
 def test_dagster_init_clears_the_project_absent_blocker(tmp_path: Path) -> None:
     from seshat.dagster_adapter import doctor
     from seshat.governed_projects import dagster_init
@@ -70,9 +85,12 @@ def test_dagster_init_clears_the_project_absent_blocker(tmp_path: Path) -> None:
     assert any(path.startswith("orchestration/dagster/src/") for path in report.written)
     assert "DAG-PROJ-01" not in findings
     assert "DAG-PAIR-01" not in findings
-    # The venv is inherently user-created; init points at the remedy instead.
+    # The venv is inherently user-created; init points at the remedy instead,
+    # and the remedy must work WITHOUT a development checkout (installing
+    # seshat-bi from the package index, not from a ../.. editable path).
     assert "DAG-VENV-01" in findings
     assert any("uv venv" in note for note in report.notes)
+    assert any('"seshat-bi[dbt]"' in note for note in report.notes)
 
 
 def test_dagster_init_never_overwrites(tmp_path: Path) -> None:

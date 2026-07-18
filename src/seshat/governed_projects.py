@@ -55,6 +55,12 @@ _REQUIRED_IGNORES = (
     "/.seshat/dbt/",
 )
 
+# The credential file every next-step instruction points at (.env) and the
+# machine-local run records must never become trackable in a fresh workspace
+# (the repo's own .gitignore baseline).
+_SECRET_IGNORES = (".env", ".env.*")
+_DAGSTER_IGNORES = (".seshat/dagster/",)
+
 # Generated, never bundled: table-neutral bootstrap selector (dbt refuses an
 # empty selectors list, and the dev repo's committed selectors.yml names the
 # worked example's table). Replace with per-table seshat_table_<table_id>
@@ -77,7 +83,8 @@ selectors:
 
 _DAGSTER_NEXT_STEPS = (
     "next: create the orchestration environment -- cd orchestration/dagster "
-    '&& uv venv .venv && uv pip install -p .venv -e "../..[dbt]" -e ".[dev]" '
+    '&& uv venv .venv && uv pip install -p .venv "seshat-bi[dbt]" -e ".[dev]" '
+    '(a development checkout uses -e "../..[dbt]" instead of "seshat-bi[dbt]") '
     "-- then `seshat dagster doctor`"
 )
 
@@ -149,21 +156,22 @@ def _write_if_absent(root: Path, relative: str, data: bytes) -> bool:
     return True
 
 
-def _ensure_ignore_rules(root: Path, notes: list[str]) -> None:
-    """Append (never rewrite) the ignore rules `seshat dbt doctor` requires."""
+def _ensure_ignore_rules(
+    root: Path, rules: tuple[str, ...], notes: list[str], label: str
+) -> None:
+    """Append (never rewrite or remove) the required workspace ignore rules."""
     gitignore = root / ".gitignore"
     existing = (
         gitignore.read_text(encoding="utf-8").splitlines()
         if gitignore.is_file()
         else []
     )
-    missing = [line for line in _REQUIRED_IGNORES if line not in existing]
+    missing = [line for line in rules if line not in existing]
     if not missing:
         return
-    lines = [*existing, "# seshat dbt local outputs (added by `seshat dbt init`)"]
-    lines.extend(missing)
+    lines = [*existing, f"# {label} (added by seshat init)", *missing]
     gitignore.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    notes.append(f".gitignore: appended {len(missing)} dbt local-output rules")
+    notes.append(f".gitignore: appended {len(missing)} {label} rules")
 
 
 def dbt_init(repo_root: Path) -> InitReport:
@@ -183,7 +191,12 @@ def dbt_init(repo_root: Path) -> InitReport:
     }
     for relative, data in materialized.items():
         (written if _write_if_absent(root, relative, data) else kept).append(relative)
-    _ensure_ignore_rules(root, notes)
+    _ensure_ignore_rules(
+        root,
+        (*_REQUIRED_IGNORES, *_SECRET_IGNORES),
+        notes,
+        "seshat dbt local outputs and secrets",
+    )
     notes.append(
         "next: copy profiles.example.yml to the gitignored profiles.yml, set "
         "the SESHAT_DBT_* keys in .env, then `seshat dbt doctor`"
@@ -197,11 +210,20 @@ def dagster_init(repo_root: Path) -> InitReport:
     root = Path(repo_root).resolve()
     written: list[str] = []
     kept: list[str] = []
+    notes: list[str] = []
     for relative in (*_DAGSTER_FILES, *_tree_files(_DAGSTER_SRC_DIR)):
         data = _resource_bytes(relative)
         (written if _write_if_absent(root, relative, data) else kept).append(relative)
+    # The nested orchestration .gitignore cannot cover the ROOT .env the
+    # README/doctor point at, nor the root .seshat/dagster/ run records.
+    _ensure_ignore_rules(
+        root,
+        (*_SECRET_IGNORES, *_DAGSTER_IGNORES),
+        notes,
+        "seshat dagster run records and secrets",
+    )
     return InitReport(
         written=tuple(written),
         kept=tuple(kept),
-        notes=(_DAGSTER_NEXT_STEPS,),
+        notes=(*notes, _DAGSTER_NEXT_STEPS),
     )
