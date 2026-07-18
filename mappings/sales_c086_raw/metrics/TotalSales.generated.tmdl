@@ -1,0 +1,4 @@
+	/// The total gross sales value across all C086 pharmacy line items, gross of returns. Returns are already recorded as negative or zero gross_sales values in the source (verified 2026-07-16 against gold.fct_sales_c086: of 12,280 is_return=true rows, 10,603 (86.4%) carry negative gross_sales and 1,677 (13.6%) are exactly zero -- NONE are positive), so summing gross_sales across every row -- return and non-return alike -- nets returns in automatically; a separate ReturnsSales metric can isolate the return-only component if needed later, but TotalSales itself does not exclude them. There is no separate net-sales figure in this model: net_sales (landed) was ruled unreliable and dropped 2026-07-16 (only 90.4% reconciled against gross_sales+tax+discounts, no formula found); gross_sales is the sole standing 'sales' measure for this table.
+	measure TotalSales = SUM('gold fct_sales_c086'[gross_sales])
+		formatString: #,0
+		displayFolder: Measures

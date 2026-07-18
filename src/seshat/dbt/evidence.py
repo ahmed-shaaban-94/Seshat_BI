@@ -136,8 +136,8 @@ def _parity_contract(raw: dict[str, Any]) -> tuple[str, str, str, Decimal]:
     its class is one of the governed classes; the tolerance is then fixed by that
     class. This replaces the retail_store_sales-specific id table so a second
     governed table's parity rows (whose ids/subjects legitimately differ) validate
-    on the same rules. The per-table REQUIRED set is enforced separately, from the
-    approved gold_star (see _validate_parity_set)."""
+    on the same rules. The per-table REQUIRED set is enforced separately, derived
+    from the built graph's selected_unique_ids (see _validate_parity_set)."""
     assertion_id = raw.get("assertion_id")
     if not isinstance(assertion_id, str) or not _TABLE_ID.match(assertion_id):
         raise ArtifactIntegrityError(f"invalid parity assertion id {assertion_id!r}")
@@ -358,60 +358,81 @@ def _validate_artifact_roles(
 _MODEL_ID = re.compile(r"^model\.[^.]+\.(?P<name>.+)$")
 
 
-def _selected_dimension_count(selected_unique_ids: tuple[str, ...]) -> int:
-    """How many dimension models the build materialized (dim_* model nodes).
+def _selected_dimension_subjects(
+    selected_unique_ids: tuple[str, ...],
+) -> frozenset[str]:
+    """The dimension model names the build materialized (dim_* model nodes).
 
-    The required dimension_member_count assertions are one per built dimension:
-    parity must cover every dimension that was actually built, and no more. The
-    date dimension is a dim_* model too, so it is included.
+    Each dimension_member_count assertion's subject is the dimension's model name
+    (e.g. model node ``dim_product_c086`` -> subject ``dim_product_c086``). Parity
+    must cover exactly these -- every built dimension, each once, no extras -- so
+    the required set is the set of dim_* subjects, not merely their count. The date
+    dimension is a dim_* model too, so it is included.
     """
-    count = 0
+    subjects: set[str] = set()
     for uid in selected_unique_ids:
         match = _MODEL_ID.match(uid)
         if match and match.group("name").startswith("dim_"):
-            count += 1
-    return count
+            subjects.add(match.group("name"))
+    return frozenset(subjects)
 
 
-def _required_class_counts(selected_unique_ids: tuple[str, ...]) -> dict[str, int]:
-    """The exact governed parity shape for THIS build, derived from what was built.
-
-    Reproduces the retail_store_sales guarantee (1 fact_row_count + 1
-    business_key_count + 1 additive_money_total + one dimension_member_count per
-    dimension) for any table, using the built graph as the authority: parity must
-    reconcile exactly the fact and dimensions that were materialized. Tying the
-    required set to selected_unique_ids (not to gold_star) keeps this the
-    "shadow matches migration for everything built" check; map-vs-build coverage
-    is a separate invariant owned by validate/plan.
-    """
-    return {
-        "fact_row_count": 1,
-        "business_key_count": 1,
-        "additive_money_total": 1,
-        "dimension_member_count": _selected_dimension_count(selected_unique_ids),
-    }
+# The fact-level assertions are one-per-class: there is exactly one fact table, so
+# cardinality alone pins them (and there is no second additive_money_total to
+# confuse). Dimensions need SUBJECT equality, not just a matching count.
+_FACT_CLASS_COUNTS = {
+    "fact_row_count": 1,
+    "business_key_count": 1,
+    "additive_money_total": 1,
+}
 
 
 def _validate_parity_set(
     parity: tuple[ParityAssertion, ...],
     selected_unique_ids: tuple[str, ...],
 ) -> None:
-    required = _required_class_counts(selected_unique_ids)
-    actual: dict[str, int] = {cls: 0 for cls in _CLASS_TOLERANCES}
+    """Prove the parity audit covers exactly what was built.
+
+    Fact-level: exactly one each of fact_row_count / business_key_count /
+    additive_money_total (one fact, so counts suffice). Dimensions: the SET of
+    dimension_member_count subjects must equal the set of dim_* models in
+    selected_unique_ids -- checking subjects, not just the count, so a malformed
+    audit cannot pass by duplicating one dimension's check and omitting another
+    (two dim_customer + zero dim_date has the right count but the wrong set).
+    """
+    fact_counts: dict[str, int] = {cls: 0 for cls in _FACT_CLASS_COUNTS}
+    dim_subjects: list[str] = []
     for row in parity:
-        actual[row.assertion_class] = actual.get(row.assertion_class, 0) + 1
-    missing = {
-        cls: n - actual.get(cls, 0)
-        for cls, n in required.items()
-        if actual.get(cls, 0) < n
-    }
-    if missing:
+        if row.assertion_class in fact_counts:
+            fact_counts[row.assertion_class] += 1
+        elif row.assertion_class == "dimension_member_count":
+            dim_subjects.append(row.subject)
+
+    if fact_counts != _FACT_CLASS_COUNTS:
         raise ArtifactIntegrityError(
-            "missing parity assertions by class: "
-            + ", ".join(f"{cls} (need {n} more)" for cls, n in sorted(missing.items()))
+            "parity fact-level assertions are not the exact governed set "
+            f"(expected one each of {sorted(_FACT_CLASS_COUNTS)}, got {fact_counts})"
         )
-    if actual != required:
-        raise ArtifactIntegrityError("parity assertions are not the exact governed set")
+
+    expected_dims = _selected_dimension_subjects(selected_unique_ids)
+    seen_dims = frozenset(dim_subjects)
+    if len(dim_subjects) != len(seen_dims):
+        raise ArtifactIntegrityError(
+            "parity has duplicate dimension_member_count subjects: "
+            + ", ".join(sorted({s for s in dim_subjects if dim_subjects.count(s) > 1}))
+        )
+    if seen_dims != expected_dims:
+        missing = expected_dims - seen_dims
+        extra = seen_dims - expected_dims
+        detail = []
+        if missing:
+            detail.append("missing " + ", ".join(sorted(missing)))
+        if extra:
+            detail.append("unexpected " + ", ".join(sorted(extra)))
+        raise ArtifactIntegrityError(
+            "parity dimension assertions do not match the built dimensions: "
+            + "; ".join(detail)
+        )
 
 
 def _execution_blocker(invocation: InvocationResult) -> Blocker | None:

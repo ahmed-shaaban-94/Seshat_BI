@@ -1,0 +1,71 @@
+# Metric contract -- TotalSales (filled instance for sales_c086_raw)
+# F009 define-layer. Semantic Model Ready (Stage 5) depends on this contract
+# existing and being approved; a PBIP measure has nothing to trace to until then.
+# formula_intent is plain-language INTENT, NOT DAX. binds_to is gold-only.
+
+name: "TotalSales"
+grain: "valid at gold.fct_sales_c086 line grain (one row = one billing-document line item); fully additive across all dimensions and over time"
+formula_intent: "The total gross sales value across all C086 pharmacy line items, gross of returns. Returns are already recorded as negative or zero gross_sales values in the source (verified 2026-07-16 against gold.fct_sales_c086: of 12,280 is_return=true rows, 10,603 (86.4%) carry negative gross_sales and 1,677 (13.6%) are exactly zero -- NONE are positive), so summing gross_sales across every row -- return and non-return alike -- nets returns in automatically; a separate ReturnsSales metric can isolate the return-only component if needed later, but TotalSales itself does not exclude them. There is no separate net-sales figure in this model: net_sales (landed) was ruled unreliable and dropped 2026-07-16 (only 90.4% reconciled against gross_sales+tax+discounts, no formula found); gross_sales is the sole standing 'sales' measure for this table."
+owner: "Ahmed Shaaban (data_owner)"
+
+binds_to:
+  gold_table: "gold.fct_sales_c086"
+  columns:
+    - "gross_sales"
+  pii_sensitive: false
+
+time_additivity: "fully"   # transaction/line-grain fact; sum across days is valid
+unit: "EGP"
+
+# OPTIONAL (F-DAXGEN): consumed by `retail generate` to emit a verified DAX
+# measure. Added 2026-07-16 -- kind:base, no filter, matching the already-
+# approved A2 ruling exactly (gross of returns: sum every row, no exclusion).
+# This does not re-decide anything; formula_intent above remains the
+# authoritative plain-language statement of intent.
+definition:
+  kind: base
+  aggregation: sum
+  source:
+    table: gold.fct_sales_c086
+    column: gross_sales
+
+readiness:
+  status: "pass"
+  evidence:
+    - "approved by Ahmed Shaaban (data_owner) on 2026-07-16"
+    - "gold.fct_sales_c086 built + RC16-verified 2026-07-16 (SUM(gross_sales) reconciles exactly between silver and gold: 38,804,001.54 EGP)"
+    - "A2 (returns) ruling: gross of returns -- sum gross_sales across all rows regardless of is_return, confirmed by the data owner 2026-07-16"
+    - "A1 (VAT) ruling: tax treatment DEFERRED -- data owner directed 'ignore tax for now' 2026-07-16. This is a recorded decision (not an open unknown): TotalSales is reported as gross_sales AS LANDED, with NO stated position on whether it is pre-tax or tax-inclusive. Revisit if/when a tax-aware metric is needed; do not assume pre-tax or tax-inclusive without a fresh ruling."
+  blocking_reasons: []
+
+ambiguities:
+  - id: A1
+    decision_status: decided
+    ruling: "Tax treatment of gross_sales is DEFERRED, not resolved -- TotalSales is reported as-landed with no VAT adjustment or stated pre-tax/tax-inclusive position. Revisit with a fresh ruling if a tax-aware metric is ever needed."
+    evidence: ["ruled by Ahmed Shaaban (data_owner) on 2026-07-16: 'we will ignore tax for now'"]
+    number_moving: false   # explicitly downgraded by the named owner: deferring tax
+                           # treatment does not change what TotalSales reports today
+                           # (it simply does not adjust for tax either way) -- this
+                           # downgrade decision itself is attributed above, per the
+                           # contract template's rule that only a named owner may
+                           # set number_moving:false.
+  - id: A2
+    decision_status: decided
+    ruling: "TotalSales is gross of returns: SUM(gross_sales) across ALL rows, including is_return=true rows (already negative/offsetting in the source). No separate returns-only exclusion in this metric."
+    evidence: ["ruled by Ahmed Shaaban (data_owner) on 2026-07-16"]
+    number_moving: true
+  - id: A4
+    decision_status: decided
+    ruling: "Not applicable as a live ambiguity for this table: there is no net_sales measure in the model at all (landed net_sales rejected 2026-07-16 as unreliable, no replacement formula authored). gross_sales is the ONLY sales measure, so there is no gross-vs-net substitution risk to guard against here."
+    evidence: ["source-map.yaml derived_columns closure note, 2026-07-16, Ahmed Shaaban (data_owner)"]
+    number_moving: false
+  - id: A8
+    decision_status: decided
+    ruling: "N/A for TotalSales directly -- this metric does not group by product. (Relevant to a future by-product breakdown: material, not material_desc, is the stable grouping key -- see source-map.yaml dim_product_c086.)"
+    evidence: ["source-map.yaml dim_product_c086: material is the natural key, verified 1:1 with material_desc"]
+    number_moving: false
+  - id: A9
+    decision_status: decided
+    ruling: "N/A -- this table is single-branch (site='C086' constant across all rows); site was row-filtered out of the model entirely as a no-signal column within this table. Revisit if/when multiple branch tables are folded together -- site would become load-bearing then."
+    evidence: ["source-map.yaml site column entry, 2026-07-16"]
+    number_moving: false
