@@ -48,9 +48,7 @@ def test_dbt_init_never_overwrites_and_is_idempotent(tmp_path: Path) -> None:
 def test_dbt_init_appends_only_missing_ignore_rules(tmp_path: Path) -> None:
     from seshat.governed_projects import dbt_init
 
-    (tmp_path / ".gitignore").write_text(
-        "/profiles.yml\nuser-line\n", encoding="utf-8"
-    )
+    (tmp_path / ".gitignore").write_text("/profiles.yml\nuser-line\n", encoding="utf-8")
 
     dbt_init(tmp_path)
 
@@ -69,9 +67,7 @@ def test_dagster_init_clears_the_project_absent_blocker(tmp_path: Path) -> None:
 
     findings = {finding.id for finding in doctor.run_doctor(tmp_path)}
     assert "orchestration/dagster/pyproject.toml" in report.written
-    assert any(
-        path.startswith("orchestration/dagster/src/") for path in report.written
-    )
+    assert any(path.startswith("orchestration/dagster/src/") for path in report.written)
     assert "DAG-PROJ-01" not in findings
     assert "DAG-PAIR-01" not in findings
     # The venv is inherently user-created; init points at the remedy instead.

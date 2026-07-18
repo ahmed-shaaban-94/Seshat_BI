@@ -139,16 +139,14 @@ def _tree_files(relative_dir: str) -> tuple[str, ...]:
     )
 
 
-def _write_if_absent(
-    root: Path, relative: str, data: bytes, written: list[str], kept: list[str]
-) -> None:
+def _write_if_absent(root: Path, relative: str, data: bytes) -> bool:
+    """Write one template file; True when written, False when kept as-is."""
     target = root / Path(*relative.split("/"))
     if target.exists():
-        kept.append(relative)
-        return
+        return False
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
-    written.append(relative)
+    return True
 
 
 def _ensure_ignore_rules(root: Path, notes: list[str]) -> None:
@@ -175,16 +173,16 @@ def dbt_init(repo_root: Path) -> InitReport:
     written: list[str] = []
     kept: list[str] = []
     notes: list[str] = []
-    for relative in _DBT_FILES:
-        _write_if_absent(root, relative, _resource_bytes(relative), written, kept)
-    _write_if_absent(
-        root,
-        "dbt/selectors.yml",
-        _SELECTORS_BOOTSTRAP.encode("utf-8"),
-        written,
-        kept,
-    )
-    _write_if_absent(root, "dbt/models/.gitkeep", b"", written, kept)
+    generated = {
+        "dbt/selectors.yml": _SELECTORS_BOOTSTRAP.encode("utf-8"),
+        "dbt/models/.gitkeep": b"",
+    }
+    materialized = {
+        **{relative: _resource_bytes(relative) for relative in _DBT_FILES},
+        **generated,
+    }
+    for relative, data in materialized.items():
+        (written if _write_if_absent(root, relative, data) else kept).append(relative)
     _ensure_ignore_rules(root, notes)
     notes.append(
         "next: copy profiles.example.yml to the gitignored profiles.yml, set "
@@ -200,7 +198,8 @@ def dagster_init(repo_root: Path) -> InitReport:
     written: list[str] = []
     kept: list[str] = []
     for relative in (*_DAGSTER_FILES, *_tree_files(_DAGSTER_SRC_DIR)):
-        _write_if_absent(root, relative, _resource_bytes(relative), written, kept)
+        data = _resource_bytes(relative)
+        (written if _write_if_absent(root, relative, data) else kept).append(relative)
     return InitReport(
         written=tuple(written),
         kept=tuple(kept),
