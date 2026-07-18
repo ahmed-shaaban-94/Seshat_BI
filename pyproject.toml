@@ -136,6 +136,21 @@ packages = ["src/seshat", "src/retail"]
 # package so `packs.resolve_schema_path` finds them in an installed layout.
 "schemas/seshat-extension-pack.schema.json" = "seshat/packs/schemas/seshat-extension-pack.schema.json"
 "schemas/seshat-pack-registry.schema.json" = "seshat/packs/schemas/seshat-pack-registry.schema.json"
+# `seshat dbt init` / `seshat dagster init` (issue #325) materialize the
+# GENERIC governed projects from these bundled templates so any workspace is
+# self-sufficient without the development repository. Only table-neutral
+# files ship (constitution VII): the dbt models/** and selectors.yml stay
+# dev-only (worked example); selectors.yml is generated table-neutral by init.
+"dbt/dbt_project.yml" = "seshat/governed_projects/dbt/dbt_project.yml"
+"dbt/macros" = "seshat/governed_projects/dbt/macros"
+"profiles.example.yml" = "seshat/governed_projects/profiles.example.yml"
+"schemas/dbt-run-evidence.schema.json" = "seshat/governed_projects/schemas/dbt-run-evidence.schema.json"
+"schemas/dagster-run-evidence.schema.json" = "seshat/governed_projects/schemas/dagster-run-evidence.schema.json"
+"orchestration/dagster/pyproject.toml" = "seshat/governed_projects/orchestration/dagster/pyproject.toml"
+"orchestration/dagster/.gitignore" = "seshat/governed_projects/orchestration/dagster/.gitignore"
+"orchestration/dagster/README.md" = "seshat/governed_projects/orchestration/dagster/README.md"
+"orchestration/dagster/run-evidence/README.md" = "seshat/governed_projects/orchestration/dagster/run-evidence/README.md"
+"orchestration/dagster/src" = "seshat/governed_projects/orchestration/dagster/src"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -148,6 +163,18 @@ include = [
     # force-include them into the package.
     "/schemas/seshat-extension-pack.schema.json",
     "/schemas/seshat-pack-registry.schema.json",
+    # Governed-project templates the init scaffolders bundle (issue #325);
+    # the wheel is built from the sdist, so the sdist must carry them.
+    "/dbt/dbt_project.yml",
+    "/dbt/macros",
+    "/profiles.example.yml",
+    "/schemas/dbt-run-evidence.schema.json",
+    "/schemas/dagster-run-evidence.schema.json",
+    "/orchestration/dagster/pyproject.toml",
+    "/orchestration/dagster/.gitignore",
+    "/orchestration/dagster/README.md",
+    "/orchestration/dagster/run-evidence/README.md",
+    "/orchestration/dagster/src",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",

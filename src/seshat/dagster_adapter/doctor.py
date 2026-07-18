@@ -57,7 +57,10 @@ _PROJECT_ABSENT = DoctorFinding(
     message=(
         "orchestration project absent: orchestration/dagster/pyproject.toml not found"
     ),
-    remedy="check out the full repo (the orchestration project ships with spec 134)",
+    remedy=(
+        "run `seshat dagster init` to materialize the governed orchestration "
+        "project into this workspace, then create its .venv (see DAG-VENV-01)"
+    ),
 )
 
 _PIN_MISMATCH = DoctorFinding(

@@ -138,8 +138,39 @@ def _run_evidence(args) -> int:
     return 0
 
 
+def _run_init(args) -> int:
+    """Materialize the governed orchestration project (issue #325)."""
+    from seshat.governed_projects import dagster_init
+
+    report = dagster_init(Path(args.repo))
+    if args.as_json:
+        print(
+            json.dumps(
+                {
+                    "written": list(report.written),
+                    "kept": list(report.kept),
+                    "notes": list(report.notes),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    print(
+        f"materialized {len(report.written)} governed orchestration files "
+        f"(kept {len(report.kept)} existing)"
+    )
+    for note in report.notes:
+        print(note)
+    return 0
+
+
 def dagster_main(args) -> int:
-    handlers = {"doctor": _run_doctor, "run": _run_run, "evidence": _run_evidence}
+    handlers = {
+        "doctor": _run_doctor,
+        "run": _run_run,
+        "evidence": _run_evidence,
+        "init": _run_init,
+    }
     handler = handlers.get(getattr(args, "dagster_cmd", None))
     if handler is None:
         return 1

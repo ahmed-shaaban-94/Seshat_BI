@@ -38,7 +38,7 @@ The front door is the main package's CLI (see
 
 ```text
 seshat dagster doctor                 # preflight: env, pinned dagster, engine mode, gate state
-seshat dagster run --job through_gold_job --table retail_store_sales
+seshat dagster run --job through_gold_job --table <table_id>
 seshat dagster evidence --run-id <id> # render run-evidence/<id>.md
 ```
 
