@@ -418,10 +418,20 @@ def _subject_root(subject: str) -> str:
     return subject.split(".", 1)[0]
 
 
-# The fact-level assertion classes: exactly one each. There is one fact table, so
-# cardinality pins the count -- but each assertion's SUBJECT must still reference
-# the built fact model (a malformed audit could point them at a stale relation).
-_FACT_CLASSES = ("fact_row_count", "business_key_count", "additive_money_total")
+# Fact-level assertion classes split by expected cardinality:
+#   - fact_row_count / business_key_count are inherent SINGLETONS: one fact table
+#     has one row count, one grain has one distinct-key count -- exactly one each.
+#   - additive_money_total is NOT a singleton: a fact may carry several additive
+#     money measures (e.g. gross_amount AND net_amount), each a separate row. So it
+#     requires AT LEAST ONE. Exact per-measure coverage is uncheckable here --
+#     money measures are columns, not enumerable model nodes, so unlike dimensions
+#     (which are dim_* nodes in selected_unique_ids) the built graph does not list
+#     which measures must be reconciled. "At least one, every subject rooting at
+#     the built fact" is therefore the strongest check the committed artifacts
+#     support. (Exact money-measure coverage would need the map's gold_star to tag
+#     which measures are money -- a separate future enhancement, not this layer.)
+_FACT_SINGLETON_CLASSES = ("fact_row_count", "business_key_count")
+_FACT_CLASSES = (*_FACT_SINGLETON_CLASSES, "additive_money_total")
 
 
 def _validate_fact_assertions(
@@ -429,11 +439,22 @@ def _validate_fact_assertions(
     fact_counts: dict[str, int],
     selected_unique_ids: tuple[str, ...],
 ) -> None:
-    """Exactly one of each fact class, each subject rooting at the built fact."""
-    if fact_counts != {cls: 1 for cls in _FACT_CLASSES}:
+    """One row_count + one business_key_count + >=1 additive_money_total, each
+    subject rooting at the built fact model."""
+    wrong_cardinality = {
+        cls: fact_counts.get(cls, 0)
+        for cls in _FACT_CLASSES
+        if (
+            fact_counts.get(cls, 0) != 1
+            if cls in _FACT_SINGLETON_CLASSES
+            else fact_counts.get(cls, 0) < 1
+        )
+    }
+    if wrong_cardinality:
         raise ArtifactIntegrityError(
-            "parity fact-level assertions are not the exact governed set "
-            f"(expected one each of {sorted(_FACT_CLASSES)}, got {fact_counts})"
+            "parity fact-level assertions have the wrong cardinality "
+            "(expected exactly one fact_row_count and business_key_count, and at "
+            f"least one additive_money_total): {wrong_cardinality}"
         )
     fact_model = _selected_fact_model(selected_unique_ids)
     wrong_fact = sorted({s for s in fact_subjects if _subject_root(s) != fact_model})

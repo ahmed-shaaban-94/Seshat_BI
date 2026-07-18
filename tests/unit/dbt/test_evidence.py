@@ -290,6 +290,50 @@ def test_parity_with_right_count_but_wrong_dimension_subjects_is_blocked() -> No
         _validate_parity_set(parity, selected)
 
 
+def test_parity_accepts_multiple_money_measures_but_requires_at_least_one() -> None:
+    """A fact with several additive money measures emits one additive_money_total
+    row per measure -- that must pass (both subjects root at the built fact), and
+    the class still requires at least one row. fact_row_count and
+    business_key_count remain exactly-one singletons."""
+    from seshat.dbt.artifacts import ArtifactIntegrityError
+    from seshat.dbt.contracts import ParityAssertion
+    from seshat.dbt.evidence import _validate_parity_set
+
+    def _row(assertion_id: str, cls: str, subject: str) -> ParityAssertion:
+        return ParityAssertion(
+            assertion_id=assertion_id,
+            assertion_class=cls,
+            subject=subject,
+            expected="1",
+            actual="1",
+            delta="0",
+            tolerance="0",
+            passed=True,
+        )
+
+    selected = ("model.seshat_bi.fct_x", "model.seshat_bi.dim_only_x")
+    base = [
+        _row("fact_row_count", "fact_row_count", "fct_x"),
+        _row("fact_grain", "business_key_count", "fct_x.grain"),
+        _row("dim_only_x_member_count", "dimension_member_count", "dim_only_x"),
+    ]
+
+    # Two money measures on the same fact -> passes.
+    two_money = tuple(
+        base
+        + [
+            _row("fact_gross_sum", "additive_money_total", "fct_x.gross_amount"),
+            _row("fact_net_sum", "additive_money_total", "fct_x.net_amount"),
+        ]
+    )
+    _validate_parity_set(two_money, selected)  # no raise
+
+    # Zero money measures -> still blocks ("at least one").
+    no_money = tuple(base)
+    with pytest.raises(ArtifactIntegrityError, match="additive_money_total"):
+        _validate_parity_set(no_money, selected)
+
+
 @pytest.mark.parametrize(
     "case",
     (
