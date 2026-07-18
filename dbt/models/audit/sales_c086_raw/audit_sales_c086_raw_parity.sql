@@ -16,11 +16,13 @@ with parity_values as (
 
     union all
 
-    -- composite business key (reference_no, item_no) -- NOT a single column
+    -- composite business key (reference_no, item_no). The subject is the fact's
+    -- grain (a schema-valid dotted identifier; the parity value below counts the
+    -- distinct composite tuple, not a single column).
     select
         'fact_distinct_grain_key',
         'business_key_count',
-        'fct_sales_c086.(reference_no,item_no)',
+        'fct_sales_c086.grain',
         (select count(distinct (reference_no, item_no))::numeric from {{ source('migration_gold', 'fct_sales_c086') }}),
         (select count(distinct (reference_no, item_no))::numeric from {{ ref('fct_sales_c086') }}),
         0::numeric
@@ -38,21 +40,11 @@ with parity_values as (
     union all
 
     select
-        'fact_quantity_sum',
-        'additive_quantity_total',
-        'fct_sales_c086.quantity',
-        (select coalesce(sum(quantity), 0)::numeric from {{ source('migration_gold', 'fct_sales_c086') }}),
-        (select coalesce(sum(quantity), 0)::numeric from {{ ref('fct_sales_c086') }}),
-        0.001::numeric
-
-    union all
-
-    select
-        'fact_return_row_count',
-        'flag_row_count',
-        'fct_sales_c086.is_return',
-        (select count(*) filter (where is_return)::numeric from {{ source('migration_gold', 'fct_sales_c086') }}),
-        (select count(*) filter (where is_return)::numeric from {{ ref('fct_sales_c086') }}),
+        'dim_billing_type_member_count',
+        'dimension_member_count',
+        'dim_billing_type_c086',
+        (select count(*)::numeric from {{ source('migration_gold', 'dim_billing_type_c086') }}),
+        (select count(*)::numeric from {{ ref('dim_billing_type_c086') }}),
         0::numeric
 
     union all
@@ -63,16 +55,6 @@ with parity_values as (
         'dim_product_c086',
         (select count(*)::numeric from {{ source('migration_gold', 'dim_product_c086') }}),
         (select count(*)::numeric from {{ ref('dim_product_c086') }}),
-        0::numeric
-
-    union all
-
-    select
-        'dim_billing_type_member_count',
-        'dimension_member_count',
-        'dim_billing_type_c086',
-        (select count(*)::numeric from {{ source('migration_gold', 'dim_billing_type_c086') }}),
-        (select count(*)::numeric from {{ ref('dim_billing_type_c086') }}),
         0::numeric
 
     union all

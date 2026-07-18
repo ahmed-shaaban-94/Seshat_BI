@@ -64,6 +64,13 @@ def _sample_plan():
         selected_unique_ids=(
             "model.seshat_bi.fact_retail_store_sales",
             "model.seshat_bi.stg_retail_store_sales",
+            # The dimensions the build materialized -- the required parity set is
+            # derived from these (one dimension_member_count per dim_* model).
+            "model.seshat_bi.dim_customer_rss",
+            "model.seshat_bi.dim_product_rss",
+            "model.seshat_bi.dim_payment_method_rss",
+            "model.seshat_bi.dim_location_rss",
+            "model.seshat_bi.dim_date_rss",
             "test.seshat_bi.not_null_fact_transaction_id.abc123",
         ),
     )
@@ -102,17 +109,87 @@ def _stdout(name: str) -> str:
     return (FIXTURES / name).read_text(encoding="utf-8")
 
 
+def test_parse_parity_rows_reads_dbt_1_12_preview_string() -> None:
+    """dbt 1.12 `show --output json` emits the rows as a JSON string under
+    'preview', not a native 'rows' list. The parser must decode it."""
+    import json
+
+    from seshat.dbt.evidence import parse_parity_rows
+
+    preview_rows = [
+        {
+            "assertion_id": "fact_row_count",
+            "assertion_class": "fact_row_count",
+            "subject": "fct_x",
+            "expected": "5",
+            "actual": "5",
+            "delta": "0",
+            "tolerance": "0",
+            "passed": True,
+        }
+    ]
+    event = {"data": {"node_name": "audit_x", "preview": json.dumps(preview_rows)}}
+    rows = parse_parity_rows(json.dumps(event) + "\n")
+
+    assert len(rows) == 1
+    assert rows[0].assertion_id == "fact_row_count"
+    assert rows[0].passed is True
+
+
+def test_parse_parity_rows_accepts_a_non_rss_tables_assertions() -> None:
+    """Parity parsing is class-driven, not welded to retail_store_sales ids:
+    a different table's assertion ids/subjects validate on the same rules, with
+    tolerance derived from the class (0 for counts, 0.01 for money)."""
+    import json
+
+    from seshat.dbt.evidence import parse_parity_rows
+
+    preview_rows = [
+        {
+            "assertion_id": "fact_distinct_grain_key",  # not an rss id
+            "assertion_class": "business_key_count",
+            "subject": "fct_sales_c086.(reference_no,item_no)",
+            "expected": "100",
+            "actual": "100",
+            "delta": "0",
+            "tolerance": "0",
+            "passed": True,
+        },
+        {
+            "assertion_id": "fact_gross_sales_sum",
+            "assertion_class": "additive_money_total",
+            "subject": "fct_sales_c086.gross_sales",
+            "expected": "10.00",
+            "actual": "10.01",
+            "delta": "0.01",
+            "tolerance": "0.01",  # derived from class, at the boundary -> passes
+            "passed": True,
+        },
+    ]
+    event = {"data": {"preview": json.dumps(preview_rows)}}
+    rows = parse_parity_rows(json.dumps(event) + "\n")
+
+    by_id = {row.assertion_id: row for row in rows}
+    assert set(by_id) == {"fact_distinct_grain_key", "fact_gross_sales_sum"}
+    assert by_id["fact_gross_sales_sum"].tolerance == "0.01"
+    assert all(row.passed for row in rows)
+
+
 def test_complete_parity_passes_and_money_delta_at_tolerance_passes() -> None:
-    from seshat.dbt.evidence import (
-        REQUIRED_RETAIL_STORE_SALES_ASSERTIONS,
-        parse_parity_rows,
-    )
+    from seshat.dbt.evidence import parse_parity_rows
 
     rows = parse_parity_rows(_stdout("show-parity-pass.jsonl"))
 
-    assert {row.assertion_id for row in rows} == (
-        REQUIRED_RETAIL_STORE_SALES_ASSERTIONS
-    )
+    assert {row.assertion_id for row in rows} == {
+        "fact_row_count",
+        "fact_distinct_transaction_id",
+        "fact_total_spent_sum",
+        "dim_customer_member_count",
+        "dim_product_member_count",
+        "dim_payment_method_member_count",
+        "dim_location_member_count",
+        "dim_date_member_count",
+    }
     assert all(row.passed for row in rows)
     money = next(row for row in rows if row.assertion_id == "fact_total_spent_sum")
     assert money.delta == "0.01"

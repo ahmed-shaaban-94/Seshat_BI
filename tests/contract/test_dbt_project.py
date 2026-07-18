@@ -22,12 +22,71 @@ EXPECTED_MODELS = {
     "fct_sales_rss",
     "audit_retail_store_sales_parity",
 }
+# Per governed table, the exact model set that table's worked star must contain.
+# The project hosts several tables side by side (spec 133 VII: models isolated
+# under the worked selector); each table still owns EXACTLY its own models -- no
+# stray, no missing. Add a table's entry here when its worked example is added.
+EXPECTED_MODELS_BY_TABLE = {
+    "retail_store_sales": EXPECTED_MODELS,
+    "sales_c086_raw": {
+        "stg_sales_c086_raw",
+        "dim_product_c086",
+        "dim_billing_type_c086",
+        "dim_customer_c086",
+        "dim_staff_c086",
+        "dim_date_c086",
+        "fct_sales_c086",
+        "audit_sales_c086_raw_parity",
+    },
+}
+# The exact migration_gold source tables each governed table reconciles against.
+EXPECTED_MIGRATION_GOLD_BY_TABLE = {
+    "retail_store_sales": [
+        "fct_sales_rss",
+        "dim_customer_rss",
+        "dim_product_rss",
+        "dim_payment_method_rss",
+        "dim_location_rss",
+        "dim_date_rss",
+    ],
+    "sales_c086_raw": [
+        "fct_sales_c086",
+        "dim_product_c086",
+        "dim_billing_type_c086",
+        "dim_customer_c086",
+        "dim_staff_c086",
+        "dim_date_c086",
+    ],
+}
 ALLOWED_DERIVATIONS = {
     "surrogate_key",
     "date_spine",
     "unknown_member",
     "parity_measure",
 }
+
+
+def _governed_tables() -> set[str]:
+    """Table ids with a committed mapping working set (dir + source map + readiness).
+
+    Note: a mapping working set does NOT imply a dbt worked example. Some tables
+    (e.g. status-surface demo fixtures) have a mapping but no dbt models. Tables
+    that have a dbt star are the keys of EXPECTED_MODELS_BY_TABLE, always a subset
+    of this set -- see _tables_with_models().
+    """
+    mappings = ROOT / "mappings"
+    return {
+        child.name
+        for child in mappings.iterdir()
+        if child.is_dir()
+        and (child / "source-map.yaml").is_file()
+        and (child / "readiness-status.yaml").is_file()
+    }
+
+
+def _tables_with_models() -> set[str]:
+    """Governed tables that ship a dbt worked star (subset of _governed_tables)."""
+    return set(EXPECTED_MODELS_BY_TABLE)
 
 
 def _yaml(path: Path) -> dict:
@@ -45,9 +104,9 @@ def _model_rows() -> dict[str, dict]:
     return rows
 
 
-def _map_revision() -> str:
+def _map_revision(table_id: str = TABLE_ID) -> str:
     result = subprocess.run(
-        ["git", "rev-parse", f"HEAD:{SOURCE_MAP}"],
+        ["git", "rev-parse", f"HEAD:mappings/{table_id}/source-map.yaml"],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -59,9 +118,25 @@ def _map_revision() -> str:
 
 def test_worked_project_has_complete_star() -> None:
     sql_names = {path.stem for path in (DBT / "models").rglob("*.sql")}
+    rows = _model_rows()
 
-    assert EXPECTED_MODELS <= sql_names
-    assert set(_model_rows()) == EXPECTED_MODELS
+    # Every table that ships a dbt star must be a real governed table, contribute
+    # EXACTLY its worked-star model set -- no stray model, none missing -- and the
+    # project's models are precisely the union of those stars (no orphan model
+    # belonging to nothing). Tables with a mapping but no dbt models (demo
+    # fixtures) legitimately contribute none.
+    governed = _governed_tables()
+    tables_with_models = _tables_with_models()
+    assert tables_with_models <= governed, (
+        "a table with dbt models has no committed mapping working set",
+        tables_with_models - governed,
+    )
+    expected_union: set[str] = set()
+    for table_id in tables_with_models:
+        expected = EXPECTED_MODELS_BY_TABLE[table_id]
+        assert expected <= sql_names, (table_id, expected - sql_names)
+        expected_union |= expected
+    assert set(rows) == expected_union
 
 
 def test_project_uses_only_target_prefixed_shadow_layers() -> None:
@@ -111,40 +186,49 @@ def test_generic_project_and_macro_contain_no_worked_example_answers() -> None:
 
 def test_selector_and_source_are_exact() -> None:
     selectors = _yaml(DBT / "selectors.yml")["selectors"]
-    match = [row for row in selectors if row["name"] == SELECTOR]
     sources = _yaml(DBT / "models" / "sources" / "_sources.yml")["sources"]
-
-    assert len(match) == 1
-    assert match[0]["definition"] == {"method": "tag", "value": SELECTOR}
     by_name = {source["name"]: source for source in sources}
-    assert by_name["bronze"] == {
-        "name": "bronze",
-        "schema": "bronze",
-        "tables": [{"name": "retail_store_sales"}],
-    }
-    assert by_name["migration_gold"] == {
-        "name": "migration_gold",
-        "schema": "gold",
-        "tables": [
-            {"name": "fct_sales_rss"},
-            {"name": "dim_customer_rss"},
-            {"name": "dim_product_rss"},
-            {"name": "dim_payment_method_rss"},
-            {"name": "dim_location_rss"},
-            {"name": "dim_date_rss"},
-        ],
-    }
+    tables_with_models = _tables_with_models()
+
+    # Each table with a dbt star declares exactly one tag selector of the fixed shape.
+    for table_id in tables_with_models:
+        selector = f"seshat_table_{table_id}"
+        match = [row for row in selectors if row["name"] == selector]
+        assert len(match) == 1, (table_id, "exactly one selector expected")
+        assert match[0]["definition"] == {"method": "tag", "value": selector}
+
+    # bronze source carries exactly one landing table per table with a dbt star.
+    assert by_name["bronze"]["schema"] == "bronze"
+    assert {t["name"] for t in by_name["bronze"]["tables"]} == tables_with_models
+
+    # migration_gold carries exactly each such table's oracle tables -- the union,
+    # nothing stray.
+    expected_gold: set[str] = set()
+    for table_id in tables_with_models:
+        expected_gold |= set(EXPECTED_MIGRATION_GOLD_BY_TABLE[table_id])
+    assert by_name["migration_gold"]["schema"] == "gold"
+    assert {t["name"] for t in by_name["migration_gold"]["tables"]} == expected_gold
 
 
 def test_every_model_and_output_column_has_current_governed_citation() -> None:
-    revision = _map_revision()
+    governed = _governed_tables()
+    # Cache each governed table's committed source-map revision once.
+    revision_by_table = {tid: _map_revision(tid) for tid in governed}
 
     for name, row in _model_rows().items():
-        assert SELECTOR in row["config"]["tags"]
         contract = row["meta"]["seshat"]
-        assert contract["table_id"] == TABLE_ID
-        assert contract["source_map"] == SOURCE_MAP
-        assert contract["source_map_revision"] == revision
+        tid = contract["table_id"]
+        # Every model must be attributed to a REAL governed table -- a model citing
+        # a table with no committed mapping working set is an orphan and fails here
+        # (the contract-test twin of the DBT_MODEL_ORPHANED validator guard).
+        assert tid in governed, (name, "table_id is not a governed table", tid)
+        # ...and it must cite ITS OWN table: the matching selector tag, its own
+        # source map, and that map's own committed revision. A model that carried
+        # another table's revision (e.g. a c086 model citing the rss hash) fails
+        # here -- the citation cannot silently belong to the wrong table.
+        assert f"seshat_table_{tid}" in row["config"]["tags"], (name, tid)
+        assert contract["source_map"] == f"mappings/{tid}/source-map.yaml"
+        assert contract["source_map_revision"] == revision_by_table[tid], (name, tid)
         assert contract["authority"] == "derived"
         assert contract["grain"]
         assert contract["business_key"]

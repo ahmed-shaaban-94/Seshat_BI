@@ -33,45 +33,6 @@ from seshat.dbt.redaction import (
     secret_values,
 )
 
-_ASSERTION_CONTRACTS = {
-    "fact_row_count": ("fact_row_count", "fct_sales_rss", Decimal("0")),
-    "fact_distinct_transaction_id": (
-        "business_key_count",
-        "fct_sales_rss.transaction_id",
-        Decimal("0"),
-    ),
-    "fact_total_spent_sum": (
-        "additive_money_total",
-        "fct_sales_rss.total_spent",
-        Decimal("0.01"),
-    ),
-    "dim_customer_member_count": (
-        "dimension_member_count",
-        "dim_customer_rss",
-        Decimal("0"),
-    ),
-    "dim_product_member_count": (
-        "dimension_member_count",
-        "dim_product_rss",
-        Decimal("0"),
-    ),
-    "dim_payment_method_member_count": (
-        "dimension_member_count",
-        "dim_payment_method_rss",
-        Decimal("0"),
-    ),
-    "dim_location_member_count": (
-        "dimension_member_count",
-        "dim_location_rss",
-        Decimal("0"),
-    ),
-    "dim_date_member_count": (
-        "dimension_member_count",
-        "dim_date_rss",
-        Decimal("0"),
-    ),
-}
-REQUIRED_RETAIL_STORE_SALES_ASSERTIONS = frozenset(_ASSERTION_CONTRACTS)
 _INVOCATION_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
 _TABLE_ID = re.compile(r"^[a-z][a-z0-9_]*$")
 _TEST_STATUS_BUCKETS = {
@@ -100,6 +61,16 @@ def _is_parity_result(value: Any) -> bool:
 def _candidate_entry(key: str, value: Any) -> list[list[dict[str, Any]]]:
     if key == "rows" and _is_parity_result(value):
         return [value]
+    # dbt 1.12 `show --output json` carries the preview rows as a JSON-encoded
+    # STRING under "preview", not a native list. Decode it and treat a decoded
+    # parity-result array the same as a native "rows" array.
+    if key == "preview" and isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = None
+        if _is_parity_result(decoded):
+            return [decoded]
     return _candidate_rows(value)
 
 
@@ -146,28 +117,39 @@ def _decimal_string(value: Decimal) -> str:
     return text
 
 
+# The governed assertion classes (spec 133 data-model.md) and the tolerance each
+# class carries. Tolerance is a function of class -- 0 for exact counts, 0.01 for
+# additive money -- NOT a per-table value, so a table cannot loosen its own bound
+# (the committed map supplies WHICH assertions; code fixes HOW tight).
+_CLASS_TOLERANCES: dict[str, Decimal] = {
+    "fact_row_count": Decimal("0"),
+    "business_key_count": Decimal("0"),
+    "dimension_member_count": Decimal("0"),
+    "additive_money_total": Decimal("0.01"),
+}
+
+
 def _parity_contract(raw: dict[str, Any]) -> tuple[str, str, str, Decimal]:
+    """Resolve (id, class, subject, tolerance) for one emitted parity row.
+
+    Class-driven, not id-allowlisted: any table's assertion is accepted as long as
+    its class is one of the governed classes; the tolerance is then fixed by that
+    class. This replaces the retail_store_sales-specific id table so a second
+    governed table's parity rows (whose ids/subjects legitimately differ) validate
+    on the same rules. The per-table REQUIRED set is enforced separately, from the
+    approved gold_star (see _validate_parity_set)."""
     assertion_id = raw.get("assertion_id")
-    if not isinstance(assertion_id, str) or assertion_id not in _ASSERTION_CONTRACTS:
-        raise ArtifactIntegrityError(f"unknown parity assertion {assertion_id!r}")
-    expected_class, expected_subject, tolerance = _ASSERTION_CONTRACTS[assertion_id]
-    return assertion_id, expected_class, expected_subject, tolerance
-
-
-def _validate_parity_identity(
-    raw: dict[str, Any], assertion_id: str, expected_class: str, expected_subject: str
-) -> None:
-    expected_fields = (
-        (
-            "assertion_class",
-            expected_class,
-            f"parity assertion class is invalid for {assertion_id}",
-        ),
-        ("subject", expected_subject, f"parity subject is invalid for {assertion_id}"),
-    )
-    for field, expected, message in expected_fields:
-        if raw.get(field) != expected:
-            raise ArtifactIntegrityError(message)
+    if not isinstance(assertion_id, str) or not _TABLE_ID.match(assertion_id):
+        raise ArtifactIntegrityError(f"invalid parity assertion id {assertion_id!r}")
+    assertion_class = raw.get("assertion_class")
+    if assertion_class not in _CLASS_TOLERANCES:
+        raise ArtifactIntegrityError(
+            f"parity assertion class is invalid for {assertion_id}"
+        )
+    subject = raw.get("subject")
+    if not isinstance(subject, str) or not subject.strip():
+        raise ArtifactIntegrityError(f"parity subject is invalid for {assertion_id}")
+    return assertion_id, assertion_class, subject, _CLASS_TOLERANCES[assertion_class]
 
 
 def _validate_reported_decimal(
@@ -211,15 +193,14 @@ def _validate_reported_pass(
 
 
 def _parity_row(raw: dict[str, Any]) -> ParityAssertion:
-    assertion_id, expected_class, expected_subject, tolerance = _parity_contract(raw)
-    _validate_parity_identity(raw, assertion_id, expected_class, expected_subject)
+    assertion_id, assertion_class, subject, tolerance = _parity_contract(raw)
     expected, actual, delta = _parity_values(raw, assertion_id, tolerance)
     passed = delta <= tolerance
     _validate_reported_pass(raw, assertion_id, passed)
     return ParityAssertion(
         assertion_id=assertion_id,
-        assertion_class=expected_class,
-        subject=expected_subject,
+        assertion_class=assertion_class,
+        subject=subject,
         expected=_decimal_string(expected),
         actual=_decimal_string(actual),
         delta=_decimal_string(delta),
@@ -277,8 +258,8 @@ def _normalized_parity_rows(
     ids = tuple(row.assertion_id for row in rows)
     if len(ids) != len(set(ids)):
         raise ArtifactIntegrityError("dbt show contains duplicate parity assertion IDs")
-    order = {name: index for index, name in enumerate(_ASSERTION_CONTRACTS)}
-    return tuple(sorted(rows, key=lambda row: order[row.assertion_id]))
+    # Deterministic order by assertion id (no per-table id table to key on).
+    return tuple(sorted(rows, key=lambda row: row.assertion_id))
 
 
 def parse_parity_rows(show_stdout: str) -> tuple[ParityAssertion, ...]:
@@ -374,15 +355,62 @@ def _validate_artifact_roles(
         raise ArtifactIntegrityError("dbt evidence contains unexpected run-results")
 
 
-def _validate_parity_set(parity: tuple[ParityAssertion, ...]) -> None:
-    parity_ids = {row.assertion_id for row in parity}
-    missing = REQUIRED_RETAIL_STORE_SALES_ASSERTIONS - parity_ids
-    extras = parity_ids - REQUIRED_RETAIL_STORE_SALES_ASSERTIONS
+_MODEL_ID = re.compile(r"^model\.[^.]+\.(?P<name>.+)$")
+
+
+def _selected_dimension_count(selected_unique_ids: tuple[str, ...]) -> int:
+    """How many dimension models the build materialized (dim_* model nodes).
+
+    The required dimension_member_count assertions are one per built dimension:
+    parity must cover every dimension that was actually built, and no more. The
+    date dimension is a dim_* model too, so it is included.
+    """
+    count = 0
+    for uid in selected_unique_ids:
+        match = _MODEL_ID.match(uid)
+        if match and match.group("name").startswith("dim_"):
+            count += 1
+    return count
+
+
+def _required_class_counts(selected_unique_ids: tuple[str, ...]) -> dict[str, int]:
+    """The exact governed parity shape for THIS build, derived from what was built.
+
+    Reproduces the retail_store_sales guarantee (1 fact_row_count + 1
+    business_key_count + 1 additive_money_total + one dimension_member_count per
+    dimension) for any table, using the built graph as the authority: parity must
+    reconcile exactly the fact and dimensions that were materialized. Tying the
+    required set to selected_unique_ids (not to gold_star) keeps this the
+    "shadow matches migration for everything built" check; map-vs-build coverage
+    is a separate invariant owned by validate/plan.
+    """
+    return {
+        "fact_row_count": 1,
+        "business_key_count": 1,
+        "additive_money_total": 1,
+        "dimension_member_count": _selected_dimension_count(selected_unique_ids),
+    }
+
+
+def _validate_parity_set(
+    parity: tuple[ParityAssertion, ...],
+    selected_unique_ids: tuple[str, ...],
+) -> None:
+    required = _required_class_counts(selected_unique_ids)
+    actual: dict[str, int] = {cls: 0 for cls in _CLASS_TOLERANCES}
+    for row in parity:
+        actual[row.assertion_class] = actual.get(row.assertion_class, 0) + 1
+    missing = {
+        cls: n - actual.get(cls, 0)
+        for cls, n in required.items()
+        if actual.get(cls, 0) < n
+    }
     if missing:
         raise ArtifactIntegrityError(
-            "missing parity assertions: " + ", ".join(sorted(missing))
+            "missing parity assertions by class: "
+            + ", ".join(f"{cls} (need {n} more)" for cls, n in sorted(missing.items()))
         )
-    if extras or len(parity) != len(REQUIRED_RETAIL_STORE_SALES_ASSERTIONS):
+    if actual != required:
         raise ArtifactIntegrityError("parity assertions are not the exact governed set")
 
 
@@ -452,7 +480,7 @@ def build_evidence(
         raise ArtifactIntegrityError("only build/test invocations produce run evidence")
     _validate_artifact_roles(invocation, artifacts)
     _validate_artifacts(plan, artifacts)
-    _validate_parity_set(parity)
+    _validate_parity_set(parity, plan.selected_unique_ids)
     tests = _test_summary(artifacts)
     outcome, exit_code, blockers = _evidence_outcome(invocation, tests, parity)
     return RunEvidence(
