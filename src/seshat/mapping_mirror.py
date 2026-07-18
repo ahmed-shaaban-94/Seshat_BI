@@ -7,10 +7,13 @@ prose, so a table could clear the whole readiness spine without the file and
 only fail much later. This emitter closes that gap deterministically:
 
 - It NEVER overwrites an existing ledger (the humans' audit trail wins).
-- The stub's status is DERIVED from the committed ``readiness-status.yaml``,
-  never invented (never_self_grant_approval): a CLEARED stub is written only
-  when a ``mapping_ready: pass`` with a named-human approval is already
-  recorded; anything less yields an OPEN stub that keeps every gate blocked.
+- The stub's status is DERIVED from the COMMITTED ``readiness-status.yaml``
+  (the file must be tracked and clean, and its HEAD content is what is read
+  -- an uncommitted worktree edit can never mint a clearance), never invented
+  (never_self_grant_approval): a CLEARED stub is written only when the
+  committed revision records ``mapping_ready: pass`` with a named-human
+  approval in the audited C4 shape ``Person Name (authority_class)``;
+  anything less yields an OPEN stub that keeps every gate blocked.
 - The stub carries exactly one ``Gate status:`` line and no question-table
   rows, the one shape every downstream parser (dbt gate, dagster gate,
   approver-view, gap-detector) reads identically.
@@ -18,7 +21,9 @@ only fail much later. This emitter closes that gap deterministically:
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -67,9 +72,14 @@ _OPEN_STUB = """\
 
 ## Open questions (the build is blocked until these are `answered`)
 
-| ID | Question | Why it blocks | Who must answer | Proposed default (if unanswered) | Status | Resolution |
-|----|----------|---------------|-----------------|----------------------------------|--------|------------|
-"""
+{table_header}"""
+
+_QUESTION_TABLE_HEADER = (
+    "| ID | Question | Why it blocks | Who must answer "
+    "| Proposed default (if unanswered) | Status | Resolution |\n"
+    "|----|----------|---------------|-----------------"
+    "|----------------------------------|--------|------------|\n"
+)
 
 
 @dataclass(frozen=True)
@@ -93,12 +103,50 @@ def _require_mapping_dir(repo_root: Path, table_id: str) -> Path:
     return mapping_dir
 
 
-def _read_readiness(mapping_dir: Path) -> dict[str, Any]:
+def _git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    command = [
+        "git",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        f"core.hooksPath={os.devnull}",
+        "-c",
+        "protocol.ext.allow=never",
+        "-c",
+        f"safe.directory={repo_root.as_posix()}",
+        *args,
+    ]
+    return subprocess.run(
+        command,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+        shell=False,
+    )
+
+
+def _committed_readiness(repo_root: Path, table_id: str) -> dict[str, Any]:
+    """The COMMITTED readiness document, or {} when it cannot vouch for one.
+
+    A CLEARED mirror is downstream-trusted (the Dagster source_map asset
+    permits the silver build on it), so the derivation reads git's HEAD
+    content and refuses while the file is untracked or carries uncommitted
+    edits -- a worktree-only 'pass' must never mint a clearance."""
+    root = Path(repo_root).resolve()
+    relative = f"mappings/{table_id}/readiness-status.yaml"
+    tracked = _git(root, "ls-files", "--error-unmatch", "--", relative)
+    if tracked.returncode != 0:
+        return {}
+    clean = _git(root, "diff", "--quiet", "HEAD", "--", relative)
+    if clean.returncode != 0:
+        return {}
+    shown = _git(root, "show", f"HEAD:{relative}")
+    if shown.returncode != 0:
+        return {}
     try:
-        document = yaml.safe_load(
-            (mapping_dir / "readiness-status.yaml").read_text(encoding="utf-8")
-        )
-    except (OSError, UnicodeError, yaml.YAMLError):
+        document = yaml.safe_load(shown.stdout)
+    except yaml.YAMLError:
         return {}
     return document if isinstance(document, dict) else {}
 
@@ -111,8 +159,15 @@ def _mapping_ready_passed(document: dict[str, Any]) -> bool:
 
 
 def _named_owner(row: Any) -> bool:
+    """True only for the audited C4 owner shape ``Person Name (authority_class)``.
+
+    Reuses the readiness-status validator so a bare role token, an agent, or a
+    name without an authority class can never clear the mirror (the same shape
+    rule C4 enforces on the spine)."""
+    from seshat.rules.readiness_status import _owner_is_valid
+
     owner = row.get("owner") if isinstance(row, dict) else None
-    return isinstance(owner, str) and bool(owner.strip())
+    return _owner_is_valid(owner)
 
 
 def _valid_date(row: Any) -> bool:
@@ -139,12 +194,18 @@ def _has_named_mapping_approval(document: dict[str, Any]) -> bool:
     )
 
 
-def _stub_for(mapping_dir: Path, table_id: str) -> tuple[str, str]:
-    document = _read_readiness(mapping_dir)
+def _stub_for(repo_root: Path, table_id: str) -> tuple[str, str]:
+    document = _committed_readiness(repo_root, table_id)
     cleared = _mapping_ready_passed(document) and _has_named_mapping_approval(document)
-    template = _CLEARED_STUB if cleared else _OPEN_STUB
-    status = "cleared-stub" if cleared else "open-stub"
-    return template.format(table_id=table_id, today=date.today().isoformat()), status
+    if cleared:
+        text = _CLEARED_STUB.format(table_id=table_id, today=date.today().isoformat())
+        return text, "cleared-stub"
+    text = _OPEN_STUB.format(
+        table_id=table_id,
+        today=date.today().isoformat(),
+        table_header=_QUESTION_TABLE_HEADER,
+    )
+    return text, "open-stub"
 
 
 def ensure_unresolved_questions(repo_root: Path, table_id: str) -> MirrorResult:
@@ -154,7 +215,7 @@ def ensure_unresolved_questions(repo_root: Path, table_id: str) -> MirrorResult:
     path = mapping_dir / "unresolved-questions.md"
     if path.is_file():
         return MirrorResult(path=path, created=False, status="already-present")
-    text, status = _stub_for(mapping_dir, table_id)
+    text, status = _stub_for(repo_root, table_id)
     with path.open("x", encoding="utf-8", newline="\n") as stream:
         stream.write(text)
     return MirrorResult(path=path, created=True, status=status)
