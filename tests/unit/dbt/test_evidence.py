@@ -232,8 +232,8 @@ def test_parity_with_right_count_but_wrong_dimension_subjects_is_blocked() -> No
     the built dimension set is not covered.
     """
     from seshat.dbt.artifacts import ArtifactIntegrityError
-    from seshat.dbt.evidence import _validate_parity_set
     from seshat.dbt.contracts import ParityAssertion
+    from seshat.dbt.evidence import _validate_parity_set
 
     def _dim(subject: str) -> ParityAssertion:
         return ParityAssertion(
