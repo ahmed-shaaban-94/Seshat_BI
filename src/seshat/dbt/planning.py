@@ -142,12 +142,15 @@ def _validate_plan_hashes(plan: ExecutionPlan) -> None:
 
 
 def _canonical_money(money: tuple[str, ...]) -> bool:
-    # Empty is canonical: a factless fact declares zero money measures.
-    if money != tuple(sorted(set(money))):
-        return False
-    return all(
+    # Identifier-check FIRST: a malformed stored plan may carry non-string
+    # (even unhashable) elements, and sorting/set-building those must yield a
+    # handled PlanDrift, never an uncaught TypeError.
+    if not all(
         isinstance(measure, str) and _COLUMN_ID.fullmatch(measure) for measure in money
-    )
+    ):
+        return False
+    # Empty is canonical: a factless fact declares zero money measures.
+    return money == tuple(sorted(set(money)))
 
 
 def _require_canonical_money(money: tuple[str, ...]) -> None:
@@ -158,13 +161,14 @@ def _require_canonical_money(money: tuple[str, ...]) -> None:
 
 
 def _canonical_business_key(key: tuple[str, ...]) -> bool:
-    # Ordered and non-empty; order is the grain declaration, so uniqueness is
-    # required but sorting is NOT.
-    if not key or len(key) != len(set(key)):
-        return False
-    return all(
+    # Identifier-check FIRST (see _canonical_money). Ordered and non-empty;
+    # order is the grain declaration, so uniqueness is required but sorting
+    # is NOT.
+    if not all(
         isinstance(column, str) and _COLUMN_ID.fullmatch(column) for column in key
-    )
+    ):
+        return False
+    return bool(key) and len(key) == len(set(key))
 
 
 def _validate_fact_binding(plan: ExecutionPlan) -> None:
@@ -292,6 +296,15 @@ def load_plan(repo_root: Path, table_id: str) -> PlanEnvelope:
     return envelope
 
 
+def _stored_columns(value: object) -> tuple[object, ...]:
+    """Normalize a stored plan's column list without char-splitting a string.
+
+    JSON stores the columns as a list; a hand-edited scalar must become a
+    1-tuple (not iterated character-by-character) so _valid_plan judges the
+    actual value and returns a handled PlanDrift."""
+    return tuple(value) if isinstance(value, list) else (value,)
+
+
 def _load_plan_payload(path: Path) -> object:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -307,8 +320,10 @@ def _plan_envelope(payload: object) -> PlanEnvelope:
             table_id=raw["table_id"],
             mapping=MappingBinding(**raw["mapping"]),
             fact=FactBinding(
-                business_key=tuple(raw["fact"]["business_key"]),
-                additive_money_measures=tuple(raw["fact"]["additive_money_measures"]),
+                business_key=_stored_columns(raw["fact"]["business_key"]),
+                additive_money_measures=_stored_columns(
+                    raw["fact"]["additive_money_measures"]
+                ),
             ),
             project=ProjectBinding(**raw["project"]),
             runtime=RuntimeBinding(**raw["runtime"]),

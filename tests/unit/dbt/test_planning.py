@@ -166,6 +166,11 @@ def test_save_plan_writes_atomic_envelope_to_fixed_local_path(tmp_path: Path) ->
             "additive_money_measures",
         ),
         (("total_spent",), ("total_spent",), "business_key"),
+        # Malformed-but-valid-JSON element types must yield the handled
+        # PlanDrift, never an uncaught TypeError from sorting/set-building.
+        (("transaction_id",), (1, "amount"), "additive_money_measures"),
+        (("transaction_id",), ({"col": "amount"},), "additive_money_measures"),
+        ((None, "line_no"), ("total_spent",), "business_key"),
     ),
 )
 def test_save_plan_rejects_invalid_fact_binding(
