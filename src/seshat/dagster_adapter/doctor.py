@@ -20,7 +20,8 @@ from .gate import GateState, list_mapped_tables, read_gate_state
 
 _INSTALL_REMEDY = (
     "cd orchestration/dagster && uv venv .venv && "
-    'uv pip install -p .venv -e "../..[dbt]" -e ".[dev]"'
+    'uv pip install -p .venv "seshat-bi[dbt]" -e ".[dev]" '
+    '(a development checkout uses -e "../..[dbt]" instead of "seshat-bi[dbt]")'
 )
 
 
@@ -57,7 +58,10 @@ _PROJECT_ABSENT = DoctorFinding(
     message=(
         "orchestration project absent: orchestration/dagster/pyproject.toml not found"
     ),
-    remedy="check out the full repo (the orchestration project ships with spec 134)",
+    remedy=(
+        "run `seshat dagster init` to materialize the governed orchestration "
+        "project into this workspace, then create its .venv (see DAG-VENV-01)"
+    ),
 )
 
 _PIN_MISMATCH = DoctorFinding(

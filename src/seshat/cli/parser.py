@@ -1026,6 +1026,18 @@ def _add_dagster_parser(sub: argparse._SubParsersAction) -> None:
         "--json", dest="as_json", action="store_true", help="machine-readable output"
     )
 
+    init_p = dagster_sub.add_parser(
+        "init",
+        help=(
+            "materialize the governed Dagster orchestration project into this "
+            "workspace from bundled templates (never overwrites; issue #325)"
+        ),
+    )
+    init_p.add_argument("--repo", default=".", help="repo root to materialize into")
+    init_p.add_argument(
+        "--json", dest="as_json", action="store_true", help="machine-readable result"
+    )
+
 
 def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.

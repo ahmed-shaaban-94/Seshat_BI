@@ -80,3 +80,12 @@ def _add_dbt_parser(sub: argparse._SubParsersAction) -> None:
         help="run directory contained under .seshat/dbt/runs/",
     )
     _common(inspect)
+
+    init = commands.add_parser(
+        "init",
+        help=(
+            "materialize the generic governed dbt working set into this "
+            "workspace from bundled templates (never overwrites; issue #325)"
+        ),
+    )
+    _common(init)

@@ -505,6 +505,21 @@ def _inspect(args: Any) -> CommandResult:
     )
 
 
+def _init(args: Any) -> CommandResult:
+    """Materialize the generic governed dbt working set (issue #325)."""
+    from seshat.governed_projects import dbt_init
+
+    report = dbt_init(_root(args))
+    message = "; ".join(
+        (
+            f"materialized {len(report.written)} governed dbt files "
+            f"(kept {len(report.kept)} existing)",
+            *report.notes,
+        )
+    )
+    return _pass("init", None, message)
+
+
 _COMMANDS = {
     "doctor": _doctor,
     "validate": _validate,
@@ -512,6 +527,7 @@ _COMMANDS = {
     "build": _build,
     "test": _test,
     "inspect-run": _inspect,
+    "init": _init,
 }
 
 
