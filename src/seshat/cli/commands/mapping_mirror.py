@@ -31,4 +31,9 @@ def mapping_mirror_main(args: argparse.Namespace) -> int:
             "gate starts OPEN: raise each build-blocking question as a row; "
             "only a named human flips the status to CLEARED"
         )
+    if result.status == "cleared-stub":
+        print(
+            "commit the generated ledger before any downstream build: an "
+            "uncommitted clearance is not an audit record"
+        )
     return 0

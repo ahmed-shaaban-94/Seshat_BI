@@ -39,8 +39,11 @@ _CLEARED_STUB = """\
 > Generated mirror (`seshat mapping-mirror`). The mapping stage recorded no
 > open blocking questions for this table; this file is the committed
 > Principle-V decision ledger the downstream dbt and Dagster gates require.
-> Its status is DERIVED from `readiness-status.yaml` (mapping_ready: pass with
-> a named-human approval already recorded) -- this file grants nothing itself.
+> Its status is DERIVED from the COMMITTED `readiness-status.yaml`
+> (mapping_ready: pass with a named-human approval already recorded) -- this
+> file grants nothing itself. COMMIT this ledger with the mapping artifacts:
+> only a committed ledger is an audit record, and no downstream gate should
+> treat an uncommitted clearance as a GO signal.
 
 - **Table id:** `{table_id}`
 - **Date raised:** {today}
@@ -156,8 +159,11 @@ def _mapping_ready_passed(document: dict[str, Any]) -> bool:
     mapping = stages.get("mapping_ready") if isinstance(stages, dict) else None
     if not isinstance(mapping, dict) or mapping.get("status") != "pass":
         return False
-    # RS1 (readiness_status._check_evidence) rejects every evidence-free pass;
+    # RS1 rejects every evidence-free pass AND any pass still carrying
+    # blocking_reasons (readiness_status._check_evidence / _check_blockers);
     # an invalid readiness state must never mint a clearance downstream trusts.
+    if mapping.get("blocking_reasons"):
+        return False
     evidence = mapping.get("evidence")
     return isinstance(evidence, list) and bool(evidence)
 

@@ -161,6 +161,15 @@ def test_dirty_committed_readiness_never_mints_a_clearance(tmp_path: Path) -> No
             ).replace("    evidence:\n      []", "    evidence: []"),
             id="empty-evidence-list-pass",
         ),
+        pytest.param(
+            _APPROVED_READINESS.replace(
+                "    status: pass\n",
+                "    status: pass\n"
+                "    blocking_reasons:\n"
+                '      - "grain question reopened"\n',
+            ),
+            id="pass-still-carrying-blockers",
+        ),
         pytest.param("not: [valid yaml\n", id="unreadable-readiness"),
     ),
 )
