@@ -277,20 +277,50 @@ def _init_repo(root: Path) -> None:
     _git(root, "init", "-q")
 
 
+# A readiness-status.yaml whose Mapping Ready gate is ALLOWED: status pass + a
+# valid named-human approval row. Paired with a CLEARED unresolved-questions
+# mirror, evaluate_mapping_gate returns allowed.
+_GATE_PASS_READINESS = "\n".join(
+    [
+        "stages:",
+        "  mapping_ready:",
+        "    status: pass",
+        "approvals:",
+        "  - stage: mapping_ready",
+        "    owner: Test Owner (data_owner)",
+        "    at: '2026-07-16'",
+        "    note: approved for test",
+        "",
+    ]
+)
+# Mapping Ready still blocked (status not pass, no approval) -- the gate refuses it
+# even when the map is tracked and clean.
+_GATE_BLOCKED_READINESS = "stages:\n  mapping_ready:\n    status: blocked\n"
+
+
 def _write_mapping_working_set(
-    root: Path, table_id: str, complete: bool = True, committed: bool = False
+    root: Path,
+    table_id: str,
+    complete: bool = True,
+    committed: bool = False,
+    gate_ok: bool = True,
 ) -> None:
     """Write a table's mapping dir. complete=True writes the full 3-file working set
     (source-map + readiness-status + unresolved-questions) that resolve_working_set
     requires; complete=False omits unresolved-questions.md (a partial mapping).
     committed=True git-adds + commits the source map so it is tracked and clean
-    (resolve_working_set also requires that); committed=False leaves it untracked."""
+    (resolve_working_set also requires that); committed=False leaves it untracked.
+    gate_ok=True writes a readiness whose Mapping Ready gate is allowed; gate_ok=
+    False writes one still blocked (evaluate_mapping_gate refuses it)."""
     mapping = root / "mappings" / table_id
     mapping.mkdir(parents=True, exist_ok=True)
     (mapping / "source-map.yaml").write_text(
         f"meta:\n  table_id: {table_id}\n", encoding="utf-8"
     )
-    (mapping / "readiness-status.yaml").write_text("stages: {}\n", encoding="utf-8")
+    (mapping / "readiness-status.yaml").write_text(
+        _GATE_PASS_READINESS if gate_ok else _GATE_BLOCKED_READINESS,
+        encoding="utf-8",
+    )
     if complete:
         (mapping / "unresolved-questions.md").write_text(
             "Gate status: CLEARED\n", encoding="utf-8"
@@ -394,6 +424,40 @@ def test_model_for_uncommitted_mapping_table_is_orphan_rejected(tmp_path: Path) 
     working_set = _write_project(tmp_path)  # validating table = orders
     # "widgets" has all 3 files but its map is NOT committed (untracked).
     _write_mapping_working_set(tmp_path, "widgets", complete=True, committed=False)
+    _append_model(
+        tmp_path,
+        "staging/widgets",
+        _tagged_model_yaml("stg_widgets", "seshat_table_widgets", "widgets"),
+    )
+
+    result = validate_project(tmp_path, working_set)
+
+    assert result.valid is False
+    assert "DBT_MODEL_ORPHANED" in {b.code for b in result.blocking_reasons}
+
+
+def test_model_for_gate_blocked_table_is_orphan_rejected(tmp_path: Path) -> None:
+    """A model tagged for a table with a tracked, clean map but a still-BLOCKED
+    Mapping Ready gate must block, not skip.
+
+    Regression for the same partition hole one layer deeper: resolve_working_set
+    succeeding is not the whole precondition a real validate run enforces --
+    _validated_project also requires evaluate_mapping_gate to be allowed before it
+    reaches model checking. A table whose map is committed but whose gate is still
+    blocked (unapproved) can never reach model validation on its own run, so if it
+    counted as governed here its models would be skipped and never checked. The
+    governed bar therefore mirrors the entry point's FULL precondition set
+    (resolve_working_set AND the mapping gate), not just the working-set resolve.
+    """
+    from seshat.dbt.project import validate_project
+
+    _init_repo(tmp_path)
+    working_set = _write_project(tmp_path)  # validating table = orders
+    # "widgets" map is committed (tracked + clean) but its Mapping Ready gate is
+    # still blocked -- resolve_working_set succeeds, the gate does not.
+    _write_mapping_working_set(
+        tmp_path, "widgets", complete=True, committed=True, gate_ok=False
+    )
     _append_model(
         tmp_path,
         "staging/widgets",

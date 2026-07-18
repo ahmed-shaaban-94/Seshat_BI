@@ -296,27 +296,35 @@ _SESHAT_TABLE_TAG = re.compile(r"^seshat_table_([a-z][a-z0-9_]*)$")
 
 
 def _is_validatable_table(root: Path, table_id: str) -> bool:
-    """True iff ``resolve_working_set`` would succeed for this table -- i.e. the
-    table can ACTUALLY be validated on its own run.
+    """True iff a real ``validate --table <table_id>`` run would reach model
+    checking -- i.e. the table can ACTUALLY be validated on its own run.
 
     This is the single authority for "governed enough to absorb another table's
-    skipped models": it delegates to the exact predicate a real validate run uses
-    (``gate.resolve_working_set``), which checks the full mapping working set AND
-    that the source map is git-tracked, clean, and revision-resolvable. Delegating
-    -- rather than re-listing those requirements here -- guarantees the skip bar
-    and the validate bar are the same code and cannot drift: a table whose map is
-    present-but-untracked/dirty is NOT validatable, so its models are never
-    silently skipped; they orphan-block instead, staying reachable by some check.
-    Read-only; the table being resolved is always another table, never the one
-    under validation, so there is no recursion.
+    skipped models". It mirrors EVERY precondition the CLI entry point
+    (``_validated_project``) enforces before it reaches ``validate_project``'s
+    model stage: (1) ``resolve_working_set`` succeeds (full mapping working set +
+    the source map git-tracked, clean, and revision-resolvable), and (2) the
+    Mapping Ready gate (``evaluate_mapping_gate``) is allowed. Both are leaf checks
+    -- neither re-enters ``_model_contracts`` -- so this is recursion-safe; do NOT
+    delegate to ``_validated_project``/``validate_project`` (that would recurse
+    back into this predicate). Mirroring the entry point's complete precondition
+    set -- not just one of its checks -- is what keeps the skip bar and the
+    validate bar the same: a table whose map is untracked/dirty OR whose Mapping
+    Ready gate is still blocked is NOT validatable, so its models orphan-block
+    instead of being silently skipped and thus never reached by any check. The
+    table resolved here is always another table, never the one under validation.
     """
-    from seshat.dbt.gate import GovernanceError, resolve_working_set
+    from seshat.dbt.gate import (
+        GovernanceError,
+        evaluate_mapping_gate,
+        resolve_working_set,
+    )
 
     try:
-        resolve_working_set(root, table_id)
+        working_set = resolve_working_set(root, table_id)
     except GovernanceError:
         return False
-    return True
+    return evaluate_mapping_gate(working_set).allowed
 
 
 def _governed_table_ids(root: Path) -> frozenset[str]:
