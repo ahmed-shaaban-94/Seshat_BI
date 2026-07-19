@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from seshat.dagster_adapter import gate
+from tests.unit._gitfix import commit_all, make_git_repo
 
 pytestmark = pytest.mark.unit
 
@@ -74,16 +75,26 @@ def _make_table(
     (tdir / "source-map.yaml").write_text("table: demo\n", encoding="utf-8")
 
 
+def _committed_table(
+    tmp_path: Path, table: str, unresolved: str, publish_status: str = "not_started"
+) -> Path:
+    """A COMMITTED gate fixture: the GO signal requires committed state (#334)."""
+    repo = make_git_repo(tmp_path)
+    _make_table(repo, table, unresolved, publish_status)
+    commit_all(repo, "gate fixture")
+    return repo
+
+
 class TestReadGateState:
     def test_cleared_gate_with_zero_open_rows(self, tmp_path: Path) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.gate_status == "CLEARED"
         assert state.open_rows == 0
 
     def test_open_gate_counts_open_rows(self, tmp_path: Path) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_OPEN)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_OPEN)
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.gate_status == "OPEN"
         assert state.open_rows == 2
 
@@ -96,8 +107,8 @@ class TestReadGateState:
             "## Gate status: CLEARED\n\n"
             "- every question answered by the named owner.\n"
         )
-        _make_table(tmp_path, "demo_table", heading_form)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", heading_form)
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.gate_status == "CLEARED"
         assert state.silver_permitted is True
 
@@ -105,8 +116,8 @@ class TestReadGateState:
         """'unanswered' contains the substring 'answered' -- the cell must be
         an exact token match (review finding)."""
         tricky = UNRESOLVED_OPEN.replace("| `open` |", "| `unanswered` |")
-        _make_table(tmp_path, "demo_table", tricky)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", tricky)
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.open_rows == 2
 
     def test_missing_artifacts_report_missing(self, tmp_path: Path) -> None:
@@ -117,9 +128,33 @@ class TestReadGateState:
         assert state.approvals == ()
         assert state.publish_ready == "missing"
 
+    def test_uncommitted_mirror_never_permits_silver(self, tmp_path: Path) -> None:
+        """#334: a worktree-only CLEARED mirror never entered audit history and
+        may disappear on checkout -- it must read as UNCOMMITTED and the GO
+        signal must fail closed, in a git repo and outside one alike."""
+        repo = make_git_repo(tmp_path)
+        _make_table(repo, "demo_table", UNRESOLVED_CLEARED)  # written, not committed
+        state = gate.read_gate_state(repo, "demo_table")
+        assert state.gate_status == "UNCOMMITTED"
+        assert state.silver_permitted is False
+
+        bare = tmp_path / "not_a_repo"
+        _make_table(bare, "demo_table", UNRESOLVED_CLEARED)
+        assert gate.read_gate_state(bare, "demo_table").gate_status == "UNCOMMITTED"
+
+    def test_dirty_committed_mirror_never_permits_silver(self, tmp_path: Path) -> None:
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_OPEN)
+        # An uncommitted edit flips the gate to CLEARED -- committed truth is OPEN.
+        (repo / "mappings" / "demo_table" / "unresolved-questions.md").write_text(
+            UNRESOLVED_CLEARED, encoding="utf-8"
+        )
+        state = gate.read_gate_state(repo, "demo_table")
+        assert state.gate_status == "UNCOMMITTED"
+        assert state.silver_permitted is False
+
     def test_approvals_read_verbatim(self, tmp_path: Path) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
+        state = gate.read_gate_state(repo, "demo_table")
         assert len(state.approvals) == 1
         approval = state.approvals[0]
         assert approval.stage == "mapping_ready"
@@ -127,22 +162,24 @@ class TestReadGateState:
         assert approval.at == "2026-06-25"
 
     def test_publish_ready_read_verbatim(self, tmp_path: Path) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED, publish_status="pass")
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(
+            tmp_path, "demo_table", UNRESOLVED_CLEARED, publish_status="pass"
+        )
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.publish_ready == "pass"
 
     def test_silver_permitted_only_when_cleared_and_zero_open(
         self, tmp_path: Path
     ) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
-        assert gate.read_gate_state(tmp_path, "demo_table").silver_permitted is True
-        other = tmp_path / "other"
-        _make_table(other, "demo_table", UNRESOLVED_OPEN)
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
+        assert gate.read_gate_state(repo, "demo_table").silver_permitted is True
+        (tmp_path / "other").mkdir()
+        other = _committed_table(tmp_path / "other", "demo_table", UNRESOLVED_OPEN)
         assert gate.read_gate_state(other, "demo_table").silver_permitted is False
 
     def test_approval_for_stage_lookup(self, tmp_path: Path) -> None:
-        _make_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
-        state = gate.read_gate_state(tmp_path, "demo_table")
+        repo = _committed_table(tmp_path, "demo_table", UNRESOLVED_CLEARED)
+        state = gate.read_gate_state(repo, "demo_table")
         assert state.approval_for("mapping_ready") is not None
         assert state.approval_for("semantic_model_ready") is None
 

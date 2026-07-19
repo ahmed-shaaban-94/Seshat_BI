@@ -21,15 +21,15 @@ only fail much later. This emitter closes that gap deterministically:
 
 from __future__ import annotations
 
-import os
 import re
-import subprocess
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from seshat.gitstate import committed_text
 
 _TABLE_ID = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -106,49 +106,21 @@ def _require_mapping_dir(repo_root: Path, table_id: str) -> Path:
     return mapping_dir
 
 
-def _git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    command = [
-        "git",
-        "-c",
-        "core.fsmonitor=false",
-        "-c",
-        f"core.hooksPath={os.devnull}",
-        "-c",
-        "protocol.ext.allow=never",
-        "-c",
-        f"safe.directory={repo_root.as_posix()}",
-        *args,
-    ]
-    return subprocess.run(
-        command,
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-        shell=False,
-    )
-
-
 def _committed_readiness(repo_root: Path, table_id: str) -> dict[str, Any]:
     """The COMMITTED readiness document, or {} when it cannot vouch for one.
 
     A CLEARED mirror is downstream-trusted (the Dagster source_map asset
     permits the silver build on it), so the derivation reads git's HEAD
-    content and refuses while the file is untracked or carries uncommitted
-    edits -- a worktree-only 'pass' must never mint a clearance."""
-    root = Path(repo_root).resolve()
-    relative = f"mappings/{table_id}/readiness-status.yaml"
-    tracked = _git(root, "ls-files", "--error-unmatch", "--", relative)
-    if tracked.returncode != 0:
-        return {}
-    clean = _git(root, "diff", "--quiet", "HEAD", "--", relative)
-    if clean.returncode != 0:
-        return {}
-    shown = _git(root, "show", f"HEAD:{relative}")
-    if shown.returncode != 0:
+    content (seshat.gitstate) and refuses while the file is untracked or
+    carries uncommitted edits -- a worktree-only 'pass' must never mint a
+    clearance."""
+    text = committed_text(
+        Path(repo_root).resolve(), f"mappings/{table_id}/readiness-status.yaml"
+    )
+    if text is None:
         return {}
     try:
-        document = yaml.safe_load(shown.stdout)
+        document = yaml.safe_load(text)
     except yaml.YAMLError:
         return {}
     return document if isinstance(document, dict) else {}

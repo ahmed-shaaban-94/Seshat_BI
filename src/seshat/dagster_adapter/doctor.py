@@ -134,6 +134,20 @@ def _gate_finding(table: str, state: GateState) -> DoctorFinding:
             ),
             remedy="none",
         )
+    if state.gate_status == "UNCOMMITTED":
+        return DoctorFinding(
+            id="DAG-GATE-01",
+            severity="warning",
+            message=(
+                f"{table}: mapping gate artifact is not committed "
+                f"(Gate status UNCOMMITTED, open rows {state.open_rows}) -- "
+                "silver_tables will BLOCK fail-closed"
+            ),
+            remedy=(
+                f"commit mappings/{table}/unresolved-questions.md -- an "
+                "uncommitted gate artifact is never a GO signal (#334)"
+            ),
+        )
     return DoctorFinding(
         id="DAG-GATE-01",
         severity="warning",
