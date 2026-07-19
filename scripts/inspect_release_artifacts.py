@@ -119,6 +119,12 @@ def _reject_development_paths(paths: list[PurePosixPath]) -> None:
 _REQUIRED_WHEEL_PACKAGE_DATA = (
     "seshat/packs/schemas/seshat-extension-pack.schema.json",
     "seshat/packs/schemas/seshat-pack-registry.schema.json",
+    # Stage-1 blank templates `scaffold-source` reads at call time; they reach
+    # the wheel ONLY via force-include (issue #339). A dropped entry would
+    # silently strand a pip-only user with nothing to copy -- fail loud here.
+    "seshat/stage1_templates/source-profile.md",
+    "seshat/stage1_templates/readiness-status.yaml",
+    "seshat/stage1_templates/source-map.yaml",
 )
 
 
