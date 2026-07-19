@@ -27,6 +27,16 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+
+- `seshat scaffold-source <table>` writes the three Stage-1 blank templates
+  (`source-profile.md`, `readiness-status.yaml`, `source-map.yaml`) into
+  `mappings/<table>/` from bundled package data, so a pip-only workspace can
+  produce the first Source-Ready artifact without the development repository
+  (#339). The three templates now ship as wheel package data and are required
+  by the release-artifact gate; `seshat next`'s fresh-workspace guidance points
+  at the new verb.
+
 ## [0.5.0] -- 2026-07-19
 
 ### Added

@@ -52,9 +52,23 @@ class Stage1Report:
     notes: tuple[str, ...]
 
 
+# A safe ``table`` is a single path segment: non-empty, not a traversal token,
+# and free of any path separator. Kept as a data-driven predicate set so the
+# guard stays a flat ``any(...)`` rather than a multi-branch boolean.
+_UNSAFE_TABLE_TOKENS = frozenset({"", ".", ".."})
+_PATH_SEPARATORS = ("/", "\\")
+
+
+def _is_unsafe_table(table: str) -> bool:
+    """True when ``table`` is not a safe single path segment."""
+    return table in _UNSAFE_TABLE_TOKENS or any(
+        sep in table for sep in _PATH_SEPARATORS
+    )
+
+
 def _validate_table(table: str) -> str:
-    """A safe single path segment: no separators, no traversal, non-trivial."""
-    if not table or table in {".", ".."} or "/" in table or "\\" in table:
+    """Return ``table`` if it is a safe single path segment, else raise."""
+    if _is_unsafe_table(table):
         raise Stage1ScaffoldError(
             f"unsafe table segment: {table!r} "
             "(must be a plain name, no path separators or traversal)"
