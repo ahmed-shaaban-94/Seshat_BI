@@ -27,6 +27,39 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+
+- `seshat scaffold-source <table>` writes the three Stage-1 blank templates
+  (`source-profile.md`, `readiness-status.yaml`, `source-map.yaml`) into
+  `mappings/<table>/` from bundled package data, so a pip-only workspace can
+  produce the first Source-Ready artifact without the development repository
+  (#339). The three templates now ship as wheel package data and are required
+  by the release-artifact gate; `seshat next`'s fresh-workspace guidance points
+  at the new verb. The table name is validated for Windows reserved device
+  names, invalid filename characters, and trailing/leading dots or spaces
+  (which Win32 trims), and the write refuses a symlinked or non-file output
+  path (a symlinked `mappings/` escaping `--repo`, or a directory/FIFO sitting
+  where a Stage-1 file belongs), with an `OSError` backstop for the 260-char
+  path limit -- so an unsafe name or hostile filesystem state yields the
+  documented refusal rather than a traceback or a misleading success. The
+  materialized `readiness-status.yaml` carries a truthful initial
+  `current_stage: source_ready` (not the `<stage_key>` placeholder), so a
+  committed scaffold passes the RS1 governance gate as an honest unstarted
+  Source-Ready journey with no fabricated evidence or approvals; its `table`
+  and `source_id` identity fields are set to the requested table (so
+  `seshat next` attributes the scope to it, not the literal placeholder); and
+  the `source-map.yaml` `profiled_from` provenance is retargeted at the
+  materialized `mappings/<table>/source-profile.md`; and its `next_action` is a
+  concrete Source-Ready step (not the template's Mapping-stage example, which
+  `seshat status` would otherwise project as the controlling action). The table
+  name rejects ASCII control characters (invalid on Windows; would corrupt the
+  line-oriented CLI output), and the write refuses any symlinked destination
+  component -- including an in-repo alias (`mappings/foo` -> `mappings/bar`)
+  that would pollute the wrong table scope. `scaffold-source --repo <dir>` also
+  prints a `seshat next --repo <dir>` follow-up so the guidance targets the
+  scaffolded workspace, not the caller's cwd. (A residual TOCTOU race in the
+  per-file write is tracked as a scoped follow-up, #345.)
+
 ### Fixed
 - **`dbt plan` no longer swallows the underlying dbt parse error** (#341): a
   failed non-database PARSE runs under `--log-format json`, so the Compilation

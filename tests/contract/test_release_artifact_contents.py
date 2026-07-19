@@ -47,15 +47,30 @@ def test_public_metadata_requires_urls_license_readme_and_safe_dependencies() ->
         _validate_metadata(bad)
 
 
+# A complete, valid wheel member list -- packages, both force-included pack
+# schemas, all three force-included Stage-1 templates (#339), plus the
+# entry-point and license metadata. Single-sourced so a new required asset is
+# added in ONE place; every wheel-inventory test derives its fixture from this.
+_VALID_WHEEL_INVENTORY = (
+    "seshat/__init__.py",
+    "retail/__init__.py",
+    "seshat/packs/schemas/seshat-extension-pack.schema.json",
+    "seshat/packs/schemas/seshat-pack-registry.schema.json",
+    "seshat/stage1_templates/source-profile.md",
+    "seshat/stage1_templates/readiness-status.yaml",
+    "seshat/stage1_templates/source-map.yaml",
+    "seshat_bi-0.2.0.dist-info/entry_points.txt",
+    "seshat_bi-0.2.0.dist-info/licenses/LICENSE",
+)
+
+
+def _wheel_inventory_without(fragment: str) -> list[str]:
+    """The valid inventory minus every member whose name contains ``fragment``."""
+    return [name for name in _VALID_WHEEL_INVENTORY if fragment not in name]
+
+
 def test_wheel_inventory_requires_packages_entrypoints_and_license() -> None:
-    valid = [
-        "seshat/__init__.py",
-        "retail/__init__.py",
-        "seshat/packs/schemas/seshat-extension-pack.schema.json",
-        "seshat/packs/schemas/seshat-pack-registry.schema.json",
-        "seshat_bi-0.2.0.dist-info/entry_points.txt",
-        "seshat_bi-0.2.0.dist-info/licenses/LICENSE",
-    ]
+    valid = list(_VALID_WHEEL_INVENTORY)
     validate_wheel_inventory(valid)
     with pytest.raises(ArtifactInspectionError, match="development-only"):
         validate_wheel_inventory([*valid, "tests/test_release.py"])
@@ -70,18 +85,20 @@ def test_wheel_inventory_requires_pack_runtime_schemas() -> None:
     """The `pack` family reads these schemas at runtime; they reach the wheel
     only via force-include, so a dropped entry must fail the artifact gate
     rather than silently reintroduce the clean-install FileNotFoundError."""
-    base = [
-        "seshat/__init__.py",
-        "retail/__init__.py",
-        "seshat/packs/schemas/seshat-extension-pack.schema.json",
-        "seshat/packs/schemas/seshat-pack-registry.schema.json",
-        "seshat_bi-0.2.0.dist-info/entry_points.txt",
-        "seshat_bi-0.2.0.dist-info/licenses/LICENSE",
-    ]
-    validate_wheel_inventory(base)
-    without_schema = [n for n in base if "seshat-pack-registry.schema.json" not in n]
+    validate_wheel_inventory(list(_VALID_WHEEL_INVENTORY))
+    without_schema = _wheel_inventory_without("seshat-pack-registry.schema.json")
     with pytest.raises(ArtifactInspectionError, match="required package data"):
         validate_wheel_inventory(without_schema)
+
+
+def test_wheel_inventory_requires_stage1_templates() -> None:
+    """The three Stage-1 blank templates reach the wheel only via force-include
+    (issue #339). A dropped entry must fail the artifact gate rather than
+    silently reintroduce the pip-user 'nothing to copy' bug."""
+    validate_wheel_inventory(list(_VALID_WHEEL_INVENTORY))
+    without_profile = _wheel_inventory_without("stage1_templates/source-profile.md")
+    with pytest.raises(ArtifactInspectionError, match="required package data"):
+        validate_wheel_inventory(without_profile)
 
 
 def test_sdist_inventory_is_rebuildable_without_repo_integrations() -> None:
