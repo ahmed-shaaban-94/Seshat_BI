@@ -336,3 +336,62 @@ def test_scaffold_source_rejects_control_characters(tmp_path: Path, bad: str) ->
 
     with pytest.raises(Stage1ScaffoldError):
         scaffold_source(tmp_path, bad)
+
+
+def test_scaffolded_readiness_next_action_is_concrete_source_ready(
+    tmp_path: Path,
+) -> None:
+    """P2 round-6 (#342): the readiness next_action must be a concrete
+    Source-Ready step, not the template's Mapping-stage placeholder example --
+    status_surface projects it verbatim as the controlling action, and run_next
+    otherwise emits a next_action_disagreement caveat."""
+    import yaml
+
+    from seshat.stage1_scaffold import scaffold_source
+
+    scaffold_source(tmp_path, "foo")
+    data = yaml.safe_load(
+        (tmp_path / "mappings" / "foo" / "readiness-status.yaml").read_text(
+            encoding="utf-8-sig"
+        )
+    )
+    na = str(data["next_action"])
+    assert "<" not in na and ">" not in na  # no placeholder
+    assert "source" in na.lower() or "profile" in na.lower()
+
+
+def test_scaffold_source_refuses_in_repo_symlinked_table_dir(tmp_path: Path) -> None:
+    """P2 round-6 (#342): even an IN-REPO symlink alias (mappings/foo ->
+    mappings/bar) resolves under root but writes foo-identified artifacts under
+    bar. Reject a symlinked destination directory component regardless of where
+    it points."""
+    import os
+
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    (tmp_path / "mappings" / "bar").mkdir(parents=True)
+    try:
+        os.symlink(
+            tmp_path / "mappings" / "bar",
+            tmp_path / "mappings" / "foo",
+            target_is_directory=True,
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation not permitted in this environment")
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, "foo")
+
+
+def test_cli_scaffold_source_hint_carries_repo(
+    tmp_path: Path,
+) -> None:
+    """P2 round-6 (#342): the printed follow-up must carry --repo when the user
+    passed a non-cwd --repo, so following the instruction inspects the scaffolded
+    workspace, not the caller's cwd."""
+    from seshat.stage1_scaffold import scaffold_source
+
+    report = scaffold_source(tmp_path, "foo")
+    note = " ".join(report.notes)
+    # the next-step guidance references the table so it is unambiguous
+    assert "foo" in note

@@ -49,9 +49,16 @@ explicitly identifies a public release event.
   and `source_id` identity fields are set to the requested table (so
   `seshat next` attributes the scope to it, not the literal placeholder); and
   the `source-map.yaml` `profiled_from` provenance is retargeted at the
-  materialized `mappings/<table>/source-profile.md`. The table name also
-  rejects ASCII control characters (invalid on Windows; would corrupt the
-  line-oriented CLI output).
+  materialized `mappings/<table>/source-profile.md`; and its `next_action` is a
+  concrete Source-Ready step (not the template's Mapping-stage example, which
+  `seshat status` would otherwise project as the controlling action). The table
+  name rejects ASCII control characters (invalid on Windows; would corrupt the
+  line-oriented CLI output), and the write refuses any symlinked destination
+  component -- including an in-repo alias (`mappings/foo` -> `mappings/bar`)
+  that would pollute the wrong table scope. `scaffold-source --repo <dir>` also
+  prints a `seshat next --repo <dir>` follow-up so the guidance targets the
+  scaffolded workspace, not the caller's cwd. (A residual TOCTOU race in the
+  per-file write is tracked as a scoped follow-up, #345.)
 
 ### Fixed
 - **`dbt plan` no longer swallows the underlying dbt parse error** (#341): a

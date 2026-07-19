@@ -33,4 +33,11 @@ def scaffold_source_main(args: argparse.Namespace) -> int:
         print(f"kept {rel} (already present; not overwritten)")
     for note in report.notes:
         print(f"\nnext: {note}")
+    # Carry --repo into the follow-up so `seshat next` inspects the scaffolded
+    # workspace, not the caller's cwd (the next parser defaults --repo to '.').
+    if args.repo not in (".", ""):
+        print(
+            f"      run it against this workspace: "
+            f"`seshat next --repo {args.repo} --table {args.table}`"
+        )
     return 0

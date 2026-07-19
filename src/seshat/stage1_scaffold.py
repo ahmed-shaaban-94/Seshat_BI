@@ -55,6 +55,15 @@ _READINESS_INITIAL_STAGE = 'current_stage: "source_ready"'
 _READINESS_TABLE_REF = 'table: "<schema>.<table>"'
 _READINESS_SOURCE_ID_REF = 'source_id: "<source_id>"'
 
+# next_action is projected verbatim by status_surface as the CONTROLLING action;
+# the template ships a Mapping-stage EXAMPLE, which would present the wrong
+# guidance for a not-started Source-Ready scope (and trip run_next's
+# next_action_disagreement caveat). Materialize a concrete Stage-1 action.
+_READINESS_NEXT_ACTION_REF = (
+    'next_action: "<one concrete next step, e.g. '
+    "'resolve open grain question in mappings/<table>/unresolved-questions.md'>\""
+)
+
 # source-map.yaml's meta.profiled_from points at the dev-repo template path,
 # which a pip-only workspace does not have. Retarget it at the materialized
 # profile so a completed map cites the profile it actually rests on.
@@ -157,13 +166,24 @@ def _validate_table(table: str) -> str:
 
 
 def _guard_destination_within_root(root: Path, dest_dir: Path) -> None:
-    """Refuse a destination that resolves outside ``root`` (symlink escape).
+    """Refuse a symlinked destination component, or one resolving outside ``root``.
 
-    If ``mappings`` or ``mappings/<table>`` is a directory symlink out of the
-    repo, ``_write_if_absent`` would follow it and write outside ``--repo``.
-    Resolve the destination and require it stay under ``root`` (mirrors
+    Two escape classes: a component symlinked OUT of the repo (``_write_if_absent``
+    would write outside ``--repo``), and an IN-REPO alias (``mappings/foo`` ->
+    ``mappings/bar``) that resolves under ``root`` but writes ``foo``-identified
+    artifacts under ``bar``, polluting the wrong table scope. Refuse ANY symlinked
+    ``mappings`` / ``mappings/<table>`` component regardless of target, then
+    require the resolved path stay under ``root`` (mirrors
     ``workspace_init._validate_target``'s outside-root guard).
     """
+    # Refuse a symlinked directory component (in-repo alias OR outside-root).
+    for component in (dest_dir.parent, dest_dir):
+        if component.is_symlink():
+            raise Stage1ScaffoldError(
+                f"refusing to scaffold through a symlinked path component: "
+                f"{component} is a symlink (it would write to the wrong table "
+                "scope or escape --repo); remove it and retry"
+            )
     resolved = dest_dir.resolve()
     try:
         resolved.relative_to(root)
@@ -205,6 +225,13 @@ def _materialized_bytes(name: str, table: str) -> bytes:
         text = text.replace(_READINESS_PLACEHOLDER_STAGE, _READINESS_INITIAL_STAGE)
         text = text.replace(_READINESS_SOURCE_ID_REF, f'source_id: "{table}"')
         text = text.replace(_READINESS_TABLE_REF, f'table: "{table}"')
+        text = text.replace(
+            _READINESS_NEXT_ACTION_REF,
+            'next_action: "Fill the read-only source profile in '
+            f"mappings/{table}/source-profile.md (Table id, Row count, the "
+            "Per-column profile table, the PK proof), then submit the mapping "
+            'for review."',
+        )
     elif name == "source-map.yaml":
         text = text.replace(
             _SOURCE_MAP_PROFILE_REF,
