@@ -94,6 +94,19 @@ def test_open_gate_is_a_warning_not_a_blocker(tmp_path: Path) -> None:
     assert "demo_table" in gate_findings[0].message
 
 
+def test_uncommitted_gate_artifact_names_the_commit_remedy(tmp_path: Path) -> None:
+    """The `_repo` fixture is deliberately NOT a git repo, so its CLEARED
+    mirror reads as UNCOMMITTED (#334): the doctor must name the commit
+    remedy instead of implying the reviewer still has to clear the gate."""
+    findings = doctor.run_doctor(_repo(tmp_path))
+    gate_findings = [f for f in findings if f.id == "DAG-GATE-01"]
+    assert gate_findings
+    assert "UNCOMMITTED" in gate_findings[0].message
+    assert (
+        "commit mappings/demo_table/unresolved-questions.md" in gate_findings[0].remedy
+    )
+
+
 def test_absent_dsn_is_a_warning_and_present_dsn_is_never_echoed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

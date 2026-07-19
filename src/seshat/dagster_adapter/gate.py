@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from seshat.gitstate import is_tracked_and_clean
+
 # Both committed phrasings are real: the retail_store_sales instance writes a
 # bold bullet (`- **Gate status:** \`CLEARED\``); the demo_sample_orders
 # instance writes a heading (`## Gate status: CLEARED`). Read either; anything
@@ -46,16 +48,20 @@ class GateState:
     """The committed gate state for one table -- an immutable read-only view."""
 
     table: str
-    gate_status: str  # "CLEARED" | "OPEN" | "MISSING" (or the verbatim token)
+    # "CLEARED" | "OPEN" | "MISSING" | "UNCOMMITTED" (or the verbatim token).
+    # UNCOMMITTED means the mirror exists in the worktree but is untracked or
+    # carries uncommitted edits -- never a GO signal (#334).
+    gate_status: str
     open_rows: int
     approvals: tuple[Approval, ...]
     publish_ready: str  # verbatim stage status, or "missing"
 
     @property
     def silver_permitted(self) -> bool:
-        """The ONLY GO signal for the silver build (Principle IV): a committed
-        ``Gate status: CLEARED`` with zero open rows. Never computed from
-        anything else; never writable from here."""
+        """The ONLY GO signal for the silver build (Principle IV): a COMMITTED
+        ``Gate status: CLEARED`` with zero open rows (an uncommitted mirror
+        reads as UNCOMMITTED, #334). Never computed from anything else; never
+        writable from here."""
         return self.gate_status == "CLEARED" and self.open_rows == 0
 
     def approval_for(self, stage: str) -> Approval | None:
@@ -114,14 +120,21 @@ def _read_readiness(table_dir: Path) -> tuple[tuple[Approval, ...], str]:
 
 
 def read_gate_state(repo_root: Path, table: str) -> GateState:
-    """Read the committed gate state for ``table`` under ``repo_root``.
+    """Read the COMMITTED gate state for ``table`` under ``repo_root``.
 
     Missing artifacts are reported as MISSING/missing -- never guessed, never
     treated as approval (fail-closed is the caller's duty on anything that is
-    not an explicit CLEARED + zero open rows).
+    not an explicit CLEARED + zero open rows). A mirror that exists but is
+    untracked or dirty against HEAD reads as UNCOMMITTED (#334): a
+    worktree-only clearance never entered audit history and may disappear on
+    checkout, so it must never permit the silver build.
     """
     table_dir = Path(repo_root) / "mappings" / table
     gate_status, open_rows = _read_unresolved(table_dir)
+    if gate_status != "MISSING" and not is_tracked_and_clean(
+        Path(repo_root), f"mappings/{table}/unresolved-questions.md"
+    ):
+        gate_status = "UNCOMMITTED"
     approvals, publish_ready = _read_readiness(table_dir)
     return GateState(
         table=table,

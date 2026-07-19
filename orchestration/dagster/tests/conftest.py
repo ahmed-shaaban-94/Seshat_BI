@@ -8,11 +8,27 @@ is deliberately generic (Principle VII).
 from __future__ import annotations
 
 import hashlib
+import subprocess
 from pathlib import Path
 
 import pytest
 
 TABLE = "demo_table"
+
+
+def _git_commit_all(root: Path) -> None:
+    """Commit the fixture: the gate GO signal requires COMMITTED artifacts
+    (seshat.dagster_adapter.gate reads UNCOMMITTED otherwise, issue #334)."""
+    for argv in (
+        ["git", "init", "-b", "main"],
+        ["git", "config", "user.email", "t@example.com"],
+        ["git", "config", "user.name", "Test"],
+        ["git", "config", "commit.gpgsign", "false"],
+        ["git", "add", "-A"],
+        ["git", "commit", "-m", "fixture"],
+    ):
+        subprocess.run(argv, cwd=root, check=True, capture_output=True)
+
 
 UNRESOLVED_TEMPLATE = """# Unresolved questions -- `{table}`
 
@@ -109,6 +125,7 @@ def make_fixture_repo(
     raw = root / "data" / "raw"
     raw.mkdir(parents=True)
     (raw / f"{TABLE}.csv").write_text("id,amount\n1,10\n2,20\n", encoding="utf-8")
+    _git_commit_all(root)
     return root
 
 
