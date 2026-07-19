@@ -27,6 +27,20 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Fixed
+- **`validate` / `drift` / `value-check` now load the workspace `.env`** (#340):
+  the live-connection resolvers read `dict(os.environ)` only, so a user who put
+  the `ANALYTICS_DB_*` credentials in the gitignored `.env` -- exactly as the
+  error text, `.env.example`, and README all instruct -- still got "no database
+  connection configured". A new `seshat.connection_env.connection_environment`
+  merges `.env` into a copy of the process env (real environment variables win
+  over `.env`; the process is never mutated), reusing the governed
+  dependency-free `.env` parser from `dbt.redaction` -- no `python-dotenv`
+  dependency added. (Scoped follow-ups: `drift`'s postgres path is still gated
+  on `--dsn` upstream, so full postgres-drift-from-`.env` parity needs that gate
+  relaxed; and the driver hint still prints `retail[db]` where the installable
+  extra is `seshat-bi[db]`.)
+
 ## [0.5.0] -- 2026-07-19
 
 ### Added

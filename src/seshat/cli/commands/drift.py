@@ -93,14 +93,22 @@ def _run_deferred_drift(args: argparse.Namespace, parsed: object) -> int:
 
 
 def _resolve_live_config(args: argparse.Namespace, cli: object, dialect: object):
-    """Resolve the engine's DB config (Postgres: --dsn wins; else env). None-safe."""
-    import os
+    """Resolve the engine's DB config (Postgres: --dsn wins; else env). None-safe.
 
+    The env is the process environment merged with the workspace `.env` (#340),
+    so a user who put `ANALYTICS_DB_*` in `.env` -- as the tool instructs -- is
+    honored. (Postgres drift is still gated on `--dsn` upstream in `run_drift`;
+    the `.env` merge fixes the non-postgres path and the connection env parity.)
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import connection_environment
     from seshat.validate import resolve_dsn
 
+    base_env = connection_environment(Path.cwd())
     if cli._current_engine() == "postgres":
-        return resolve_dsn({**os.environ, "DATABASE_URL": args.dsn})
-    return dialect.resolve_config(dict(os.environ))
+        return resolve_dsn({**base_env, "DATABASE_URL": args.dsn})
+    return dialect.resolve_config(base_env)
 
 
 def _source_map_path(args: argparse.Namespace) -> Path | None:

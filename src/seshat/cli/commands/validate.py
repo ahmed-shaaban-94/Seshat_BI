@@ -12,6 +12,34 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import Callable
+
+
+def _resolve_config(
+    args: argparse.Namespace,
+    engine: str,
+    dialect: object,
+    resolve_dsn: Callable[[dict[str, str]], str | None],
+) -> object:
+    """Resolve the engine's DB config. None-safe.
+
+    Postgres: ``--dsn`` wins, else the env; other engines resolve from env only
+    (``--dsn`` is not applicable). The env is the process environment merged
+    with the workspace ``.env`` (#340): a user who put ``ANALYTICS_DB_*`` in the
+    gitignored ``.env`` -- as the tool instructs -- is honored, with real
+    environment variables still winning over the file. Extracted from
+    ``run_validate`` to keep it below the CodeScene complexity threshold and to
+    mirror ``value_check._resolve_config`` / ``drift._resolve_live_config``.
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import connection_environment
+
+    base_env = connection_environment(Path.cwd())
+    if engine == "postgres":
+        env = base_env if not args.dsn else {**base_env, "DATABASE_URL": args.dsn}
+        return resolve_dsn(env)
+    return dialect.resolve_config(base_env)  # type: ignore[attr-defined]
 
 
 def run_validate(args: argparse.Namespace) -> int:
@@ -35,8 +63,6 @@ def run_validate(args: argparse.Namespace) -> int:
       * no ``--source-map`` -> report the deferred state (the surface is built and
         fixture-tested; a live run needs a table's targets). Returns 1.
     """
-    import os
-
     from seshat import cli
     from seshat.core import Severity
     from seshat.dialect import get_dialect
@@ -48,13 +74,7 @@ def run_validate(args: argparse.Namespace) -> int:
 
     # 1. Resolve the engine's config. Postgres: --dsn wins; else env (UNCHANGED
     #    behavior). Other engines: --dsn is not applicable; resolve from env only.
-    if engine == "postgres":
-        env = dict(os.environ)
-        if args.dsn:
-            env = {**env, "DATABASE_URL": args.dsn}
-        config = resolve_dsn(env)
-    else:
-        config = dialect.resolve_config(dict(os.environ))
+    config = _resolve_config(args, engine, dialect, resolve_dsn)
     if config is None:
         print(
             "error: no database connection configured.\n"

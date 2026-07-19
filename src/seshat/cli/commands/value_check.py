@@ -71,17 +71,19 @@ def _resolve_engine_config(engine: str, args: argparse.Namespace) -> object:
     Postgres: --dsn wins; else env (UNCHANGED behavior). Other engines: --dsn is
     not applicable; resolve from env only.
     """
-    import os
+    from pathlib import Path
 
+    from seshat.connection_env import connection_environment
     from seshat.dialect import get_dialect
     from seshat.validate import resolve_dsn
 
+    base_env = connection_environment(Path.cwd())  # process env + workspace .env (#340)
     if engine == "postgres":
-        env = dict(os.environ)
+        env = base_env
         if args.dsn:
             env = {**env, "DATABASE_URL": args.dsn}
         return resolve_dsn(env)
-    return get_dialect(engine).resolve_config(dict(os.environ))
+    return get_dialect(engine).resolve_config(base_env)
 
 
 def _parse_one_contract(
