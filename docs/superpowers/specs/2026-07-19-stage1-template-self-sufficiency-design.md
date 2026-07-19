@@ -132,6 +132,13 @@ runs `seshat next` on an empty workspace learns the command exists.
   are required wheel inventory; dropping one raises `ArtifactInspectionError`.
 - `tests/unit/test_cli_scaffold_source.py`: the verb wires up, prints
   written/kept, and returns exit 0 / non-zero on refusal.
+- `tests/unit/test_capability_inventory.py` (existing gate — no new test):
+  adding `scaffold-source` to `_DISPATCH` requires a matching
+  `docs/capabilities/capabilities.yaml` entry in the same commit, or the
+  capability-inventory contract fails (a `_DISPATCH` key with no manifest entry
+  is an "unlisted wired command"). The entry's `references.dispatch` supplies
+  the positive ship signal; `documentation` points at this design doc (must
+  exist); `readiness_stage: source_ready`.
 - **End-to-end degrade test:** `scaffold_source(root, "foo")` → `run_next` /
   `agent_next` yields Source-Ready guidance (not the malformed-repair path); a
   `seshat check` over the scaffolded workspace stays clean.
@@ -144,6 +151,7 @@ runs `seshat next` on an empty workspace learns the command exists.
 | `src/seshat/stage1_scaffold.py` | **new** — resolver + `scaffold_source` |
 | `src/seshat/cli/commands/scaffold_source.py` | **new** — verb handler |
 | `src/seshat/cli/parser.py` | wire `scaffold-source <table>` |
+| `docs/capabilities/capabilities.yaml` | classify the new CLI verb (enforced by `test_capability_inventory`) |
 | `src/seshat/agent_next.py` | mention `scaffold-source` in Source-Ready guidance |
 | `scripts/inspect_release_artifacts.py` | +3 to `_REQUIRED_WHEEL_PACKAGE_DATA` |
 | `tests/unit/test_stage1_scaffold.py` | **new** |

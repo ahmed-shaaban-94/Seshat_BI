@@ -431,15 +431,42 @@ Then, in `_build_parser` (~line 1070), add the call immediately after `_add_init
     "scaffold-source": _lazy(".commands.scaffold_source", "scaffold_source_main"),
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [ ] **Step 6: Register the capability (REQUIRED — closes a gate the CLI wiring opens)**
 
-Run: `python -m pytest tests/unit/test_cli_scaffold_source.py -v`
-Expected: PASS (all 3 cases).
+**Why this step exists:** `docs/capabilities/capabilities.yaml` is the enforced classification of every `_DISPATCH` verb. `tests/unit/test_capability_inventory.py` (via `tests/unit/_capability_oracle.py`) fails the suite if a `_DISPATCH` key has no matching capability entry (`test_o2_unlisted_wired_command_fails`). So the moment Step 5 adds `scaffold-source` to `_DISPATCH`, the manifest MUST gain a matching entry in the SAME commit, or the contract suite goes red. Verified constraints on the entry:
+- The record is a CLOSED schema (`_assert_closed_schema`: `set(record) == DECLARED_RECORD_FIELDS`) — use exactly the fields below, no more, no fewer.
+- `documentation` must be a path that EXISTS in the repo (checked against the real tree). Point it at the committed design doc.
+- `state: shipped` requires a positive ship signal; `references.dispatch: "scaffold-source"` naming a real `_DISPATCH` key satisfies it (`has_positive_ship_signal`). No roadmap/status-claims wiring needed.
 
-- [ ] **Step 7: Commit**
+In `docs/capabilities/capabilities.yaml`, add this entry immediately after the `init-project` entry (the `- id: init-project` block, ends at its `dispatch: "init-project"` line ~160). Match the exact field shape of the neighboring `init-project` entry:
+
+```yaml
+  - id: scaffold-source
+    name: "seshat scaffold-source"
+    summary: "Writes the three Stage-1 blank templates (source-profile.md, readiness-status.yaml, source-map.yaml) into mappings/<table>/ so a pip-only workspace has the Source-Ready artifacts to fill."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: []
+    provenance: locally-verified
+    readiness_stage: source_ready
+    command: "scaffold-source"
+    documentation: "docs/superpowers/specs/2026-07-19-stage1-template-self-sufficiency-design.md"
+    references:
+      dispatch: "scaffold-source"
+```
+
+Note on `readiness_stage`: it must be `not-stage-scoped` OR a valid `stages.*` key (oracle O8). `source_ready` is the first readiness stage (confirmed in `run_next._STAGES` / `agent_next._STAGE_LABELS`) — correct here because this verb serves Stage 1 specifically. If the O8 check rejects `source_ready` at test time (i.e. the valid token set is different), fall back to `not-stage-scoped` (always valid) and re-run.
+
+- [ ] **Step 7: Run the CLI test AND the capability-inventory contract test to verify both pass**
+
+Run: `python -m pytest tests/unit/test_cli_scaffold_source.py tests/unit/test_capability_inventory.py -v`
+Expected: PASS. The capability test proves the `_DISPATCH` verb ↔ manifest entry are reconciled. If `test_o8` or the closed-schema check fails, fix the entry per the notes in Step 6.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/seshat/cli/commands/scaffold_source.py src/seshat/cli/parser.py src/seshat/cli/__init__.py tests/unit/test_cli_scaffold_source.py
+git add src/seshat/cli/commands/scaffold_source.py src/seshat/cli/parser.py src/seshat/cli/__init__.py docs/capabilities/capabilities.yaml tests/unit/test_cli_scaffold_source.py
 git commit -m "feat: add `seshat scaffold-source <table>` verb (#339)"
 ```
 
@@ -662,10 +689,12 @@ _FRESH_NEXT_ACTION = (
 )
 ```
 
-- [ ] **Step 4: Run the test AND the existing agent_next tests to verify none asserted the old exact string**
+- [ ] **Step 4: Run the new test AND any test touching this guidance to verify none asserted the old string**
 
-Run: `python -m pytest tests/unit/test_agent_next_source_ready_pointer.py tests/unit -k "agent_next or fresh or next" -v`
-Expected: PASS. If any existing test asserted the OLD `_FRESH_NEXT_ACTION` verbatim, update that assertion to match the new text (it is guidance copy, not a contract).
+Pre-verified during design: the old fragment `"onboard one table"` appears ONLY in `src/seshat/agent_next.py` — no golden/schema fixture asserts the full text. So the edit is safe. Confirm nothing regressed:
+
+Run: `python -m pytest tests/unit/test_agent_next_source_ready_pointer.py tests/unit -k "agent_next or run_next or fresh or next_action" -v`
+Expected: PASS. If any existing test asserted the OLD `_FRESH_NEXT_ACTION` verbatim (none found during design), update that assertion to the new text — it is guidance copy, not a contract.
 
 - [ ] **Step 5: Commit**
 
