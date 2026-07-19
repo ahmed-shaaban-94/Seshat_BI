@@ -1,13 +1,13 @@
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from seshat.dashboard.render import (
-    render_page,
-    _STATUS_STYLE,
-    _STAGE_ORDER,
     _STAGE_LABELS_AR,
+    _STAGE_ORDER,
+    _STATUS_STYLE,
+    render_page,
 )
+
+pytestmark = pytest.mark.unit
 
 
 def test_status_style_covers_all_four_statuses():
