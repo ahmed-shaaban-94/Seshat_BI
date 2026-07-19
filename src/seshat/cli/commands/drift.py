@@ -93,7 +93,14 @@ def _run_deferred_drift(args: argparse.Namespace, parsed: object) -> int:
 
 
 def _resolve_live_config(args: argparse.Namespace, cli: object, dialect: object):
-    """Resolve the engine's DB config (Postgres: --dsn wins; else env). None-safe."""
+    """Resolve the engine's DB config from the (already `.env`-applied) env.
+
+    Postgres: ``--dsn`` wins; else the env. ``os.environ`` already carries the
+    workspace ``.env`` values here because ``_run_live_drift`` runs inside
+    ``applied_dotenv`` (#340). None-safe. (Postgres drift is still gated on
+    ``--dsn`` upstream in ``run_drift``; the `.env` application fixes engine
+    selection, the non-postgres path, and the connection-env parity.)
+    """
     import os
 
     from seshat.validate import resolve_dsn
@@ -149,7 +156,36 @@ def _uncomparable_precondition(parsed: object) -> str | None:
 
 
 def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
-    """Live leg: re-profile the SAME table on the baseline's STATED PK, diff, emit.
+    """Live leg: apply the workspace `.env` (#340), then re-profile and diff.
+
+    Thin wrapper: ``applied_dotenv`` makes engine selection and connection
+    resolution see the documented ``ANALYTICS_DB_*`` values for the body; a
+    malformed ``.env`` fails clean (exit 1, no traceback).
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import ConnectionConfigError, applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    try:
+        with applied_dotenv(Path.cwd()):
+            return _run_live_drift_body(args, parsed)
+    except EnvironmentConfigError as exc:
+        print(
+            f"retail drift: could not read the workspace .env: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    except ConnectionConfigError as exc:
+        print(
+            f"retail drift: invalid database connection setting: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def _run_live_drift_body(args: argparse.Namespace, parsed: object) -> int:
+    """Re-profile the SAME table on the baseline's STATED PK, diff, emit.
 
     Mirrors run_validate's DB-boundary discipline -- gate on the lazy driver and
     scrub every DB-boundary exception through dialect.redact(exc, config) so a DSN
@@ -158,12 +194,15 @@ def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
     grain_pk_drift can't be fabricated.
     """
     from seshat import cli
+    from seshat.connection_env import as_connection_config
     from seshat.dialect import get_dialect
     from seshat.drift import ReportContext, to_findings_dict
     from seshat.profile import profile as run_profile
 
-    dialect = get_dialect(cli._current_engine())
-    config = _resolve_live_config(args, cli, dialect)
+    # Convert an invalid engine/port setting into a clean boundary failure;
+    # the re-profile body below stays outside the wrap (its ValueErrors are real).
+    dialect = as_connection_config(lambda: get_dialect(cli._current_engine()))
+    config = as_connection_config(lambda: _resolve_live_config(args, cli, dialect))
     if config is None:
         print(
             "retail drift: no database connection configured for the live "

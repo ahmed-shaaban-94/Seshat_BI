@@ -110,7 +110,13 @@ def _dotenv_entry(number: int, source: str) -> tuple[str, str] | None:
     return key, _unquote_dotenv_value(value, number)
 
 
-def _dotenv_values(path: Path) -> dict[str, str]:
+def dotenv_values(path: Path) -> dict[str, str]:
+    """Parse a `.env` file into a key->value dict (dependency-free).
+
+    Public because live-connection resolution (issue #340) reuses this exact
+    governed parser rather than adding python-dotenv. Raises
+    ``EnvironmentConfigError`` on a malformed file or a duplicate key.
+    """
     values: dict[str, str] = {}
     for number, source in enumerate(_dotenv_lines(path), start=1):
         entry = _dotenv_entry(number, source)
@@ -121,6 +127,11 @@ def _dotenv_values(path: Path) -> dict[str, str]:
             raise EnvironmentConfigError(f".env contains duplicate key {key}")
         values[key] = value
     return values
+
+
+# Backwards-compatible private alias: existing callers imported the underscore
+# name; keep it pointing at the now-public function so nothing breaks.
+_dotenv_values = dotenv_values
 
 
 def load_child_environment(repo_root: Path) -> dict[str, str]:

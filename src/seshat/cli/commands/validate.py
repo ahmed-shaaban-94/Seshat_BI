@@ -12,9 +12,59 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import Callable
+
+
+def _resolve_config(
+    args: argparse.Namespace,
+    engine: str,
+    dialect: object,
+    resolve_dsn: Callable[[dict[str, str]], str | None],
+) -> object:
+    """Resolve the engine's DB config from the (already `.env`-applied) env.
+
+    Postgres: ``--dsn`` wins, else the env; other engines resolve from env only
+    (``--dsn`` is not applicable). ``os.environ`` already carries the workspace
+    ``.env`` values here because the caller runs inside ``applied_dotenv`` (#340),
+    so this reads the process env directly. Extracted to keep ``run_validate``
+    below the CodeScene complexity threshold and to mirror
+    ``value_check._resolve_config`` / ``drift._resolve_live_config``.
+    """
+    import os
+
+    if engine == "postgres":
+        env = dict(os.environ)
+        if args.dsn:
+            env = {**env, "DATABASE_URL": args.dsn}
+        return resolve_dsn(env)
+    return dialect.resolve_config(dict(os.environ))  # type: ignore[attr-defined]
 
 
 def run_validate(args: argparse.Namespace) -> int:
+    """Run the LIVE validators against a real DB, honoring the workspace `.env`.
+
+    Thin wrapper: apply the workspace ``.env`` (#340) for the whole body so
+    engine selection, driver choice, and config resolution all see the
+    documented ``ANALYTICS_DB_*`` values, then delegate. A malformed ``.env``
+    fails clean (exit 1, no traceback) rather than raising at the DB boundary.
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import ConnectionConfigError, applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    try:
+        with applied_dotenv(Path.cwd()):
+            return _run_validate_body(args)
+    except EnvironmentConfigError as exc:
+        print(f"error: could not read the workspace .env: {exc}", file=sys.stderr)
+        return 1
+    except ConnectionConfigError as exc:
+        print(f"error: invalid database connection setting: {exc}", file=sys.stderr)
+        return 1
+
+
+def _run_validate_body(args: argparse.Namespace) -> int:
     """Run the LIVE validators against a real DB.
 
     The DB driver import is LAZY (via ``_ensure_driver`` / ``_make_runner``,
@@ -35,26 +85,25 @@ def run_validate(args: argparse.Namespace) -> int:
       * no ``--source-map`` -> report the deferred state (the surface is built and
         fixture-tested; a live run needs a table's targets). Returns 1.
     """
-    import os
-
     from seshat import cli
+    from seshat.connection_env import as_connection_config
     from seshat.core import Severity
     from seshat.dialect import get_dialect
     from seshat.runner import _format  # reuse the [severity] id (locator) format
     from seshat.validate import resolve_dsn, run_live_checks
 
+    # Engine + config resolution can raise ValueError on an invalid setting
+    # (unknown ANALYTICS_DB_ENGINE, unparseable port); convert those to a clean
+    # boundary failure. The live-check body below is deliberately OUTSIDE this
+    # wrap so its own ValueErrors are never masked.
     engine = cli._current_engine()
-    dialect = get_dialect(engine)
+    dialect = as_connection_config(lambda: get_dialect(engine))
 
     # 1. Resolve the engine's config. Postgres: --dsn wins; else env (UNCHANGED
     #    behavior). Other engines: --dsn is not applicable; resolve from env only.
-    if engine == "postgres":
-        env = dict(os.environ)
-        if args.dsn:
-            env = {**env, "DATABASE_URL": args.dsn}
-        config = resolve_dsn(env)
-    else:
-        config = dialect.resolve_config(dict(os.environ))
+    config = as_connection_config(
+        lambda: _resolve_config(args, engine, dialect, resolve_dsn)
+    )
     if config is None:
         print(
             "error: no database connection configured.\n"
