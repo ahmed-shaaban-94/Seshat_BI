@@ -38,6 +38,19 @@ _STAGE1_FILES: tuple[str, ...] = (
 _BROKEN_LINK = "[ADR 0003](../docs/decisions/0003-mapping-artifact-location.md)"
 _LINK_REPLACEMENT = "ADR 0003 (mapping-artifact-location)"
 
+# readiness-status.yaml ships current_stage as a "<stage_key>" placeholder,
+# which RS1 rejects the moment the workspace is committed. A just-onboarded
+# table honestly IS at the first stage (source_ready, not-yet-passed) -- this is
+# a truthful stage LABEL, never fabricated evidence/approvals (which stay empty),
+# so the committed scaffold passes `retail check` as an unstarted journey.
+_READINESS_PLACEHOLDER_STAGE = 'current_stage: "<stage_key>"'
+_READINESS_INITIAL_STAGE = 'current_stage: "source_ready"'
+
+# source-map.yaml's meta.profiled_from points at the dev-repo template path,
+# which a pip-only workspace does not have. Retarget it at the materialized
+# profile so a completed map cites the profile it actually rests on.
+_SOURCE_MAP_PROFILE_REF = 'profiled_from: "templates/source-profile.md"'
+
 
 class Stage1ScaffoldError(ValueError):
     """Raised when ``table`` is not a safe single path segment."""
@@ -160,14 +173,28 @@ def _template_bytes(name: str) -> bytes:
     )
 
 
-def _materialized_bytes(name: str) -> bytes:
-    """Template bytes with per-file materialization fixups applied."""
-    data = _template_bytes(name)
+def _materialized_bytes(name: str, table: str) -> bytes:
+    """Template bytes with per-file, table-aware materialization fixups applied.
+
+    Each fixup makes the stub self-contained and gate-valid in a workspace that
+    has no ``templates/`` directory: neutralize the dev-repo ADR link, set a
+    truthful initial ``current_stage`` (so RS1 passes on commit), and retarget
+    ``profiled_from`` at the materialized profile. All are literal substitutions
+    on the committed template text; nothing is fabricated.
+    """
+    text = _template_bytes(name).decode("utf-8")
     if name == "source-profile.md":
-        return data.replace(
-            _BROKEN_LINK.encode("utf-8"), _LINK_REPLACEMENT.encode("utf-8")
+        text = text.replace(_BROKEN_LINK, _LINK_REPLACEMENT)
+    elif name == "readiness-status.yaml":
+        text = text.replace(
+            _READINESS_PLACEHOLDER_STAGE, _READINESS_INITIAL_STAGE
         )
-    return data
+    elif name == "source-map.yaml":
+        text = text.replace(
+            _SOURCE_MAP_PROFILE_REF,
+            f'profiled_from: "mappings/{table}/source-profile.md"',
+        )
+    return text.encode("utf-8")
 
 
 def _refuse_unwritable_target(target: Path) -> None:
@@ -224,7 +251,7 @@ def scaffold_source(repo_root: Path, table: str) -> Stage1Report:
     try:
         for name in _STAGE1_FILES:
             rel = f"mappings/{table}/{name}"
-            if _write_if_absent(dest_dir / name, _materialized_bytes(name)):
+            if _write_if_absent(dest_dir / name, _materialized_bytes(name, table)):
                 written.append(rel)
             else:
                 kept.append(rel)

@@ -41,7 +41,13 @@ explicitly identifies a public release event.
   path (a symlinked `mappings/` escaping `--repo`, or a directory/FIFO sitting
   where a Stage-1 file belongs), with an `OSError` backstop for the 260-char
   path limit -- so an unsafe name or hostile filesystem state yields the
-  documented refusal rather than a traceback or a misleading success.
+  documented refusal rather than a traceback or a misleading success. The
+  materialized `readiness-status.yaml` carries a truthful initial
+  `current_stage: source_ready` (not the `<stage_key>` placeholder), so a
+  committed scaffold passes the RS1 governance gate as an honest unstarted
+  Source-Ready journey with no fabricated evidence or approvals; the
+  `source-map.yaml` `profiled_from` provenance is retargeted at the
+  materialized `mappings/<table>/source-profile.md`.
 
 ### Fixed
 - **`dbt plan` no longer swallows the underlying dbt parse error** (#341): a

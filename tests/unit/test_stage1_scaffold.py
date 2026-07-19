@@ -222,3 +222,72 @@ def test_scaffold_source_refuses_non_file_output_collision(tmp_path: Path) -> No
 
     with pytest.raises(Stage1ScaffoldError):
         scaffold_source(tmp_path, "foo")
+
+
+def test_scaffolded_readiness_has_concrete_source_ready_stage(tmp_path: Path) -> None:
+    """P2 round-4 (#342): the scaffolded readiness-status.yaml must carry a
+    CONCRETE current_stage (source_ready), not the '<stage_key>' placeholder --
+    otherwise RS1 rejects it the moment the workspace is committed. A
+    just-onboarded table honestly IS at source_ready (not-yet-passed), so this
+    is a stage LABEL, never fabricated evidence/approvals."""
+    import yaml
+
+    from seshat.stage1_scaffold import scaffold_source
+
+    scaffold_source(tmp_path, "orders")
+    data = yaml.safe_load(
+        (tmp_path / "mappings" / "orders" / "readiness-status.yaml").read_text(
+            encoding="utf-8-sig"
+        )
+    )
+    assert data["current_stage"] == "source_ready"
+    # honesty: no fabricated evidence or approvals were introduced
+    assert data.get("evidence") == []
+    assert data.get("approvals") == []
+
+
+def test_scaffolded_readiness_passes_rs1_when_committed(tmp_path: Path) -> None:
+    """Regression lock (#342): a committed scaffold must pass RS1 -- the
+    `retail check` surface the original contract test missed. This is what
+    proves the degrade-to-unstarted promise holds through the GATE, not just
+    through `run_next`."""
+    import subprocess
+
+    from seshat.rules.readiness_status import check_readiness_status_consistency
+    from seshat.runner import build_context
+    from seshat.stage1_scaffold import scaffold_source
+
+    scaffold_source(tmp_path, "orders")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"],
+        cwd=tmp_path,
+        capture_output=True,
+    )
+
+    findings = list(check_readiness_status_consistency(build_context(tmp_path)))
+
+    assert findings == [], [getattr(f, "message", f) for f in findings]
+
+
+def test_scaffolded_source_map_profiled_from_points_at_materialized_profile(
+    tmp_path: Path,
+) -> None:
+    """P2 round-4 (#342): source-map's meta.profiled_from FIELD (the machine-read
+    provenance) must point at the MATERIALIZED profile
+    (mappings/<table>/source-profile.md), not the dev-repo
+    'templates/source-profile.md' a pip-only workspace does not have. (The
+    illustrative 'sister artifacts' comment block is documentation, left as-is.)"""
+    import yaml
+
+    from seshat.stage1_scaffold import scaffold_source
+
+    scaffold_source(tmp_path, "orders")
+    sm = (tmp_path / "mappings" / "orders" / "source-map.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert 'profiled_from: "mappings/orders/source-profile.md"' in sm
+    assert 'profiled_from: "templates/source-profile.md"' not in sm
+    data = yaml.safe_load(sm)
+    assert data["meta"]["profiled_from"] == "mappings/orders/source-profile.md"
