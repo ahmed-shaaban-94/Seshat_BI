@@ -27,6 +27,52 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+- **`kpi-contract-builder` verb** (spec 130 follow-through, PR #321): drives the
+  shipped `kpi_contracts` engine -- assess answerability, list the decisions to
+  approve, preview with per-field provenance, then draft/finalize; never
+  self-grants approval. Registered in the kit source and capability inventory.
+- **`seshat mapping-mirror` verb** (issue #326, PR #333): guarantees
+  `mappings/<table>/unresolved-questions.md` exists -- a CLEARED stub is derived
+  only from the COMMITTED readiness status (named-human C4-shaped `mapping_ready`
+  approval, non-empty evidence, no blockers); anything less yields an OPEN stub.
+  Never overwrites the human-authored ledger. Wired into the `source-mapping`
+  skill's gate step, closing the gap where a table could pass the whole readiness
+  spine and only then hard-fail the dbt gate (`DBT_MAPPING_MIRROR_MISSING`).
+- **`seshat dbt init` and `seshat dagster init` verbs** (issue #325, PR #335):
+  materialize the generic governed dbt working set and the table-neutral Dagster
+  orchestration project from wheel-bundled templates, so any workspace gains full
+  dbt/Dagster capability without the development repository (portable operating
+  contract). Only table-neutral content ships (constitution VII); `selectors.yml`
+  is generated table-neutral; both inits are per-file non-destructive and ensure
+  the secret/run-output ignore baseline.
+
+### Changed
+- **dbt parity evidence is table-agnostic and exact** (issue #324/PR #330 +
+  issue #331/PR #332): the rss-hardcoded assertion contracts were replaced by
+  class-driven validation, and exact fact-subject coverage was restored
+  generically -- the approved source map's `gold_star.fact` now REQUIRES
+  `business_key` (string or ordered list for composite grains) and
+  `additive_money_measures` (explicit `[]` for factless facts) tags, bound into
+  the digest-accepted plan (execution-plan `schema_version` is now 2; v1 plans
+  fail closed with a re-plan message). Evidence verifies every declared money
+  measure reconciles exactly once, the business-key count references exactly the
+  declared grain key, and the built fact model IS the approved relation. A
+  dbt-path mapping without the new tags now fails closed with
+  `DBT_FACT_SEMANTICS_MISSING` until the tags are declared and re-approved.
+- **The Dagster GO signal requires a committed gate artifact** (issue #334,
+  PR #336): `read_gate_state` reports `UNCOMMITTED` when
+  `unresolved-questions.md` is untracked or differs from HEAD (or the workspace
+  is not a git repository), so `silver_permitted` fails closed on any clearance
+  that never entered audit history; `seshat dagster doctor` names the commit
+  remedy. New shared `seshat.gitstate` hardened read-only git probes back both
+  this gate and `mapping-mirror`.
+
+### Fixed
+- **Windows Unicode crash and multi-table dbt validate** (PR #327): CLI output
+  is forced UTF-8 on Windows consoles, and `seshat dbt validate` handles more
+  than one governed table.
+
 ## [0.4.1] -- 2026-07-17
 
 ### Added
