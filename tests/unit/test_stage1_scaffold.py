@@ -155,3 +155,40 @@ def test_scaffold_source_wraps_oserror_as_stage1_error(
 
     with pytest.raises(Stage1ScaffoldError):
         scaffold_source(tmp_path, "foo")
+
+
+def test_scaffold_source_refuses_symlinked_output_file(tmp_path: Path) -> None:
+    """P2 round-2 (#342): a pre-planted (even dangling) symlink AT an individual
+    output path would let write_bytes() follow it out of --repo. Refuse any
+    output path that is a symlink, before writing."""
+    import os
+
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    dest = tmp_path / "mappings" / "foo"
+    dest.mkdir(parents=True)
+    outside = tmp_path / "outside.yaml"  # dangling target (does not exist)
+    try:
+        os.symlink(outside, dest / "source-map.yaml")
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation not permitted in this environment")
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, "foo")
+
+    assert not outside.exists()  # nothing written through the symlink
+
+
+def test_scaffold_source_keeps_preexisting_regular_file(tmp_path: Path) -> None:
+    """A pre-existing REGULAR output file is still 'kept' (not a symlink refusal):
+    the symlink guard must not regress the non-destructive keep behavior."""
+    from seshat.stage1_scaffold import scaffold_source
+
+    dest = tmp_path / "mappings" / "foo"
+    dest.mkdir(parents=True)
+    (dest / "source-map.yaml").write_text("# hand-authored\n", encoding="utf-8")
+
+    report = scaffold_source(tmp_path, "foo")
+
+    assert "mappings/foo/source-map.yaml" in report.kept
+    assert (dest / "source-map.yaml").read_text(encoding="utf-8") == "# hand-authored\n"

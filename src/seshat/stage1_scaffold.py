@@ -146,7 +146,19 @@ def _materialized_bytes(name: str) -> bytes:
 
 
 def _write_if_absent(target: Path, data: bytes) -> bool:
-    """Write one file; True when written, False when kept as-is."""
+    """Write one file; True when written, False when kept as-is.
+
+    Refuses a symlink AT the output path: ``Path.is_symlink()`` is True even for
+    a DANGLING link (it lstat's the link, not the target), so this closes the
+    whole file-level escape class -- ``write_bytes`` would otherwise follow the
+    link and create the file outside ``--repo``. A pre-existing REGULAR file is
+    still kept (non-destructive), never refused.
+    """
+    if target.is_symlink():
+        raise Stage1ScaffoldError(
+            f"refusing to write through a symlinked output path: {target} "
+            "(a symlink here could escape --repo); remove it and retry"
+        )
     if target.exists():
         return False
     target.parent.mkdir(parents=True, exist_ok=True)
