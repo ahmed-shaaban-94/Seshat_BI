@@ -21,28 +21,47 @@ def _resolve_config(
     dialect: object,
     resolve_dsn: Callable[[dict[str, str]], str | None],
 ) -> object:
-    """Resolve the engine's DB config. None-safe.
+    """Resolve the engine's DB config from the (already `.env`-applied) env.
 
     Postgres: ``--dsn`` wins, else the env; other engines resolve from env only
-    (``--dsn`` is not applicable). The env is the process environment merged
-    with the workspace ``.env`` (#340): a user who put ``ANALYTICS_DB_*`` in the
-    gitignored ``.env`` -- as the tool instructs -- is honored, with real
-    environment variables still winning over the file. Extracted from
-    ``run_validate`` to keep it below the CodeScene complexity threshold and to
-    mirror ``value_check._resolve_config`` / ``drift._resolve_live_config``.
+    (``--dsn`` is not applicable). ``os.environ`` already carries the workspace
+    ``.env`` values here because the caller runs inside ``applied_dotenv`` (#340),
+    so this reads the process env directly. Extracted to keep ``run_validate``
+    below the CodeScene complexity threshold and to mirror
+    ``value_check._resolve_config`` / ``drift._resolve_live_config``.
     """
-    from pathlib import Path
+    import os
 
-    from seshat.connection_env import connection_environment
-
-    base_env = connection_environment(Path.cwd())
     if engine == "postgres":
-        env = base_env if not args.dsn else {**base_env, "DATABASE_URL": args.dsn}
+        env = dict(os.environ)
+        if args.dsn:
+            env = {**env, "DATABASE_URL": args.dsn}
         return resolve_dsn(env)
-    return dialect.resolve_config(base_env)  # type: ignore[attr-defined]
+    return dialect.resolve_config(dict(os.environ))  # type: ignore[attr-defined]
 
 
 def run_validate(args: argparse.Namespace) -> int:
+    """Run the LIVE validators against a real DB, honoring the workspace `.env`.
+
+    Thin wrapper: apply the workspace ``.env`` (#340) for the whole body so
+    engine selection, driver choice, and config resolution all see the
+    documented ``ANALYTICS_DB_*`` values, then delegate. A malformed ``.env``
+    fails clean (exit 1, no traceback) rather than raising at the DB boundary.
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    try:
+        with applied_dotenv(Path.cwd()):
+            return _run_validate_body(args)
+    except EnvironmentConfigError as exc:
+        print(f"error: could not read the workspace .env: {exc}", file=sys.stderr)
+        return 1
+
+
+def _run_validate_body(args: argparse.Namespace) -> int:
     """Run the LIVE validators against a real DB.
 
     The DB driver import is LAZY (via ``_ensure_driver`` / ``_make_runner``,

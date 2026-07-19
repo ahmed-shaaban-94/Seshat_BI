@@ -28,18 +28,22 @@ explicitly identifies a public release event.
 ## [Unreleased]
 
 ### Fixed
-- **`validate` / `drift` / `value-check` now load the workspace `.env`** (#340):
-  the live-connection resolvers read `dict(os.environ)` only, so a user who put
-  the `ANALYTICS_DB_*` credentials in the gitignored `.env` -- exactly as the
-  error text, `.env.example`, and README all instruct -- still got "no database
-  connection configured". A new `seshat.connection_env.connection_environment`
-  merges `.env` into a copy of the process env (real environment variables win
-  over `.env`; the process is never mutated), reusing the governed
-  dependency-free `.env` parser from `dbt.redaction` -- no `python-dotenv`
-  dependency added. (Scoped follow-ups: `drift`'s postgres path is still gated
-  on `--dsn` upstream, so full postgres-drift-from-`.env` parity needs that gate
-  relaxed; and the driver hint still prints `retail[db]` where the installable
-  extra is `seshat-bi[db]`.)
+- **`validate` / `drift` / `value-check` now honor the workspace `.env`** (#340):
+  the live commands read `os.environ` only -- for BOTH engine selection
+  (`ANALYTICS_DB_ENGINE`) and connection resolution (`ANALYTICS_DB_*`) -- so a
+  user who put those in the gitignored `.env`, exactly as the error text,
+  `.env.example`, and README all instruct, got "no database connection
+  configured" or silently the wrong engine. A new
+  `seshat.connection_env.applied_dotenv(root)` context manager applies `.env`
+  into `os.environ` for the whole command body (so every read -- engine, driver,
+  config -- sees it), with real environment variables winning over `.env`, and
+  restores `os.environ` exactly on exit (including on error). It reuses the
+  governed dependency-free `.env` parser from `dbt.redaction` -- no
+  `python-dotenv` dependency. A malformed `.env` now fails clean (exit 1, no
+  traceback) at the command boundary. `value-check` reads `.env` from `--repo`
+  (the evaluated workspace), not the caller's cwd. (Scoped follow-ups: `drift`'s
+  postgres path is still gated on `--dsn` upstream; and the driver hint prints
+  `retail[db]` where the installable extra is `seshat-bi[db]`.)
 
 ## [0.5.0] -- 2026-07-19
 

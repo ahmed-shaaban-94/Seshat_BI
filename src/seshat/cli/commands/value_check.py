@@ -71,19 +71,19 @@ def _resolve_engine_config(engine: str, args: argparse.Namespace) -> object:
     Postgres: --dsn wins; else env (UNCHANGED behavior). Other engines: --dsn is
     not applicable; resolve from env only.
     """
-    from pathlib import Path
+    import os
 
-    from seshat.connection_env import connection_environment
     from seshat.dialect import get_dialect
     from seshat.validate import resolve_dsn
 
-    base_env = connection_environment(Path.cwd())  # process env + workspace .env (#340)
+    # os.environ already carries the workspace .env here: run_value_check runs
+    # inside applied_dotenv(Path(args.repo)) (#340).
     if engine == "postgres":
-        env = base_env
+        env = dict(os.environ)
         if args.dsn:
             env = {**env, "DATABASE_URL": args.dsn}
         return resolve_dsn(env)
-    return get_dialect(engine).resolve_config(base_env)
+    return get_dialect(engine).resolve_config(dict(os.environ))
 
 
 def _parse_one_contract(
@@ -261,6 +261,26 @@ def run_value_check(args: argparse.Namespace) -> int:
     value outside tolerance. A contract with no expected_value block is skipped; a
     malformed block is a fail-closed ERROR, never a silent skip.
     """
+    from seshat.connection_env import applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    # Apply the workspace .env for the whole body (#340) so engine selection,
+    # driver choice, and config resolution honor the documented ANALYTICS_DB_*
+    # values. Rooted at --repo (the workspace being evaluated), NOT the caller's
+    # cwd, so `value-check --repo /elsewhere` loads /elsewhere/.env.
+    try:
+        with applied_dotenv(Path(args.repo)):
+            return _run_value_check_body(args)
+    except EnvironmentConfigError as exc:
+        print(
+            f"retail value-check: could not read the workspace .env: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def _run_value_check_body(args: argparse.Namespace) -> int:
+    """The value-check body, run with the workspace `.env` already applied."""
     from seshat import cli
     from seshat.dialect import get_dialect
 

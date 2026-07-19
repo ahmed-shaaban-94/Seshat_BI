@@ -93,22 +93,21 @@ def _run_deferred_drift(args: argparse.Namespace, parsed: object) -> int:
 
 
 def _resolve_live_config(args: argparse.Namespace, cli: object, dialect: object):
-    """Resolve the engine's DB config (Postgres: --dsn wins; else env). None-safe.
+    """Resolve the engine's DB config from the (already `.env`-applied) env.
 
-    The env is the process environment merged with the workspace `.env` (#340),
-    so a user who put `ANALYTICS_DB_*` in `.env` -- as the tool instructs -- is
-    honored. (Postgres drift is still gated on `--dsn` upstream in `run_drift`;
-    the `.env` merge fixes the non-postgres path and the connection env parity.)
+    Postgres: ``--dsn`` wins; else the env. ``os.environ`` already carries the
+    workspace ``.env`` values here because ``_run_live_drift`` runs inside
+    ``applied_dotenv`` (#340). None-safe. (Postgres drift is still gated on
+    ``--dsn`` upstream in ``run_drift``; the `.env` application fixes engine
+    selection, the non-postgres path, and the connection-env parity.)
     """
-    from pathlib import Path
+    import os
 
-    from seshat.connection_env import connection_environment
     from seshat.validate import resolve_dsn
 
-    base_env = connection_environment(Path.cwd())
     if cli._current_engine() == "postgres":
-        return resolve_dsn({**base_env, "DATABASE_URL": args.dsn})
-    return dialect.resolve_config(base_env)
+        return resolve_dsn({**os.environ, "DATABASE_URL": args.dsn})
+    return dialect.resolve_config(dict(os.environ))
 
 
 def _source_map_path(args: argparse.Namespace) -> Path | None:
@@ -157,7 +156,30 @@ def _uncomparable_precondition(parsed: object) -> str | None:
 
 
 def _run_live_drift(args: argparse.Namespace, parsed: object) -> int:
-    """Live leg: re-profile the SAME table on the baseline's STATED PK, diff, emit.
+    """Live leg: apply the workspace `.env` (#340), then re-profile and diff.
+
+    Thin wrapper: ``applied_dotenv`` makes engine selection and connection
+    resolution see the documented ``ANALYTICS_DB_*`` values for the body; a
+    malformed ``.env`` fails clean (exit 1, no traceback).
+    """
+    from pathlib import Path
+
+    from seshat.connection_env import applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    try:
+        with applied_dotenv(Path.cwd()):
+            return _run_live_drift_body(args, parsed)
+    except EnvironmentConfigError as exc:
+        print(
+            f"retail drift: could not read the workspace .env: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def _run_live_drift_body(args: argparse.Namespace, parsed: object) -> int:
+    """Re-profile the SAME table on the baseline's STATED PK, diff, emit.
 
     Mirrors run_validate's DB-boundary discipline -- gate on the lazy driver and
     scrub every DB-boundary exception through dialect.redact(exc, config) so a DSN
