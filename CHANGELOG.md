@@ -35,7 +35,11 @@ explicitly identifies a public release event.
   produce the first Source-Ready artifact without the development repository
   (#339). The three templates now ship as wheel package data and are required
   by the release-artifact gate; `seshat next`'s fresh-workspace guidance points
-  at the new verb.
+  at the new verb. The table name is validated for Windows reserved device
+  names and invalid filename characters (and the write is guarded against a
+  symlinked `mappings/` escaping `--repo`, with an `OSError` backstop for the
+  260-char path limit), so an unsafe name yields the documented refusal rather
+  than a traceback.
 
 ## [0.5.0] -- 2026-07-19
 

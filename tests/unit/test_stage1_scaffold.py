@@ -96,3 +96,62 @@ def test_scaffolded_readiness_degrades_to_unstarted_not_malformed(
     assert resp["outcome"] == "next_action"
     assert resp["stage"] == "source_ready"
     assert resp["read_only_proof"] is True
+
+
+@pytest.mark.parametrize(
+    "reserved",
+    ["con", "CON", "aux", "nul", "com1", "lpt1", "prn", "Com9", "a:b", "a*b", "a?b"],
+)
+def test_scaffold_source_rejects_windows_reserved_and_invalid_names(
+    tmp_path: Path, reserved: str
+) -> None:
+    """P2 (#342): names that match the charset but cannot be created as
+    directories on Windows (reserved device names, invalid filename chars) must
+    raise Stage1ScaffoldError -- the documented refusal -- not an uncaught
+    filesystem OSError / traceback."""
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, reserved)
+
+
+def test_scaffold_source_refuses_symlinked_mappings_escape(tmp_path: Path) -> None:
+    """P2 (#342): if `mappings/` is a symlink pointing outside --repo, writing
+    into mappings/<table>/ would escape the repo. Refuse rather than follow the
+    symlink out of the requested tree."""
+    import os
+
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    try:
+        os.symlink(outside, repo / "mappings", target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation not permitted in this environment")
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(repo, "foo")
+
+    # nothing was written outside the repo
+    assert not (outside / "foo").exists()
+
+
+def test_scaffold_source_wraps_oserror_as_stage1_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P2 backstop (#342): any residual filesystem OSError during the write
+    (e.g. the Windows 260-char path limit) surfaces as Stage1ScaffoldError, so
+    the CLI returns its refusal status instead of a traceback."""
+    import seshat.stage1_scaffold as mod
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    def _boom(target, data):
+        raise OSError("simulated filesystem failure")
+
+    monkeypatch.setattr(mod, "_write_if_absent", _boom)
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, "foo")
