@@ -151,6 +151,13 @@ packages = ["src/seshat", "src/retail"]
 "orchestration/dagster/README.md" = "seshat/governed_projects/orchestration/dagster/README.md"
 "orchestration/dagster/run-evidence/README.md" = "seshat/governed_projects/orchestration/dagster/run-evidence/README.md"
 "orchestration/dagster/src" = "seshat/governed_projects/orchestration/dagster/src"
+# `seshat scaffold-source <table>` (issue #339) materializes the three Stage-1
+# blank templates from these bundled copies so a pip-only workspace can produce
+# the first Source-Ready artifact without the development repository. Only the
+# table-neutral blank templates ship (constitution VII).
+"templates/source-profile.md" = "seshat/stage1_templates/source-profile.md"
+"templates/readiness-status.yaml" = "seshat/stage1_templates/readiness-status.yaml"
+"templates/source-map.yaml" = "seshat/stage1_templates/source-map.yaml"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -175,6 +182,11 @@ include = [
     "/orchestration/dagster/README.md",
     "/orchestration/dagster/run-evidence/README.md",
     "/orchestration/dagster/src",
+    # Stage-1 blank templates the scaffold-source verb bundles (issue #339);
+    # the wheel is built from the sdist, so the sdist must carry them.
+    "/templates/source-profile.md",
+    "/templates/readiness-status.yaml",
+    "/templates/source-map.yaml",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",
