@@ -36,10 +36,12 @@ explicitly identifies a public release event.
   (#339). The three templates now ship as wheel package data and are required
   by the release-artifact gate; `seshat next`'s fresh-workspace guidance points
   at the new verb. The table name is validated for Windows reserved device
-  names and invalid filename characters (and the write is guarded against a
-  symlinked `mappings/` escaping `--repo`, with an `OSError` backstop for the
-  260-char path limit), so an unsafe name yields the documented refusal rather
-  than a traceback.
+  names, invalid filename characters, and trailing/leading dots or spaces
+  (which Win32 trims), and the write refuses a symlinked or non-file output
+  path (a symlinked `mappings/` escaping `--repo`, or a directory/FIFO sitting
+  where a Stage-1 file belongs), with an `OSError` backstop for the 260-char
+  path limit -- so an unsafe name or hostile filesystem state yields the
+  documented refusal rather than a traceback or a misleading success.
 
 ### Fixed
 - **`dbt plan` no longer swallows the underlying dbt parse error** (#341): a

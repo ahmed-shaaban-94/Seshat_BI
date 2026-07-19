@@ -192,3 +192,33 @@ def test_scaffold_source_keeps_preexisting_regular_file(tmp_path: Path) -> None:
 
     assert "mappings/foo/source-map.yaml" in report.kept
     assert (dest / "source-map.yaml").read_text(encoding="utf-8") == "# hand-authored\n"
+
+
+@pytest.mark.parametrize("bad", ["orders.", "orders ", "orders.  ", " orders", "."])
+def test_scaffold_source_rejects_trailing_dot_or_space(
+    tmp_path: Path, bad: str
+) -> None:
+    """P2 round-3 (#342): Win32 strips trailing periods/spaces, so `orders.` or
+    `orders ` would normalize to a DIFFERENT folder than reported. Reject a
+    leading/trailing dot or space rather than silently operating on the wrong
+    table folder."""
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, bad)
+
+
+def test_scaffold_source_refuses_non_file_output_collision(tmp_path: Path) -> None:
+    """P2 round-3 (#342): if an output path already exists as a DIRECTORY (or
+    other non-regular node), target.exists() is true and the path was reported
+    'kept' -- a misleading success, since the required Stage-1 FILE is absent.
+    Only a regular file is keepable; any other node type is refused."""
+    from seshat.stage1_scaffold import Stage1ScaffoldError, scaffold_source
+
+    dest = tmp_path / "mappings" / "foo"
+    dest.mkdir(parents=True)
+    # A directory sitting where source-profile.md should be.
+    (dest / "source-profile.md").mkdir()
+
+    with pytest.raises(Stage1ScaffoldError):
+        scaffold_source(tmp_path, "foo")

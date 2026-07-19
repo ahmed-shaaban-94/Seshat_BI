@@ -73,16 +73,41 @@ _WINDOWS_RESERVED_NAMES = frozenset(
 )
 
 
+def _has_invalid_char(table: str) -> bool:
+    return any(char in _INVALID_FILENAME_CHARS for char in table)
+
+
+def _has_path_separator(table: str) -> bool:
+    return any(sep in table for sep in _PATH_SEPARATORS)
+
+
+def _is_windows_reserved(table: str) -> bool:
+    # Compared on the pre-extension stem, lowercased (CON, aux, com1, ...).
+    return table.split(".", 1)[0].lower() in _WINDOWS_RESERVED_NAMES
+
+
+def _has_trimmed_suffix(table: str) -> bool:
+    # Win32 strips a trailing dot or space, so ``orders.`` / ``orders `` would
+    # normalize to a DIFFERENT folder than reported; a leading one is equally a
+    # red flag. Refuse rather than silently operate on the wrong table.
+    return table != table.strip(" .")
+
+
+# Each predicate names one reason a ``table`` cannot be a safe, portably-
+# createable path segment. Kept as a flat tuple so the guard is a single
+# ``any(...)`` rather than a multi-branch method (CodeScene complexity guard).
+_UNSAFE_TABLE_PREDICATES = (
+    lambda t: t in _UNSAFE_TABLE_TOKENS,
+    _has_path_separator,
+    _has_invalid_char,
+    _has_trimmed_suffix,
+    _is_windows_reserved,
+)
+
+
 def _is_unsafe_table(table: str) -> bool:
     """True when ``table`` is not a safe, portably-createable path segment."""
-    if table in _UNSAFE_TABLE_TOKENS:
-        return True
-    if any(sep in table for sep in _PATH_SEPARATORS):
-        return True
-    if any(char in _INVALID_FILENAME_CHARS for char in table):
-        return True
-    stem = table.split(".", 1)[0].lower()
-    return stem in _WINDOWS_RESERVED_NAMES
+    return any(predicate(table) for predicate in _UNSAFE_TABLE_PREDICATES)
 
 
 def _validate_table(table: str) -> str:
@@ -145,22 +170,39 @@ def _materialized_bytes(name: str) -> bytes:
     return data
 
 
-def _write_if_absent(target: Path, data: bytes) -> bool:
-    """Write one file; True when written, False when kept as-is.
+def _refuse_unwritable_target(target: Path) -> None:
+    """Refuse an output path that is a symlink or a non-file node.
 
-    Refuses a symlink AT the output path: ``Path.is_symlink()`` is True even for
-    a DANGLING link (it lstat's the link, not the target), so this closes the
-    whole file-level escape class -- ``write_bytes`` would otherwise follow the
-    link and create the file outside ``--repo``. A pre-existing REGULAR file is
-    still kept (non-destructive), never refused.
+    A symlink (even a DANGLING one -- ``is_symlink`` lstat's the link) could let
+    ``write_bytes`` escape ``--repo``; a directory / FIFO / socket sitting where
+    a Stage-1 FILE belongs makes ``exists()`` true while the required file is
+    absent, which would otherwise read as a misleading "kept" success. Only a
+    regular file (handled by the caller) or a truly absent path is writable.
     """
     if target.is_symlink():
         raise Stage1ScaffoldError(
             f"refusing to write through a symlinked output path: {target} "
             "(a symlink here could escape --repo); remove it and retry"
         )
-    if target.exists():
-        return False
+    if target.exists() and not target.is_file():
+        node = "directory" if target.is_dir() else "special file"
+        raise Stage1ScaffoldError(
+            f"refusing to scaffold over a non-file at {target} "
+            f"(a {node} exists where a Stage-1 file must be); remove it and retry"
+        )
+
+
+def _write_if_absent(target: Path, data: bytes) -> bool:
+    """Write one file; True when written, False when kept as-is.
+
+    A symlink or non-file node at the path is refused FIRST (see
+    ``_refuse_unwritable_target``) -- a symlink to a regular file satisfies
+    ``is_file()``, so the refusal must precede the keep check or it would be
+    bypassed. A pre-existing REGULAR file is then kept (non-destructive).
+    """
+    _refuse_unwritable_target(target)
+    if target.is_file():
+        return False  # a pre-existing REGULAR file is kept (non-destructive)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     return True
