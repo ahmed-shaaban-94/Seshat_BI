@@ -231,3 +231,58 @@ def test_value_check_malformed_block_is_error_not_skip(
     assert rc == 1
     assert "aggregation" in err.lower()
     assert "Traceback" not in err
+
+
+# ---------------------------------------------------------------------------
+# .env loading (#340) -- rooted at --repo, and malformed .env fails clean
+# ---------------------------------------------------------------------------
+
+
+def test_value_check_loads_dotenv_from_repo_not_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """P2 (#344): with `--repo <workspace>`, `.env` is read from THAT workspace,
+    not the caller's cwd. The workspace .env supplies the connection; no
+    exported vars and no contracts -> a clean 'nothing to verify' (exit 0),
+    proving the connection resolved from the repo's .env."""
+    for var in ("DATABASE_URL", "ANALYTICS_DB_HOST", "ANALYTICS_DB_ENGINE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr("seshat.cli._ensure_driver", lambda: True)
+    workspace = tmp_path / "ws"
+    (workspace / "retail_store_sales" / "metrics").mkdir(parents=True)
+    (workspace / ".env").write_text(
+        "ANALYTICS_DB_HOST=repo.example\n"
+        "ANALYTICS_DB_NAME=warehouse\n"
+        "ANALYTICS_DB_USER=reader\n",
+        encoding="utf-8",
+    )
+    # Run from a DIFFERENT cwd that has NO .env.
+    monkeypatch.chdir(tmp_path)
+
+    rc = main_under_test(
+        ["value-check", "--repo", str(workspace), "--metrics-dir", str(workspace)]
+    )
+
+    # Connection resolved (from the repo .env) and no contracts -> exit 0.
+    assert rc == 0
+    assert "nothing to verify" in capsys.readouterr().err
+
+
+def test_value_check_malformed_dotenv_exits_1_without_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """P2 (#344): a malformed workspace .env yields a clean exit-1 with an
+    actionable message, never a raw traceback."""
+    for var in ("DATABASE_URL", "ANALYTICS_DB_HOST"):
+        monkeypatch.delenv(var, raising=False)
+    (tmp_path / "retail_store_sales" / "metrics").mkdir(parents=True)
+    (tmp_path / ".env").write_text(
+        "ANALYTICS_DB_HOST=a\nANALYTICS_DB_HOST=b\n", encoding="utf-8"
+    )  # duplicate key -> EnvironmentConfigError
+
+    rc = main_under_test(
+        ["value-check", "--repo", str(tmp_path), "--metrics-dir", str(tmp_path)]
+    )
+
+    assert rc == 1
+    assert "could not read the workspace .env" in capsys.readouterr().err

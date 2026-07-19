@@ -76,6 +76,8 @@ def _resolve_engine_config(engine: str, args: argparse.Namespace) -> object:
     from seshat.dialect import get_dialect
     from seshat.validate import resolve_dsn
 
+    # os.environ already carries the workspace .env here: run_value_check runs
+    # inside applied_dotenv(Path(args.repo)) (#340).
     if engine == "postgres":
         env = dict(os.environ)
         if args.dsn:
@@ -196,8 +198,12 @@ def _preflight_config(
             f"error: --metrics-dir {args.metrics_dir!r} escapes the repo root; "
             "it must resolve to a path inside --repo."
         )
-    # Postgres: --dsn wins; else env (UNCHANGED). Other engines: env only.
-    config = _resolve_engine_config(engine, args)
+    # Postgres: --dsn wins; else env (UNCHANGED). Other engines: env only. An
+    # unparseable port makes resolve_config raise ValueError -> convert to a
+    # clean boundary failure (see run_value_check's ConnectionConfigError handler).
+    from seshat.connection_env import as_connection_config
+
+    config = as_connection_config(lambda: _resolve_engine_config(engine, args))
     if config is None:
         raise _ContractError(
             "error: no database connection configured.\n"
@@ -259,11 +265,41 @@ def run_value_check(args: argparse.Namespace) -> int:
     value outside tolerance. A contract with no expected_value block is skipped; a
     malformed block is a fail-closed ERROR, never a silent skip.
     """
+    from seshat.connection_env import ConnectionConfigError, applied_dotenv
+    from seshat.dbt.redaction import EnvironmentConfigError
+
+    # Apply the workspace .env for the whole body (#340) so engine selection,
+    # driver choice, and config resolution honor the documented ANALYTICS_DB_*
+    # values. Rooted at --repo (the workspace being evaluated), NOT the caller's
+    # cwd, so `value-check --repo /elsewhere` loads /elsewhere/.env.
+    try:
+        with applied_dotenv(Path(args.repo)):
+            return _run_value_check_body(args)
+    except EnvironmentConfigError as exc:
+        print(
+            f"retail value-check: could not read the workspace .env: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    except ConnectionConfigError as exc:
+        print(
+            f"retail value-check: invalid database connection setting: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def _run_value_check_body(args: argparse.Namespace) -> int:
+    """The value-check body, run with the workspace `.env` already applied."""
     from seshat import cli
+    from seshat.connection_env import as_connection_config
     from seshat.dialect import get_dialect
 
     engine = cli._current_engine()
-    dialect = get_dialect(engine)
+    # An unknown ANALYTICS_DB_ENGINE makes get_dialect raise ValueError; convert
+    # it (and the unparseable-port case inside _preflight_config) to a clean
+    # boundary failure -- see run_value_check's ConnectionConfigError handler.
+    dialect = as_connection_config(lambda: get_dialect(engine))
     metrics_root = (Path(args.repo) / args.metrics_dir).resolve()
 
     # Steps 1-3: preflight (metrics-dir guard, config, driver) then discover +
