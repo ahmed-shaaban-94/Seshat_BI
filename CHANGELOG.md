@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.5.0] -- 2026-07-19
+
 ### Added
 - **`kpi-contract-builder` verb** (spec 130 follow-through, PR #321): drives the
   shipped `kpi_contracts` engine -- assess answerability, list the decisions to
