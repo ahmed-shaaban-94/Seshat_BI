@@ -120,37 +120,41 @@ def _summary_table(tables: list[dict]) -> str:
     )
 
 
+def _evidence_list(evidence: list) -> str:
+    if not evidence:
+        return ""
+    items = "".join(f"<li>{_esc(e)}</li>" for e in evidence)
+    return f'<ul class="evidence">{items}</ul>'
+
+
+def _blockers(reasons: list) -> str:
+    return "".join(f'<div class="blocker">{_esc(r)}</div>' for r in reasons)
+
+
+def _stage_block(stage_name: str, block: dict) -> str:
+    status = block.get("status", "not_started")
+    fg, bg = _STATUS_STYLE.get(status, _STATUS_STYLE["not_started"])
+    ev = _evidence_list(block.get("evidence") or [])
+    rs = _blockers(block.get("blocking_reasons") or [])
+    return (
+        f'<div class="stage" style="color:{fg};background:{bg};">'
+        f"{_esc(_STAGE_LABELS_AR[stage_name])}<br>{_esc(status)}{ev}{rs}</div>"
+    )
+
+
 def _table_card(t: dict) -> str:
     name = t.get("table", t.get("source_path", ""))
     stages = t.get("stages") or {}
-    stage_html = []
-    for stage_name in _STAGE_ORDER:
-        block = stages.get(stage_name) or {}
-        status = block.get("status", "not_started")
-        fg, bg = _STATUS_STYLE.get(status, _STATUS_STYLE["not_started"])
-        evidence = block.get("evidence") or []
-        reasons = block.get("blocking_reasons") or []
-        ev = ""
-        if evidence:
-            ev = (
-                '<ul class="evidence">'
-                + "".join(f"<li>{_esc(e)}</li>" for e in evidence)
-                + "</ul>"
-            )
-        rs = "".join(f'<div class="blocker">{_esc(r)}</div>' for r in reasons)
-        stage_html.append(
-            f'<div class="stage" style="color:{fg};background:{bg};">'
-            f"{_esc(_STAGE_LABELS_AR[stage_name])}<br>{_esc(status)}{ev}{rs}</div>"
-        )
-    top_blockers = "".join(
-        f'<div class="blocker">{_esc(r)}</div>'
-        for r in (t.get("blocking_reasons") or [])
+    stepper = "".join(
+        _stage_block(stage_name, stages.get(stage_name) or {})
+        for stage_name in _STAGE_ORDER
     )
+    top_blockers = _blockers(t.get("blocking_reasons") or [])
     return (
         f'<div class="card" id="table-{_esc(name)}">'
         f"<h3>{_esc(name)} {_chip(t.get('current_stage') or 'not_started')}</h3>"
         f'<div class="meta">{_esc(t.get("source_path") or "")}</div>'
-        f'<div class="stepper">{"".join(stage_html)}</div>'
+        f'<div class="stepper">{stepper}</div>'
         f"{top_blockers}"
         f'<div class="next">الإجراء التالي: {_esc(t.get("next_action") or "-")}</div>'
         "</div>"

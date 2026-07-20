@@ -52,32 +52,21 @@ def test_dashboard_main_oserror_returns_one(tmp_path, capsys):
     assert rc == 1
 
 
-def test_no_open_does_not_open_browser(tmp_path, monkeypatch):
+@pytest.mark.parametrize("no_open, expected_calls", [(True, 0), (False, 1)])
+def test_no_open_flag_controls_browser(tmp_path, monkeypatch, no_open, expected_calls):
     calls = []
     monkeypatch.setattr("webbrowser.open", lambda uri: calls.append(uri))
 
     repo = _make_repo(tmp_path)
     out = tmp_path / "d.html"
-    args = argparse.Namespace(repo=str(repo), out=str(out), no_open=True)
+    args = argparse.Namespace(repo=str(repo), out=str(out), no_open=no_open)
     rc = dashboard_main(args)
 
     assert rc == 0
     assert out.exists()
-    assert calls == []
-
-
-def test_open_branch_opens_file_uri(tmp_path, monkeypatch):
-    calls = []
-    monkeypatch.setattr("webbrowser.open", lambda uri: calls.append(uri))
-
-    repo = _make_repo(tmp_path)
-    out = tmp_path / "d.html"
-    args = argparse.Namespace(repo=str(repo), out=str(out), no_open=False)
-    rc = dashboard_main(args)
-
-    assert rc == 0
-    assert len(calls) == 1
-    assert calls[0].startswith("file:")
+    assert len(calls) == expected_calls
+    if expected_calls:
+        assert calls[0].startswith("file:")
 
 
 def test_dispatch_has_dashboard_row():
