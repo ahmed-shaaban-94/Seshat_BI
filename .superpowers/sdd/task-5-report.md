@@ -132,3 +132,144 @@ Kind-absent regression tests: `test_kind_absent_ratio_path_unchanged` and `test_
 
 ### Commit hash
 `0cfcff2`
+
+---
+
+## Task 5 Report — CLI handler + parser + dispatch wiring (`retail dashboard` verb)
+
+NOTE: This section documents a DIFFERENT "Task 5" (per `.superpowers/sdd/task-5-brief.md`,
+dashboard CLI wiring), unrelated to the dax_gen work recorded above. The two
+tasks happen to share the file name `task-5-report.md` in this scratch
+directory; this section was appended rather than overwriting prior history.
+
+### Status: DONE
+
+### Commit
+`36951df94631b19edbc71feb566a333f1024891a` — "feat: retail dashboard CLI verb (write + auto-open static HTML)"
+
+### What was implemented
+
+Followed the brief's 5 steps exactly (TDD: RED -> GREEN -> commit):
+
+1. **Test file** `tests/unit/test_dashboard_cli.py` — written verbatim from the
+   brief's Step 1, with ONE deliberate deviation per the known plan slip #1:
+   all imports placed FIRST, then `pytestmark = pytest.mark.unit` AFTER the
+   imports (repo convention / ruff E402 compliance), instead of the
+   mid-import placement shown in the brief's code block.
+
+2. **RED confirmed**: `PYTHONPATH=src python -m pytest tests/unit/test_dashboard_cli.py -v`
+   failed with `ModuleNotFoundError: No module named 'seshat.cli.commands.dashboard'`
+   as expected.
+
+3. **Implementation** (Step 3, verbatim from brief):
+   - Created `src/seshat/cli/commands/dashboard.py` — `dashboard_main(args)`:
+     lazily imports `generate` from `seshat.dashboard.generate` and (only on
+     the open-browser branch) lazily imports `webbrowser`. No module-scope
+     import of `generate` or `webbrowser`. Catches `OSError` from `generate`,
+     prints an ASCII-only error, returns 1; otherwise prints the written path
+     and returns 0.
+   - Modified `src/seshat/cli/parser.py`: added `_add_dashboard_parser(sub)`
+     immediately after `_add_status_parser` (registers `--repo`, `--out`,
+     `--no-open`/`dest="no_open"`), and added the call
+     `_add_dashboard_parser(sub)` in `_build_parser` immediately after
+     `_add_status_parser(sub)` (was line 1097; now followed by the new call).
+   - Modified `src/seshat/cli/__init__.py`: added
+     `"dashboard": _lazy(".commands.dashboard", "dashboard_main"),` to
+     `_DISPATCH`, immediately after the `"status"` row, matching the existing
+     `_lazy(...)` style exactly.
+
+4. **GREEN confirmed**: `PYTHONPATH=src python -m pytest tests/unit/test_dashboard_cli.py -v`
+   -> 4 passed (parser registration, write+return-0, OSError->1, dispatch row
+   present).
+
+5. **Committed** the 4 files listed in the brief's Step 5 (test file, new
+   handler, parser.py, cli/__init__.py).
+
+### Verification gates
+
+- **pytest**: `PYTHONPATH=src python -m pytest tests/unit/test_dashboard_cli.py -v`
+  -> **4 passed**.
+- **ruff**: `ruff check src tests scripts` -> **All checks passed!** (no new
+  ignores added; no line-length reflow was needed — all new lines were
+  already <=88 chars).
+- **retail check (B1 gate)**: `PYTHONPATH=src python -m seshat.cli check --repo . --format json`
+  -> `{"findings": [], "exit_code": 0}` — **no B1 finding** on
+  `src/seshat/cli/commands/dashboard.py` or any other file.
+
+#### B1 scan-coverage negative control (extra verification, not in the brief)
+
+The advisor flagged a real gap: B1's rule (`check_no_module_scope_execution_imports`
+in `src/seshat/rules/never_execute.py`) iterates `ctx.tracked_files`, which is
+populated by `git ls-files` (`src/seshat/runner.py::_git_ls_files`) — i.e. the
+git index, NOT a filesystem walk. Immediately after creating `dashboard.py` it
+was untracked, so an initial "0 findings" run would have been a **file-not-
+scanned** false negative, not a true confirmation.
+
+To close that gap:
+1. Staged all 4 files (`git add ...`) so `dashboard.py` entered the git index
+   and `git ls-files` (confirmed directly) listed
+   `src/seshat/cli/commands/dashboard.py`.
+2. **Negative control**: temporarily added `import socket` at module scope in
+   `dashboard.py`, re-staged, and re-ran `retail check --repo . --format
+   json`. Result: **B1 fired** —
+   `{"rule_id": "B1", "message": "module-scope import of 'socket' ...",
+   "locator": "src/seshat/cli/commands/dashboard.py"}`, exit code 1. This
+   proves the gate genuinely parses and evaluates this file.
+3. Reverted the temporary `import socket` line, re-staged, and re-ran all
+   three gates (retail check, ruff, pytest) — all clean/passing (see above).
+4. Committed the clean state.
+
+This makes the "no B1 finding" claim a verified true negative, not an
+artifact of the scanner skipping an untracked file.
+
+### Concerns
+
+None. The only deviation from the brief's literal code (test-file import
+ordering) was an explicitly pre-authorized "known plan slip" (#1 in the task
+instructions), applied without asking as instructed.
+
+---
+
+### Fix note — review Minor: cover the webbrowser branch (B1-critical behavior)
+
+Review passed (Spec, quality Approved) with one Minor: no test exercised the
+`webbrowser.open` branch, so a future edit that un-gated the lazy import to
+module scope would pass silently (no test would catch it going module-scope
+or being called when it shouldn't be).
+
+**What was added** to `tests/unit/test_dashboard_cli.py` (imports stayed at
+top, `pytestmark` stayed last — unchanged from before):
+
+1. `test_no_open_does_not_open_browser` — `monkeypatch.setattr("webbrowser.open", ...)`
+   with a spy appending to a `calls` list; calls `dashboard_main` with
+   `no_open=True`; asserts `rc == 0`, the output file exists, and `calls == []`
+   (browser never invoked).
+2. `test_open_branch_opens_file_uri` — same spy pattern; calls `dashboard_main`
+   with `no_open=False`; asserts `rc == 0`, the spy was called exactly once,
+   and the argument starts with `"file:"` (the `.as_uri()` of the written
+   path). Hermetic — no real browser launches since `webbrowser.open` is
+   mocked.
+
+**How the monkeypatch resolved the lazy import:** `monkeypatch.setattr(
+"webbrowser.open", spy)` patches the `open` attribute directly on the
+`webbrowser` module object in `sys.modules`. The handler's lazy
+`import webbrowser` inside `dashboard_main` does not create a new module — it
+binds the SAME cached module object from `sys.modules` (Python only executes
+a module's top-level code once, on first import; every subsequent `import
+webbrowser` anywhere, including inside a function body, returns that same
+object). So `webbrowser.open(...)` called inside the handler resolves to the
+already-patched attribute. Verified empirically: both new tests passed on the
+first run with no alternate patch target needed — no workaround was
+required.
+
+**Verification:**
+- `PYTHONPATH=src python -m pytest tests/unit/test_dashboard_cli.py -v` ->
+  **6 passed** (previous 4 + the 2 new monkeypatch tests; all PASSED
+  individually: `test_parser_registers_dashboard_with_flags`,
+  `test_dashboard_main_writes_and_returns_zero`,
+  `test_dashboard_main_oserror_returns_one`,
+  `test_no_open_does_not_open_browser`, `test_open_branch_opens_file_uri`,
+  `test_dispatch_has_dashboard_row`).
+- `ruff check src tests scripts` -> **All checks passed!**
+
+**Commit:** `e762ac8985aeaf829ffb4e3f32b35bedb5f03426`
