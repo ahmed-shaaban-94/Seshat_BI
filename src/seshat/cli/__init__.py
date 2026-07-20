@@ -76,11 +76,23 @@ def _run_check(args: object) -> int:
         # strip it so the message passed to rules is the bare text.
         commit_message = raw.rstrip("\r\n")
 
-    ctx = build_context(
-        Path(args.repo),  # type: ignore[attr-defined]
-        commit_range=args.commit_range,  # type: ignore[attr-defined]
-        commit_message=commit_message,
-    )
+    try:
+        ctx = build_context(
+            Path(args.repo),  # type: ignore[attr-defined]
+            commit_range=args.commit_range,  # type: ignore[attr-defined]
+            commit_message=commit_message,
+        )
+    except (OSError, RuntimeError) as exc:
+        # build_context -> _git_ls_files exercises git BEFORE any rule runs. A git
+        # that cannot launch (OSError: missing binary) or fails non-zero/non-128
+        # (RuntimeError: e.g. a corrupt repo) must surface as a clean error, not a
+        # raw traceback (the #371 crash class). A non-git workspace is NOT this
+        # case -- git exit-128 is tolerated inside _git_ls_files (returns ()), so
+        # `check` still runs there (#384). (#394, reframed.)
+        print(
+            f"error: git is required to run 'check' but failed: {exc}", file=sys.stderr
+        )
+        return 1
     # Spec A drop-in fitness: in a repo the kit was merely downloaded into
     # (not bootstrapped), KIT_SELF rules SKIP (INFO) instead of ERROR-ing on
     # internal manifests that repo can't have. The kit's own repo IS

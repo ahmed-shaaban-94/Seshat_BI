@@ -127,10 +127,23 @@ def run_doctor(repo_root: Path, strict: bool = False) -> int:
     as the foreign-repo skip -- is not drift, so a not-kit-bootstrapped repo never
     fails strict for its (correctly skipped) kit manifests (#377).
     """
+    import sys
+
     from .core import Severity
     from .runner import build_context
 
-    ctx = build_context(repo_root)
+    try:
+        ctx = build_context(repo_root)
+    except (OSError, RuntimeError) as exc:
+        # build_context -> _git_ls_files exercises git before anything else. A git
+        # that cannot launch (OSError) or fails non-zero/non-128 (RuntimeError) must
+        # surface as a clean error, not a raw traceback (the #371 crash class) --
+        # same posture as the `check` handler. git exit-128 (non-repo) is tolerated
+        # upstream, so doctor still runs on a fresh workspace. (#394, reframed.)
+        print(
+            f"error: git is required to run 'doctor' but failed: {exc}", file=sys.stderr
+        )
+        return 1
     findings = collect_findings(ctx)
     print(format_digest(findings))
     actionable = [
