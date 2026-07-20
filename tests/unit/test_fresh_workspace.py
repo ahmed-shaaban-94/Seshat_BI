@@ -271,3 +271,63 @@ def test_p2_still_errors_on_a_malformed_explicit_commit_range(tmp_path: Path) ->
     findings = list(rule_p2_commit_subjects(ctx))
     errors = [f for f in findings if f.rule_id == "P2" and f.severity is Severity.ERROR]
     assert errors, "a malformed explicit --commit-range must still surface a P2 error"
+
+
+# ---------------------------------------------------------------------------
+# #394 (reframed) -- a broken/unlaunchable git yields a CLEAN error at the CLI
+# boundary, not a raw traceback (the #371 crash class). build_context ->
+# _git_ls_files runs before any rule, so both git-touching verbs (check, doctor)
+# must catch the failure there. rc 128 (not-a-repo / no-HEAD) stays tolerated
+# upstream and is NOT this case.
+# ---------------------------------------------------------------------------
+
+
+def _git_launch_failure():
+    """subprocess.run replacement: git binary missing (raises FileNotFoundError)."""
+
+    def run(*args, **kwargs):
+        raise FileNotFoundError("[Errno 2] No such file or directory: 'git'")
+
+    return run
+
+
+def _git_non_128_failure():
+    """subprocess.run replacement: git exits non-zero, non-128 (e.g. corrupt repo)."""
+
+    class _Result:
+        returncode = 129
+        stdout = ""
+        stderr = "error: object file .git/objects/ab/cd is empty"
+
+    return lambda *a, **k: _Result()
+
+
+# Each case: (verb, subprocess.run-replacement). Packed into a single param so the
+# test signature stays within the fixture-count budget.
+_BROKEN_GIT_CASES = {
+    f"{verb}-{fail_id}": (verb, fake)
+    for verb in ("check", "doctor")
+    for fake, fail_id in (
+        (_git_launch_failure(), "cannot-launch"),
+        (_git_non_128_failure(), "non-128-failure"),
+    )
+}
+
+
+@pytest.mark.parametrize(
+    "case", _BROKEN_GIT_CASES.values(), ids=list(_BROKEN_GIT_CASES)
+)
+def test_git_touching_verb_reports_clean_error_on_broken_git(
+    tmp_path: Path, monkeypatch, capsys, case: tuple[str, object]
+) -> None:
+    # Both verbs call build_context -> _git_ls_files, which exercises git before
+    # anything else. A git that cannot launch (OSError) or fails non-128
+    # (RuntimeError) must yield a clean stderr error + nonzero exit, NOT a raw
+    # traceback out of main().
+    verb, fake_run = case
+    monkeypatch.setattr("seshat.runner.subprocess.run", fake_run)
+    code = cli.main([verb, "--repo", str(tmp_path)])  # must NOT raise
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "git" in err.lower()
+    assert "Traceback" not in err
