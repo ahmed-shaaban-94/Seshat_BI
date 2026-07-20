@@ -27,6 +27,44 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+
+- `seshat dashboard` writes a self-contained, static HTML readiness view of the
+  workspace -- a Home page with portfolio KPIs and one per-table card showing the
+  seven-stage readiness track -- from the recomputed `readiness-status.yaml`, with
+  no server, no external assets, and every value HTML-escaped. The theme CSS is
+  inlined into the page, and the verb can write-and-auto-open the file (#358,
+  closing the deferred dashboard scope #359 #360 #361). The renderer fails safe on
+  a `None` stage or missing source path rather than raising.
+
+### Fixed
+
+- Close three credential-leak paths in the Dagster-adapter and portfolio
+  enumeration redaction: a reformatted, schemeless driver error that named only
+  the host/user components of a `DATABASE_URL`-shaped secret could survive the
+  whole-value replace. URI decomposition now scrubs each component (#362, #364).
+- Redact the Dagster adapter's secret environment values from an explicit
+  POSITIVE key set (`ANALYTICS_DB_*` credentials + `DATABASE_URL`) instead of a
+  prefix scan, so a fixed-vocabulary config word (e.g. `ENGINE=postgres`) is no
+  longer over-redacted, while genuine credentials stay scrubbed (#357, #363).
+- `seshat-init` workspace writers are hardened and the generated `init-project`
+  layout is aligned, closing a set of workspace-scaffold issues (#349 #350 #351
+  #352, PR #356).
+- Close the time-of-check-to-time-of-use race in `scaffold-source`'s
+  `_write_if_absent` per-file write, the follow-up deferred from v0.5.1 (#345,
+  PR #355).
+- The Dagster command family now loads the workspace `.env` for engine selection
+  and connection resolution, matching how `validate` / `value-check` already
+  read it (#348, PR #354).
+
+### Changed
+
+- Extract one shared URI-redaction core (`seshat/redaction_core.py`) imported by
+  the dbt, Dagster-adapter, and portfolio redactors, replacing three in-place
+  copies of the URI decomposition and the fragment-replace helper. Each caller
+  keeps its own replacement token; pure refactor, no behavior change (#365,
+  PR #366).
+
 ## [0.5.1] -- 2026-07-19
 
 ### Added
