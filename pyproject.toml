@@ -158,6 +158,11 @@ packages = ["src/seshat", "src/retail"]
 "templates/source-profile.md" = "seshat/stage1_templates/source-profile.md"
 "templates/readiness-status.yaml" = "seshat/stage1_templates/readiness-status.yaml"
 "templates/source-map.yaml" = "seshat/stage1_templates/source-map.yaml"
+# `seshat init` (issue #370) seeds the canonical kit-source.yaml router into a
+# fresh `.seshat/` so a pip-only workspace can bootstrap the compass. Unlike the
+# blank Stage-1 templates above this is the kit's own global router content
+# (verbs/orient/hard_stops), so `init` projects a REAL compass, not a hollow one.
+"templates/kit-source.yaml" = "seshat/stage1_templates/kit-source.yaml"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -187,6 +192,8 @@ include = [
     "/templates/source-profile.md",
     "/templates/readiness-status.yaml",
     "/templates/source-map.yaml",
+    # The canonical kit-source.yaml seed `init` materializes (issue #370).
+    "/templates/kit-source.yaml",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",
