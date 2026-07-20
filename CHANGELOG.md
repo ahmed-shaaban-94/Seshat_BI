@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.5.2] -- 2026-07-20
+
 ### Added
 
 - `seshat dashboard` writes a self-contained, static HTML readiness view of the
