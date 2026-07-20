@@ -158,6 +158,10 @@ packages = ["src/seshat", "src/retail"]
 "templates/source-profile.md" = "seshat/stage1_templates/source-profile.md"
 "templates/readiness-status.yaml" = "seshat/stage1_templates/readiness-status.yaml"
 "templates/source-map.yaml" = "seshat/stage1_templates/source-map.yaml"
+# The other two of the five sister artifacts source-map.yaml declares a reviewer
+# reads as a set (issue #380); scaffold-source now materializes all five.
+"templates/assumptions.md" = "seshat/stage1_templates/assumptions.md"
+"templates/reconciliation-report.md" = "seshat/stage1_templates/reconciliation-report.md"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -182,11 +186,13 @@ include = [
     "/orchestration/dagster/README.md",
     "/orchestration/dagster/run-evidence/README.md",
     "/orchestration/dagster/src",
-    # Stage-1 blank templates the scaffold-source verb bundles (issue #339);
+    # Stage-1 blank templates the scaffold-source verb bundles (issue #339, #380);
     # the wheel is built from the sdist, so the sdist must carry them.
     "/templates/source-profile.md",
     "/templates/readiness-status.yaml",
     "/templates/source-map.yaml",
+    "/templates/assumptions.md",
+    "/templates/reconciliation-report.md",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",
