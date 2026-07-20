@@ -84,14 +84,48 @@ knob / `DATABASE_URL` / generic `*_TOKEN`) pinned on current `main`:
 
 Strict improvement on #357's two axes; neutral everywhere else.
 
+## Scope refinements (from adversarial review)
+
+- **Generic-key length floor.** Dropping the `len>=4` gate is scoped to the
+  KNOWN credential set (`_SECRET_ANALYTICS_KEYS` ∪ `DATABASE_URL`). A generic
+  `_SECRET_ENV_RE`-matched key (`*_TOKEN`, `*_SECRET`, …) keeps a length floor
+  (`_GENERIC_SECRET_MIN_LEN = 4`): such a key can carry a tiny non-credential
+  value (a flag `1`, a version `v2`) that global replacement would turn into a
+  redaction wildcard, shredding every matching digit in the payload. The
+  any-length policy the design approved was about the credential set, not
+  arbitrary regex-matched keys.
+- **Value-before-regex ordering.** `redact_text` now replaces exact secret
+  values FIRST, then runs the DSN/keyword regex passes — mirroring the order
+  `seshat.dialect` documents as required. A regex-first pass could consume the
+  leading token of a secret value and leave its tail surviving the later value
+  replace.
+
 ## Known accepted limitation (documented)
 
-Redaction is a **global substring replace**, so a database literally named a
-common word (`ANALYTICS_DB_NAME=gold`) has that word clobbered wherever it
-appears in output — this is unchanged from `main` (NAME is already secret at
-len>=4) and is the inherent tradeoff of the chosen approach vs. the quoted-token
-alternative. It is safe-direction (a dbname must never surface, per the
-all-output-redacted contract) and therefore a documented decision, not a defect.
+- **Common-word dbname collision.** Redaction is a **global substring replace**,
+  so a database literally named a common word (`ANALYTICS_DB_NAME=gold`) has that
+  word clobbered wherever it appears in output — unchanged from `main` (NAME is
+  already secret at len>=4) and the inherent tradeoff of the chosen approach vs.
+  the quoted-token alternative. Safe-direction (a dbname must never surface) and
+  therefore a documented decision, not a defect.
+- **Snowflake target/authz labels are non-secret.** `ANALYTICS_DB_SCHEMA`,
+  `ANALYTICS_DB_ROLE`, and `ANALYTICS_DB_WAREHOUSE` are read by the tool
+  (`SnowflakeDialect`) but classified non-secret (none is in any dialect's
+  `_secret_keys`; matches how dbt treats `SESHAT_DBT_SCHEMA`). This is a
+  deliberate secret→non-secret classification vs. the old prefix rule that
+  redacted the whole `ANALYTICS_DB_*` namespace — they now surface verbatim in
+  output, which is correct for target/config labels.
+
+## Out of scope — filed as a follow-up
+
+The adversarial review confirmed the value-based redactor leaks credentials in
+three places this refactor does not touch, all "the dagster redactor lacks what
+the `seshat.dbt.redaction` sibling already has": DSN-component decomposition
+(a DATABASE_URL-only config leaks host/user in a reformatted psycopg2 error),
+redact-before-truncate ordering (`runner.py` slices the tail before redacting,
+cutting a DSN's scheme so it leaks), and the `portfolio_enumerate` prefix scan.
+These are the class-closing work — unify the dagster redactor onto the dbt
+hardened core — filed as **#362** rather than patching this module a sixth time.
 
 ## Testing (TDD, baseline-first)
 
