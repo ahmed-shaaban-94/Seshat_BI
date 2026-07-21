@@ -9,6 +9,74 @@
 > record. Fill it from a read-only profiling pass over the *landed* source -- before
 > any cleaning decision and before any `silver.*` SQL exists.
 >
+> **How to produce these numbers (issue #400).** For a DB source the turnkey path
+> is the shipped **`seshat profile`** verb -- it drives the SAME
+> `seshat.profile.profile()` the drift path uses, routes the SQL through the
+> selected engine's dialect (Postgres / SQL Server / MySQL / Snowflake), and emits
+> a markdown block you paste straight into the sections below:
+>
+> ```
+> seshat profile --table <bronze_schema>.<landed_table> --pk <candidate-key>
+> ```
+>
+> (needs a read-only DSN + the `db` extra -- `pipx inject seshat-bi
+> psycopg2-binary`, or `pip install "seshat-bi[db]"`; never commit a real DSN. For a
+> non-Postgres engine set `ANALYTICS_DB_ENGINE` and inject that engine's driver.)
+> Semantic rows (what each column MEANS) are PROPOSED for a human, never invented --
+> the verb emits only the mechanical numbers, not the semantic passes.
+>
+> **The reference SQL, if you profile by hand (PostgreSQL-illustrative).** The verb
+> is preferred because it is dialect-correct; the queries below use PostgreSQL
+> syntax (`FILTER`, row-value `count(DISTINCT (...))`) and must be translated for
+> another engine (that is exactly what the verb does for you). They mirror what
+> `profile.py` computes, so hand numbers match the tool's own profiler. Run against
+> the *landed* table:
+>
+> - **Row + column count:** `SELECT count(*) FROM <table>;` plus the column list +
+>   each column's data type from `information_schema.columns`.
+> - **Per-column missingness + distinct -- branch on the column's type** (exactly as
+>   `profile.py` does; `trim()` is TEXT-only and errors on a numeric/date/boolean
+>   column):
+>   - **TEXT columns (RC5 -- the load-bearing trap):**
+>     `SELECT count(*) FILTER (WHERE trim(<col>) = '' OR <col> IS NULL),
+>     count(DISTINCT trim(<col>)) FROM <table>;` -- `'' OR NULL`, **never `IS NULL`
+>     alone** (a landing loader that writes `''` for None makes `IS NULL` report 0),
+>     and `trim()` in the distinct so `"A"` and `" A "` are not counted as two.
+>   - **Non-text columns:** `SELECT count(*) FILTER (WHERE <col> IS NULL),
+>     count(DISTINCT <col>) FROM <table>;` -- no `trim()`; a non-text column cannot
+>     hold `''`, so plain `IS NULL` is the correct (and only valid) measure.
+> - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)),
+>   count(*) FILTER (WHERE <missing-key predicate>) FROM <table>;` where the
+>   missing-key predicate branches by EACH key column's type, exactly as the
+>   per-column measure above (RC5) and the profiler's PK proof do -- **`trim(<pk_col>)
+>   = '' OR <pk_col> IS NULL`** for a TEXT key component, plain **`<pk_col> IS NULL`**
+>   for a non-text one, OR-joined across the components. Using plain `IS NULL` for a
+>   text key is the same load-bearing trap: an all-TEXT landing writes `''` (not NULL)
+>   for a blank key, so `IS NULL` alone reports zero missing and a blank-but-unique
+>   tuple would wrongly pass. The PK holds iff **`count(*) > 0`** (an empty source
+>   proves nothing) **AND** `count(*) = count(DISTINCT pk)` **AND** the empty-or-NULL
+>   -in-any-PK-component count is `0` (RC2; all three required, matching the profiler's
+>   `is_unique = total > 0 and total == distinct_pk and null_pk == 0`).
+> - **Returns-column population:** the missingness measure above on the
+>   authoritative returns column.
+>
+> **File source (`csv`/`excel`, no DB/DSN):** the same mechanical set is computed
+> from the file's raw cells, not SQL -- CSV uses the stdlib (no extra); Excel needs
+> the `files` extra (`pipx inject seshat-bi openpyxl`, or
+> `pip install "seshat-bi[files]"`). Treat every cell as landed-as-TEXT, but
+> **normalize an empty cell to `''` FIRST** -- openpyxl reads a blank Excel cell as
+> Python `None`, and `str(None)` is the literal `"None"`, not `""`, so measuring
+> missingness with `str(cell).strip() == ''` would count a blank cell as populated
+> and let a blank key satisfy the PK proof. Map the cell as `'' if cell is None else
+> str(cell)` (exactly what `file_profile.py` does), THEN: a cell is missing when the
+> normalized text `.strip()` is `''`; distinct cardinality is over the `.strip()`ed
+> normalized cells; skip a wholly-blank row (it is a formatting artifact, not data);
+> and the PK proof is the SAME three-part check -- at least one row, rows =
+> distinct-key-tuples, and no blank/empty key component. This mirrors the shipped
+> `file_profile.py` so file and DB numbers are comparable at the gate. See the
+> file-source addendum below for the read traps (encoding, delimiter, header row,
+> sheet selection).
+>
 > **The rule the gate enforces:** you do not write silver until this profile is filled,
 > the source is mapped (`source-map.yaml`), and the mapping is reviewed.
 >
@@ -180,7 +248,9 @@ unique **on the data**.
 - **Uniqueness proof (on the landed data):**
   - `COUNT(*)            = <N>`
   - `COUNT(DISTINCT pk)  = <N>`   *(must equal `COUNT(*)` for the PK to hold)*
-  - `NULLs in PK columns = <N>`   *(must be `0`)*
+  - `NULLs/empty in PK   = <N>`   *(must be `0`; count `'' OR NULL` for a TEXT key
+    component, plain `IS NULL` for a non-text one -- the same measure the profiler
+    emits, so a hand-filled proof round-trips identically)*
 
 > **Forward seam to the silver build (ADR 0002 RC2).** What is recorded here is the
 > candidate PK on the **landed** data. RC2 requires the PK to be **re-verified on the
