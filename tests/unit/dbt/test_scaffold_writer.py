@@ -116,6 +116,22 @@ def test_malformed_selectors_fails_closed_without_clobbering(tmp_path: Path) -> 
     assert path.read_text(encoding="utf-8") == original
 
 
+def test_selectors_wrong_type_fails_closed_without_clobbering(tmp_path: Path) -> None:
+    """A `selectors:` that parses as valid YAML but is a MAPPING/scalar/null (not a
+    list) must fail closed -- silently coercing to [] would rewrite the file and
+    drop its existing content (#406 review). Covers the valid-YAML-wrong-shape gap
+    the malformed-YAML test above does not."""
+    path = tmp_path / SELECTORS
+    path.parent.mkdir(parents=True)
+    # valid YAML, but `selectors` is a mapping, not the expected list of rows
+    original = "selectors:\n  name: not_a_list\n"
+    path.write_text(original, encoding="utf-8")
+
+    with pytest.raises(model_plan.ScaffoldError, match="not a list"):
+        writer.merge_selector(tmp_path, "seshat_table_b")
+    assert path.read_text(encoding="utf-8") == original
+
+
 # --------------------------------------------------------------------------- #
 # FIX #3 regression -- a symlinked merge target is refused, never followed
 # --------------------------------------------------------------------------- #

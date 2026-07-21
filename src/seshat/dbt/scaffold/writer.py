@@ -101,12 +101,37 @@ def _selector_row(selector: str) -> dict:
     }
 
 
+def _existing_list(document: dict, key: str, path: Path) -> list:
+    """The value at ``key`` as a list, or ``[]`` when the key is ABSENT.
+
+    Fails CLOSED when the key is PRESENT but not a list (a mapping/scalar/null):
+    silently coercing to ``[]`` would rewrite the file dropping that existing
+    content -- the same destroy-other-tables' -entries hazard ``_load_document``
+    guards. An absent key is the only valid empty case.
+    """
+    if key not in document:
+        return []
+    value = document[key]
+    if value is None:
+        # An explicit `selectors:` / `sources:` with no value is a malformed
+        # collection, not an empty one -- refuse rather than silently replace it.
+        raise ScaffoldError(
+            f"{path.name} has a '{key}:' key with no list value; fix or remove it "
+            "before scaffolding (refusing to overwrite it and lose its entries)"
+        )
+    if not isinstance(value, list):
+        raise ScaffoldError(
+            f"{path.name} '{key}:' is a {type(value).__name__}, not a list; fix or "
+            "remove it before scaffolding (refusing to overwrite it)"
+        )
+    return value
+
+
 def merge_selector(root: Path, selector: str) -> bool:
     """Add the ``seshat_table_<id>`` tag selector if absent; True when changed."""
     path = root / _SELECTORS
     document = _load_document(path)
-    rows = document.get("selectors")
-    rows = rows if isinstance(rows, list) else []
+    rows = _existing_list(document, "selectors", path)
     if any(isinstance(row, dict) and row.get("name") == selector for row in rows):
         return False
     document["selectors"] = [*rows, _selector_row(selector)]
@@ -163,8 +188,7 @@ def merge_sources(root: Path, plan: ScaffoldPlan) -> bool:
     """
     path = root / _SOURCES
     document = _load_document(path)
-    rows = document.get("sources")
-    rows = rows if isinstance(rows, list) else []
+    rows = _existing_list(document, "sources", path)
     by_name = {
         row.get("name"): row
         for row in rows

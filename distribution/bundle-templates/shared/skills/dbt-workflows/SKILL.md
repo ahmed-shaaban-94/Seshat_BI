@@ -28,9 +28,12 @@ profile, lock, redaction, or artifact checks with raw dbt commands.
    database. The generated `.sql` files are SKELETONS: their SELECT column list
    is the governed output contract (do not rename or drop columns), but the
    joins, casts, and surrogate-key logic are yours to complete before the live
-   build. Re-run scaffold after any source-map re-commit so every model's
-   `source_map_revision` stays current. See "The `meta.seshat` model contract"
-   below for the shape scaffold emits and `validate` enforces.
+   build. NOTE: scaffold is non-destructive (it never overwrites an existing
+   model), so after a source-map re-commit a plain re-run does NOT refresh a
+   stale `source_map_revision` — you must update each model's `source_map_revision`
+   by hand, or delete the generated `_models.yml` and re-scaffold. See "The
+   `meta.seshat` model contract" below for the shape scaffold emits and `validate`
+   enforces.
 
 3. Validate the Mapping Ready gate, shadow schemas, selector, and citations:
 
