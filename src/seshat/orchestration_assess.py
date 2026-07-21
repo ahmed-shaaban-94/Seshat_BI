@@ -95,10 +95,6 @@ class _AdapterAssessment:
         }
 
 
-def _as_str(value: object) -> str | None:
-    return value if isinstance(value, str) else None
-
-
 def _load_yaml_mapping(path: Path) -> dict | None:
     """Read + parse one readiness-status.yaml. ``None`` (skip, not fatal) on any
     read/parse/shape failure -- RS1 is the fail-loud gate for a malformed file;
@@ -141,17 +137,18 @@ def _is_gold_ready(data: dict) -> bool:
     ``blocked``/``warning`` (e.g. the committed ``demo_sample_orders`` example).
     Counting the bare label would falsely report a not-yet-validated build as
     Gold-validated and drive a wrong "orchestration not required" headline (#401
-    review). So require an at/after-gold stage whose status is ``pass``; when the
-    ``stages`` block is absent, fall back to the ``current_stage`` label ONLY if
-    the record carries no stage-status evidence to contradict it.
+    review). Gold is reached ONLY when an at/after-gold stage records ``pass`` --
+    NEVER from a ``current_stage`` label alone. A record that omits/mistypes
+    ``stages`` but keeps ``current_stage: gold_ready`` carries NO recorded pass or
+    evidence, so counting it would fabricate a readiness claim (the kit's
+    never-fabricate posture): it returns False. Every committed/template readiness
+    record carries a ``stages`` block, so this only ever undercounts a malformed
+    record toward "consider orchestration" -- never a false "you don't need it".
     """
     stages = data.get("stages")
-    if isinstance(stages, dict):
-        # A stages block exists: gold is reached iff an at/after-gold stage passed,
-        # regardless of the current_stage label (which may be blocked).
-        return any(_stage_passed_at_or_after_gold(n, b) for n, b in stages.items())
-    # No stages block at all: the label is the only signal we have.
-    return _as_str(data.get("current_stage")) in _GOLD_OR_LATER
+    if not isinstance(stages, dict):
+        return False
+    return any(_stage_passed_at_or_after_gold(n, b) for n, b in stages.items())
 
 
 def _read_signals(root: Path) -> _WorkspaceSignals:
@@ -255,9 +252,15 @@ def _assess_dagster(s: _WorkspaceSignals) -> _AdapterAssessment:
         )
         recommendation = _CONSIDER
     else:
+        # NB: the adapter DOES build a multi-asset graph per table, so the honest
+        # reason is not "no graph" -- it is that a single direct build has no
+        # CROSS-table run dependency to coordinate; orchestration's remaining draw
+        # (scheduled / unattended runs) is the open question surfaced below, not a
+        # derivable need (#401 review -- don't claim a false "no graph exists").
         acc.against.append(
-            "Single table (or none) -- there is no multi-step run graph to "
-            "orchestrate; a direct build is enough."
+            "Single table (or none) -- a direct build has no cross-table run "
+            "dependency to coordinate; the only remaining draw is scheduled / "
+            "unattended runs, which is the open question below (you decide)."
         )
         recommendation = _NOT_RECOMMENDED
     acc.questions.append(

@@ -58,7 +58,9 @@ it never asserts that the customer must adopt.
 
 ## Opt-in commands (only if you decide)
 
-- dbt: `pip install 'seshat-bi[dbt]'` then `seshat dbt doctor`.
+- dbt: `pip install 'seshat-bi[dbt]'`, then `seshat dbt init` (materialize the
+  governed project), then `seshat dbt doctor`. Running `doctor` before `init`
+  reports missing `dbt_project.yml` / `selectors.yml`.
 - dagster: `seshat dagster init` then `seshat dagster doctor`.
 
 The command prints these as guidance. It never runs them.
