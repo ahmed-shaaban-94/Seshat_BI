@@ -131,24 +131,40 @@ def _resolve_pk_columns(
     DISCOVERED spelling forward so the emitted SQL names the column exactly as the
     engine stored it. Exact-first is load-bearing on a case-SENSITIVE catalog:
     Postgres can hold both ``id`` and a quoted ``"ID"`` in one table, so a
-    casefold-only lookup (last-wins) would silently profile the WRONG column for
-    ``--pk id`` -- an exit-0 wrong PK proof, the worst kind of bug in the gate's
-    evidence. A candidate name with no discovered match falls back to a text-typed
+    casefold-only lookup would silently profile the WRONG column for ``--pk id`` --
+    an exit-0 wrong PK proof, the worst kind of bug in the gate's evidence.
+
+    An AMBIGUOUS folded match -- the user's spelling matches NO column exactly yet
+    casefolds to TWO OR MORE discovered columns (e.g. ``--pk Id`` against both
+    ``id`` and ``"ID"``) -- is REFUSED with an actionable error rather than
+    silently resolved by catalog order (#410 review): guessing a grain key from
+    ordinal position would fabricate a uniqueness proof for a column the user did
+    not name. A candidate with no match at all falls back to a text-typed
     passthrough of the user's spelling (the DB then reports the unknown column).
     """
     exact = {name: (name, dt) for name, dt in columns}
-    # First-wins on casefold so a genuine collision resolves to the FIRST catalog
-    # (ordinal) column, deterministic and independent of dict iteration; but exact
-    # match is consulted first, so the collision only matters when the user's
-    # spelling matches NO column exactly.
-    by_casefold: dict[str, tuple[str, str]] = {}
+    # Group discovered columns by casefold so an AMBIGUOUS (>1 candidate) fold is
+    # detectable; keep every colliding spelling for the error message.
+    by_casefold: dict[str, list[tuple[str, str]]] = {}
     for name, dt in columns:
-        by_casefold.setdefault(name.casefold(), (name, dt))
+        by_casefold.setdefault(name.casefold(), []).append((name, dt))
+
+    def _match(col: str) -> tuple[str, str]:
+        if col in exact:
+            return exact[col]  # exact-case wins outright, even amid a collision
+        candidates = by_casefold.get(col.casefold(), [])
+        if len(candidates) > 1:
+            spellings = ", ".join(repr(n) for n, _ in candidates)
+            raise ValueError(
+                f"candidate PK column {col!r} is ambiguous: it case-matches "
+                f"multiple columns ({spellings}). Re-run --pk with the exact "
+                f"column spelling to name the intended grain key."
+            )
+        return candidates[0] if candidates else (col, "text")
+
     resolved: list[_ResolvedColumn] = []
     for col in candidate_pk:
-        discovered, data_type = exact.get(col) or by_casefold.get(
-            col.casefold(), (col, "text")
-        )
+        discovered, data_type = _match(col)
         resolved.append(
             _ResolvedColumn(
                 discovered=discovered,

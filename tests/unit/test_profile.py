@@ -242,6 +242,20 @@ def test_exact_case_pk_match_wins_over_casefold_collision() -> None:
     assert "trim(" not in pk_sql
 
 
+def test_ambiguous_casefold_pk_is_refused() -> None:
+    """When a --pk name matches NO column exactly but case-folds to MORE THAN ONE
+    discovered column (Postgres `id` + quoted `"ID"`, `--pk Id`), the profiler must
+    REFUSE with an actionable error rather than silently pick the ordinal-first
+    column and fabricate a uniqueness proof for the wrong grain (#410 review)."""
+    from seshat.dialect import get_dialect
+    from seshat.profile import profile
+
+    pg = get_dialect("postgres")
+    runner = FakeRunner([[("id", "integer"), ("ID", "text")], [(100,)]])
+    with pytest.raises(ValueError, match="ambiguous"):
+        profile(runner, "bronze.t", ("Id",), dialect=pg)
+
+
 def test_reserved_word_identifiers_are_quoted() -> None:
     """A valid landed object whose table or column is a reserved word (`order`,
     `group`) must be QUOTED in the generated SQL so the DB parses it as an
