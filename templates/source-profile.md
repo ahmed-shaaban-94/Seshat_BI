@@ -9,16 +9,28 @@
 > record. Fill it from a read-only profiling pass over the *landed* source -- before
 > any cleaning decision and before any `silver.*` SQL exists.
 >
-> **How to produce these numbers (issue #400):** on a `pipx`/marketplace install
-> (no development repository), reach the Stage-1 profiling procedure through the
-> shipped surface, not this file's `docs/` links (which are the dev-checkout
-> reference). Ask your agent to load the **`seshat-bi`** skill (the one that ships
-> with the plugin) and run `seshat next --format agent` -- it names the one governed
-> next action for this stage; at Source Ready that is the read-only profile that
-> fills the table below. Discover verbs with `seshat --help` / `seshat status`;
-> never guess a verb or skill name. The live profiling leg needs the optional `db`
-> extra and a DSN in a gitignored `.env` (`pipx inject seshat-bi psycopg2-binary`,
-> or `pip install "seshat-bi[db]"`).
+> **How to produce these numbers (issue #400) -- self-contained, no turnkey
+> command.** There is no `seshat profile` verb; the agent performs this read-only
+> pass itself, from the SQL below (nothing here needs the unshipped `docs/`). It
+> needs the optional `db` extra and a read-only DSN in a gitignored `.env`
+> (`pipx inject seshat-bi psycopg2-binary`, or `pip install "seshat-bi[db]"`); never
+> commit a real DSN. Run against the *landed* table and paste the results in:
+>
+> - **Row + column count:** `SELECT count(*) FROM <table>;` and the column list from
+>   `information_schema.columns` (or the source's catalog).
+> - **Per-column missingness (RC5 -- the load-bearing trap):** for each column,
+>   `SELECT count(*) FROM <table> WHERE trim(<col>) = '' OR <col> IS NULL;` --
+>   **`'' OR NULL`, never `IS NULL` alone** (a landing loader that writes `''` for
+>   None makes `IS NULL` return 0, a false "no missing data").
+> - **Distinct cardinality:** `SELECT count(DISTINCT <col>) FROM <table>;` per column.
+> - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)) FROM
+>   <table>;` -- the PK holds iff the two are equal (RC2, verified on the data).
+> - **Returns-column population:** the `'' OR NULL` count on the authoritative
+>   returns column.
+>
+> Semantic rows (what each column MEANS) are PROPOSED for a human, never invented.
+> The fuller method + trap checklist is `docs/medallion-playbook.md` Phase 1 /
+> Appendix A -- a deeper reference for a development checkout, not required here.
 >
 > **The rule the gate enforces:** you do not write silver until this profile is filled,
 > the source is mapped (`source-map.yaml`), and the mapping is reviewed.
