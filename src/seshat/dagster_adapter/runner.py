@@ -73,6 +73,14 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
     env = dict(os.environ)
     env["SESHAT_DAGSTER_RUN_ID"] = run_id
     env["SESHAT_REPO_ROOT"] = str(root)
+    # Force the CHILD to EMIT UTF-8, not just decode it in the parent (#404).
+    # The `python -m dagster` child does not run seshat's stdio reconfig, so on
+    # Windows it would otherwise write via the legacy code page (cp1252) and
+    # UnicodeEncodeError on non-Latin-1 governed values (e.g. Arabic). Pairing
+    # the child's UTF-8 output with the parent's UTF-8 decode also stops
+    # `errors="replace"` from silently corrupting cp1252-encoded chars like `é`.
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     if table:
         env["SESHAT_DAGSTER_TABLES"] = table
     else:
@@ -84,6 +92,16 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
             env=env,
             capture_output=True,
             text=True,
+            # Decode the child's stdout/stderr as UTF-8, NOT the platform default
+            # (cp1252 on Windows). The Dagster child ingests governed data whose
+            # values can be non-Latin-1 (e.g. Arabic `billing_type`); with
+            # `text=True` alone the reader thread decodes via
+            # locale.getpreferredencoding() and raises UnicodeDecodeError mid-run
+            # on Windows (#404). `errors="replace"` keeps a stray byte from
+            # crashing the capture. Same class as the #322 stdio fix, one layer
+            # down at the subprocess-read boundary.
+            encoding="utf-8",
+            errors="replace",
             shell=False,
             timeout=_RUN_TIMEOUT_SECONDS,
         )

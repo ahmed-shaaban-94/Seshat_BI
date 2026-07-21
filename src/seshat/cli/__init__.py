@@ -158,6 +158,7 @@ def _lazy(module_path: str, func_name: str):
 _DISPATCH: dict[str, Callable[[object], int]] = {
     "check": _run_check,
     "validate": _lazy(".commands.validate", "run_validate"),
+    "profile": _lazy(".commands.profile", "run_profile"),
     "drift": _lazy(".commands.drift", "run_drift"),
     "semantic-check": _lazy(".commands.semantic", "run_semantic_check"),
     "value-check": _lazy(".commands.value_check", "run_value_check"),
@@ -273,7 +274,7 @@ def _prog(args: object) -> str:
     return getattr(args, "prog", "seshat") or "seshat"
 
 
-def _db_extra_hint() -> str:
+def _db_extra_hint(engine: str = "postgres") -> str:
     """Actionable, install-path-aware guidance for the optional DB driver (#399).
 
     Names the real distribution (``seshat-bi``, not the internal ``retail``) and
@@ -281,10 +282,20 @@ def _db_extra_hint() -> str:
     external-customer ``pipx`` install (where ``pip install`` inside the isolated
     venv is the wrong mechanism), and the ``pip install`` extra for a plain venv.
     Sourced from ONE place so the brand + remedy can't drift per command.
+
+    ``engine`` selects the right driver/extra so a non-Postgres run (SQL Server /
+    MySQL / Snowflake) is told to install ITS driver, not psycopg2 (PR #409). The
+    default is ``postgres`` -- unchanged output for callers that don't pass one.
     """
+    driver, extra = {
+        "postgres": ("psycopg2-binary", "db"),
+        "sqlserver": ("pyodbc", "mssql"),
+        "mysql": ("mysql-connector-python", "mysql"),
+        "snowflake": ("snowflake-connector-python", "snowflake"),
+    }.get(engine, ("psycopg2-binary", "db"))
     return (
-        "       pipx install:  pipx inject seshat-bi psycopg2-binary\n"
-        "       pip install:   pip install 'seshat-bi[db]'"
+        f"       pipx install:  pipx inject seshat-bi {driver}\n"
+        f"       pip install:   pip install 'seshat-bi[{extra}]'"
     )
 
 
@@ -323,8 +334,46 @@ def _safe_target_label(engine: str, config: object) -> str:
     non-Postgres config is guaranteed secret-free enough to print.
     """
     if engine == "postgres" and isinstance(config, str):
-        return config.split("@")[-1] if "@" in config else config
+        return _postgres_target_label(config)
     return engine
+
+
+def _postgres_target_label(config: str) -> str:
+    """A credential-free label from a Postgres config string.
+
+    Classify by OUTER syntax, never by content (#409 P1). A libpq KEYWORD
+    conninfo can embed anything inside a quoted credential -- ``@``, ``host=``,
+    even ``://`` (``password='abc://u:s3cret@x'``) -- so any content-based test
+    (``"://" in config``, a ``host=`` regex, an ``@`` split) can be spoofed into
+    surfacing the secret. A genuine Postgres URL is identified ONLY by its
+    leading ``postgresql://`` / ``postgres://`` scheme, which a keyword conninfo
+    (always ``keyword=value ...``) can never produce at offset 0. Anything that
+    is not outwardly a URL renders NO component -- just the bare engine label.
+    """
+    if config.lstrip().lower().startswith(("postgresql://", "postgres://")):
+        # URL form. Parse STRUCTURALLY (urlsplit) rather than string-splitting on
+        # "@"/"?": a query-string credential whose value contains a raw "@"
+        # defeats a split-then-strip and leaks the trailing fragment (#409 P1).
+        # urlsplit.hostname excludes any userinfo and .path excludes the query,
+        # so only host[:port]/dbname is surfaced.
+        from urllib.parse import urlsplit
+
+        try:
+            parts = urlsplit(config.lstrip())
+            host = parts.hostname
+            # .port is a lazily-parsed property: it raises ValueError on a
+            # non-numeric / out-of-range port (`host:notaport`). This label is
+            # computed BEFORE the handler's DB-boundary try, so an unguarded
+            # access would surface an uncaught traceback instead of the clean
+            # config error (#409). Access it inside the guard.
+            port = parts.port
+        except ValueError:
+            return "postgres"
+        if not host:
+            return "postgres"
+        label = f"{host}:{port}" if port else host
+        return f"{label}{parts.path}" if parts.path not in ("", "/") else label
+    return "postgres"
 
 
 def _current_engine() -> str:

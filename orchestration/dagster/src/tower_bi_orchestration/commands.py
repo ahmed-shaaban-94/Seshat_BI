@@ -40,7 +40,13 @@ def run_gate_command(argv: list[str], cwd: Path) -> tuple[int, str]:
         cwd=cwd,
         capture_output=True,
         text=True,
-        shell=False,
+        # Force UTF-8 decoding of the child's output instead of the platform
+        # default (cp1252 on Windows). Gate output echoes redacted findings that
+        # can contain non-Latin-1 governed values (e.g. Arabic `billing_type`);
+        # `text=True` alone decodes via locale.getpreferredencoding() and crashes
+        # the reader thread with UnicodeDecodeError on Windows (#404).
+        encoding="utf-8",
+        errors="replace",
         timeout=1800,
     )
     combined = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")

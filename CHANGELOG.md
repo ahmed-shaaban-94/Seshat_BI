@@ -27,6 +27,29 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+
+- `seshat profile` CLI verb: runs the mechanical Stage-1 profiler over a
+  read-only connection and emits the numbers the blank `source-profile.md`
+  asks for (row/column count, per-column `'' OR NULL` missingness, distinct
+  cardinality, candidate-PK uniqueness proof) as markdown to paste or JSON.
+  Closes the gap where `scaffold-source` pointed at the internal
+  `seshat.profile.profile()`, unreachable on a pipx install (#400).
+
+### Changed
+
+- `seshat dbt doctor` now prints the exact remediation command
+  (`pipx inject seshat-bi --force "<pkg>==<ver>"`, or the pip equivalent) when a
+  dbt-core/dbt-postgres version is unsupported or missing, instead of only
+  naming the expected version (#407).
+
+### Fixed
+
+- Windows cp1252 crash on UTF-8 ingest: the Dagster run and gate-command
+  subprocess readers now decode child output as UTF-8 (not the platform
+  default), so non-Latin-1 governed values (e.g. Arabic `billing_type`) no
+  longer raise `UnicodeDecodeError` mid-run (#404).
+
 ## [0.5.3] -- 2026-07-21
 
 ### Added
