@@ -34,12 +34,14 @@ def _safe_identifier(name: str) -> str:
     not be able to break out of the identifier position. Allow letters, digits,
     underscore, and dots between parts; reject everything else.
 
-    NOTE (audit 2026-06-26 #40): this overlaps :mod:`seshat.identifiers`, but the
-    grammars differ deliberately -- this accepts an UNLIMITED dotted chain via one
-    regex (the inverted-data-flow profiler runs before a source-map exists), while
-    ``identifiers.validate_qualified_identifier`` caps at two parts. They are kept
-    separate rather than merged so neither validator's contract shifts; both use
-    ``fullmatch`` and reject quotes/comments/separators identically.
+    NOTE (#410): since the profiler now QUOTES every emitted identifier through the
+    dialect (``quote_ident`` / ``quote_qualified``, which re-run
+    ``seshat.identifiers.validate_*``), this is a cheap FIRST-PASS reject on the raw
+    table string before the authoritative dialect validation -- not the sole guard.
+    Its regex still accepts an unlimited dotted chain, but the table then passes
+    through ``validate_qualified_identifier`` (max two parts) in ``profile()``, so a
+    3-part name is rejected there; this pre-check only rejects the obviously-unsafe
+    (quotes, comments, separators) early. Both validators use ``fullmatch``.
     """
     # fullmatch (not match): `.match` anchors only at the start, so a
     # newline-terminated name like "valid_id\nDROP ..." would slip past the
@@ -125,15 +127,28 @@ def _resolve_pk_columns(
     misses on a case mismatch -- e.g. Postgres ``--pk ID`` on a stored ``id``, or
     Snowflake ``--pk id`` on a stored ``ID`` -- defaulting the type to ``text``
     and emitting ``trim(<key>)`` against a numeric column (a DB-boundary crash,
-    #409/#410). Match on ``casefold()`` and carry the DISCOVERED spelling forward
-    so the emitted SQL names the column exactly as the engine stored it. A
-    candidate name with no discovered match falls back to a text-typed passthrough
-    of the user's spelling (the DB then reports the unknown column honestly).
+    #409/#410). Match EXACT-case first, then fall back to ``casefold()``; carry the
+    DISCOVERED spelling forward so the emitted SQL names the column exactly as the
+    engine stored it. Exact-first is load-bearing on a case-SENSITIVE catalog:
+    Postgres can hold both ``id`` and a quoted ``"ID"`` in one table, so a
+    casefold-only lookup (last-wins) would silently profile the WRONG column for
+    ``--pk id`` -- an exit-0 wrong PK proof, the worst kind of bug in the gate's
+    evidence. A candidate name with no discovered match falls back to a text-typed
+    passthrough of the user's spelling (the DB then reports the unknown column).
     """
-    by_casefold = {name.casefold(): (name, data_type) for name, data_type in columns}
+    exact = {name: (name, dt) for name, dt in columns}
+    # First-wins on casefold so a genuine collision resolves to the FIRST catalog
+    # (ordinal) column, deterministic and independent of dict iteration; but exact
+    # match is consulted first, so the collision only matters when the user's
+    # spelling matches NO column exactly.
+    by_casefold: dict[str, tuple[str, str]] = {}
+    for name, dt in columns:
+        by_casefold.setdefault(name.casefold(), (name, dt))
     resolved: list[_ResolvedColumn] = []
     for col in candidate_pk:
-        discovered, data_type = by_casefold.get(col.casefold(), (col, "text"))
+        discovered, data_type = exact.get(col) or by_casefold.get(
+            col.casefold(), (col, "text")
+        )
         resolved.append(
             _ResolvedColumn(
                 discovered=discovered,

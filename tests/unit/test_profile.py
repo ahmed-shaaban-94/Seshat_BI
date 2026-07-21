@@ -215,6 +215,33 @@ def test_postgres_uppercase_pk_matches_lowercased_catalog_type() -> None:
     assert "trim(" not in pk_sql
 
 
+def test_exact_case_pk_match_wins_over_casefold_collision() -> None:
+    """On a case-SENSITIVE catalog (Postgres) a table can hold BOTH `id` and a
+    quoted `"ID"`. A candidate `--pk id` must resolve to the EXACT-case `id`
+    (integer here), never let the casefold-colliding `"ID"` (text) win -- a
+    casefold-only lookup would silently profile the wrong column and emit a wrong
+    PK proof at exit 0, the worst kind of gate-evidence bug (#410 review catch)."""
+    from seshat.dialect import get_dialect
+    from seshat.profile import profile
+
+    pg = get_dialect("postgres")
+    # Catalog returns `id` (integer) then `ID` (text) -- both coexist on Postgres.
+    runner = FakeRunner(
+        [
+            [("id", "integer"), ("ID", "text")],
+            [(100,)],
+            [(0, 100)],  # id column stats
+            [(5, 90)],  # ID column stats
+            [(100, 100, 0)],  # pk proof
+        ]
+    )
+    profile(runner, "bronze.t", ("id",), dialect=pg)
+    pk_sql = runner.calls[-1]
+    # Must profile the exact-case integer `id` (no trim), NOT the text `"ID"`.
+    assert '"id" IS NULL' in pk_sql
+    assert "trim(" not in pk_sql
+
+
 def test_reserved_word_identifiers_are_quoted() -> None:
     """A valid landed object whose table or column is a reserved word (`order`,
     `group`) must be QUOTED in the generated SQL so the DB parses it as an
