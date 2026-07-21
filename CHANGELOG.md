@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.5.3] -- 2026-07-21
+
 ### Added
 
 - Top-level `--version` prints `<prog> <version>` from installed package
