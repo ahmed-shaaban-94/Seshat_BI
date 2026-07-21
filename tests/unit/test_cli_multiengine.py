@@ -56,11 +56,15 @@ def test_safe_target_label_sqlserver_odbc_string_never_echoes_credentials() -> N
     assert label == "sqlserver"
 
 
-def test_safe_target_label_postgres_dsn_unchanged() -> None:
-    # Regression guard: the Postgres DSN behavior (host-only label) is UNCHANGED.
+def test_safe_target_label_postgres_dsn_is_host_only() -> None:
+    # The Postgres URL label is the credential-free host[:port]/dbname, parsed
+    # structurally (urlsplit) so userinfo and query never reach the status line.
     assert _safe_target_label("postgres", "postgresql://u:p@h:5432/db") == "h:5432/db"
-    assert _safe_target_label("postgres", "postgresql://h:5432/db") == (
-        "postgresql://h:5432/db"
+    assert _safe_target_label("postgres", "postgresql://h:5432/db") == "h:5432/db"
+    # A query-param credential with a raw "@" must NOT leak (#409): host only.
+    assert (
+        _safe_target_label("postgres", "postgresql://h/db?password=secret@tail")
+        == "h/db"
     )
 
 

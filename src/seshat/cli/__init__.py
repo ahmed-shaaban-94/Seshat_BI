@@ -351,10 +351,22 @@ def _postgres_target_label(config: str) -> str:
     is not outwardly a URL renders NO component -- just the bare engine label.
     """
     if config.lstrip().lower().startswith(("postgresql://", "postgres://")):
-        # URL form. Credentials live in the userinfo (before "@") and/or the
-        # query string (?password=); strip both, keep host[:port]/dbname.
-        after_userinfo = config.split("@")[-1]
-        return after_userinfo.split("?")[0]
+        # URL form. Parse STRUCTURALLY (urlsplit) rather than string-splitting on
+        # "@"/"?": a query-string credential whose value contains a raw "@"
+        # defeats a split-then-strip and leaks the trailing fragment (#409 P1).
+        # urlsplit.hostname excludes any userinfo and .path excludes the query,
+        # so only host[:port]/dbname is surfaced.
+        from urllib.parse import urlsplit
+
+        try:
+            parts = urlsplit(config.lstrip())
+        except ValueError:
+            return "postgres"
+        host = parts.hostname
+        if not host:
+            return "postgres"
+        label = f"{host}:{parts.port}" if parts.port else host
+        return f"{label}{parts.path}" if parts.path not in ("", "/") else label
     return "postgres"
 
 

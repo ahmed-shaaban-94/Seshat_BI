@@ -201,17 +201,18 @@ def test_safe_target_label_never_leaks_keyword_conninfo_password() -> None:
     assert spoof_label == "postgres"
     assert "s3cret" not in spoof_label and "credential" not in spoof_label
 
-    # URL form with credentials in the query string is also scrubbed to host.
-    url = "postgresql://h:5432/db?password=s3cret"
-    assert "s3cret" not in _safe_target_label("postgres", url)
-
-    # Unchanged: the credential-bearing URL form still yields host:port/db, and a
-    # credential-free URL is returned as-is.
-    assert _safe_target_label("postgres", "postgresql://u:p@h:5432/db") == "h:5432/db"
-    assert (
-        _safe_target_label("postgres", "postgresql://h:5432/db")
-        == "postgresql://h:5432/db"
+    # URL form with credentials in the query string is scrubbed to host, even
+    # when the query value contains a raw "@" (structural parse, not @-split).
+    assert "s3cret" not in _safe_target_label(
+        "postgres", "postgresql://h:5432/db?password=s3cret"
     )
+    at_query = "postgresql://h/db?password=secret@tail"
+    assert _safe_target_label("postgres", at_query) == "h/db"
+    assert "tail" not in _safe_target_label("postgres", at_query)
+
+    # The credential-bearing URL form yields the host-only label.
+    assert _safe_target_label("postgres", "postgresql://u:p@h:5432/db") == "h:5432/db"
+    assert _safe_target_label("postgres", "postgresql://h:5432/db") == "h:5432/db"
 
 
 @pytest.mark.parametrize("bad_table", ["orders", "a.b.c", "bronze.", ".orders"])
