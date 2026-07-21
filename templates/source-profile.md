@@ -11,26 +11,44 @@
 >
 > **How to produce these numbers (issue #400) -- self-contained, no turnkey
 > command.** There is no `seshat profile` verb; the agent performs this read-only
-> pass itself, from the SQL below (nothing here needs the unshipped `docs/`). It
-> needs the optional `db` extra and a read-only DSN in a gitignored `.env`
-> (`pipx inject seshat-bi psycopg2-binary`, or `pip install "seshat-bi[db]"`); never
-> commit a real DSN. Run against the *landed* table and paste the results in:
+> pass itself, from the method below (nothing here needs the unshipped `docs/`). It
+> mirrors what `seshat.profile.profile()` computes, so the numbers match the tool's
+> own profiler. Semantic rows (what each column MEANS) are PROPOSED for a human,
+> never invented.
 >
-> - **Row + column count:** `SELECT count(*) FROM <table>;` and the column list from
->   `information_schema.columns` (or the source's catalog).
-> - **Per-column missingness (RC5 -- the load-bearing trap):** for each column,
->   `SELECT count(*) FROM <table> WHERE trim(<col>) = '' OR <col> IS NULL;` --
->   **`'' OR NULL`, never `IS NULL` alone** (a landing loader that writes `''` for
->   None makes `IS NULL` return 0, a false "no missing data").
-> - **Distinct cardinality:** `SELECT count(DISTINCT <col>) FROM <table>;` per column.
-> - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)) FROM
->   <table>;` -- the PK holds iff the two are equal (RC2, verified on the data).
-> - **Returns-column population:** the `'' OR NULL` count on the authoritative
->   returns column.
+> **DB source (`db` extra + a read-only DSN** in a gitignored `.env` --
+> `pipx inject seshat-bi psycopg2-binary`, or `pip install "seshat-bi[db]"`; never
+> commit a real DSN). Run against the *landed* table:
 >
-> Semantic rows (what each column MEANS) are PROPOSED for a human, never invented.
-> The fuller method + trap checklist is `docs/medallion-playbook.md` Phase 1 /
-> Appendix A -- a deeper reference for a development checkout, not required here.
+> - **Row + column count:** `SELECT count(*) FROM <table>;` plus the column list +
+>   each column's data type from `information_schema.columns`.
+> - **Per-column missingness + distinct -- branch on the column's type** (exactly as
+>   `profile.py` does; `trim()` is TEXT-only and errors on a numeric/date/boolean
+>   column):
+>   - **TEXT columns (RC5 -- the load-bearing trap):**
+>     `SELECT count(*) FILTER (WHERE trim(<col>) = '' OR <col> IS NULL),
+>     count(DISTINCT trim(<col>)) FROM <table>;` -- `'' OR NULL`, **never `IS NULL`
+>     alone** (a landing loader that writes `''` for None makes `IS NULL` report 0),
+>     and `trim()` in the distinct so `"A"` and `" A "` are not counted as two.
+>   - **Non-text columns:** `SELECT count(*) FILTER (WHERE <col> IS NULL),
+>     count(DISTINCT <col>) FROM <table>;` -- no `trim()`; a non-text column cannot
+>     hold `''`, so plain `IS NULL` is the correct (and only valid) measure.
+> - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)),
+>   count(*) FILTER (WHERE <pk_col_1> IS NULL OR <pk_col_2> IS NULL ...) FROM
+>   <table>;` -- the PK holds iff `count(*) = count(DISTINCT pk)` **AND** the
+>   NULL-in-any-PK-component count is `0` (RC2; both conditions required, matching
+>   `profile.py`'s `is_unique = total == distinct_pk and null_pk == 0`).
+> - **Returns-column population:** the missingness measure above on the
+>   authoritative returns column.
+>
+> **File source (`csv`/`excel`, no DB/DSN):** the same mechanical set is computed
+> from the file's raw cells, not SQL -- CSV uses the stdlib (no extra); Excel needs
+> the `files` extra (`pipx inject seshat-bi openpyxl`, or
+> `pip install "seshat-bi[files]"`). Treat every cell as landed-as-TEXT: missingness
+> is `'' OR NULL` per column, distinct is over `trim()`ed values, and the PK proof is
+> the same "rows = distinct-key-tuples AND no NULL/empty key component" check on the
+> raw rows. See the file-source addendum below for the read traps (encoding,
+> delimiter, header row, sheet selection).
 >
 > **The rule the gate enforces:** you do not write silver until this profile is filled,
 > the source is mapped (`source-map.yaml`), and the mapping is reviewed.
