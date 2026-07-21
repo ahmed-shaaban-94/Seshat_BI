@@ -482,3 +482,98 @@ def test_fact_named_with_reserved_prefix_fails_closed() -> None:
     )
     with pytest.raises(model_plan.ScaffoldError, match="dim_/stg_/audit_"):
         model_plan.build_scaffold_plan(_source(_MAP), TABLE_ID, fact)
+
+
+# --------------------------------------------------------------------------- #
+# FIX 1 regression -- composite grain never emits a single-column `unique`
+# --------------------------------------------------------------------------- #
+_COMPOSITE_MAP = {
+    "meta": {"table_id": TABLE_ID, "grain": "one row = one invoice line"},
+    "columns": [
+        {"source_name": "invoice_no", "decision": "keep", "rename_to": "invoice_no"},
+        {"source_name": "line_no", "decision": "keep", "rename_to": "line_no"},
+        {
+            "source_name": "amount",
+            "decision": "keep",
+            "rename_to": "amount",
+            "silver_type": "numeric(12,2)",
+        },
+    ],
+    "gold_star": {
+        "fact": {
+            "name": "gold.fct_lines_rss",
+            "business_key": ["invoice_no", "line_no"],
+            "measures": ["amount"],
+            "additive_money_measures": ["amount"],
+        },
+        "dimensions": [
+            {
+                "name": "gold.dim_invoice_rss",
+                "surrogate_key": "invoice_sk",
+                "attributes": ["invoice_no"],
+            },
+        ],
+    },
+}
+_COMPOSITE_FACT = FactBinding(
+    name="fct_lines_rss",
+    business_key=("invoice_no", "line_no"),
+    additive_money_measures=("amount",),
+)
+
+
+def _test_names(column: dict) -> set[str]:
+    return {next(iter(t)) for t in column.get("data_tests", [])}
+
+
+def test_composite_grain_staging_has_no_single_column_unique() -> None:
+    """A composite grain [invoice_no, line_no] must NOT put `unique` on either
+    component alone (that fails on correct data); both get `not_null`."""
+    plan = model_plan.build_scaffold_plan(
+        _source(_COMPOSITE_MAP), TABLE_ID, _COMPOSITE_FACT
+    )
+    doc = yaml_render.render_models_document((plan.staging,), plan, SELECTOR)
+    by_name = {c["name"]: c for c in doc["models"][0]["columns"]}
+
+    assert "unique" not in _test_names(by_name["invoice_no"])
+    assert "unique" not in _test_names(by_name["line_no"])
+    assert "not_null" in _test_names(by_name["invoice_no"])
+    assert "not_null" in _test_names(by_name["line_no"])
+    # No column anywhere in the composite-grain staging model carries `unique`.
+    assert all("unique" not in _test_names(c) for c in doc["models"][0]["columns"])
+
+
+def test_single_column_grain_staging_keeps_unique_and_not_null() -> None:
+    """The single-column case is unchanged: the grain key is unique + not_null."""
+    plan = _plan()
+    doc = yaml_render.render_models_document((plan.staging,), plan, SELECTOR)
+    by_name = {c["name"]: c for c in doc["models"][0]["columns"]}
+
+    assert _test_names(by_name["transaction_id"]) == {"unique", "not_null"}
+
+
+# --------------------------------------------------------------------------- #
+# FIX 2 regression -- unstaged reference remedy names the derived_columns path
+# --------------------------------------------------------------------------- #
+def test_derived_rollup_attribute_remedy_points_at_derived_columns() -> None:
+    """A dim attribute whose provenance is a derived_columns rollup (not a kept
+    columns[] source) fails closed with a remedy that names derived_columns and
+    the hand-completion path -- NOT a misleading 'add it to columns[]'."""
+    rollup_map = {
+        **_MAP,
+        "gold_star": {
+            **_MAP["gold_star"],
+            "dimensions": [
+                {
+                    "name": "gold.dim_customer_rss",
+                    "surrogate_key": "customer_sk",
+                    # customer_segment is an RC11 rollup living in derived_columns,
+                    # not a kept 1:1 source column -- so it is not in the lookup.
+                    "attributes": ["customer_segment"],
+                },
+            ],
+        },
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="derived_columns") as err:
+        model_plan.build_scaffold_plan(_source(rollup_map), TABLE_ID, _FACT)
+    assert "customer_segment" in str(err.value)

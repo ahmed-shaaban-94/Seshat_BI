@@ -184,13 +184,22 @@ def _bronze_by_silver(document: dict) -> dict[str, str]:
 def _bronze_citation(inputs: _PlanInputs, silver_name: str, context: str) -> str:
     """The ``bronze.<table>.<source_name>`` citation for a silver column, or fail.
 
-    Resolves the silver name to its committed bronze ``source_name``; a name the
-    map does not stage is a defect (never a fabricated citation)."""
+    Resolves the silver name to its committed bronze ``source_name`` via the
+    kept ``columns[]`` rows. A name that maps to no kept source column is a defect
+    (never a fabricated citation) -- but it also legitimately covers a
+    ``derived_columns`` rollup (RC11, e.g. a business segment with a
+    ``derived_from`` source rather than a direct 1:1 rename), which the scaffold
+    does not yet wire, so the message distinguishes the two and points at the
+    hand-completion path."""
     source = inputs.bronze_by_silver.get(silver_name)
     if source is None:
         raise ScaffoldError(
             f"{context} references {silver_name!r}, which no kept source column "
-            "maps to (add/keep it in the map's columns[] before scaffolding)"
+            "in columns[] maps to. If it is a direct source column, keep it in "
+            "columns[] (with rename_to) before scaffolding. If it is a "
+            "derived_columns rollup (RC11, a derived_from computation, not a 1:1 "
+            "rename), scaffold does not yet generate its provenance -- author that "
+            "model column and its meta.seshat citation by hand (tracked follow-up)"
         )
     return f"bronze.{inputs.source_table}.{source}"
 

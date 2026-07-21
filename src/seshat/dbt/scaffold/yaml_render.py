@@ -46,28 +46,53 @@ def _tagged_test(test: dict, selector: str) -> dict:
     return {name: body}
 
 
-def _key_tests(is_key: bool) -> tuple[dict, ...]:
-    return ({"name": "unique"}, {"name": "not_null"}) if is_key else ()
+def _column_tests(
+    name: str, unique_col: str, not_null_cols: frozenset[str]
+) -> tuple[dict, ...]:
+    tests: list[dict] = []
+    if name == unique_col:
+        tests.append({"name": "unique"})
+    if name in not_null_cols:
+        tests.append({"name": "not_null"})
+    return tuple(tests)
 
 
-def _tested_key_column(model: ModelSpec) -> str:
-    """The column ``unique``+``not_null`` are keyed on.
+def _synthetic_key_column(model: ModelSpec) -> str | None:
+    """The surrogate/PK column when the model has one (dims, the fact, the audit).
 
-    The surrogate/PK when the model has one (dims, the fact, the audit) --
-    NEVER the natural business key of a dimension, whose ``-1`` unknown-member
-    row carries a NULL natural key that would fail ``not_null`` on correct data.
-    A staging model has no surrogate, so its grain business key is tested (which
-    is also the map-order-independent correct column, not ``columns[0]``)."""
+    Preferred over the natural business key: a dimension's ``-1`` unknown-member
+    row NULLs the natural key, which would fail ``not_null`` on correct data. A
+    staging model has no such column."""
     for column in model.columns:
         if column.derivation in {"surrogate_key", "date_spine", "parity_measure"}:
             return column.name
-    return model.business_key[0] if model.business_key else ""
+    return None
+
+
+def _key_test_targets(model: ModelSpec) -> tuple[str, frozenset[str]]:
+    """(column that carries ``unique``, columns that carry ``not_null``).
+
+    A single synthetic PK is both unique and not_null. Absent one (staging), the
+    grain business key is tested: EACH component gets ``not_null``, but ``unique``
+    is emitted ONLY for a single-column key -- a composite grain's uniqueness is a
+    multi-column property that dbt's column-level ``unique`` cannot express, so a
+    single-column ``unique`` on one component would fail on correct data (a
+    composite uniqueness test would be a model-level
+    ``dbt_utils.unique_combination_of_columns``, out of scope for the scaffold)."""
+    synthetic = _synthetic_key_column(model)
+    if synthetic is not None:
+        return synthetic, frozenset({synthetic})
+    key = model.business_key
+    unique_col = key[0] if len(key) == 1 else ""
+    return unique_col, frozenset(key)
 
 
 def _model_columns(model: ModelSpec, selector: str) -> list[dict]:
-    key = _tested_key_column(model)
+    unique_col, not_null_cols = _key_test_targets(model)
     return [
-        _column_row(column, selector, _key_tests(column.name == key))
+        _column_row(
+            column, selector, _column_tests(column.name, unique_col, not_null_cols)
+        )
         for column in model.columns
     ]
 
