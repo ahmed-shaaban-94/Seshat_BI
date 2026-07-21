@@ -480,6 +480,53 @@ def _add_validate_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
+def _add_profile_parser(sub: argparse._SubParsersAction) -> None:
+    """`profile` (#400): run the mechanical Stage-1 profiler over a read-only
+    connection and emit the numbers the blank ``source-profile.md`` asks for
+    (row/column count, per-column ''-OR-NULL missingness, distinct cardinality,
+    and the candidate-PK uniqueness proof). This is the CLI entry point for
+    ``seshat.profile.profile`` -- previously reachable only by importing an
+    internal from inside the pipx venv. Needs a running DB + the optional `db`
+    extra; the driver is imported LAZILY in ``run_profile``, never here, so the
+    stdlib-only ``check`` core is unaffected."""
+    profile = sub.add_parser(
+        "profile",
+        help="profile a landed (bronze) table for the Source Ready source-profile.md "
+        "(needs a DSN + the 'db' extra)",
+    )
+    profile.add_argument(
+        "--table",
+        required=True,
+        metavar="[schema.]table",
+        help="the landed table to profile, e.g. `bronze.sales_c086_raw` "
+        "(an unqualified name defaults to the `public` schema).",
+    )
+    profile.add_argument(
+        "--pk",
+        required=True,
+        metavar="col[,col...]",
+        help="the candidate grain key to prove unique on the landed data; "
+        "comma-separate a composite, e.g. `invoice_id,line_no`.",
+    )
+    profile.add_argument(
+        "--dsn",
+        default=None,
+        metavar="postgresql://...",
+        help=(
+            "Postgres connection string. Overrides env. If omitted, DATABASE_URL "
+            "or the ANALYTICS_DB_* env vars are used. NEVER commit a real DSN."
+        ),
+    )
+    profile.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("md", "json"),
+        default="md",
+        help="'md' (default) emits the source-profile.md blocks to paste; "
+        "'json' emits the machine-readable ProfileResult.",
+    )
+
+
 def _add_drift_parser(sub: argparse._SubParsersAction) -> None:
     """`drift` (F014): compare a committed baseline source-profile.md against a
     live observed re-profile and emit source-drift-findings. Two-mode like
@@ -1123,6 +1170,7 @@ def _build_parser(prog: str = "retail") -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     _add_check_parser(sub)
     _add_validate_parser(sub)
+    _add_profile_parser(sub)
     _add_drift_parser(sub)
     _add_semantic_and_value_check_parsers(sub)
     _add_generate_parser(sub)

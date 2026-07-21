@@ -379,5 +379,9 @@ def scaffold_source(repo_root: Path, table: str) -> Stage1Report:
     notes = (
         f"fill mappings/{table}/source-profile.md (Table id, Row count, the "
         "Per-column profile table, the PK proof), then run `seshat next`",
+        "get the mechanical numbers (row/column count, per-column missingness, "
+        "distinct cardinality, PK proof) with "
+        f"`seshat profile --table bronze.{table} --pk <candidate-key>` "
+        "(needs a DSN + the 'db' extra); paste its output into the profile",
     )
     return Stage1Report(written=tuple(written), kept=tuple(kept), notes=notes)

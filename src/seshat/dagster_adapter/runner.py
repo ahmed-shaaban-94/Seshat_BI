@@ -84,6 +84,16 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
             env=env,
             capture_output=True,
             text=True,
+            # Decode the child's stdout/stderr as UTF-8, NOT the platform default
+            # (cp1252 on Windows). The Dagster child ingests governed data whose
+            # values can be non-Latin-1 (e.g. Arabic `billing_type`); with
+            # `text=True` alone the reader thread decodes via
+            # locale.getpreferredencoding() and raises UnicodeDecodeError mid-run
+            # on Windows (#404). `errors="replace"` keeps a stray byte from
+            # crashing the capture. Same class as the #322 stdio fix, one layer
+            # down at the subprocess-read boundary.
+            encoding="utf-8",
+            errors="replace",
             shell=False,
             timeout=_RUN_TIMEOUT_SECONDS,
         )
