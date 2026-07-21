@@ -47,6 +47,21 @@ stages:
 """
 
 
+def _gold_stage_blocked(table: str) -> str:
+    """current_stage LABEL is gold_ready, but the gold_ready stage is BLOCKED --
+    the table has NOT reached gold. Counting the bare label as gold would be the
+    #401-review bug."""
+    return f"""\
+table: "silver.{table}"
+current_stage: "gold_ready"
+stages:
+  source_ready: {{status: "pass", evidence: ["profile"]}}
+  mapping_ready: {{status: "pass", evidence: ["map"]}}
+  silver_ready: {{status: "pass", evidence: ["silver"]}}
+  gold_ready: {{status: "blocked", evidence: []}}
+"""
+
+
 # ---------------------------------------------------------------------------
 # Shape / invariants
 # ---------------------------------------------------------------------------
@@ -82,6 +97,23 @@ def test_recommendation_values_are_categorical_never_a_decision(tmp_path: Path) 
     assert result["recommendation"]["dbt"] in allowed
     assert result["recommendation"]["dagster"] in allowed
     assert result["decision_owner"] == "human"
+
+
+def test_gold_ready_label_with_blocked_stage_is_not_counted_as_gold(
+    tmp_path: Path,
+) -> None:
+    """A table whose `current_stage` LABEL is `gold_ready` but whose `gold_ready`
+    stage is `blocked` has NOT reached gold. It must not be counted as
+    gold-validated -- counting the bare label would falsely emit the stronger
+    single-table "already Gold-validated -> orchestration NOT required" headline
+    for a build that has not passed (#401 review)."""
+    _write_status(tmp_path, "orders", _gold_stage_blocked("orders"))
+    result = build_orchestration_assessment(tmp_path)
+    assert result["table_count"] == 1
+    # A blocked gold stage is NOT counted toward gold readiness.
+    assert result["gold_ready_count"] == 0
+    # The headline must NOT assert the build is already Gold-validated.
+    assert "Gold-validated" not in result["recommended_action"]
 
 
 def test_engine_is_read_only(tmp_path: Path) -> None:

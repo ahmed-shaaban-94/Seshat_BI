@@ -41,7 +41,12 @@ from pathlib import Path
 _DBT_PROJECT_MARKER = ("dbt", "dbt_project.yml")
 _DAGSTER_PROJECT_MARKER = ("orchestration", "dagster", "pyproject.toml")
 
-_DBT_OPT_IN = "pip install 'seshat-bi[dbt]'  (then: seshat dbt doctor)"
+# Full opt-in sequence: install the extra, MATERIALIZE the governed project
+# (`seshat dbt init` -- doctor's `_verify_required_paths` needs dbt_project.yml /
+# selectors.yml, absent in a marker-free workspace), THEN check prerequisites.
+# Omitting `dbt init` would make the very next `dbt doctor` fail on missing
+# project files (#401 review).
+_DBT_OPT_IN = "pip install 'seshat-bi[dbt]'  (then: seshat dbt init; seshat dbt doctor)"
 _DAGSTER_OPT_IN = "seshat dagster init  (then: seshat dagster doctor)"
 
 # The categorical recommendation vocabulary. There is NO numeric axis, and there
@@ -111,20 +116,42 @@ def _load_yaml_mapping(path: Path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+# Stages at or beyond gold_ready. A table that reached one of these later stages
+# has, by construction, PASSED gold_ready earlier in the spine.
+_GOLD_OR_LATER = frozenset(
+    {"gold_ready", "semantic_model_ready", "dashboard_ready", "publish_ready"}
+)
+
+
+def _stage_passed_at_or_after_gold(stage_name: object, block: object) -> bool:
+    """True iff ``stage_name`` is at/after gold AND its status block is ``pass``."""
+    return (
+        stage_name in _GOLD_OR_LATER
+        and isinstance(block, dict)
+        and block.get("status") == "pass"
+    )
+
+
 def _is_gold_ready(data: dict) -> bool:
-    """A table has reached gold when its ``gold_ready`` stage status is ``pass``
-    (or ``current_stage`` is at/after gold). Read verbatim -- never derived."""
+    """A table has reached gold ONLY when a stage at/after ``gold_ready`` records a
+    ``pass`` status -- read verbatim, never derived.
+
+    ``current_stage`` alone is NOT sufficient: it is a truthful stage LABEL, and a
+    table can sit at ``current_stage: gold_ready`` while that stage is still
+    ``blocked``/``warning`` (e.g. the committed ``demo_sample_orders`` example).
+    Counting the bare label would falsely report a not-yet-validated build as
+    Gold-validated and drive a wrong "orchestration not required" headline (#401
+    review). So require an at/after-gold stage whose status is ``pass``; when the
+    ``stages`` block is absent, fall back to the ``current_stage`` label ONLY if
+    the record carries no stage-status evidence to contradict it.
+    """
     stages = data.get("stages")
     if isinstance(stages, dict):
-        block = stages.get("gold_ready")
-        if isinstance(block, dict) and block.get("status") == "pass":
-            return True
-    return _as_str(data.get("current_stage")) in {
-        "gold_ready",
-        "semantic_model_ready",
-        "dashboard_ready",
-        "publish_ready",
-    }
+        # A stages block exists: gold is reached iff an at/after-gold stage passed,
+        # regardless of the current_stage label (which may be blocked).
+        return any(_stage_passed_at_or_after_gold(n, b) for n, b in stages.items())
+    # No stages block at all: the label is the only signal we have.
+    return _as_str(data.get("current_stage")) in _GOLD_OR_LATER
 
 
 def _read_signals(root: Path) -> _WorkspaceSignals:
@@ -246,6 +273,18 @@ def _assess_dagster(s: _WorkspaceSignals) -> _AdapterAssessment:
     )
 
 
+def _is_single_gold_no_adapter(s: _WorkspaceSignals) -> bool:
+    """The strongest "orchestration not required" case: exactly one governed table,
+    already Gold-validated, with neither adapter present. Named so the headline's
+    conditional stays simple (one predicate, not a 4-way boolean chain)."""
+    return (
+        s.table_count == 1
+        and s.all_tables_gold
+        and not s.dbt_present
+        and not s.dagster_present
+    )
+
+
 def _recommended_action(
     s: _WorkspaceSignals, dbt: _AdapterAssessment, dagster: _AdapterAssessment
 ) -> str:
@@ -257,12 +296,7 @@ def _recommended_action(
             "No tables onboarded yet -- orchestration is NOT required; revisit "
             "this after your first table reaches Gold and you add a second."
         )
-    if (
-        s.table_count == 1
-        and s.all_tables_gold
-        and not s.dbt_present
-        and not s.dagster_present
-    ):
+    if _is_single_gold_no_adapter(s):
         return (
             "Single governed table, direct build already Gold-validated -> "
             "orchestration NOT required; revisit when you add a 2nd table or "
@@ -273,14 +307,15 @@ def _recommended_action(
         for name, a in (("dbt", dbt), ("dagster", dagster))
         if a.recommendation == _CONSIDER
     ]
+    onboarded = f"{s.table_count} table{'' if s.table_count == 1 else 's'} onboarded"
     if considered:
         return (
-            f"{s.table_count} tables onboarded -- {', '.join(considered)} may be "
+            f"{onboarded} -- {', '.join(considered)} may be "
             "worth adopting; review the signals below, then YOU decide "
             "(the tool never adopts on your behalf); revisit as the portfolio grows."
         )
     return (
-        f"{s.table_count} tables onboarded -- no orchestration adapter is "
+        f"{onboarded} -- no orchestration adapter is "
         "recommended from committed state; revisit as scope grows."
     )
 
