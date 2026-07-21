@@ -497,9 +497,11 @@ def _add_profile_parser(sub: argparse._SubParsersAction) -> None:
     profile.add_argument(
         "--table",
         required=True,
-        metavar="[schema.]table",
-        help="the landed table to profile, e.g. `bronze.sales_c086_raw` "
-        "(an unqualified name defaults to the `public` schema).",
+        metavar="schema.table",
+        help="the landed table to profile, schema-qualified, e.g. "
+        "`bronze.sales_c086_raw`. An unqualified name is rejected: column "
+        "discovery and the row/PK queries would resolve to different schemas "
+        "on non-Postgres engines.",
     )
     profile.add_argument(
         "--pk",

@@ -185,12 +185,23 @@ def test_safe_target_label_never_leaks_keyword_conninfo_password() -> None:
     assert "svc" not in label
     assert label == "db.example"  # only the host token is surfaced
 
+    # A keyword conninfo whose password itself contains "@" must NOT be split on
+    # "@": the shape is detected before any split, so the password never leaks.
+    at_pw = "host=db user=svc password=@s3cret dbname=x"
+    assert "s3cret" not in _safe_target_label("postgres", at_pw)
+    assert _safe_target_label("postgres", at_pw) == "db"
+
     # URL form with credentials in the query string is also scrubbed to host.
     url = "postgresql://h:5432/db?password=s3cret"
     assert "s3cret" not in _safe_target_label("postgres", url)
 
-    # Unchanged: the credential-bearing URL form still yields host:port/db.
+    # Unchanged: the credential-bearing URL form still yields host:port/db, and a
+    # credential-free URL is returned as-is.
     assert _safe_target_label("postgres", "postgresql://u:p@h:5432/db") == "h:5432/db"
+    assert (
+        _safe_target_label("postgres", "postgresql://h:5432/db")
+        == "postgresql://h:5432/db"
+    )
 
 
 def test_profile_requires_schema_qualified_table(

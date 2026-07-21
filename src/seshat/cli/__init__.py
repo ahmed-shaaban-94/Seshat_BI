@@ -334,45 +334,29 @@ def _safe_target_label(engine: str, config: object) -> str:
     non-Postgres config is guaranteed secret-free enough to print.
     """
     if engine == "postgres" and isinstance(config, str):
-        if "@" in config:
-            # URL form: the "@" split drops the userinfo (user:password), so the
-            # remainder (host:port/dbname) is credential-free. Unchanged.
-            return config.split("@")[-1]
-        # No "@": either a URL with no credentials, OR a libpq KEYWORD conninfo
-        # (`host=db user=svc password=secret dbname=x`) that embeds the password
-        # inline with no "@" to split on. Echoing the latter verbatim leaks the
-        # credential to stderr / CI / orchestration logs (#409 P1). Extract only
-        # a host token; never echo user=/password=. Fall back to the engine
-        # label when no host is recoverable.
-        return _postgres_host_only(config) or engine
+        return _postgres_target_label(config)
     return engine
 
 
-def _postgres_host_only(config: str) -> str | None:
-    """A credential-free label from a `@`-less Postgres config, or None.
+def _postgres_target_label(config: str) -> str:
+    """A credential-free label from a Postgres config string.
 
-    Two `@`-less shapes:
-      * a URL (``postgresql://host:5432/db[?password=...]``) -- there is no
-        userinfo (that needs an ``@``), so credentials can only hide in the
-        query string; keep ``scheme://netloc/dbname`` and DROP the query. A
-        credential-free URL is therefore returned unchanged.
-      * a libpq keyword conninfo (``host=db user=svc password=secret``) -- match
-        only the host/hostaddr token; NEVER echo user=/password=.
-    Anything else -> None, so the caller prints the engine label rather than
-    risk echoing a secret.
+    Detect the SHAPE before splitting (#409 P1): a libpq KEYWORD conninfo can
+    carry ``@`` inside an unquoted password (``password=@s3cret``), so a blind
+    ``"@" in config`` split would surface the password. URL syntax (``://``) is
+    the unambiguous discriminator; only a URL gets the ``@``/query strip, and
+    every keyword conninfo is routed through the host-only token match.
     """
+    if "://" in config:
+        # URL form. Credentials live in the userinfo (before "@") and/or the
+        # query string (?password=); strip both, keep host[:port]/dbname.
+        after_userinfo = config.split("@")[-1]
+        return after_userinfo.split("?")[0]
+    # libpq KEYWORD conninfo: never split on "@"; extract only the host token.
     import re
 
-    if "://" in config:
-        from urllib.parse import urlsplit
-
-        try:
-            parts = urlsplit(config)
-        except ValueError:
-            return None
-        return f"{parts.scheme}://{parts.netloc}{parts.path}" if parts.netloc else None
     match = re.search(r"\b(?:host|hostaddr)\s*=\s*(\S+)", config)
-    return match.group(1) if match else None
+    return match.group(1) if match else "postgres"
 
 
 def _current_engine() -> str:
