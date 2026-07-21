@@ -122,6 +122,25 @@ def test_pk_proof_not_unique_when_duplicates_or_nulls() -> None:
     assert profile(nulls, "bronze.demo", ("id",)).pk.is_unique is False
 
 
+def test_pk_proof_uses_the_selected_dialects_tuple_distinct_form() -> None:
+    """The PK count must route through ``dialect.distinct_tuple_count``, not a
+    hardcoded Postgres ``count(DISTINCT (...))``. Postgres keeps that native
+    form; a non-Postgres dialect (here SQL Server) needs a DISTINCT subquery, so
+    the hardcoded form reached the real runner as invalid SQL (PR #409)."""
+    from seshat.dialect import get_dialect
+    from seshat.profile import profile
+
+    sqlserver = get_dialect("sqlserver")
+    runner = FakeRunner(
+        [[("id", "text")], [(100,)], [(0, 100)], [(100, 100, 0)]]
+    )
+    profile(runner, "bronze.demo", ("id", "line_no"), dialect=sqlserver)
+    pk_sql = runner.calls[-1]
+    # SQL Server form: a DISTINCT subquery, NOT the Postgres row-value tuple.
+    assert "SELECT DISTINCT" in pk_sql
+    assert "count(DISTINCT (id, line_no))" not in pk_sql
+
+
 def test_profile_rejects_unsafe_table_name() -> None:
     from seshat.profile import profile
 

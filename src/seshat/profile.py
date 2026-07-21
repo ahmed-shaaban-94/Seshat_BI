@@ -146,12 +146,16 @@ def profile(
         )
 
     validated_pk = tuple(_safe_identifier(c) for c in candidate_pk)
-    pk_cols = ", ".join(validated_pk)
     null_pred = " OR ".join(f"{c} IS NULL" for c in validated_pk)
     null_frag = dialect.count_where(null_pred)
-    pk_rows = runner.run(
-        f"SELECT count(*), count(DISTINCT ({pk_cols})), {null_frag} FROM {table}"
-    )
+    # Route the tuple-distinct count through the dialect, NOT a hardcoded
+    # Postgres row-value `count(DISTINCT (a, b))`. Postgres returns exactly that
+    # form (byte-identical to before), but SQL Server / MySQL / Snowflake need
+    # their own shape (a DISTINCT subquery) -- the hardcoded form reached the
+    # non-Postgres runners as invalid SQL and failed at the DB boundary
+    # (PR #409 review).
+    distinct_frag = dialect.distinct_tuple_count(validated_pk, table)
+    pk_rows = runner.run(f"SELECT count(*), {distinct_frag}, {null_frag} FROM {table}")
     total, distinct_pk, null_pk = pk_rows[0] if pk_rows else (0, 0, 0)
     pk = PkProof(
         total=total,

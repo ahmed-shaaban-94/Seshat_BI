@@ -85,6 +85,38 @@ def test_profile_json_render(
     assert [c["name"] for c in payload["columns"]] == ["a", "amount"]
 
 
+def test_rendered_pk_proof_round_trips_through_the_reader() -> None:
+    """The markdown the verb advertises must be parseable by
+    ``read_source_profile``: a NULL-caused PK failure has to survive a
+    render->paste->read round-trip, or drift reconstructs the wrong uniqueness
+    state (PR #409). Guards the shared proof label (`NULLs/empty in PK`)."""
+    from seshat.cli.commands.profile import _render_markdown
+    from seshat.profile import ColumnProfile, PkProof, ProfileResult
+    from seshat.source_profile_reader import _parse_pk
+
+    result = ProfileResult(
+        table="bronze.t",
+        row_count=100,
+        column_count=1,
+        columns=(
+            ColumnProfile(
+                name="id",
+                missing_count=0,
+                missing_pct=0.0,
+                distinct_cardinality=100,
+                landed_type="text",
+            ),
+        ),
+        # distinct == total but 3 NULL keys -> NOT unique; only recoverable if
+        # the reader can read back the null count from the rendered label.
+        pk=PkProof(total=100, distinct_pk=100, null_pk=3, is_unique=False),
+    )
+    rendered = _render_markdown(result)
+    recovered = _parse_pk(rendered, row_count=100)
+    assert recovered.null_pk == 3
+    assert recovered.is_unique is False
+
+
 def test_profile_no_creds_errors_clearly(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

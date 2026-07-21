@@ -221,7 +221,12 @@ def _render_markdown(result: object) -> str:
     lines.append("- **Uniqueness proof (on the landed data):**")
     lines.append(f"  - `COUNT(*)            = {result.pk.total:,}`")
     lines.append(f"  - `COUNT(DISTINCT pk)  = {result.pk.distinct_pk:,}`")
-    lines.append(f"  - `NULLs in PK columns = {result.pk.null_pk:,}`")
+    # Use the exact label `read_source_profile()` parses (`NULLs/empty in PK`,
+    # matching the committed filled examples) so a customer who pastes this back
+    # into source-profile.md round-trips: the wrong label would make the reader
+    # default null_pk to 0 and mis-reconstruct the uniqueness state, corrupting a
+    # later grain-drift comparison (PR #409 review).
+    lines.append(f"  - `NULLs/empty in PK   = {result.pk.null_pk:,}`")
     verdict = (
         "[OK] candidate PK holds on the landed data"
         if result.pk.is_unique
