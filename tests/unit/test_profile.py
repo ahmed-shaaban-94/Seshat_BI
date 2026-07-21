@@ -122,6 +122,75 @@ def test_pk_proof_not_unique_when_duplicates_or_nulls() -> None:
     assert profile(nulls, "bronze.demo", ("id",)).pk.is_unique is False
 
 
+def test_pk_proof_uses_the_selected_dialects_tuple_distinct_form() -> None:
+    """The PK count must route through ``dialect.distinct_tuple_count``, not a
+    hardcoded Postgres ``count(DISTINCT (...))``. Postgres keeps that native
+    form; a non-Postgres dialect (here SQL Server) needs a DISTINCT subquery, so
+    the hardcoded form reached the real runner as invalid SQL (PR #409)."""
+    from seshat.dialect import get_dialect
+    from seshat.profile import profile
+
+    sqlserver = get_dialect("sqlserver")
+    runner = FakeRunner([[("id", "text")], [(100,)], [(0, 100)], [(100, 100, 0)]])
+    profile(runner, "bronze.demo", ("id", "line_no"), dialect=sqlserver)
+    pk_sql = runner.calls[-1]
+    # SQL Server form: a DISTINCT subquery, NOT the Postgres row-value tuple.
+    assert "SELECT DISTINCT" in pk_sql
+    assert "count(DISTINCT (id, line_no))" not in pk_sql
+
+
+def test_pk_null_proof_counts_empty_text_keys_not_just_null() -> None:
+    """For a TEXT candidate key the null/empty proof must use the ''OR NULL
+    measure (RC5), not IS NULL alone -- a faithful bronze landing writes '' for a
+    missing key, so IS NULL alone would pass a blank-key grain as unique and make
+    the emitted `NULLs/empty in PK` label dishonest (PR #409)."""
+    from seshat.profile import profile
+
+    runner = FakeRunner([[("code", "text")], [(100,)], [(0, 100)], [(100, 100, 0)]])
+    profile(runner, "bronze.demo", ("code",))
+    pk_sql = runner.calls[-1]
+    assert "trim(code)" in pk_sql and "= ''" in pk_sql
+
+    # A non-text key stays on plain IS NULL (trim() is text-only, would crash).
+    runner2 = FakeRunner([[("id", "integer")], [(100,)], [(0, 100)], [(100, 100, 0)]])
+    profile(runner2, "bronze.demo", ("id",))
+    pk_sql2 = runner2.calls[-1]
+    assert "id IS NULL" in pk_sql2 and "trim(" not in pk_sql2
+
+
+def test_pk_is_not_unique_on_an_empty_table() -> None:
+    """An empty source proves NOTHING: `(0, 0, 0)` must NOT pass a candidate PK.
+    Without the `total > 0` guard, `0 == 0 and 0 == 0` wrongly returns unique --
+    and disagrees with the file profiler, which already guards `row_count > 0`
+    (`file_profile.py`). Both profilers must give the same empty-table verdict so
+    a DB and a file source cannot record opposite PK results at the gate (#409)."""
+    from seshat.profile import profile
+
+    empty = FakeRunner([[("id", "text")], [(0,)], [(0, 0)], [(0, 0, 0)]])
+    result = profile(empty, "bronze.demo", ("id",))
+    assert result.row_count == 0
+    assert result.pk.is_unique is False
+
+
+def test_snowflake_lowercase_pk_matches_uppercased_catalog_type() -> None:
+    """Snowflake's INFORMATION_SCHEMA reports an unquoted `id` as `ID`. A user's
+    `--pk id` must still resolve to its real (numeric) type via the dialect's
+    catalog normalization -- a case-sensitive lookup would miss it, default to
+    `text`, and emit `trim(id) = ''` against a NUMBER column (a DB-boundary crash
+    instead of a profile, #409)."""
+    from seshat.dialect import get_dialect
+    from seshat.profile import profile
+
+    snowflake = get_dialect("snowflake")
+    # Catalog returns UPPER names (as Snowflake does); the numeric PK is NUMBER.
+    runner = FakeRunner([[("ID", "NUMBER")], [(100,)], [(0, 100)], [(100, 100, 0)]])
+    profile(runner, "bronze.demo", ("id",), dialect=snowflake)
+    pk_sql = runner.calls[-1]
+    # Non-text key -> plain IS NULL, NEVER trim() (which errors on a NUMBER column).
+    assert "id IS NULL" in pk_sql
+    assert "trim(id)" not in pk_sql
+
+
 def test_profile_rejects_unsafe_table_name() -> None:
     from seshat.profile import profile
 

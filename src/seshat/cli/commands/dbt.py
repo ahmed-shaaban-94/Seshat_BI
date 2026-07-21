@@ -120,11 +120,21 @@ def _verify_runtime_versions() -> None:
             actual = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError as exc:
             raise _pending(
-                f"{package} is unavailable; install `seshat-bi[dbt]`"
+                f"{package} is unavailable; install `seshat-bi[dbt]` "
+                f"(or pin it directly: "
+                f'pipx inject seshat-bi --force "{package}=={expected}")'
             ) from exc
         if actual != expected:
+            # State the remedy, not just the expected version. The natural
+            # `pipx inject seshat-bi dbt-core dbt-postgres` pulls the LATEST
+            # release, so a fresh customer install lands on an unsupported
+            # version with no obvious next step; `--force` is required because a
+            # plain re-inject of an already-injected package is refused (#407).
             raise _pending(
-                f"{package} version {actual} is unsupported; expected {expected}"
+                f"{package} version {actual} is unsupported; expected {expected}. "
+                f'run: pipx inject seshat-bi --force "{package}=={expected}" '
+                f'(pipx install), or pip install "{package}=={expected}" '
+                f"(plain venv)"
             )
     resolve_dbt_executable()
 

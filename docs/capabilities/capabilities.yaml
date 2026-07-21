@@ -511,6 +511,20 @@ capabilities:
       skill: "retail-validate"
       verb: "retail-validate"
 
+  - id: seshat-profile
+    name: "seshat profile"
+    summary: "Mechanical Stage-1 profiler as a CLI verb: row/column count, per-column empty-or-null missingness, distinct cardinality, and the candidate-PK uniqueness proof to paste into source-profile.md."
+    state: shipped
+    authority: agent-runnable
+    surface: cli
+    requirements: [database, optional-dependency]
+    provenance: locally-verified
+    readiness_stage: source_ready
+    command: "profile"
+    documentation: "docs/superpowers/specs/2026-07-19-stage1-template-self-sufficiency-design.md"
+    references:
+      dispatch: "profile"
+
   - id: retail-drift
     name: "retail drift"
     summary: "Detects when a source's live shape/semantics drift from its committed profile (needs a live connection to compare)."
