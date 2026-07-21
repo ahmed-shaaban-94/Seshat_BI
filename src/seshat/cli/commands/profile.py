@@ -82,7 +82,7 @@ def _resolve_engine(args: argparse.Namespace, cli, prog: str):
     if not cli._ensure_driver():
         print(
             f"error: `{prog} profile` needs the optional DB driver.\n"
-            f"{cli._db_extra_hint()}\n"
+            f"{cli._db_extra_hint(engine)}\n"
             f"       (the static `{prog} check` core stays dependency-free).",
             file=sys.stderr,
         )
@@ -160,19 +160,19 @@ def _run_profile_body(args: argparse.Namespace) -> int:
         print(
             "       verify the DSN, network access, the table + columns exist, "
             "and the optional DB driver:\n"
-            f"{cli._db_extra_hint()}",
+            f"{cli._db_extra_hint(engine)}",
             file=sys.stderr,
         )
         return 1
 
     if args.output_format == "json":
-        print(_render_json(result))
+        print(_render_json(result, candidate_pk))
     else:
-        print(_render_markdown(result))
+        print(_render_markdown(result, candidate_pk))
     return 0
 
 
-def _render_json(result: object) -> str:
+def _render_json(result: object, candidate_pk: tuple[str, ...]) -> str:
     """Emit the ProfileResult as a JSON document (machine-readable)."""
     import json
 
@@ -192,6 +192,7 @@ def _render_json(result: object) -> str:
                 for col in result.columns
             ],
             "pk": {
+                "columns": list(candidate_pk),
                 "total": result.pk.total,
                 "distinct_pk": result.pk.distinct_pk,
                 "null_pk": result.pk.null_pk,
@@ -202,21 +203,28 @@ def _render_json(result: object) -> str:
     )
 
 
-def _render_markdown(result: object) -> str:
-    """Render the mechanical numbers as the source-profile.md blocks to paste.
+def _render_markdown(result: object, candidate_pk: tuple[str, ...]) -> str:
+    """Render the mechanical numbers as source-profile.md blocks to paste.
 
-    Fills the *Shape*, *Per-column profile*, and *Candidate PK uniqueness proof*
-    sections. The semantic passes (code<->label 1:1, dimension fan-out, returns
-    rule) are deliberately NOT emitted -- they need the table's MEANING and are a
-    Principle-V judgment call the analyst records by hand.
+    Fills the *Shape*, *Per-column profile*, and *Candidate grain & candidate PK*
+    sections. The numeric cells are emitted in the EXACT template/reader-accepted
+    format (bare numbers, not backtick-wrapped; the ``**Candidate PK:**`` line
+    stated) so a pasted profile round-trips through ``read_source_profile()`` and
+    can serve as a drift baseline (PR #409 review). The semantic passes
+    (code<->label 1:1, dimension fan-out, returns rule) are deliberately NOT
+    emitted -- they need the table's MEANING and are a Principle-V judgment call
+    the analyst records by hand.
     """
     lines: list[str] = []
     lines.append(f"## Shape  (profiled: `{result.table}`)")
     lines.append("")
     lines.append("| Metric | Value |")
     lines.append("|--------|-------|")
-    lines.append(f"| Row count (landed) | `{result.row_count:,}` |")
-    lines.append(f"| Column count (landed) | `{result.column_count}` |")
+    # Bare numbers (not backticked): `_find_row_count` / `_COL_ROW` in
+    # source_profile_reader.py match a plain `[\d,]+`, so a backtick would make
+    # the pasted profile non-conformant and unusable as a drift baseline.
+    lines.append(f"| Row count (landed) | {result.row_count:,} |")
+    lines.append(f"| Column count (landed) | {result.column_count} |")
     lines.append("")
     lines.append("## Per-column profile")
     lines.append("")
@@ -228,20 +236,24 @@ def _render_markdown(result: object) -> str:
     for col in result.columns:
         landed = col.landed_type or "TEXT"
         lines.append(
-            f"| `{col.name}` | `{landed}` | `{col.missing_count:,}` / "
-            f"`{col.missing_pct:.1f}%` | `{col.distinct_cardinality:,}` |"
+            f"| `{col.name}` | {landed} | {col.missing_count:,} / "
+            f"{col.missing_pct:.2f}% | {col.distinct_cardinality:,} |"
         )
     lines.append("")
     lines.append("## Candidate grain & candidate PK")
     lines.append("")
+    # State the candidate PK the run used, in the reader's parsed form
+    # (`**Candidate PK:** ( col_a, col_b )`) -- without it `_find_pk_columns`
+    # returns None and the live drift path refuses the baseline (PR #409 review).
+    pk_decl = ", ".join(candidate_pk)
+    lines.append(f"- **Candidate PK:** `( {pk_decl} )`.")
     lines.append("- **Uniqueness proof (on the landed data):**")
     lines.append(f"  - `COUNT(*)            = {result.pk.total:,}`")
     lines.append(f"  - `COUNT(DISTINCT pk)  = {result.pk.distinct_pk:,}`")
     # Use the exact label `read_source_profile()` parses (`NULLs/empty in PK`,
-    # matching the committed filled examples) so a customer who pastes this back
-    # into source-profile.md round-trips: the wrong label would make the reader
-    # default null_pk to 0 and mis-reconstruct the uniqueness state, corrupting a
-    # later grain-drift comparison (PR #409 review).
+    # matching the committed filled examples) so a pasted profile round-trips:
+    # the wrong label would make the reader default null_pk to 0 and
+    # mis-reconstruct the uniqueness state, corrupting a grain-drift comparison.
     lines.append(f"  - `NULLs/empty in PK   = {result.pk.null_pk:,}`")
     verdict = (
         "[OK] candidate PK holds on the landed data"

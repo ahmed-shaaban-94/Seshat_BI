@@ -85,36 +85,53 @@ def test_profile_json_render(
     assert [c["name"] for c in payload["columns"]] == ["a", "amount"]
 
 
-def test_rendered_pk_proof_round_trips_through_the_reader() -> None:
-    """The markdown the verb advertises must be parseable by
-    ``read_source_profile``: a NULL-caused PK failure has to survive a
-    render->paste->read round-trip, or drift reconstructs the wrong uniqueness
-    state (PR #409). Guards the shared proof label (`NULLs/empty in PK`)."""
+def test_rendered_markdown_round_trips_as_a_drift_baseline(tmp_path) -> None:
+    """The markdown the verb advertises ("paste into source-profile.md") must be
+    parseable by ``read_source_profile`` as a conformant, comparable baseline: a
+    NULL-caused PK failure and the candidate-PK columns have to survive a
+    render->paste->read round-trip, or the live drift path refuses the baseline
+    (PR #409). Guards the reader-accepted numeric format + the `Candidate PK:`
+    line + the shared `NULLs/empty in PK` proof label."""
+    from pathlib import Path
+
     from seshat.cli.commands.profile import _render_markdown
     from seshat.profile import ColumnProfile, PkProof, ProfileResult
-    from seshat.source_profile_reader import _parse_pk
+    from seshat.source_profile_reader import read_source_profile
 
     result = ProfileResult(
         table="bronze.t",
         row_count=100,
-        column_count=1,
+        column_count=2,
         columns=(
-            ColumnProfile(
-                name="id",
-                missing_count=0,
-                missing_pct=0.0,
-                distinct_cardinality=100,
-                landed_type="text",
-            ),
+            ColumnProfile("id", 0, 0.0, 100, landed_type="text"),
+            ColumnProfile("amount", 4, 4.0, 90, landed_type="numeric"),
         ),
         # distinct == total but 3 NULL keys -> NOT unique; only recoverable if
         # the reader can read back the null count from the rendered label.
         pk=PkProof(total=100, distinct_pk=100, null_pk=3, is_unique=False),
     )
-    rendered = _render_markdown(result)
-    recovered = _parse_pk(rendered, row_count=100)
-    assert recovered.null_pk == 3
-    assert recovered.is_unique is False
+    rendered = _render_markdown(result, ("id", "line_no"))
+
+    # Paste the emitted blocks under a minimal template header (Table id +
+    # Landed location) -- exactly the scaffolded shape the verb targets.
+    doc = (
+        "## Header\n\n"
+        "| Field | Value |\n|-------|-------|\n"
+        "| Table id | `T` |\n"
+        "| Landed location | `bronze.t` |\n\n" + rendered + "\n"
+    )
+    path = Path(tmp_path) / "source-profile.md"
+    path.write_text(doc, encoding="utf-8")
+
+    parsed = read_source_profile(path)
+    assert parsed.uncomparable is None, parsed.uncomparable
+    assert parsed.profile is not None
+    assert parsed.profile.row_count == 100
+    assert tuple(c.name for c in parsed.profile.columns) == ("id", "amount")
+    assert parsed.profile.columns[1].missing_count == 4
+    assert parsed.pk_columns == ("id", "line_no")
+    assert parsed.profile.pk.null_pk == 3
+    assert parsed.profile.pk.is_unique is False
 
 
 def test_profile_no_creds_errors_clearly(
@@ -153,6 +170,21 @@ def test_profile_missing_driver_errors_clearly(
     assert rc == 1
     assert "optional DB driver" in err
     assert "Traceback" not in err
+
+
+def test_db_extra_hint_is_engine_specific() -> None:
+    """The driver remedy must name the SELECTED engine's driver/extra, not
+    always psycopg2 (PR #409). Postgres stays the default (unchanged output)."""
+    from seshat.cli import _db_extra_hint
+
+    pg = _db_extra_hint()
+    assert "psycopg2-binary" in pg and "seshat-bi[db]" in pg
+    assert _db_extra_hint("postgres") == pg  # default is postgres, unchanged
+
+    mssql = _db_extra_hint("sqlserver")
+    assert "pyodbc" in mssql and "seshat-bi[mssql]" in mssql
+    assert "mysql-connector-python" in _db_extra_hint("mysql")
+    assert "snowflake-connector-python" in _db_extra_hint("snowflake")
 
 
 def test_profile_db_boundary_error_is_clean(

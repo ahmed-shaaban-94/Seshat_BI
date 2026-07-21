@@ -274,7 +274,7 @@ def _prog(args: object) -> str:
     return getattr(args, "prog", "seshat") or "seshat"
 
 
-def _db_extra_hint() -> str:
+def _db_extra_hint(engine: str = "postgres") -> str:
     """Actionable, install-path-aware guidance for the optional DB driver (#399).
 
     Names the real distribution (``seshat-bi``, not the internal ``retail``) and
@@ -282,10 +282,20 @@ def _db_extra_hint() -> str:
     external-customer ``pipx`` install (where ``pip install`` inside the isolated
     venv is the wrong mechanism), and the ``pip install`` extra for a plain venv.
     Sourced from ONE place so the brand + remedy can't drift per command.
+
+    ``engine`` selects the right driver/extra so a non-Postgres run (SQL Server /
+    MySQL / Snowflake) is told to install ITS driver, not psycopg2 (PR #409). The
+    default is ``postgres`` -- unchanged output for callers that don't pass one.
     """
+    driver, extra = {
+        "postgres": ("psycopg2-binary", "db"),
+        "sqlserver": ("pyodbc", "mssql"),
+        "mysql": ("mysql-connector-python", "mysql"),
+        "snowflake": ("snowflake-connector-python", "snowflake"),
+    }.get(engine, ("psycopg2-binary", "db"))
     return (
-        "       pipx install:  pipx inject seshat-bi psycopg2-binary\n"
-        "       pip install:   pip install 'seshat-bi[db]'"
+        f"       pipx install:  pipx inject seshat-bi {driver}\n"
+        f"       pip install:   pip install 'seshat-bi[{extra}]'"
     )
 
 
