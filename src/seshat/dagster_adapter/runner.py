@@ -19,6 +19,7 @@ from pathlib import Path
 from . import ALLOWED_JOBS
 from .doctor import orchestration_python
 from .redaction import redact_text
+from .source_mode import DEFAULT_SOURCE_MODE, SOURCE_MODE_ENV, normalize_source_mode
 
 _TAIL_CHARS = 4000
 _RUN_TIMEOUT_SECONDS = 7200
@@ -55,21 +56,15 @@ def build_run_argv(python: Path, job: str) -> list[str]:
     ]
 
 
-def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
-    """Run one job in the orchestration environment; return the redacted result.
+def _child_env(
+    root: Path, run_id: str, table: str | None, resolved_mode: str
+) -> dict[str, str]:
+    """The child process's environment: a copy of the parent's os.environ plus
+    the run-scoped keys, the UTF-8 forcing, and the closed discovery seams.
 
-    The child's evidence lands under ``.seshat/dagster/runs/<run_id>/`` because
-    the run id is injected via ``SESHAT_DAGSTER_RUN_ID`` -- the parent then
-    finalizes and renders it (evidence.py)."""
-    root = Path(root)
-    python = orchestration_python(root)
-    if python is None:
-        raise RunnerError(
-            "orchestration environment absent -- run `seshat dagster doctor` "
-            "for the install remedy"
-        )
-    argv = build_run_argv(python, job)
-    run_id = new_run_id()
+    Byte-identity: the table and source-mode seams are set ONLY when non-empty /
+    non-default, so a default (CSV, no-table) run leaves both vars absent and the
+    child environment matches the pre-feature runner exactly."""
     env = dict(os.environ)
     env["SESHAT_DAGSTER_RUN_ID"] = run_id
     env["SESHAT_REPO_ROOT"] = str(root)
@@ -85,6 +80,45 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
         env["SESHAT_DAGSTER_TABLES"] = table
     else:
         env.pop("SESHAT_DAGSTER_TABLES", None)
+    if resolved_mode != DEFAULT_SOURCE_MODE:
+        env[SOURCE_MODE_ENV] = resolved_mode
+    else:
+        env.pop(SOURCE_MODE_ENV, None)
+    return env
+
+
+def execute_run(
+    root: Path,
+    job: str,
+    table: str | None = None,
+    source_mode: str | None = None,
+) -> RunResult:
+    """Run one job in the orchestration environment; return the redacted result.
+
+    The child's evidence lands under ``.seshat/dagster/runs/<run_id>/`` because
+    the run id is injected via ``SESHAT_DAGSTER_RUN_ID`` -- the parent then
+    finalizes and renders it (evidence.py).
+
+    ``source_mode`` selects the Bronze source adapter (#404/#405). It travels
+    via the ``SESHAT_DAGSTER_SOURCE_MODE`` env var -- the same closed discovery
+    seam ``SESHAT_DAGSTER_TABLES`` uses, never argv -- and is validated
+    fail-closed against the closed set. The var is set ONLY when non-default so
+    the DEFAULT (CSV) run's child environment stays byte-identical to the
+    pre-feature runner."""
+    root = Path(root)
+    python = orchestration_python(root)
+    if python is None:
+        raise RunnerError(
+            "orchestration environment absent -- run `seshat dagster doctor` "
+            "for the install remedy"
+        )
+    try:
+        resolved_mode = normalize_source_mode(source_mode)
+    except ValueError as error:
+        raise RunnerError(str(error)) from error
+    argv = build_run_argv(python, job)
+    run_id = new_run_id()
+    env = _child_env(root, run_id, table, resolved_mode)
     try:
         proc = subprocess.run(
             argv,

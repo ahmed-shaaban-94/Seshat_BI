@@ -142,3 +142,61 @@ class TestExecuteRun:
     ) -> None:
         with pytest.raises(runner.RunnerError, match="orchestration environment"):
             runner.execute_run(tmp_path, "full_sequence_job")
+
+
+class TestSourceModeWiring:
+    """The source mode travels via SESHAT_DAGSTER_SOURCE_MODE, never argv, set
+    ONLY when non-default so the CSV child env stays byte-identical (#404/#405)."""
+
+    def _capture_env(self, root: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
+        captured: dict = {}
+
+        def fake_run(argv, **kwargs):
+            captured["argv"] = argv
+            captured["env"] = kwargs["env"]
+            return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
+
+        monkeypatch.setattr(runner.subprocess, "run", fake_run)
+        return captured
+
+    def test_default_run_leaves_source_mode_env_absent(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A stale var in the parent env must be popped for the default path so
+        # the child sees the pre-feature environment exactly.
+        monkeypatch.setenv("SESHAT_DAGSTER_SOURCE_MODE", "existing-bronze")
+        root = _fake_repo(tmp_path)
+        captured = self._capture_env(root, monkeypatch)
+        runner.execute_run(root, "through_gold_job")  # source_mode defaults to None/csv
+        assert "SESHAT_DAGSTER_SOURCE_MODE" not in captured["env"]
+
+    def test_explicit_csv_also_leaves_the_env_absent(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = _fake_repo(tmp_path)
+        captured = self._capture_env(root, monkeypatch)
+        runner.execute_run(root, "through_gold_job", source_mode="csv")
+        assert "SESHAT_DAGSTER_SOURCE_MODE" not in captured["env"]
+
+    def test_existing_bronze_sets_the_env_var_never_argv(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = _fake_repo(tmp_path)
+        captured = self._capture_env(root, monkeypatch)
+        runner.execute_run(
+            root, "through_gold_job", table="demo", source_mode="existing-bronze"
+        )
+        assert captured["env"]["SESHAT_DAGSTER_SOURCE_MODE"] == "existing-bronze"
+        assert "existing-bronze" not in captured["argv"]  # scoping via env only
+
+    def test_unknown_source_mode_is_refused_before_launch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = _fake_repo(tmp_path)
+
+        def must_not_run(argv, **kwargs):
+            raise AssertionError("child must not launch on an invalid source mode")
+
+        monkeypatch.setattr(runner.subprocess, "run", must_not_run)
+        with pytest.raises(runner.RunnerError, match="source mode must be one of"):
+            runner.execute_run(root, "through_gold_job", source_mode="wipe-it")

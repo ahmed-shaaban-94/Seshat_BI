@@ -66,10 +66,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "commands/dagster-run.md",
-      "output_sha256": "75b64752d6c04d8b8e730d1681be7ddbbde48900b54074b88792e153aeac9890",
+      "output_sha256": "22049a7eb20e501f2c70b1c4c93fc7ab5d51308135a63020d565e709eceb2f7b",
       "source": "distribution/bundle-templates/claude/commands/dagster-run.md",
       "source_id": "claude-dagster-run",
-      "source_sha256": "75b64752d6c04d8b8e730d1681be7ddbbde48900b54074b88792e153aeac9890",
+      "source_sha256": "22049a7eb20e501f2c70b1c4c93fc7ab5d51308135a63020d565e709eceb2f7b",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1686,19 +1686,19 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/dagster-workflows/SKILL.md",
-      "output_sha256": "dfefc62ce0c850a9a850e522e7f9b07dec51996bc7557d207336825a9f423c7b",
+      "output_sha256": "6ce03521157f477b16cd77a5cef202219c6a2105d382b5db9c40de17b252a862",
       "source": "distribution/bundle-templates/shared/skills/dagster-workflows/SKILL.md",
       "source_id": "dagster-workflows-skill",
-      "source_sha256": "dfefc62ce0c850a9a850e522e7f9b07dec51996bc7557d207336825a9f423c7b",
+      "source_sha256": "6ce03521157f477b16cd77a5cef202219c6a2105d382b5db9c40de17b252a862",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "generated_wrapper",
       "destination": "skills/dbt-workflows/SKILL.md",
-      "output_sha256": "12244fd86be31e828cf95db0d2e8f3f349b38a7317dc0fb7db7777d1c0d773b8",
+      "output_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
       "source": "distribution/bundle-templates/shared/skills/dbt-workflows/SKILL.md",
       "source_id": "dbt-workflows-skill",
-      "source_sha256": "12244fd86be31e828cf95db0d2e8f3f349b38a7317dc0fb7db7777d1c0d773b8",
+      "source_sha256": "b216171a521e1c35c1ebabb0c3c3450b0ca52967fdc6dcba798f85120c531c17",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1748,10 +1748,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "aced535b111c8ec83a3c5da7b7f445e4f5bd5266fde29983f8df71fed73ce95c",
+  "manifest_digest": "2a1753e73e5827f23c6e5c9632b3df81fbe83dededaaeaea5db1074d874f4c2e",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "ceff22a166dd9fb7f1fe01d16e54e725cf85be52",
+  "source_revision": "56d9cfacbf4733524e947ee306ef65b4e1cd2d8a",
   "target": "claude",
   "version": "0.5.3"
 }

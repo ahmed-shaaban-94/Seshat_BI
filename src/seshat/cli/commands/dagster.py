@@ -64,15 +64,19 @@ def _render_evidence(root: Path, run_id: str) -> Path | None:
 
 
 def _print_run_outcome(args, result, summary: dict, rendered: Path | None) -> None:
+    source_mode = getattr(args, "source_mode", "csv")
     if args.as_json:
         payload = {
             "run_id": result.run_id,
             "run_status": summary["run_status"],
+            # Source mode is explicit in the CLI result (#405 acceptance): the
+            # per-asset run evidence carries it in bronze_table's `measured`.
+            "source_mode": source_mode,
             "evidence": str(rendered) if rendered else None,
         }
         print(json.dumps(payload, indent=2))
         return
-    print(f"run {result.run_id}: {summary['run_status']}")
+    print(f"run {result.run_id}: {summary['run_status']} (source-mode: {source_mode})")
     if rendered:
         print(f"evidence: {rendered}")
     if result.output and summary["run_status"] == "failed":
@@ -88,7 +92,12 @@ def _run_run(args) -> int:
         return 2
     started = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
-        result = runner.execute_run(root, args.job, table=args.table)
+        result = runner.execute_run(
+            root,
+            args.job,
+            table=args.table,
+            source_mode=getattr(args, "source_mode", None),
+        )
     except runner.RunnerError as error:
         print(f"refused: {error}", file=sys.stderr)
         return 2
