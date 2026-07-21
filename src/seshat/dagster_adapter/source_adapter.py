@@ -31,7 +31,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
-from .source_mode import CSV, EXISTING_BRONZE
+from .source_mode import EXISTING_BRONZE
 
 
 @dataclass(frozen=True)
@@ -74,11 +74,6 @@ class SourceAdapter(Protocol):
         fail-closed halt) on any blocking condition.
         """
         ...
-
-
-# The closed mode->adapter binding. New origins register a factory here plus a
-# token in :mod:`.source_mode`; the medallion graph is untouched (#405).
-_KNOWN_MODES: frozenset[str] = frozenset({CSV, EXISTING_BRONZE})
 
 
 #: Modes that are READ-ONLY against Bronze (issue zero DDL/DML). Everything

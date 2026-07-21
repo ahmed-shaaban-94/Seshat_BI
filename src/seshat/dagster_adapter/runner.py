@@ -56,6 +56,37 @@ def build_run_argv(python: Path, job: str) -> list[str]:
     ]
 
 
+def _child_env(
+    root: Path, run_id: str, table: str | None, resolved_mode: str
+) -> dict[str, str]:
+    """The child process's environment: a copy of the parent's os.environ plus
+    the run-scoped keys, the UTF-8 forcing, and the closed discovery seams.
+
+    Byte-identity: the table and source-mode seams are set ONLY when non-empty /
+    non-default, so a default (CSV, no-table) run leaves both vars absent and the
+    child environment matches the pre-feature runner exactly."""
+    env = dict(os.environ)
+    env["SESHAT_DAGSTER_RUN_ID"] = run_id
+    env["SESHAT_REPO_ROOT"] = str(root)
+    # Force the CHILD to EMIT UTF-8, not just decode it in the parent (#404).
+    # The `python -m dagster` child does not run seshat's stdio reconfig, so on
+    # Windows it would otherwise write via the legacy code page (cp1252) and
+    # UnicodeEncodeError on non-Latin-1 governed values (e.g. Arabic). Pairing
+    # the child's UTF-8 output with the parent's UTF-8 decode also stops
+    # `errors="replace"` from silently corrupting cp1252-encoded chars like `é`.
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    if table:
+        env["SESHAT_DAGSTER_TABLES"] = table
+    else:
+        env.pop("SESHAT_DAGSTER_TABLES", None)
+    if resolved_mode != DEFAULT_SOURCE_MODE:
+        env[SOURCE_MODE_ENV] = resolved_mode
+    else:
+        env.pop(SOURCE_MODE_ENV, None)
+    return env
+
+
 def execute_run(
     root: Path,
     job: str,
@@ -87,28 +118,7 @@ def execute_run(
         raise RunnerError(str(error)) from error
     argv = build_run_argv(python, job)
     run_id = new_run_id()
-    env = dict(os.environ)
-    env["SESHAT_DAGSTER_RUN_ID"] = run_id
-    env["SESHAT_REPO_ROOT"] = str(root)
-    # Force the CHILD to EMIT UTF-8, not just decode it in the parent (#404).
-    # The `python -m dagster` child does not run seshat's stdio reconfig, so on
-    # Windows it would otherwise write via the legacy code page (cp1252) and
-    # UnicodeEncodeError on non-Latin-1 governed values (e.g. Arabic). Pairing
-    # the child's UTF-8 output with the parent's UTF-8 decode also stops
-    # `errors="replace"` from silently corrupting cp1252-encoded chars like `é`.
-    env["PYTHONUTF8"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    if table:
-        env["SESHAT_DAGSTER_TABLES"] = table
-    else:
-        env.pop("SESHAT_DAGSTER_TABLES", None)
-    # Byte-identity: set the mode ONLY when it is NOT the default. A default
-    # (CSV) run leaves the var absent, so the child env matches the pre-feature
-    # runner exactly and the existing runner test stays green.
-    if resolved_mode != DEFAULT_SOURCE_MODE:
-        env[SOURCE_MODE_ENV] = resolved_mode
-    else:
-        env.pop(SOURCE_MODE_ENV, None)
+    env = _child_env(root, run_id, table, resolved_mode)
     try:
         proc = subprocess.run(
             argv,

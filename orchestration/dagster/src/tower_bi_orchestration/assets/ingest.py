@@ -49,7 +49,8 @@ def _raw_source_file_asset(table: str, root: Path):
             gate_command="n/a -- landing input",
             exit_code=None,
         )
-        if resolve_source_mode() != "csv":
+        mode = resolve_source_mode()
+        if mode != "csv":
             # existing-bronze (and any future non-CSV origin): no landing file
             # by design. `deferred` is honest -- it is NOT `failed`, so it does
             # not STOP-edge bronze_table (which reads the DB directly). Same
@@ -57,12 +58,11 @@ def _raw_source_file_asset(table: str, root: Path):
             writer.record(
                 AssetOutcome(
                     **base,
-                    measured={"source_mode": resolve_source_mode()},
+                    measured={"source_mode": mode},
                     outcome="deferred",
                     blocking_reason=(
-                        f"{resolve_source_mode()} mode: no raw landing file by "
-                        "design -- bronze_table verifies the existing relation "
-                        "read-only"
+                        f"{mode} mode: no raw landing file by design -- "
+                        "bronze_table verifies the existing relation read-only"
                     ),
                     owner="data owner",
                 )

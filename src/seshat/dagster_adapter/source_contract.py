@@ -26,6 +26,29 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _load_columns(source_map: Path) -> list:
+    """The raw ``columns`` list from a committed source-map, or ``[]``.
+
+    Swallows every read/parse problem (absent, unreadable, malformed YAML,
+    non-mapping document, absent/non-list ``columns``) into ``[]`` so the
+    caller never raises and the existence / non-empty gate stays authoritative.
+    """
+    if not source_map.is_file():
+        return []
+    try:
+        text = source_map.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return []
+    import yaml  # lazy: keeps this module driver- and dependency-light
+
+    try:
+        document = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return []
+    columns = document.get("columns") if isinstance(document, dict) else None
+    return columns if isinstance(columns, list) else []
+
+
 def referenced_source_columns(repo_root: Path, table: str) -> frozenset[str]:
     """The set of ``columns[].source_name`` the committed source-map references.
 
@@ -34,25 +57,8 @@ def referenced_source_columns(repo_root: Path, table: str) -> frozenset[str]:
     existence / non-empty gate stays the fail-closed authority.
     """
     source_map = Path(repo_root) / "mappings" / table / "source-map.yaml"
-    if not source_map.is_file():
-        return frozenset()
-    try:
-        text = source_map.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        return frozenset()
-    import yaml  # lazy: keeps this module driver- and dependency-light
-
-    try:
-        document = yaml.safe_load(text)
-    except yaml.YAMLError:
-        return frozenset()
-    if not isinstance(document, dict):
-        return frozenset()
-    columns = document.get("columns")
-    if not isinstance(columns, list):
-        return frozenset()
     names: set[str] = set()
-    for entry in columns:
+    for entry in _load_columns(source_map):
         if isinstance(entry, dict):
             source_name = entry.get("source_name")
             if isinstance(source_name, str) and source_name.strip():
