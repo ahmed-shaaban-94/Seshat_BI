@@ -172,7 +172,7 @@ class TestDoctorLoadsDotenv:
         monkeypatch.setattr(doctor, "run_doctor", lambda r: [])  # no blockers
         seen: dict[str, str | None] = {}
 
-        def _capture_env(r, job, table=None):
+        def _capture_env(r, job, table=None, source_mode=None):
             # The runner snapshots os.environ here; capture what it would inherit.
             seen["ANALYTICS_DB_HOST"] = os.environ.get("ANALYTICS_DB_HOST")
             return runner.RunResult(run_id="run-x", exit_code=0, output="")
@@ -288,7 +288,7 @@ class TestRunExitCodes:
         monkeypatch.setattr(
             runner,
             "execute_run",
-            lambda root, job, table=None: runner.RunResult(
+            lambda root, job, table=None, source_mode=None: runner.RunResult(
                 run_id="run-x", exit_code=child_exit, output="child output"
             ),
         )
@@ -317,3 +317,44 @@ class TestRunExitCodes:
         assert code == expected_code
         assert calls["finalized"] == "run-x"  # evidence finalized in BOTH cases
         assert calls["rendered"] == Path("run-x.md")
+
+    @pytest.mark.parametrize(
+        "cli_mode",
+        [None, "csv", "existing-bronze"],
+        ids=["default-none", "explicit-csv", "existing-bronze"],
+    )
+    def test_run_forwards_source_mode_to_the_runner(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_mode
+    ) -> None:
+        """The CLI->runner seam: whatever `--source-mode` argparse resolved is
+        forwarded verbatim to ``runner.execute_run`` (the runner then validates
+        + carries it via the env seam). Proven here so the wiring cannot silently
+        regress (#404/#405)."""
+        from seshat.cli.commands.dagster import dagster_main
+        from seshat.dagster_adapter import doctor, evidence, runner
+
+        monkeypatch.setattr(doctor, "run_doctor", lambda root: [])
+        seen: dict = {}
+
+        def _capture(root, job, table=None, source_mode=None):
+            seen["source_mode"] = source_mode
+            return runner.RunResult(run_id="run-x", exit_code=0, output="")
+
+        monkeypatch.setattr(runner, "execute_run", _capture)
+        monkeypatch.setattr(
+            evidence, "finalize_run", lambda *a, **k: {"run_status": "succeeded"}
+        )
+        monkeypatch.setattr(
+            evidence, "write_run_evidence", lambda r, run_id: Path("run-x.md")
+        )
+
+        dagster_main(
+            _args(
+                dagster_cmd="run",
+                repo=str(tmp_path),
+                job="through_gold_job",
+                table=None,
+                source_mode=cli_mode,
+            )
+        )
+        assert seen["source_mode"] == cli_mode

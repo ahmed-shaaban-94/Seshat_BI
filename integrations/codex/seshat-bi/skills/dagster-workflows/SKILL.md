@@ -27,11 +27,28 @@ exit code and the named human decide whether a stage passed.
 2. Execute one governed job as a shell-free child process in the
    orchestration project's own environment:
 
-   `seshat dagster run --job <full_sequence_job|through_gold_job> [--table <table>] [--json]`
+   `seshat dagster run --job <full_sequence_job|through_gold_job> [--table <table>] [--source-mode <csv|existing-bronze>] [--json]`
 
-   Any doctor blocker stops the run before anything executes. A failed or
-   blocked gate halts every downstream asset fail-closed; report the recorded
-   `blocking_reason` and its named owner, then stop.
+   `--source-mode` selects the Bronze origin (the gated tail is identical for
+   both and is never bypassed):
+
+   - `csv` (default): a raw `<table>.csv` lands and the loader OWNS and
+     reloads `bronze.<table>` (drop-and-reload). Use it for a file-first
+     workspace. This is the one destructive-by-design mode.
+   - `existing-bronze`: NON-DESTRUCTIVE DB-first. An already-loaded
+     `bronze.<table>` is verified READ-ONLY (existence, row count, and that its
+     columns cover the approved source-map) and used as the satisfied
+     upstream. It issues ZERO Bronze DDL/DML. Use it when Bronze already lives
+     in the warehouse (BCP, COPY, an external ETL, a prior tool); never export
+     Bronze to a CSV just to feed the default path. `raw_source_file` records a
+     `deferred` boundary (no landing file by design), not a failure. A missing,
+     empty, or source-map-mismatched relation fails closed with a named blocker.
+
+   The chosen mode is explicit in the command result and in the run evidence
+   (`bronze_table`'s measured facts). Any doctor blocker stops the run before
+   anything executes. A failed or blocked gate halts every downstream asset
+   fail-closed; report the recorded `blocking_reason` and its named owner, then
+   stop.
 
 3. List runs or render the committed derived record:
 
