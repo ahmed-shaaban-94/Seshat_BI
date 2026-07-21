@@ -99,11 +99,52 @@ def _discover_columns(
     return tuple((r[0], (r[1] if len(r) > 1 else "text")) for r in rows)
 
 
-def _pk_null_predicate(
+@dataclass(frozen=True)
+class _ResolvedColumn:
+    """A candidate-key column resolved against the discovered catalog columns.
+
+    ``discovered`` is the EXACT-case name the catalog returned (Postgres folds an
+    unquoted name to lower, Snowflake to upper); ``data_type`` is that column's
+    landed type; ``is_text`` is the dialect's text/non-text verdict for it.
+    """
+
+    discovered: str
+    data_type: str
+    is_text: bool
+
+
+def _resolve_pk_columns(
     dialect: Dialect,
-    validated_pk: tuple[str, ...],
+    candidate_pk: tuple[str, ...],
     columns: tuple[tuple[str, str], ...],
-) -> str:
+) -> tuple[_ResolvedColumn, ...]:
+    """Match each ``--pk`` name to a DISCOVERED column, case-insensitively.
+
+    The catalog already folded the name when it stored it (Postgres -> lower,
+    Snowflake -> upper), so a raw case-sensitive lookup of the user's spelling
+    misses on a case mismatch -- e.g. Postgres ``--pk ID`` on a stored ``id``, or
+    Snowflake ``--pk id`` on a stored ``ID`` -- defaulting the type to ``text``
+    and emitting ``trim(<key>)`` against a numeric column (a DB-boundary crash,
+    #409/#410). Match on ``casefold()`` and carry the DISCOVERED spelling forward
+    so the emitted SQL names the column exactly as the engine stored it. A
+    candidate name with no discovered match falls back to a text-typed passthrough
+    of the user's spelling (the DB then reports the unknown column honestly).
+    """
+    by_casefold = {name.casefold(): (name, data_type) for name, data_type in columns}
+    resolved: list[_ResolvedColumn] = []
+    for col in candidate_pk:
+        discovered, data_type = by_casefold.get(col.casefold(), (col, "text"))
+        resolved.append(
+            _ResolvedColumn(
+                discovered=discovered,
+                data_type=data_type,
+                is_text=dialect.is_text_type(data_type),
+            )
+        )
+    return tuple(resolved)
+
+
+def _pk_null_predicate(dialect: Dialect, pk_cols: tuple[_ResolvedColumn, ...]) -> str:
     """The ``OR``-joined missing-key predicate for the candidate-PK null proof.
 
     Count an EMPTY-or-NULL key, not just NULL, for TEXT PK columns -- the same
@@ -113,26 +154,19 @@ def _pk_null_predicate(
     it also keeps the emitted ``NULLs/empty in PK`` proof honest (#409). Non-text
     keys cannot hold ``''`` -> plain ``IS NULL`` (``trim()`` is text-only, crashes).
 
-    Match a candidate-key name to its discovered type using the dialect's OWN
-    catalog normalization -- NOT a raw case-sensitive dict lookup. Snowflake's
-    INFORMATION_SCHEMA reports an unquoted ``id`` as ``ID``, so a user's ``--pk
-    id`` would miss a case-sensitive lookup, default to ``text``, and emit
-    ``trim(id) = ''`` against a NUMBER column -- a DB-boundary crash instead of a
-    profile (#409). Postgres's normalize is identity, so its case-sensitive
-    matching is unchanged; Snowflake folds to upper, aligning with ``columns_query``.
+    Each identifier is QUOTED via the dialect (``"id"`` / ``[id]`` / `` `id` ``) so
+    a reserved word (``order``, ``group``) or a case-sensitive column parses as an
+    identifier, not a keyword (#410); the DISCOVERED spelling is quoted so it
+    matches the stored column on every engine.
     """
-    type_by_name = {
-        dialect.normalize_catalog_literal(name): data_type
-        for name, data_type in columns
-    }
 
-    def _term(col: str) -> str:
-        data_type = type_by_name.get(dialect.normalize_catalog_literal(col), "text")
-        if dialect.is_text_type(data_type):
-            return f"trim({col}) = '' OR {col} IS NULL"
-        return f"{col} IS NULL"
+    def _term(rc: _ResolvedColumn) -> str:
+        q = dialect.quote_ident(rc.discovered, context="candidate PK column")
+        if rc.is_text:
+            return f"trim({q}) = '' OR {q} IS NULL"
+        return f"{q} IS NULL"
 
-    return " OR ".join(_term(c) for c in validated_pk)
+    return " OR ".join(_term(rc) for rc in pk_cols)
 
 
 def profile(
@@ -146,20 +180,28 @@ def profile(
     dialect = dialect or get_dialect("postgres")
     table = _safe_identifier(table)
     columns = _discover_columns(runner, table, dialect)
+    # Quote the table so a reserved-word or case-sensitive object (bronze.order,
+    # a mixed-case name) parses as an identifier, not a keyword (#410). Quoting
+    # only -- NOT case-folding the table: `--table Bronze.T` casing is a separate
+    # pre-existing concern (columns_query's normalize) and out of scope here.
+    quoted_table = dialect.quote_qualified(table, context="profiled table")
 
-    row_rows = runner.run(f"SELECT count(*) FROM {table}")
+    row_rows = runner.run(f"SELECT count(*) FROM {quoted_table}")
     row_count = row_rows[0][0] if row_rows else 0
 
     col_profiles: list[ColumnProfile] = []
     for col_name, data_type in columns:
-        col = _safe_identifier(col_name)
+        # col_name is the DISCOVERED (catalog-cased) name; quote it so a
+        # reserved-word column (`order`, `group`) parses as an identifier (#410).
+        col = dialect.quote_ident(col_name, context="profiled column")
         if dialect.is_text_type(data_type):
             # TEXT: missingness is ''OR NULL, NEVER IS NULL alone (RC5 / the
             # load-bearing trap): a faithful landing writes '' for None, so IS NULL
             # alone reports 0. trim() also folds whitespace-variant phantom distincts.
             missing_frag = dialect.count_where(f"trim({col}) = '' OR {col} IS NULL")
             stat = runner.run(
-                f"SELECT {missing_frag}, count(DISTINCT trim({col})) FROM {table}"
+                f"SELECT {missing_frag}, count(DISTINCT trim({col})) "
+                f"FROM {quoted_table}"
             )
         else:
             # NON-TEXT (timestamptz, numeric, boolean, a lineage column, ...):
@@ -167,7 +209,7 @@ def profile(
             # so plain IS NULL is the correct (and only valid) missingness measure.
             missing_frag = dialect.count_where(f"{col} IS NULL")
             stat = runner.run(
-                f"SELECT {missing_frag}, count(DISTINCT {col}) FROM {table}"
+                f"SELECT {missing_frag}, count(DISTINCT {col}) FROM {quoted_table}"
             )
         missing, distinct = (stat[0][0], stat[0][1]) if stat else (0, 0)
         pct = (missing / row_count * 100.0) if row_count else 0.0
@@ -181,16 +223,25 @@ def profile(
             )
         )
 
-    validated_pk = tuple(_safe_identifier(c) for c in candidate_pk)
-    null_frag = dialect.count_where(_pk_null_predicate(dialect, validated_pk, columns))
+    # Resolve each --pk name to its DISCOVERED (catalog-cased) column so the type
+    # branch is correct on a case-mismatch and the emitted SQL names the column as
+    # the engine stored it (#410); then quote each discovered name.
+    pk_cols = _resolve_pk_columns(dialect, candidate_pk, columns)
+    null_frag = dialect.count_where(_pk_null_predicate(dialect, pk_cols))
     # Route the tuple-distinct count through the dialect, NOT a hardcoded
     # Postgres row-value `count(DISTINCT (a, b))`. Postgres returns exactly that
-    # form (byte-identical to before), but SQL Server / MySQL / Snowflake need
-    # their own shape (a DISTINCT subquery) -- the hardcoded form reached the
-    # non-Postgres runners as invalid SQL and failed at the DB boundary
-    # (PR #409 review).
-    distinct_frag = dialect.distinct_tuple_count(validated_pk, table)
-    pk_rows = runner.run(f"SELECT count(*), {distinct_frag}, {null_frag} FROM {table}")
+    # form, but SQL Server / MySQL / Snowflake need their own shape (a DISTINCT
+    # subquery) -- the hardcoded form reached the non-Postgres runners as invalid
+    # SQL and failed at the DB boundary (PR #409 review). Pass the QUOTED discovered
+    # names so a reserved-word / case-sensitive key is handled here too (#410).
+    quoted_pk = tuple(
+        dialect.quote_ident(rc.discovered, context="candidate PK column")
+        for rc in pk_cols
+    )
+    distinct_frag = dialect.distinct_tuple_count(quoted_pk, quoted_table)
+    pk_rows = runner.run(
+        f"SELECT count(*), {distinct_frag}, {null_frag} FROM {quoted_table}"
+    )
     total, distinct_pk, null_pk = pk_rows[0] if pk_rows else (0, 0, 0)
     pk = PkProof(
         total=total,
