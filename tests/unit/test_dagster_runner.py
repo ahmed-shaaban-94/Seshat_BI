@@ -68,6 +68,12 @@ class TestExecuteRun:
         assert env["SESHAT_DAGSTER_TABLES"] == "demo_table"
         assert env["SESHAT_REPO_ROOT"] == str(root)
         assert "demo_table" not in captured["argv"]  # scoping via env, never argv
+        # The child must EMIT utf-8 (not just be decoded as utf-8) so non-Latin-1
+        # governed values don't UnicodeEncodeError on a legacy Windows code page,
+        # and the parent's decode matches the child's output (#404).
+        assert env["PYTHONUTF8"] == "1"
+        assert env["PYTHONIOENCODING"] == "utf-8"
+        assert captured["kwargs"].get("encoding") == "utf-8"
 
     def test_child_failure_maps_to_nonzero_result_with_redacted_output(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

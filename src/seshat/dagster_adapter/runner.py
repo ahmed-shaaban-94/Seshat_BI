@@ -73,6 +73,14 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
     env = dict(os.environ)
     env["SESHAT_DAGSTER_RUN_ID"] = run_id
     env["SESHAT_REPO_ROOT"] = str(root)
+    # Force the CHILD to EMIT UTF-8, not just decode it in the parent (#404).
+    # The `python -m dagster` child does not run seshat's stdio reconfig, so on
+    # Windows it would otherwise write via the legacy code page (cp1252) and
+    # UnicodeEncodeError on non-Latin-1 governed values (e.g. Arabic). Pairing
+    # the child's UTF-8 output with the parent's UTF-8 decode also stops
+    # `errors="replace"` from silently corrupting cp1252-encoded chars like `é`.
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     if table:
         env["SESHAT_DAGSTER_TABLES"] = table
     else:
