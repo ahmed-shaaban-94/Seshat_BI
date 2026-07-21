@@ -46,10 +46,16 @@
 >     count(DISTINCT <col>) FROM <table>;` -- no `trim()`; a non-text column cannot
 >     hold `''`, so plain `IS NULL` is the correct (and only valid) measure.
 > - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)),
->   count(*) FILTER (WHERE <pk_col_1> IS NULL OR <pk_col_2> IS NULL ...) FROM
->   <table>;` -- the PK holds iff **`count(*) > 0`** (an empty source proves nothing)
->   **AND** `count(*) = count(DISTINCT pk)` **AND** the NULL-in-any-PK-component count
->   is `0` (RC2; all three required, matching the profiler's
+>   count(*) FILTER (WHERE <missing-key predicate>) FROM <table>;` where the
+>   missing-key predicate branches by EACH key column's type, exactly as the
+>   per-column measure above (RC5) and the profiler's PK proof do -- **`trim(<pk_col>)
+>   = '' OR <pk_col> IS NULL`** for a TEXT key component, plain **`<pk_col> IS NULL`**
+>   for a non-text one, OR-joined across the components. Using plain `IS NULL` for a
+>   text key is the same load-bearing trap: an all-TEXT landing writes `''` (not NULL)
+>   for a blank key, so `IS NULL` alone reports zero missing and a blank-but-unique
+>   tuple would wrongly pass. The PK holds iff **`count(*) > 0`** (an empty source
+>   proves nothing) **AND** `count(*) = count(DISTINCT pk)` **AND** the empty-or-NULL
+>   -in-any-PK-component count is `0` (RC2; all three required, matching the profiler's
 >   `is_unique = total > 0 and total == distinct_pk and null_pk == 0`).
 > - **Returns-column population:** the missingness measure above on the
 >   authoritative returns column.
@@ -242,7 +248,9 @@ unique **on the data**.
 - **Uniqueness proof (on the landed data):**
   - `COUNT(*)            = <N>`
   - `COUNT(DISTINCT pk)  = <N>`   *(must equal `COUNT(*)` for the PK to hold)*
-  - `NULLs in PK columns = <N>`   *(must be `0`)*
+  - `NULLs/empty in PK   = <N>`   *(must be `0`; count `'' OR NULL` for a TEXT key
+    component, plain `IS NULL` for a non-text one -- the same measure the profiler
+    emits, so a hand-filled proof round-trips identically)*
 
 > **Forward seam to the silver build (ADR 0002 RC2).** What is recorded here is the
 > candidate PK on the **landed** data. RC2 requires the PK to be **re-verified on the
