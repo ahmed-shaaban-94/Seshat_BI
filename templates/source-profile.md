@@ -35,20 +35,24 @@
 >     hold `''`, so plain `IS NULL` is the correct (and only valid) measure.
 > - **Candidate-key (PK) proof:** `SELECT count(*), count(DISTINCT (<pk_cols>)),
 >   count(*) FILTER (WHERE <pk_col_1> IS NULL OR <pk_col_2> IS NULL ...) FROM
->   <table>;` -- the PK holds iff `count(*) = count(DISTINCT pk)` **AND** the
->   NULL-in-any-PK-component count is `0` (RC2; both conditions required, matching
->   `profile.py`'s `is_unique = total == distinct_pk and null_pk == 0`).
+>   <table>;` -- the PK holds iff **`count(*) > 0`** (an empty source proves nothing)
+>   **AND** `count(*) = count(DISTINCT pk)` **AND** the NULL-in-any-PK-component count
+>   is `0` (RC2; all three required, matching the profiler's
+>   `is_unique = row_count > 0 and total == distinct_pk and null_pk == 0`).
 > - **Returns-column population:** the missingness measure above on the
 >   authoritative returns column.
 >
 > **File source (`csv`/`excel`, no DB/DSN):** the same mechanical set is computed
 > from the file's raw cells, not SQL -- CSV uses the stdlib (no extra); Excel needs
 > the `files` extra (`pipx inject seshat-bi openpyxl`, or
-> `pip install "seshat-bi[files]"`). Treat every cell as landed-as-TEXT: missingness
-> is `'' OR NULL` per column, distinct is over `trim()`ed values, and the PK proof is
-> the same "rows = distinct-key-tuples AND no NULL/empty key component" check on the
-> raw rows. See the file-source addendum below for the read traps (encoding,
-> delimiter, header row, sheet selection).
+> `pip install "seshat-bi[files]"`). Treat every cell as landed-as-TEXT: a cell is
+> missing when `str(cell).strip() == ''`; distinct cardinality is over the
+> `strip()`ed cells; skip a wholly-blank row (it is a formatting artifact, not data);
+> and the PK proof is the SAME three-part check -- at least one row, rows =
+> distinct-key-tuples, and no blank/empty key component. This mirrors the shipped
+> `file_profile.py` so file and DB numbers are comparable at the gate. See the
+> file-source addendum below for the read traps (encoding, delimiter, header row,
+> sheet selection).
 >
 > **The rule the gate enforces:** you do not write silver until this profile is filled,
 > the source is mapped (`source-map.yaml`), and the mapping is reviewed.
