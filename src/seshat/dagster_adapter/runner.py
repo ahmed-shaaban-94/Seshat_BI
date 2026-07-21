@@ -19,6 +19,7 @@ from pathlib import Path
 from . import ALLOWED_JOBS
 from .doctor import orchestration_python
 from .redaction import redact_text
+from .source_mode import DEFAULT_SOURCE_MODE, SOURCE_MODE_ENV, normalize_source_mode
 
 _TAIL_CHARS = 4000
 _RUN_TIMEOUT_SECONDS = 7200
@@ -55,12 +56,24 @@ def build_run_argv(python: Path, job: str) -> list[str]:
     ]
 
 
-def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
+def execute_run(
+    root: Path,
+    job: str,
+    table: str | None = None,
+    source_mode: str | None = None,
+) -> RunResult:
     """Run one job in the orchestration environment; return the redacted result.
 
     The child's evidence lands under ``.seshat/dagster/runs/<run_id>/`` because
     the run id is injected via ``SESHAT_DAGSTER_RUN_ID`` -- the parent then
-    finalizes and renders it (evidence.py)."""
+    finalizes and renders it (evidence.py).
+
+    ``source_mode`` selects the Bronze source adapter (#404/#405). It travels
+    via the ``SESHAT_DAGSTER_SOURCE_MODE`` env var -- the same closed discovery
+    seam ``SESHAT_DAGSTER_TABLES`` uses, never argv -- and is validated
+    fail-closed against the closed set. The var is set ONLY when non-default so
+    the DEFAULT (CSV) run's child environment stays byte-identical to the
+    pre-feature runner."""
     root = Path(root)
     python = orchestration_python(root)
     if python is None:
@@ -68,6 +81,10 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
             "orchestration environment absent -- run `seshat dagster doctor` "
             "for the install remedy"
         )
+    try:
+        resolved_mode = normalize_source_mode(source_mode)
+    except ValueError as error:
+        raise RunnerError(str(error)) from error
     argv = build_run_argv(python, job)
     run_id = new_run_id()
     env = dict(os.environ)
@@ -85,6 +102,13 @@ def execute_run(root: Path, job: str, table: str | None = None) -> RunResult:
         env["SESHAT_DAGSTER_TABLES"] = table
     else:
         env.pop("SESHAT_DAGSTER_TABLES", None)
+    # Byte-identity: set the mode ONLY when it is NOT the default. A default
+    # (CSV) run leaves the var absent, so the child env matches the pre-feature
+    # runner exactly and the existing runner test stays green.
+    if resolved_mode != DEFAULT_SOURCE_MODE:
+        env[SOURCE_MODE_ENV] = resolved_mode
+    else:
+        env.pop(SOURCE_MODE_ENV, None)
     try:
         proc = subprocess.run(
             argv,

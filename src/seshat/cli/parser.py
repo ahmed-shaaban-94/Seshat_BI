@@ -1108,6 +1108,17 @@ def _add_dagster_parser(sub: argparse._SubParsersAction) -> None:
         help="scope the run to one mapped table (via the discovery seam, never argv)",
     )
     run_p.add_argument(
+        "--source-mode",
+        dest="source_mode",
+        default="csv",
+        choices=("csv", "existing-bronze"),
+        help=(
+            "Bronze source: 'csv' (default; a landing file OWNS/reloads bronze) "
+            "or 'existing-bronze' (non-destructive DB-first: verify a pre-loaded "
+            "bronze.<table> read-only, zero writes). #404/#405"
+        ),
+    )
+    run_p.add_argument(
         "--json", dest="as_json", action="store_true", help="machine-readable result"
     )
 
