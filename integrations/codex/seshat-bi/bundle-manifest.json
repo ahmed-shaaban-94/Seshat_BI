@@ -1532,10 +1532,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "1ef313645cf22ea38114bf8afccf053f0170713f3dc3679aa98407711e15075a",
+  "manifest_digest": "e1fc616ff4fc06e856b8289260b6a7b1ce8c6d5c8fa8fd07a18cef7365e5c8ef",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "56d9cfacbf4733524e947ee306ef65b4e1cd2d8a",
+  "source_revision": "ceff22a166dd9fb7f1fe01d16e54e725cf85be52",
   "target": "codex",
   "version": "0.5.3"
 }

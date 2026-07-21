@@ -119,13 +119,19 @@ def _model_files(plan: model_plan.ScaffoldPlan, selector: str) -> dict[str, str]
 
 
 def _notes(plan: model_plan.ScaffoldPlan) -> tuple[str, ...]:
+    table = plan.table_id
     return (
         "the generated .sql files are SKELETONS: complete the joins, casts, and "
         "surrogate-key logic (the SELECT column list is the governed contract -- "
-        "do not change it), then run `seshat dbt validate --table "
-        f"{plan.table_id}`",
-        "any edit to the source map requires a re-commit AND re-running "
-        "`seshat dbt scaffold` so every model's source_map_revision stays current",
+        f"do not change it), then run `seshat dbt validate --table {table}`",
+        # scaffold is non-destructive (existing files are KEPT), so a plain
+        # re-run does NOT refresh a stale citation -- state the real manual step.
+        "after you re-commit an edited source map, the generated _models.yml "
+        "source_map_revision goes stale: update it (to the new "
+        f"`git rev-parse HEAD:{plan.source_map}`) in dbt/models/**/{table}/"
+        "_models.yml, OR delete those _models.yml files and re-run scaffold to "
+        "regenerate them (scaffold keeps existing files, so it will not overwrite "
+        "a stale one in place)",
     )
 
 

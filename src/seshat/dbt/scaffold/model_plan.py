@@ -101,6 +101,30 @@ def _require_identifier(value: object, label: str) -> str:
     return value
 
 
+# evidence._selected_fact_model / _selected_dimension_subjects classify built
+# models by prefix: a dimension MUST be dim_*, and the single fact must be the
+# one model that is NOT dim_/stg_/audit_. A dimension without the dim_ prefix, or
+# a fact that collides with a reserved prefix, would scaffold + pass static
+# validate yet never pass the run-evidence gate -- so fail closed at scaffold.
+_RESERVED_PREFIXES = ("dim_", "stg_", "audit_")
+
+
+def _require_dimension_prefix(name: str) -> None:
+    if not name.startswith("dim_"):
+        raise ScaffoldError(
+            f"dimension model {name!r} must be named dim_* (the run-evidence gate "
+            "identifies dimensions by that prefix); rename it in gold_star"
+        )
+
+
+def _require_fact_prefix(name: str) -> None:
+    if name.startswith(_RESERVED_PREFIXES):
+        raise ScaffoldError(
+            f"fact model {name!r} must NOT start with dim_/stg_/audit_ (the "
+            "run-evidence gate identifies the fact by excluding those prefixes)"
+        )
+
+
 def _string_list(value: object) -> tuple[str, ...]:
     if isinstance(value, str):
         return (value,)
@@ -120,6 +144,10 @@ class _PlanInputs:
     fact: FactBinding
     fact_grain: str
     gold_star: dict
+    # Maps a silver/gold column name back to its REAL bronze source_name, so a
+    # gold-star citation resolves to the column that actually exists in bronze
+    # (never the renamed silver name -- that would be fabricated provenance).
+    bronze_by_silver: dict[str, str]
 
 
 def _kept_columns(document: dict) -> tuple[dict, ...]:
@@ -132,6 +160,39 @@ def _kept_columns(document: dict) -> tuple[dict, ...]:
         for row in rows
         if isinstance(row, dict) and row.get("decision") in {"keep", "derive"}
     )
+
+
+def _bronze_by_silver(document: dict) -> dict[str, str]:
+    """Map each kept column's silver name (``rename_to`` or, absent that, its
+    ``source_name``) to its real bronze ``source_name``.
+
+    This is the single provenance authority: any gold-star reference to a silver
+    name resolves through it to a column that genuinely exists in bronze. A
+    reference with no matching row is a defect (fail closed), never fabricated.
+    """
+    lookup: dict[str, str] = {}
+    for row in _kept_columns(document):
+        source = row.get("source_name")
+        if not isinstance(source, str) or not source:
+            continue
+        rename = row.get("rename_to")
+        silver = rename if isinstance(rename, str) and rename else source
+        lookup[silver] = source
+    return lookup
+
+
+def _bronze_citation(inputs: _PlanInputs, silver_name: str, context: str) -> str:
+    """The ``bronze.<table>.<source_name>`` citation for a silver column, or fail.
+
+    Resolves the silver name to its committed bronze ``source_name``; a name the
+    map does not stage is a defect (never a fabricated citation)."""
+    source = inputs.bronze_by_silver.get(silver_name)
+    if source is None:
+        raise ScaffoldError(
+            f"{context} references {silver_name!r}, which no kept source column "
+            "maps to (add/keep it in the map's columns[] before scaffolding)"
+        )
+    return f"bronze.{inputs.source_table}.{source}"
 
 
 def _staging_column(row: dict, source_table: str) -> ColumnSpec | None:
@@ -174,14 +235,17 @@ def _staging_model(inputs: _PlanInputs, document: dict) -> ModelSpec:
 
 def _dimension_model(raw: dict, inputs: _PlanInputs) -> ModelSpec:
     name = _normalized_name(raw.get("name"), "gold_star.dimensions[].name")
+    _require_dimension_prefix(name)
     surrogate = _require_identifier(raw.get("surrogate_key"), f"{name} surrogate_key")
     attributes = _string_list(raw.get("attributes"))
+    for attr in attributes:
+        _require_identifier(attr, f"{name} attribute")
     natural_key = attributes[0] if attributes else surrogate
     columns = [ColumnSpec(name=surrogate, derivation="surrogate_key")]
     columns.extend(
         ColumnSpec(
             name=attr,
-            source_columns=(f"bronze.{inputs.source_table}.{attr}",),
+            source_columns=(_bronze_citation(inputs, attr, f"{name}.{attr}"),),
         )
         for attr in attributes
     )
@@ -202,6 +266,7 @@ def _date_dimension(inputs: _PlanInputs) -> ModelSpec | None:
     if not isinstance(raw, dict):
         return None
     name = _normalized_name(raw.get("name"), "gold_star.date_dimension.name")
+    _require_dimension_prefix(name)
     surrogate = _require_identifier(raw.get("surrogate_key"), f"{name} surrogate_key")
     columns = tuple(
         ColumnSpec(name=column, derivation="date_spine")
@@ -234,23 +299,36 @@ def _dimensions(inputs: _PlanInputs) -> tuple[ModelSpec, ...]:
 def _fact_columns(
     inputs: _PlanInputs, dimensions: tuple[ModelSpec, ...]
 ) -> tuple[ColumnSpec, ...]:
-    """A synthetic surrogate key, the grain/business key, one FK per dimension,
-    and every declared money measure -- each cited to the staging source."""
-    table = inputs.source_table
-    columns = [ColumnSpec(name=f"{inputs.fact.name}_sk", derivation="surrogate_key")]
+    """The fact's synthetic PK, the grain/business key, one FK per dimension, and
+    every declared money measure.
+
+    Provenance is honest, never fabricated: the fact's own surrogate PK and every
+    dimension FK (``*_sk``) are computed by join, so they carry a governed
+    ``surrogate_key`` derivation -- NOT a bronze citation to the renamed silver
+    name (which no bronze column has). The grain key and money measures ARE
+    columns that exist in bronze, so they resolve to their real ``source_name``
+    through the provenance lookup (fail closed if the map does not stage them).
+    """
+    fact_sk = f"{inputs.fact.name}_sk"
+    columns = [ColumnSpec(name=fact_sk, derivation="surrogate_key")]
     columns.extend(
-        ColumnSpec(name=key, source_columns=(f"bronze.{table}.{key}",))
+        ColumnSpec(
+            name=key,
+            source_columns=(_bronze_citation(inputs, key, "fact business_key"),),
+        )
         for key in inputs.fact.business_key
     )
     columns.extend(
-        ColumnSpec(
-            name=dim.columns[0].name,
-            source_columns=(f"bronze.{table}.{dim.business_key[0]}",),
-        )
+        ColumnSpec(name=dim.columns[0].name, derivation="surrogate_key")
         for dim in dimensions
     )
     columns.extend(
-        ColumnSpec(name=measure, source_columns=(f"bronze.{table}.{measure}",))
+        ColumnSpec(
+            name=measure,
+            source_columns=(
+                _bronze_citation(inputs, measure, "fact additive_money_measure"),
+            ),
+        )
         for measure in inputs.fact.additive_money_measures
     )
     return tuple(_dedupe_columns(columns))
@@ -268,6 +346,7 @@ def _dedupe_columns(columns: list[ColumnSpec]) -> list[ColumnSpec]:
 
 
 def _fact_model(inputs: _PlanInputs, dimensions: tuple[ModelSpec, ...]) -> ModelSpec:
+    _require_fact_prefix(inputs.fact.name)
     return ModelSpec(
         name=inputs.fact.name,
         layer="marts",
@@ -362,6 +441,7 @@ def build_scaffold_plan(
         fact=fact,
         fact_grain=grain if isinstance(grain, str) and grain.strip() else "one row",
         gold_star=gold_star,
+        bronze_by_silver=_bronze_by_silver(document),
     )
     dimensions = _dimensions(inputs)
     return ScaffoldPlan(

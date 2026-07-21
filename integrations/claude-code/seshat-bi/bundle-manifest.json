@@ -1748,10 +1748,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "173d16da9b1951ee9a8e0bdfbec7e48202e398cedb0e9f4a8a6eae21868ea206",
+  "manifest_digest": "aced535b111c8ec83a3c5da7b7f445e4f5bd5266fde29983f8df71fed73ce95c",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "56d9cfacbf4733524e947ee306ef65b4e1cd2d8a",
+  "source_revision": "ceff22a166dd9fb7f1fe01d16e54e725cf85be52",
   "target": "claude",
   "version": "0.5.3"
 }

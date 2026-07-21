@@ -306,3 +306,179 @@ def test_rendered_models_document_is_valid_yaml() -> None:
 
     assert round_trip["version"] == 2
     assert len(round_trip["models"]) == len(plan.dimensions)
+
+
+# --------------------------------------------------------------------------- #
+# BLOCKER 2 regression -- provenance is never fabricated
+# --------------------------------------------------------------------------- #
+# A map whose gold columns are RENAMED from their bronze source_name, so a
+# citation to the silver name (the bug) is a bronze column that does not exist.
+_RENAMED_MAP = {
+    "meta": {"table_id": TABLE_ID, "grain": "one row = one txn"},
+    "columns": [
+        {"source_name": "TxnId", "decision": "keep", "rename_to": "transaction_id"},
+        {"source_name": "CustId", "decision": "keep", "rename_to": "customer_id"},
+        {
+            "source_name": "TotalSpent",
+            "decision": "keep",
+            "rename_to": "total_spent",
+            "silver_type": "numeric(12,2)",
+        },
+        {"source_name": "TxnDate", "decision": "keep", "rename_to": "transaction_date"},
+    ],
+    "gold_star": {
+        "fact": {
+            "name": "gold.fct_sales_rss",
+            "business_key": "transaction_id",
+            "measures": ["total_spent"],
+            "additive_money_measures": ["total_spent"],
+        },
+        "dimensions": [
+            {
+                "name": "gold.dim_customer_rss",
+                "surrogate_key": "customer_sk",
+                "attributes": ["customer_id"],
+            },
+        ],
+        "date_dimension": {"name": "gold.dim_date_rss", "surrogate_key": "date_sk"},
+    },
+}
+
+
+def _renamed_plan() -> model_plan.ScaffoldPlan:
+    return model_plan.build_scaffold_plan(_source(_RENAMED_MAP), TABLE_ID, _FACT)
+
+
+def test_fact_cites_the_real_bronze_source_name_not_the_renamed_name() -> None:
+    plan = _renamed_plan()
+    bk = next(c for c in plan.fact_model.columns if c.name == "transaction_id")
+    money = next(c for c in plan.fact_model.columns if c.name == "total_spent")
+
+    assert bk.source_columns == (f"bronze.{TABLE_ID}.TxnId",)
+    assert money.source_columns == (f"bronze.{TABLE_ID}.TotalSpent",)
+
+
+def test_dim_attribute_cites_the_real_bronze_source_name() -> None:
+    plan = _renamed_plan()
+    dim = next(d for d in plan.dimensions if d.name == "dim_customer_rss")
+    attr = next(c for c in dim.columns if c.name == "customer_id")
+
+    assert attr.source_columns == (f"bronze.{TABLE_ID}.CustId",)
+
+
+def test_fact_and_dim_surrogate_keys_are_derivations_not_fabricated_citations() -> None:
+    plan = _renamed_plan()
+    fact_sk = next(c for c in plan.fact_model.columns if c.name == "fct_sales_rss_sk")
+    customer_fk = next(c for c in plan.fact_model.columns if c.name == "customer_sk")
+    date_fk = next(c for c in plan.fact_model.columns if c.name == "date_sk")
+
+    for column in (fact_sk, customer_fk, date_fk):
+        assert column.derivation == "surrogate_key", column.name
+        assert column.source_columns == ()  # no fabricated bronze citation
+
+
+def test_gold_star_reference_to_unstaged_column_fails_closed() -> None:
+    broken = {
+        **_RENAMED_MAP,
+        "columns": [
+            c for c in _RENAMED_MAP["columns"] if c["rename_to"] != "total_spent"
+        ],
+    }
+    # total_spent is still an additive_money_measure but no longer staged.
+    with pytest.raises(model_plan.ScaffoldError, match="total_spent"):
+        model_plan.build_scaffold_plan(_source(broken), TABLE_ID, _FACT)
+
+
+# --------------------------------------------------------------------------- #
+# Item 3 regression -- key tests target the correct column
+# --------------------------------------------------------------------------- #
+def test_staging_key_tests_target_the_grain_key_not_the_first_map_column() -> None:
+    """The grain key is NOT first in map order (transaction_id is column 3 here),
+    so keying tests on columns[0] would assert uniqueness on the wrong column."""
+    reordered = {
+        **_MAP,
+        "columns": [
+            {
+                "source_name": "customer_id",
+                "decision": "keep",
+                "rename_to": "customer_id",
+            },
+            {
+                "source_name": "total_spent",
+                "decision": "keep",
+                "rename_to": "total_spent",
+            },
+            {
+                "source_name": "transaction_id",
+                "decision": "keep",
+                "rename_to": "transaction_id",
+            },
+        ],
+    }
+    plan = model_plan.build_scaffold_plan(_source(reordered), TABLE_ID, _FACT)
+    doc = yaml_render.render_models_document((plan.staging,), plan, SELECTOR)
+    columns = doc["models"][0]["columns"]
+
+    tested = [c["name"] for c in columns if "data_tests" in c]
+    assert tested == ["transaction_id"]  # the grain key, not customer_id (col 0)
+
+
+def test_dimension_key_tests_target_the_surrogate_not_the_natural_key() -> None:
+    """A dim's -1 unknown-member row has a NULL natural key, so not_null must sit
+    on the surrogate key, never the natural business key."""
+    plan = _plan()
+    dim = next(d for d in plan.dimensions if d.name == "dim_customer_rss")
+    doc = yaml_render.render_models_document((dim,), plan, SELECTOR)
+    columns = doc["models"][0]["columns"]
+
+    tested = [c["name"] for c in columns if "data_tests" in c]
+    assert tested == ["customer_sk"]  # the surrogate, not customer_id
+
+
+# --------------------------------------------------------------------------- #
+# Items 6 & 7 regression -- fail closed on unbuildable star shapes
+# --------------------------------------------------------------------------- #
+def test_non_dim_prefixed_dimension_fails_closed() -> None:
+    bad = {
+        **_MAP,
+        "gold_star": {
+            **_MAP["gold_star"],
+            "dimensions": [
+                {
+                    "name": "gold.customer",
+                    "surrogate_key": "customer_sk",
+                    "attributes": ["customer_id"],
+                },
+            ],
+        },
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="dim_"):
+        model_plan.build_scaffold_plan(_source(bad), TABLE_ID, _FACT)
+
+
+def test_non_identifier_dimension_attribute_fails_closed() -> None:
+    bad = {
+        **_MAP,
+        "gold_star": {
+            **_MAP["gold_star"],
+            "dimensions": [
+                {
+                    "name": "gold.dim_customer_rss",
+                    "surrogate_key": "customer_sk",
+                    "attributes": ["Bad Name"],
+                },
+            ],
+        },
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="attribute"):
+        model_plan.build_scaffold_plan(_source(bad), TABLE_ID, _FACT)
+
+
+def test_fact_named_with_reserved_prefix_fails_closed() -> None:
+    fact = FactBinding(
+        name="dim_sales",  # would be misclassified as a dimension by evidence
+        business_key=("transaction_id",),
+        additive_money_measures=("total_spent",),
+    )
+    with pytest.raises(model_plan.ScaffoldError, match="dim_/stg_/audit_"):
+        model_plan.build_scaffold_plan(_source(_MAP), TABLE_ID, fact)

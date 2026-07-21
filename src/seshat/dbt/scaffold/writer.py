@@ -17,7 +17,7 @@ import yaml
 
 from seshat.safe_write import write_if_absent
 
-from .model_plan import ModelSpec, ScaffoldPlan
+from .model_plan import ModelSpec, ScaffoldError, ScaffoldPlan
 
 _SELECTORS = "dbt/selectors.yml"
 _SOURCES = "dbt/models/sources/_sources.yml"
@@ -29,13 +29,29 @@ def _yaml_bytes(document: dict) -> bytes:
 
 
 def _load_document(path: Path) -> dict:
+    """Load an existing merge target, or ``{}`` when it does not exist yet.
+
+    Fails CLOSED on a present-but-malformed document (mirrors every sibling
+    writer in this codebase): returning ``{}`` would let the caller rewrite the
+    file with ONLY the new rows, silently destroying OTHER tables' selectors or
+    sources. An absent file is the only valid empty case.
+    """
     if not path.is_file():
         return {}
     try:
         document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, yaml.YAMLError):
-        return {}
-    return document if isinstance(document, dict) else {}
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
+        raise ScaffoldError(
+            f"{path.name} is present but not valid YAML ({exc.__class__.__name__}); "
+            "fix or remove it before scaffolding (refusing to overwrite it and lose "
+            "other tables' entries)"
+        ) from exc
+    if not isinstance(document, dict):
+        raise ScaffoldError(
+            f"{path.name} is present but is not a YAML mapping; fix or remove it "
+            "before scaffolding (refusing to overwrite it)"
+        )
+    return document
 
 
 def _selector_row(selector: str) -> dict:
@@ -71,21 +87,64 @@ def _gold_tables(plan: ScaffoldPlan) -> list[str]:
     return [plan.fact.name, *dims]
 
 
+def _existing_table_names(group: dict) -> set[str]:
+    tables = group.get("tables")
+    return {
+        t["name"]
+        for t in (tables if isinstance(tables, list) else [])
+        if isinstance(t, dict) and isinstance(t.get("name"), str)
+    }
+
+
+def _merge_source_group(group: dict, schema: str, tables: list[str]) -> bool:
+    """Union missing table entries INTO an existing group; True when changed.
+
+    A shared ``_sources.yml`` already carries the ``bronze`` / ``migration_gold``
+    groups once the first table is scaffolded; a second table must add its NEW
+    tables into those same groups (not skip them because the group name exists,
+    which would leave the second table's staging/audit SQL referencing undeclared
+    sources and break ``dbt parse`` for the whole project).
+    """
+    group.setdefault("schema", schema)
+    existing = _existing_table_names(group)
+    missing = [name for name in tables if name not in existing]
+    if not missing:
+        return False
+    current = group.get("tables")
+    group["tables"] = [
+        *(current if isinstance(current, list) else []),
+        *({"name": name} for name in missing),
+    ]
+    return True
+
+
 def merge_sources(root: Path, plan: ScaffoldPlan) -> bool:
-    """Add the bronze landing source and the migration_gold oracle if absent."""
+    """Add/extend the bronze landing source and the migration_gold oracle.
+
+    Adds a missing group whole, OR unions this table's missing tables into an
+    already-present group. Idempotent: a re-scaffold of the same table changes
+    nothing.
+    """
     path = root / _SOURCES
     document = _load_document(path)
     rows = document.get("sources")
     rows = rows if isinstance(rows, list) else []
-    by_name = {row.get("name"): row for row in rows if isinstance(row, dict)}
+    by_name = {
+        row.get("name"): row
+        for row in rows
+        if isinstance(row, dict) and isinstance(row.get("name"), str)
+    }
     desired = {
-        "bronze": _source_entry("bronze", "bronze", [plan.source_table]),
-        "migration_gold": _source_entry("migration_gold", "gold", _gold_tables(plan)),
+        "bronze": ("bronze", [plan.source_table]),
+        "migration_gold": ("gold", _gold_tables(plan)),
     }
     changed = False
-    for name, entry in desired.items():
-        if name not in by_name:
-            rows = [*rows, entry]
+    for name, (schema, tables) in desired.items():
+        group = by_name.get(name)
+        if group is None:
+            rows = [*rows, _source_entry(name, schema, tables)]
+            changed = True
+        elif _merge_source_group(group, schema, tables):
             changed = True
     if not changed:
         return False

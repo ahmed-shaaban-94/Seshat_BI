@@ -50,8 +50,22 @@ def _key_tests(is_key: bool) -> tuple[dict, ...]:
     return ({"name": "unique"}, {"name": "not_null"}) if is_key else ()
 
 
+def _tested_key_column(model: ModelSpec) -> str:
+    """The column ``unique``+``not_null`` are keyed on.
+
+    The surrogate/PK when the model has one (dims, the fact, the audit) --
+    NEVER the natural business key of a dimension, whose ``-1`` unknown-member
+    row carries a NULL natural key that would fail ``not_null`` on correct data.
+    A staging model has no surrogate, so its grain business key is tested (which
+    is also the map-order-independent correct column, not ``columns[0]``)."""
+    for column in model.columns:
+        if column.derivation in {"surrogate_key", "date_spine", "parity_measure"}:
+            return column.name
+    return model.business_key[0] if model.business_key else ""
+
+
 def _model_columns(model: ModelSpec, selector: str) -> list[dict]:
-    key = model.columns[0].name if model.columns else ""
+    key = _tested_key_column(model)
     return [
         _column_row(column, selector, _key_tests(column.name == key))
         for column in model.columns
