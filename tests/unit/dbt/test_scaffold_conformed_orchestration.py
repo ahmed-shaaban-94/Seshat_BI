@@ -42,6 +42,37 @@ def _commit_map(root: Path, text: str) -> None:
     _git(root, "commit", "-q", "-m", "map")
 
 
+def test_discover_owner_view_reads_committed_stars(tmp_path: Path) -> None:
+    """The owner-view is discovered from COMMITTED source-maps, keyed on governed
+    star id, exposing each star's dimensions (#418)."""
+    _git(tmp_path, "init", "-q")
+    owner_dir = tmp_path / "mappings" / "sales"
+    owner_dir.mkdir(parents=True)
+    (owner_dir / "source-map.yaml").write_text(
+        "meta:\n  table_id: sales\n"
+        "gold_star:\n  fact:\n    name: fct_sales\n"
+        "  dimensions:\n    - name: gold.dim_customer\n"
+        "      surrogate_key: customer_sk\n"
+        "      attributes: [customer_id, customer_segment]\n",
+        encoding="utf-8",
+    )
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-q", "-m", "seed")
+
+    view = orchestrator._discover_owner_view(tmp_path)
+    assert "sales" in view
+    assert "dim_customer" in view["sales"]
+    assert view["sales"]["dim_customer"]["attributes"] == [
+        "customer_id",
+        "customer_segment",
+    ]
+
+
+def test_discover_owner_view_empty_without_git(tmp_path: Path) -> None:
+    """No git repo -> empty owner-view (fail-safe), never a traceback (#418)."""
+    assert orchestrator._discover_owner_view(tmp_path) == {}
+
+
 def test_load_conformed_map_absent_returns_none(tmp_path: Path) -> None:
     _git(tmp_path, "init", "-q")
     assert orchestrator._load_conformed_map(tmp_path) is None

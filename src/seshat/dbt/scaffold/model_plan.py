@@ -68,6 +68,10 @@ class MapSource:
     # declares CONFORMED but does not OWN is reused (referenced), not re-emitted
     # (#418-P1). None -> no reuse -> byte-identical single-table output.
     conformed_map: dict | None = None
+    # {star_id: {bare_dim: raw_dim_dict}} for every committed governed star, so
+    # reuse can validate a reused dim against its OWNER (#418). None -> no owner
+    # view (reconciliation treats every owner as absent -> fails closed).
+    owner_view: dict[str, dict[str, dict]] | None = None
 
 
 @dataclass(frozen=True, slots=True)

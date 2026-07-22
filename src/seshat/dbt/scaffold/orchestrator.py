@@ -15,6 +15,7 @@ from pathlib import Path
 
 import yaml
 
+from seshat.dbt import stars
 from seshat.dbt.contracts import GovernanceError
 from seshat.dbt.fact_semantics import load_fact_semantics
 from seshat.dbt.gate import evaluate_mapping_gate, resolve_working_set
@@ -106,6 +107,60 @@ def _load_conformed_map(root: Path) -> dict | None:
     return document if isinstance(document, dict) else None
 
 
+def _git_tracked_files(root: Path) -> list[str]:
+    """``git ls-files`` (posix rel paths) or ``[]`` on any failure (fail-safe)."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=False
+        )
+    except (OSError, ValueError):
+        return []
+    return result.stdout.splitlines() if result.returncode == 0 else []
+
+
+def _committed_source_map(root: Path):
+    """A ``load(rel) -> dict | None`` that reads ``rel`` from committed ``HEAD``, so
+    the owner-view reflects committed governance state -- never an uncommitted edit
+    that could suppress a dimension model (#418)."""
+    import subprocess
+
+    def _load(rel: str) -> dict | None:
+        try:
+            result = subprocess.run(
+                ["git", "show", f"HEAD:{rel}"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except (OSError, ValueError):
+            return None
+        if result.returncode != 0:
+            return None
+        try:
+            data = yaml.safe_load(result.stdout)
+        except yaml.YAMLError:
+            return None
+        return data if isinstance(data, dict) else None
+
+    return _load
+
+
+def _discover_owner_view(root: Path) -> dict[str, dict[str, dict]]:
+    """``{star_id: {bare_dim: raw_dim_dict}}`` across all committed governed stars --
+    the cross-table view reconciliation needs (#418).
+
+    Fail-SAFE to ``{}`` (no git / no stars): reconciliation then treats every owner
+    as absent and fails closed, rather than reusing against an unverifiable owner.
+    """
+    discovered = stars.discover_stars(
+        _git_tracked_files(root), _committed_source_map(root)
+    )
+    return {sid: stars.star_dimensions(doc) for sid, doc in discovered.items()}
+
+
 def _build_plan(root: Path, table_id: str) -> model_plan.ScaffoldPlan:
     working_set = _approved_working_set(root, table_id)
     fact = load_fact_semantics(working_set.source_map)
@@ -114,6 +169,7 @@ def _build_plan(root: Path, table_id: str) -> model_plan.ScaffoldPlan:
         source_map=working_set.source_map.relative_to(root).as_posix(),
         source_map_revision=working_set.source_map_revision,
         conformed_map=_load_conformed_map(root),
+        owner_view=_discover_owner_view(root),
     )
     return model_plan.build_scaffold_plan(source, table_id, fact)
 
