@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from seshat.dbt import stars
 from seshat.dbt.contracts import FactBinding, GovernanceError
 
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -457,29 +458,11 @@ def _reuses_dimension(decl: object, table_id: str) -> bool:
     return table_id in stars and table_id != stars[0]
 
 
-def _governed_star_id(document: dict, table_id: str) -> str:
-    """The GOVERNED star id the conformed-dimension map keys ``stars`` on.
-
-    Mirrors HR1's ``conformed_dimension._star_id`` EXACTLY -- ``meta.table_id``,
-    then top-level ``source_id``, then the directory ``table_id`` fallback -- so
-    scaffold resolves reuse against the SAME identifier the authority (and HR1)
-    declares. Using the raw CLI/directory ``table_id`` would miss a legitimate
-    reuser whose mapping directory differs from its governed star id (#419 review).
-    """
-    meta = document.get("meta")
-    if isinstance(meta, dict) and isinstance(meta.get("table_id"), str):
-        return meta["table_id"]
-    source_id = document.get("source_id")
-    if isinstance(source_id, str):
-        return source_id
-    return table_id
-
-
 def _conformed_reuse(conformed_map: dict | None, star_id: str) -> dict[str, str]:
     """Map each bare dim name ``star_id`` REUSES (does not own) to its OWNING star,
     read from the conformed-dimension map (#418-P1).
 
-    ``star_id`` is the GOVERNED star id (:func:`_governed_star_id`), matching what
+    ``star_id`` is the GOVERNED star id (:func:`stars.star_id`), matching what
     the map's ``stars`` entries and HR1 use -- NOT the raw CLI/directory table id.
     The owner is ``stars[0]`` -- carried so the operator note can name which star
     to build first. Fail-SAFE: an absent/malformed map (or any dim not meeting
@@ -745,7 +728,7 @@ def build_scaffold_plan(
     section, only the star's dimensions and the staging columns.
     """
     inputs = _plan_inputs(source, table_id, fact)
-    star_id = _governed_star_id(source.document, table_id)
+    star_id = stars.star_id(source.document, table_id)
     dims = _partition_dimensions(inputs, source.conformed_map, star_id)
     return ScaffoldPlan(
         table_id=table_id,
