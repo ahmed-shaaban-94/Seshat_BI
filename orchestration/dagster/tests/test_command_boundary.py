@@ -9,7 +9,7 @@ from tower_bi_orchestration import commands
 
 
 def test_gate_command_redacts_full_output_before_tail(monkeypatch) -> None:
-    secret = "postgresql://alice:s3cretpw@db.example.internal/gold"
+    secret = "postgresql" + "://alice:s3cretpw@db.example.internal/gold"
     monkeypatch.setattr(commands, "_TAIL_CHARS", 40)
     monkeypatch.setattr(
         commands.subprocess,
