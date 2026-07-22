@@ -37,36 +37,46 @@ The reconciliation needs exactly what HR1 already computes: discover every
 private helpers (`_discover_stars`, `_star_dimensions`, `_star_id`, `_bare`,
 `_is_star`, `_add_dim`).
 
-**Decision: extract them into a small shared module** — `src/seshat/dbt/stars.py`
-(pure, stdlib + lazy-`yaml`, no DB, no rules-package import). Both HR1 and scaffold
-import it, so the governance gate and the generator can never disagree on star
-identity or dimension discovery. HR1 is refactored to delegate to the module
-(behavior-preserving — its existing tests are the regression guard). This also
-retires the `_governed_star_id` DUPLICATE scaffold added in #419 (which mirrored
-`_star_id` by hand) in favor of the shared function — closing the drift risk #419
-only papered over.
+**Decision: extract them into a small shared module** — `src/seshat/star_discovery.py`
+(a TOP-LEVEL module, sibling of `seshat.core`, NOT under `seshat.dbt`). Placement
+is load-bearing: HR1 is a static-core rule loaded on the base-CLI import path, and
+importing anything under `seshat.dbt` there would violate the adapter-laziness
+contract (spec 135 T003 — `import seshat.cli` loads no governed dbt adapter). A
+module both `seshat.rules` and `seshat.dbt` consume must sit *below both*, next to
+`core`. Pure: stdlib + `seshat.core.is_test_path` only; NO `yaml` (callers parse),
+NO DB, NO `seshat.rules`/`seshat.dbt` import. Both HR1 and scaffold import it, so
+the governance gate and the generator can never disagree on star identity. HR1 is
+refactored to delegate (behavior-preserving — its existing tests are the regression
+guard). This also retires the `_governed_star_id` DUPLICATE #419 added.
 
-Public surface of `seshat.dbt.stars`:
+Public surface of `seshat.star_discovery`:
+- `bare_dim_name(name: object) -> str | None`
 - `star_id(document: dict, table_dir: str) -> str`
 - `is_star(document: dict) -> bool`
 - `star_dimensions(document: dict) -> dict[str, dict]`  (bare name → raw dim)
-- `discover_stars(root: Path, *, committed: bool) -> dict[str, dict]`
-  (governed star id → parsed source-map document)
+- `discover_stars(tracked_files, load) -> dict[str, dict]`  (governed star id → doc)
 
-`discover_stars` reads **committed HEAD** state when `committed=True` (scaffold's
-posture — the map is an ownership authority, #419) by resolving each tracked
-`mappings/*/source-map.yaml` via `git show HEAD:<path>`; HR1 keeps its worktree
-read (`committed=False`) via the `RuleContext` it already holds. Git/read failures
-fail SAFE to "star not found" (→ owner-existence refusal below), never a traceback.
+**I/O is INJECTED, not a `committed` flag.** `discover_stars` takes the tracked-file
+list and a `load(rel) -> dict | None` callable, so each caller owns its read
+strategy without the module touching git or `RuleContext`: HR1 passes its
+`RuleContext`-based worktree loader; the scaffold orchestrator passes a
+`git show HEAD:<rel>` committed loader and enumerates via `git ls-tree -r
+--name-only HEAD` (one committed snapshot). Load failures return `None` → the star
+is skipped → owner-existence refusal below; never a traceback.
+
+Known limitation (deferred, tracked on #418): two committed maps resolving to the
+SAME governed star id collapse last-wins in `discover_stars` (faithful to HR1,
+which required behavior preservation). A governance defect nothing currently
+refuses; a scaffold consumer arguably wants fail-closed on ambiguous identity.
 
 ## Component changes
 
 | Component | Change |
 |---|---|
-| `seshat/dbt/stars.py` (NEW) | The extracted discovery primitives above. Pure; lazy `yaml`. |
-| `rules/conformed_dimension.py` | Delete the local `_star_id`/`_star_dimensions`/`_is_star`/`_add_dim`/`_bare`/`_discover_stars`; import from `seshat.dbt.stars`. No behavior change (existing HR1 tests unchanged and green). |
-| `scaffold/model_plan.py` | Replace `_governed_star_id` with `stars.star_id`. `_partition_dimensions` gains the reconciliation (below). |
-| `scaffold/orchestrator.py` | `_build_plan` resolves + passes an `owner_lookup` (owner star id → its `star_dimensions`) built from `stars.discover_stars(root, committed=True)`. |
+| `seshat/star_discovery.py` (NEW) | The extracted discovery primitives above. Pure; no yaml, no DB, no rules/dbt import. |
+| `rules/conformed_dimension.py` | Delete the local `_star_id`/`_star_dimensions`/`_is_star`/`_add_dim`/`_bare`/`_discover_stars`; import from `seshat.star_discovery` (aliased `_stars`). No behavior change (existing HR1 tests unchanged and green). |
+| `scaffold/model_plan.py` | Replace `_governed_star_id` with `_stars.star_id`. `_partition_dimensions` gains the reconciliation (below). |
+| `scaffold/orchestrator.py` | `_build_plan` resolves + passes an `owner_view` (owner star id → its `star_dimensions`) built from a committed-HEAD `discover_stars` via a hardened local `_git`. |
 
 ## Reconciliation logic (in `_partition_dimensions` / a new `_reconcile_reuse`)
 
