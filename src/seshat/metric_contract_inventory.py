@@ -138,12 +138,12 @@ def _definition_error(raw: dict, relative: str) -> str | None:
 
 
 def _contract_error(
-    raw: dict, path: Path, relative: str, scope: str, root: Path, yaml
+    raw: dict, path: Path, relative: str, semantic_approval: dict | None
 ) -> str | None:
     errors = (
         _identity_error(raw, path, relative),
         _readiness_error(raw, relative),
-        _approval_error(raw, relative, _named_semantic_approval(root, scope, yaml)),
+        _approval_error(raw, relative, semantic_approval),
         _definition_error(raw, relative),
     )
     return next((error for error in errors if error is not None), None)
@@ -186,9 +186,8 @@ def load_contract_inventory(paths: Iterable[Path], root: Path) -> ContractInvent
             errors.append(read_error)
             continue
         assert raw is not None
-        validation_error = _contract_error(
-            raw, path, relative, scope, resolved_root, yaml
-        )
+        semantic_approval = _named_semantic_approval(resolved_root, scope, yaml)
+        validation_error = _contract_error(raw, path, relative, semantic_approval)
         if validation_error is not None:
             errors.append(validation_error)
             continue

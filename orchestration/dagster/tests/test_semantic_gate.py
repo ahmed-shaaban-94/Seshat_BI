@@ -66,7 +66,7 @@ def test_metric_contracts_blocks_unapproved_contracts(tmp_path, monkeypatch) -> 
 
 
 @pytest.mark.parametrize(
-    ("failed_command", "output", "failure_message", "expected_calls"),
+    "failure",
     (
         (
             commands.semantic_argv(),
@@ -83,8 +83,9 @@ def test_metric_contracts_blocks_unapproved_contracts(tmp_path, monkeypatch) -> 
     ),
 )
 def test_semantic_gate_failures_stop_before_approval_materializes(
-    tmp_path, monkeypatch, failed_command, output, failure_message, expected_calls
+    tmp_path, monkeypatch, failure
 ) -> None:
+    failed_command, output, failure_message, expected_calls = failure
     root = make_fixture_repo(tmp_path)
     _setup(monkeypatch, root)
     calls: list[list[str]] = []
