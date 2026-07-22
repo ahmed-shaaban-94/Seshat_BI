@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from . import ASSET_ORDER, OUTCOMES
@@ -21,6 +22,7 @@ _HALTED = {"failed", "skipped", "blocked", "deferred"}
 _TRIGGERS = {"schedule", "sensor", "manual-CI"}
 _SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _SUMMARY_KEYS = {
     "run_id",
     "commit_sha",
@@ -67,42 +69,90 @@ def _score_keys(payload: object) -> list[str]:
     return []
 
 
-def _summary_errors(summary: dict) -> list[str]:
+def _is_datetime(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = f"{value[:-1]}+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
+def _summary_value_errors(summary: dict) -> list[str]:
+    run_id = summary.get("run_id")
+    commit_sha = summary.get("commit_sha")
+    records_sha = summary.get("records_sha256")
+    tables = summary.get("tables")
+    invalid_values = (
+        (
+            summary.get("run_status") not in {"succeeded", "failed"},
+            "summary: run_status must be succeeded|failed",
+        ),
+        (
+            summary.get("trigger") not in _TRIGGERS,
+            f"summary: trigger must be one of {sorted(_TRIGGERS)}",
+        ),
+        (
+            not isinstance(run_id, str) or not _RUN_ID_RE.fullmatch(run_id),
+            "summary: run_id must match the run-id schema",
+        ),
+        (
+            not isinstance(commit_sha, str) or not _SHA_RE.fullmatch(commit_sha),
+            "summary: commit_sha must be a 7-40 char hex sha",
+        ),
+        (
+            not isinstance(tables, list)
+            or any(not isinstance(table, str) or not table for table in tables),
+            "summary: tables must be an array of non-empty strings",
+        ),
+        (
+            not isinstance(summary.get("workspace_dirty"), bool),
+            "summary: workspace_dirty must be boolean",
+        ),
+        (
+            not isinstance(records_sha, str)
+            or not _SHA256_RE.fullmatch(records_sha),
+            "summary: records_sha256 must be a 64 char lowercase hex sha",
+        ),
+    )
+    errors = [message for invalid, message in invalid_values if invalid]
+    errors.extend(
+        f"summary: {field} must be an offset-aware date-time"
+        for field in ("started", "finished")
+        if not _is_datetime(summary.get(field))
+    )
+    return errors
+
+
+def _input_artifact_errors(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["summary: input_artifacts must be a mapping"]
+    errors: list[str] = []
+    for relative, digest in value.items():
+        if not isinstance(relative, str):
+            errors.append("summary: input_artifacts paths must be repo-relative")
+            continue
+        path = Path(relative)
+        if not relative or path.is_absolute() or ".." in path.parts:
+            errors.append("summary: input_artifacts paths must be repo-relative")
+        if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+            errors.append(f"summary: input_artifacts digest invalid for {relative!r}")
+    return errors
+
+
+def _summary_errors(summary: object) -> list[str]:
+    if not isinstance(summary, dict):
+        return ["summary: must be an object"]
     errors = [
         f"summary: missing key {key}" for key in sorted(_SUMMARY_KEYS - set(summary))
     ]
     errors += [
         f"summary: unknown key {key}" for key in sorted(set(summary) - _SUMMARY_KEYS)
     ]
-    if summary.get("run_status") not in {"succeeded", "failed"}:
-        errors.append(
-            "summary: run_status must be succeeded|failed, "
-            f"got {summary.get('run_status')!r}"
-        )
-    if summary.get("trigger") not in _TRIGGERS:
-        errors.append(f"summary: trigger must be one of {sorted(_TRIGGERS)}")
-    if not _SHA_RE.match(str(summary.get("commit_sha", ""))):
-        errors.append("summary: commit_sha must be a 7-40 char hex sha")
-    if not isinstance(summary.get("workspace_dirty"), bool):
-        errors.append("summary: workspace_dirty must be boolean")
-    if not _SHA256_RE.match(str(summary.get("records_sha256", ""))):
-        errors.append("summary: records_sha256 must be a 64 char lowercase hex sha")
-    input_artifacts = summary.get("input_artifacts")
-    if not isinstance(input_artifacts, dict):
-        errors.append("summary: input_artifacts must be a mapping")
-    else:
-        for relative, digest in input_artifacts.items():
-            path = Path(relative)
-            if (
-                not isinstance(relative, str)
-                or path.is_absolute()
-                or ".." in path.parts
-            ):
-                errors.append("summary: input_artifacts paths must be repo-relative")
-            if not _SHA256_RE.match(str(digest)):
-                errors.append(
-                    f"summary: input_artifacts digest invalid for {relative!r}"
-                )
+    errors += _summary_value_errors(summary)
+    errors += _input_artifact_errors(summary.get("input_artifacts"))
     return errors
 
 
@@ -126,12 +176,36 @@ def _halted_field_errors(label: str, row: dict) -> list[str]:
     return [f"{label}: halted outcome requires blocking_reason + owner"]
 
 
+def _record_shape_errors(label: str, row: dict) -> list[str]:
+    errors: list[str] = []
+    run_id = row.get("run_id")
+    if not isinstance(run_id, str) or not _RUN_ID_RE.fullmatch(run_id):
+        errors.append(f"{label}: run_id must match the run-id schema")
+    for field in ("table", "gate_command"):
+        value = row.get(field)
+        if not isinstance(value, str) or not value:
+            errors.append(f"{label}: {field} must be a non-empty string")
+    exit_code = row.get("exit_code")
+    if exit_code is not None and type(exit_code) is not int:
+        errors.append(f"{label}: exit_code must be an integer or null")
+    if not isinstance(row.get("measured"), dict):
+        errors.append(f"{label}: measured must be an object")
+    for field in ("blocking_reason", "owner"):
+        value = row.get(field)
+        if value is not None and not isinstance(value, str):
+            errors.append(f"{label}: {field} must be a string or null")
+    if not _is_datetime(row.get("ts")):
+        errors.append(f"{label}: ts must be an offset-aware date-time")
+    return errors
+
+
 def _record_errors(index: int, row: object) -> list[str]:
     label = f"records[{index}]"
     if not isinstance(row, dict):
         return [f"{label}: must be an object"]
     errors = [f"{label}: missing key {key}" for key in sorted(_RECORD_KEYS - set(row))]
     errors += [f"{label}: unknown key {key}" for key in sorted(set(row) - _RECORD_KEYS)]
+    errors += _record_shape_errors(label, row)
     errors += _vocabulary_errors(label, row)
     errors += _halted_field_errors(label, row)
     errors += [
@@ -141,9 +215,11 @@ def _record_errors(index: int, row: object) -> list[str]:
     return errors
 
 
-def validate_records(summary: dict, records: list[dict]) -> list[str]:
+def validate_records(summary: object, records: object) -> list[str]:
     """Errors that make a record set unrenderable. Mirrors the JSON schema."""
     errors = _summary_errors(summary)
+    if not isinstance(records, list):
+        return [*errors, "records: must be an array"]
     if not records:
         errors.append("records: empty")
     for index, row in enumerate(records):

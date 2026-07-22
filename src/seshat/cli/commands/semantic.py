@@ -89,9 +89,11 @@ def run_semantic_check(args: argparse.Namespace) -> int:
     # Parse the tracked TMDL measures and pair their approved contract definitions.
     pairs: list[MeasurePair] = []
     measure_locators: dict[tuple[str, str], str] = {}
-    contracts_by_binding = {
-        contract.binding: contract for contract in inventory.approved.values()
-    }
+    # The validated inventory rejects duplicate semantic bindings, so this
+    # insertion cannot silently shadow a contract from another mapping scope.
+    contracts_by_binding = {}
+    for contract in inventory.approved.values():
+        contracts_by_binding[contract.binding] = contract
     for tmdl_path in inputs:
         if tmdl_path.suffix != ".tmdl":
             continue

@@ -82,6 +82,20 @@ def _norm_token(value: str) -> str:
     return re.sub(r"[\s\-]+", "_", value.strip().lower())
 
 
+def _owner_authority(owner: object) -> str | None:
+    """Return the normalized authority for a shape-valid named human."""
+    if not isinstance(owner, str):
+        return None
+    match = _OWNER_SHAPE_RE.match(owner.strip())
+    if match is None:
+        return None
+    name = match.group("name").strip()
+    if not name or _norm_token(name) in _ROLE_TOKENS:
+        return None
+    authority = _norm_token(match.group("role"))
+    return authority if authority in _AUTHORITY_CLASSES else None
+
+
 def _owner_is_valid(owner: object) -> bool:
     """True only for the full named-decider shape "Person Name (authority_class)".
 
@@ -91,15 +105,7 @@ def _owner_is_valid(owner: object) -> bool:
     or generic class ("Ada (wizard)", "Ada (owner)"), and a missing/empty/
     non-string owner -- an approval must name its decider AND the specific
     authority they acted under (audit C4)."""
-    if not isinstance(owner, str):
-        return False
-    match = _OWNER_SHAPE_RE.match(owner.strip())
-    if match is None:
-        return False
-    name = match.group("name").strip()
-    if not name or _norm_token(name) in _ROLE_TOKENS:
-        return False
-    return _norm_token(match.group("role")) in _AUTHORITY_CLASSES
+    return _owner_authority(owner) is not None
 
 
 # A source_ready block carrying one of these (normalized) source_kind values is a FILE

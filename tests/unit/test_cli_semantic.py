@@ -258,6 +258,22 @@ readiness:
     assert "no drift" in capsys.readouterr().err
 
 
+def test_semantic_check_rejects_duplicate_contract_bindings(
+    tmp_path: Path, capsys
+) -> None:
+    repo = _make_repo(tmp_path, _CONTRACT_CLEAN)
+    _write(
+        repo / "mappings/other/metrics/AvgTransactionValue.yaml",
+        _CONTRACT_CLEAN,
+    )
+    _write_semantic_approval(repo, "other")
+
+    code = main(["semantic-check", "--repo", str(repo), "--metrics-dir", "mappings"])
+
+    assert code == 1
+    assert "duplicate semantic binding" in capsys.readouterr().out
+
+
 def test_semantic_check_rejects_unapproved_and_invalid_contracts(
     tmp_path: Path, capsys
 ) -> None:

@@ -81,6 +81,28 @@ class TestValidateRecords:
         errors = evidence.validate_records(_summary(), [bad])
         assert any("score" in error.lower() for error in errors)
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        (
+            ("table", ""),
+            ("gate_command", ""),
+            ("exit_code", True),
+            ("measured", []),
+            ("blocking_reason", 7),
+            ("owner", 7),
+            ("ts", 7),
+        ),
+    )
+    def test_schema_invalid_record_values_are_rejected(
+        self, field: str, value: object
+    ) -> None:
+        record = _record()
+        record[field] = value
+
+        errors = evidence.validate_records(_summary(), [record])
+
+        assert any(field in error for error in errors)
+
     def test_bad_run_status_is_rejected(self) -> None:
         errors = evidence.validate_records(_summary(run_status="green"), [_record()])
         assert any("run_status" in error for error in errors)
@@ -302,7 +324,7 @@ class TestEvidenceIntegrity:
             "mappings/demo_table/metrics/TotalSales.yaml": (
                 "name: TotalSales\nowner: metric_owner\n"
                 "binds_to: {gold_table: gold.sales}\n"
-                "definition: {}\nreadiness:\n"
+                "definition: {kind: base, aggregation: sum, filter: []}\nreadiness:\n"
                 "  status: pass\n  evidence: [approved]\n"
                 "  blocking_reasons: []\n"
             ),

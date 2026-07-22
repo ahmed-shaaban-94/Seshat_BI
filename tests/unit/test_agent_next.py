@@ -330,6 +330,17 @@ next_action: "done"
 
     assert document["outcome"] == "terminal_pass"
     assert document["next_allowed_action"].startswith(expected_action_start)
+    if live_state == "verified":
+        assert "All seven stages pass" in document["stop_point"]
+    else:
+        assert "All seven stages pass" not in document["stop_point"]
+        assert any(
+            "No semantic-model work" in item for item in document["forbidden_scope"]
+        )
+        assert any(
+            "validate --source-map" in command
+            for command in document["validation_commands"]
+        )
 
 
 def test_blocked_table_surfaces_verbatim_reasons_and_stops(tmp_path: Path) -> None:

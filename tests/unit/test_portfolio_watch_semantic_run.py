@@ -25,7 +25,8 @@ def _write_bound_contract(root: Path, scope: str = "scope_alpha") -> None:
     contract.parent.mkdir(parents=True, exist_ok=True)
     contract.write_text(
         "name: TotalSales\nowner: metric_owner\n"
-        "binds_to: {gold_table: gold.sales}\ndefinition: {}\nreadiness:\n"
+        "binds_to: {gold_table: gold.sales}\n"
+        "definition: {kind: base, aggregation: sum, filter: []}\nreadiness:\n"
         "  status: pass\n  evidence: [metric-owner-approved]\n"
         "  blocking_reasons: []\n",
         encoding="utf-8",
@@ -265,6 +266,26 @@ def test_invalid_run_schema_never_becomes_live_proof(
     init_git_repo(tmp_path)
     _finalize_live_run(tmp_path)
     _replace_run_records(tmp_path, invalid_records)
+
+    scope = _scope(pw.build_portfolio_watch_summary(tmp_path))
+
+    assert scope["last_dagster_run"] == "invalid"
+    assert scope["live_validation_state"] == "pending_live"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (("gate_command", ""), ("measured", []), ("ts", 7)),
+)
+def test_schema_invalid_live_record_values_never_become_proof(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    write_readiness_status(tmp_path, "scope_alpha", current_stage="gold_ready")
+    init_git_repo(tmp_path)
+    _finalize_live_run(tmp_path)
+    _summary, records = evidence.load_run(tmp_path, "run-live-001")
+    records[-1][field] = value
+    _replace_run_records(tmp_path, records)
 
     scope = _scope(pw.build_portfolio_watch_summary(tmp_path))
 

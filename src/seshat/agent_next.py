@@ -274,6 +274,17 @@ def _live_validation_next_override(
     )
 
 
+def _control_stage(
+    stage: str | None, contract_override: str | None, live_override: str | None
+) -> str | None:
+    """Stage whose closed gate governs every agent-control field."""
+    if live_override is not None:
+        return "gold_ready"
+    if contract_override is not None:
+        return "semantic_model_ready"
+    return stage
+
+
 def _readiness_state(
     response: dict[str, Any], entry: dict[str, Any] | None
 ) -> str | None:
@@ -344,17 +355,23 @@ def _compose(
     outcome = response["outcome"]
     contract_override = _contract_next_override(root, response, entry)
     live_override = _live_validation_next_override(root, response, entry)
+    next_override = live_override or contract_override
+    control_stage = _control_stage(stage, contract_override, live_override)
+    control_outcome = "next_action" if next_override is not None else outcome
+    control_response = {
+        **response,
+        "stage": control_stage,
+        "outcome": control_outcome,
+    }
     return {
         "current_stage": stage,
         "readiness_state": _readiness_state(response, entry),
         "evidence": _evidence(entry),
         "blocking_reasons": list(response.get("blocking_reasons", [])),
-        "next_allowed_action": (
-            live_override or contract_override or _next_allowed_action(response)
-        ),
-        "forbidden_scope": _forbidden_scope(stage, outcome),
-        "validation_commands": _validation_commands(stage),
-        "stop_point": _stop_point(response),
+        "next_allowed_action": next_override or _next_allowed_action(response),
+        "forbidden_scope": _forbidden_scope(control_stage, control_outcome),
+        "validation_commands": _validation_commands(control_stage),
+        "stop_point": _stop_point(control_response),
         "table": response["table"],
         "outcome": outcome,
         "required_authority": response.get("required_authority"),

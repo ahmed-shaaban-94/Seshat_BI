@@ -91,13 +91,13 @@ def _named_semantic_approval(
 
 
 def _valid_semantic_approval(approval: object, contract_name: object) -> bool:
-    from seshat.rules.readiness_status import _owner_is_valid
+    from seshat.rules.readiness_status import _owner_authority
 
     if not isinstance(approval, dict):
         return False
     if approval.get("stage") != "semantic_model_ready":
         return False
-    if not _owner_is_valid(approval.get("owner")):
+    if _owner_authority(approval.get("owner")) != "metric_owner":
         return False
     if not approval.get("at") or not isinstance(contract_name, str):
         return False
@@ -132,15 +132,23 @@ def _approval_error(raw: dict, relative: str, approved: bool) -> str | None:
         return f"{relative}: approved contract requires owner"
     if not approved:
         return (
-            f"{relative}: approved contract requires named-human approval "
-            "whose note names this contract"
+            f"{relative}: approved contract requires named-human approval with "
+            "metric_owner authority whose note names this contract"
         )
     return None
 
 
 def _definition_error(raw: dict, relative: str) -> str | None:
-    if not isinstance(raw.get("definition"), dict):
+    definition = raw.get("definition")
+    if not isinstance(definition, dict):
         return f"{relative}: approved contract requires definition mapping"
+    is_base = definition.get("kind") == "base"
+    is_ratio = isinstance(definition.get("denominator"), dict)
+    if not (is_base or is_ratio):
+        return (
+            f"{relative}: approved contract requires a checkable definition "
+            "with kind: base or a denominator mapping"
+        )
     binding = raw.get("binds_to")
     if not isinstance(binding, dict):
         return f"{relative}: approved contract requires binds_to.gold_table"
@@ -179,6 +187,7 @@ def load_contract_inventory(paths: Iterable[Path], root: Path) -> ContractInvent
     import yaml
 
     approved: dict[ContractKey, MetricContract] = {}
+    bindings: dict[MeasureBinding, MetricContract] = {}
     errors: list[str] = []
     resolved_root = Path(root).resolve()
     for path in sorted(Path(item) for item in paths):
@@ -214,5 +223,14 @@ def load_contract_inventory(paths: Iterable[Path], root: Path) -> ContractInvent
                 f"within scope {scope!r}"
             )
             continue
+        previous = bindings.get(contract.binding)
+        if previous is not None:
+            previous_relative = previous.path.resolve().relative_to(resolved_root)
+            errors.append(
+                f"{relative}: duplicate semantic binding {contract.binding!r}; "
+                f"already claimed by {previous_relative.as_posix()}"
+            )
+            continue
         approved[key] = contract
+        bindings[contract.binding] = contract
     return ContractInventory(approved, tuple(errors))
