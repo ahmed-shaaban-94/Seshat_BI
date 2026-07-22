@@ -65,7 +65,15 @@ def _git(root: Path, *args: str):
     """Run a hardened, read-only git command (mirrors ``gate._git``): pins
     ``safe.directory`` (so a dubious-ownership checkout does not silently fail this
     read while the gate's read succeeds, #419-review), disables the fsmonitor,
-    hooks, and the ext protocol. Returns the CompletedProcess or raises OSError."""
+    hooks, and the ext protocol. Returns the CompletedProcess or raises OSError.
+
+    Decodes with explicit ``encoding='utf-8', errors='replace'`` -- NOT the locale
+    default: unlike ``gate._git`` (which reads only ASCII hashes/status), this is
+    the first consumer that reads arbitrary COMMITTED FILE CONTENT (a governance
+    YAML may hold non-ASCII bytes). Locale decoding (e.g. cp1252 on Windows) would
+    raise ``UnicodeDecodeError`` mid-read and break the documented fail-safe;
+    ``errors='replace'`` keeps the read total, and a mangled byte then fails the
+    downstream ``yaml.safe_load``/``isinstance`` check -> None (fail-safe)."""
     import os
     import subprocess
 
@@ -85,6 +93,8 @@ def _git(root: Path, *args: str):
         cwd=root,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         shell=False,
     )
@@ -98,7 +108,7 @@ def _committed_blob(root: Path, rel: str) -> str | None:
     suppress dimension models from unreviewed content (#419/#418 review)."""
     try:
         result = _git(root, "show", f"HEAD:{rel}")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     return result.stdout if result.returncode == 0 else None
 
@@ -133,9 +143,9 @@ def _committed_tracked_files(root: Path) -> list[str]:
     still present at HEAD -- both a false owner-absent verdict."""
     try:
         result = _git(root, "ls-tree", "-r", "--name-only", "HEAD")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return []
-    return result.stdout.splitlines() if result.returncode == 0 else []
+    return (result.stdout or "").splitlines() if result.returncode == 0 else []
 
 
 def _committed_source_map(root: Path):

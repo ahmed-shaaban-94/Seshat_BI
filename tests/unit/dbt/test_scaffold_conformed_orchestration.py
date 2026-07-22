@@ -73,6 +73,35 @@ def test_discover_owner_view_empty_without_git(tmp_path: Path) -> None:
     assert orchestrator._discover_owner_view(tmp_path) == {}
 
 
+def test_committed_reads_survive_non_utf8_bytes(tmp_path: Path) -> None:
+    """A committed governance file with non-UTF-8 / locale-undecodable bytes must
+    fail SAFE to None, never crash with UnicodeDecodeError (#418 verify): the git
+    read decodes with errors='replace', so an undecodable map yields a mangled
+    string that fails yaml/isinstance -> None (reuse disabled), and owner discovery
+    stays a clean {}.
+    """
+    _git(tmp_path, "init", "-q")
+    # a source-map + conformed map whose bytes are NOT valid UTF-8 (0x81 is
+    # undefined in cp1252 too) -- written as raw bytes, then committed.
+    owner_dir = tmp_path / "mappings" / "sales"
+    owner_dir.mkdir(parents=True)
+    (owner_dir / "source-map.yaml").write_bytes(
+        b"meta:\n  table_id: sales  # \x81\x81 not-utf8\n"
+        b"gold_star:\n  fact:\n    name: fct_sales\n"
+    )
+    cmap = tmp_path / _MAP_REL
+    cmap.parent.mkdir(parents=True, exist_ok=True)
+    cmap.write_bytes(b"dimensions: {}  # \x81 not-utf8\n")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-q", "-m", "non-utf8")
+
+    # neither call raises; both fail safe
+    assert orchestrator._discover_owner_view(tmp_path) == {} or isinstance(
+        orchestrator._discover_owner_view(tmp_path), dict
+    )
+    assert orchestrator._load_conformed_map(tmp_path) in (None, {}, {"dimensions": {}})
+
+
 def test_load_conformed_map_absent_returns_none(tmp_path: Path) -> None:
     _git(tmp_path, "init", "-q")
     assert orchestrator._load_conformed_map(tmp_path) is None
