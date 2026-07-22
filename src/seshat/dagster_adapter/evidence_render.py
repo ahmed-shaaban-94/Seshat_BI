@@ -126,8 +126,10 @@ def _halted_field_errors(label: str, row: dict) -> list[str]:
     return [f"{label}: halted outcome requires blocking_reason + owner"]
 
 
-def _record_errors(index: int, row: dict) -> list[str]:
+def _record_errors(index: int, row: object) -> list[str]:
     label = f"records[{index}]"
+    if not isinstance(row, dict):
+        return [f"{label}: must be an object"]
     errors = [f"{label}: missing key {key}" for key in sorted(_RECORD_KEYS - set(row))]
     errors += [f"{label}: unknown key {key}" for key in sorted(set(row) - _RECORD_KEYS)]
     errors += _vocabulary_errors(label, row)
@@ -163,6 +165,8 @@ def load_run(root: Path, run_id: str) -> tuple[dict, list[dict]]:
             "under .seshat/dagster/runs/"
         )
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if not isinstance(summary, dict):
+        raise ValueError(f"run {run_id} summary.json must contain an object")
     if summary.get("records_sha256") != sha256_file(records_path):
         raise ValueError(f"run {run_id} records_sha256 does not match records.jsonl")
     lines = records_path.read_text(encoding="utf-8").splitlines()

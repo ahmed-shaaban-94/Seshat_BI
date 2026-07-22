@@ -245,7 +245,6 @@ def _live_validation_next_override(
     """Keep the live DB boundary explicit after Gold; do not connect from next."""
     stage = response.get("stage")
     if entry is None or stage not in {
-        "gold_ready",
         "semantic_model_ready",
         "dashboard_ready",
         "publish_ready",
@@ -253,11 +252,10 @@ def _live_validation_next_override(
         return None
     from seshat.portfolio_watch import live_validation_state
 
-    scope_id = str(response.get("table") or _dir_name(entry["source_path"]))
-    live_state = live_validation_state(root, scope_id)
+    scope_dir = _dir_name(entry["source_path"])
+    live_state = live_validation_state(root, scope_dir)
     if live_state == "verified":
         return None
-    scope_dir = _dir_name(entry["source_path"])
     if live_state in {"stale", "blocked"}:
         return (
             f"STOP -- live validation evidence is {live_state}. Re-run `retail "

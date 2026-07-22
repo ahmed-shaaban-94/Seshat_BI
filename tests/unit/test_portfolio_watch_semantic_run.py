@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -78,6 +79,21 @@ def _scope(summary: dict) -> dict:
     return summary["scopes"][0]
 
 
+def _replace_run_records(root: Path, records: list[object]) -> None:
+    run_dir = root / ".seshat" / "dagster" / "runs" / "run-live-001"
+    records_path = run_dir / "records.jsonl"
+    records_path.write_text(
+        "".join(f"{json.dumps(record)}{chr(10)}" for record in records),
+        encoding="utf-8",
+    )
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["records_sha256"] = evidence.records_sha256(records_path)
+    summary_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + chr(10), encoding="utf-8"
+    )
+
+
 def test_missing_metrics_and_live_evidence_degrade_to_categorical_states(
     tmp_path: Path,
 ) -> None:
@@ -114,6 +130,58 @@ def test_approved_bound_contract_and_current_live_run_are_verified(
     assert scope["contract_binding_state"] == "verified"
     assert scope["live_validation_state"] == "verified"
     assert scope["last_dagster_run"] == "verified"
+
+
+def test_live_run_matches_mapping_directory_when_display_table_differs(
+    tmp_path: Path,
+) -> None:
+    write_readiness_status(
+        tmp_path,
+        "retail_store_sales",
+        table="bronze.retail_store_sales",
+        current_stage="gold_ready",
+    )
+    init_git_repo(tmp_path)
+    _finalize_live_run(tmp_path, "retail_store_sales")
+
+    scope = _scope(pw.build_portfolio_watch_summary(tmp_path))
+
+    assert scope["scope_id"] == "bronze.retail_store_sales"
+    assert scope["live_validation_state"] == "verified"
+    assert scope["last_dagster_run"] == "verified"
+
+
+def test_untracked_contract_blocks_verified_contract_state(tmp_path: Path) -> None:
+    write_readiness_status(
+        tmp_path,
+        "scope_alpha",
+        current_stage="semantic_model_ready",
+        approvals=_semantic_approval(),
+    )
+    _write_bound_contract(tmp_path)
+    init_git_repo(tmp_path)
+    extra = tmp_path / "mappings" / "scope_alpha" / "metrics" / "Untracked.yaml"
+    extra.write_text("name: Untracked" + chr(10), encoding="utf-8")
+
+    assert pw.contract_binding_state(tmp_path, "scope_alpha") == "blocked"
+
+
+def test_dirty_model_blocks_verified_contract_state(tmp_path: Path) -> None:
+    write_readiness_status(
+        tmp_path,
+        "scope_alpha",
+        current_stage="semantic_model_ready",
+        approvals=_semantic_approval(),
+    )
+    _write_bound_contract(tmp_path)
+    init_git_repo(tmp_path)
+    tmdl = next((tmp_path / "powerbi").rglob("sales.tmdl"))
+    tmdl.write_text(
+        tmdl.read_text(encoding="utf-8") + "// uncommitted edit" + chr(10),
+        encoding="utf-8",
+    )
+
+    assert pw.contract_binding_state(tmp_path, "scope_alpha") == "blocked"
 
 
 def test_uncontracted_measure_on_bound_table_blocks_contract_state(
@@ -164,3 +232,24 @@ def test_run_from_an_older_source_revision_is_stale(tmp_path: Path) -> None:
 
     assert scope["last_dagster_run"] == "stale"
     assert scope["live_validation_state"] == "stale"
+
+
+@pytest.mark.parametrize(
+    "invalid_records",
+    (
+        [{"asset": "live_validate", "table": "scope_alpha", "outcome": "materialized"}],
+        ["not-an-object"],
+    ),
+)
+def test_invalid_run_schema_never_becomes_live_proof(
+    tmp_path: Path, invalid_records: list[object]
+) -> None:
+    write_readiness_status(tmp_path, "scope_alpha", current_stage="gold_ready")
+    init_git_repo(tmp_path)
+    _finalize_live_run(tmp_path)
+    _replace_run_records(tmp_path, invalid_records)
+
+    scope = _scope(pw.build_portfolio_watch_summary(tmp_path))
+
+    assert scope["last_dagster_run"] == "invalid"
+    assert scope["live_validation_state"] == "pending_live"

@@ -183,6 +183,75 @@ next_action: "validate gold"
     assert "[PENDING LIVE PROFILE]" in document["next_allowed_action"]
 
 
+def test_gold_authoring_action_precedes_live_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_status(
+        tmp_path,
+        "orders",
+        """table: "silver.orders"
+current_stage: "gold_ready"
+stages:
+  source_ready: {status: "pass", evidence: ["profile"]}
+  mapping_ready: {status: "pass", evidence: ["map"]}
+  silver_ready: {status: "pass", evidence: ["silver"]}
+  gold_ready: {status: "not_started"}
+  semantic_model_ready: {status: "not_started"}
+  dashboard_ready: {status: "not_started"}
+  publish_ready: {status: "not_started"}
+approvals:
+  - {stage: mapping_ready, owner: "Ada Lovelace (analyst)", at: "2026-07-01"}
+next_action: "author gold"
+""",
+    )
+
+    def unexpected_live_read(root, mapping_scope):
+        pytest.fail("live evidence must not replace the Gold authoring action")
+
+    monkeypatch.setattr(
+        "seshat.portfolio_watch.live_validation_state", unexpected_live_read
+    )
+
+    document = build_agent_next_document(tmp_path)
+
+    assert document["current_stage"] == "gold_ready"
+    assert document["next_allowed_action"].startswith("Begin Gold Ready")
+
+
+def test_live_validation_uses_mapping_directory_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_status(
+        tmp_path,
+        "retail_store_sales",
+        """table: "bronze.retail_store_sales"
+current_stage: "semantic_model_ready"
+stages:
+  source_ready: {status: "pass", evidence: ["profile"]}
+  mapping_ready: {status: "pass", evidence: ["map"]}
+  silver_ready: {status: "pass", evidence: ["silver"]}
+  gold_ready: {status: "pass", evidence: ["live validation"]}
+  semantic_model_ready: {status: "not_started"}
+  dashboard_ready: {status: "not_started"}
+  publish_ready: {status: "not_started"}
+approvals:
+  - {stage: mapping_ready, owner: "Ada Lovelace (analyst)", at: "2026-07-01"}
+next_action: "build semantic model"
+""",
+    )
+    seen: list[str] = []
+
+    def live_state(root, mapping_scope):
+        seen.append(mapping_scope)
+        return "verified"
+
+    monkeypatch.setattr("seshat.portfolio_watch.live_validation_state", live_state)
+
+    build_agent_next_document(tmp_path)
+
+    assert seen == ["retail_store_sales"]
+
+
 @pytest.mark.parametrize("live_state", ("stale", "blocked"))
 def test_nonverified_live_evidence_keeps_the_gold_stop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, live_state: str

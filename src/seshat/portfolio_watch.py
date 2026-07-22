@@ -362,13 +362,39 @@ def _scope_dir(root: Path, scope: GovernedScope) -> Path:
     return root / Path(scope.source_path).parent
 
 
-def _tmdl_measure_bindings(root: Path) -> set[tuple[str, str]]:
+def _semantic_inputs(root: Path, scope_dir: str) -> tuple[tuple[Path, ...], bool]:
+    """Return committed semantic paths and whether their worktree is dirty."""
+    from .cli.commands.semantic import _semantic_files
+    from .gitutil import git_output
+
+    inputs = _semantic_files(root, include_untracked=False)
+    try:
+        dirty = bool(
+            git_output(
+                root,
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "--",
+                f"mappings/{scope_dir}/metrics",
+                f"mappings/{scope_dir}/readiness-status.yaml",
+                "powerbi",
+            )
+        )
+    except RuntimeError:
+        dirty = False
+    return inputs, dirty
+
+
+def _tmdl_measure_bindings(paths: tuple[Path, ...]) -> set[tuple[str, str]]:
     """Table-scoped model measures, using the semantic-check identity."""
     from .metric_contract_inventory import normalize_table_binding
     from .tmdl import parse_tmdl
 
     bindings: set[tuple[str, str]] = set()
-    for path in sorted((root / "powerbi").rglob("*.tmdl")):
+    for path in paths:
+        if path.suffix != ".tmdl":
+            continue
         try:
             table = parse_tmdl(path.read_text(encoding="utf-8-sig"))
         except OSError:
@@ -396,15 +422,22 @@ def contract_binding_state(
     metrics_dir = root / "mappings" / scope_dir / "metrics"
     if not metrics_dir.is_dir():
         return "missing"
-    paths = sorted([*metrics_dir.glob("*.yaml"), *metrics_dir.glob("*.yml")])
-    if not paths:
+    inputs, dirty = _semantic_inputs(root, scope_dir)
+    if dirty:
+        return "blocked"
+    contract_paths = tuple(
+        path
+        for path in inputs
+        if path.suffix == ".yaml" and path.is_relative_to(metrics_dir)
+    )
+    if not contract_paths:
         return "missing"
-    inventory = load_contract_inventory(paths, root)
+    inventory = load_contract_inventory(contract_paths, root)
     if inventory.errors or not inventory.approved:
         return "blocked"
     contracts = inventory.for_scope(scope_dir)
     contract_bindings = {contract.binding for contract in contracts.values()}
-    model_bindings = _tmdl_measure_bindings(root)
+    model_bindings = _tmdl_measure_bindings(inputs)
     bound_tables = {table for table, _measure in contract_bindings}
     scoped_model_bindings = {
         binding for binding in model_bindings if binding[0] in bound_tables
@@ -444,10 +477,10 @@ def _run_inputs_are_stale(root: Path, summary: dict[str, Any]) -> bool:
 
 
 def _dagster_run_states(
-    root: Path, scope_id: str, source_revision: str | None
+    root: Path, mapping_scope: str, source_revision: str | None
 ) -> tuple[str, str]:
     """Return the latest verified run and live-validation state for a scope."""
-    from .dagster_adapter.evidence_render import load_run
+    from .dagster_adapter.evidence_render import load_run, validate_records
 
     runs_root = root / ".seshat" / "dagster" / "runs"
     if not runs_root.is_dir():
@@ -462,8 +495,11 @@ def _dagster_run_states(
         except (FileNotFoundError, ValueError, OSError, json.JSONDecodeError):
             invalid = True
             continue
-        if scope_id in summary.get("tables", []) or any(
-            row.get("table") == scope_id for row in records
+        if validate_records(summary, records):
+            invalid = True
+            continue
+        if mapping_scope in summary.get("tables", []) or any(
+            row.get("table") == mapping_scope for row in records
         ):
             candidates.append((summary, records))
     if not candidates:
@@ -485,7 +521,7 @@ def _dagster_run_states(
     live_rows = [
         row
         for row in records
-        if row.get("table") == scope_id and row.get("asset") == "live_validate"
+        if row.get("table") == mapping_scope and row.get("asset") == "live_validate"
     ]
     if stale:
         return run_state, "stale"
@@ -499,10 +535,10 @@ def _dagster_run_states(
     return run_state, "blocked"
 
 
-def live_validation_state(repo_root: Path | str, scope_id: str) -> str:
+def live_validation_state(repo_root: Path | str, mapping_scope: str) -> str:
     """Read live-validation evidence state only; never opens a database."""
     root = Path(repo_root).resolve()
-    _run_state, state = _dagster_run_states(root, scope_id, _source_revision(root))
+    _run_state, state = _dagster_run_states(root, mapping_scope, _source_revision(root))
     return state
 
 
@@ -860,7 +896,7 @@ def _scope_document(
     contract_state = contract_binding_state(
         root, scope_dir, dims["contract_metric_drift"]
     )
-    run_state, live_state = _dagster_run_states(root, scope.scope_id, revision)
+    run_state, live_state = _dagster_run_states(root, scope_dir, revision)
     return {
         "scope_id": scope.scope_id,
         "source_path": scope.source_path,

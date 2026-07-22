@@ -56,6 +56,10 @@ class TestValidateRecords:
     def test_good_records_have_no_errors(self) -> None:
         assert evidence.validate_records(_summary(), [_record()]) == []
 
+    def test_non_mapping_record_is_rejected(self) -> None:
+        errors = evidence.validate_records(_summary(), ["not-an-object"])
+        assert errors == ["records[0]: must be an object"]
+
     def test_outcome_pass_is_rejected(self) -> None:
         errors = evidence.validate_records(_summary(), [_record(outcome="pass")])
         assert any("outcome" in error for error in errors)
