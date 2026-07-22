@@ -432,3 +432,82 @@ def test_all_dims_reused_builds_a_zero_owned_dim_plan() -> None:
     )
     unique_ids = tuple(sorted(f"model.seshat_bi.{m.name}" for m in _all_models(plan)))
     _validate_parity_set(assertions, unique_ids, plan.fact)  # must not raise
+
+
+def test_reuse_refused_when_reuser_declares_scalar_attribute_owner_lacks() -> None:
+    """#418 review BLOCKER: a SCALAR ``attributes: customer_id`` (valid YAML the
+    model materializes as a real column) must be seen by the reconciler exactly as
+    the model builder sees it -- else a scalar attribute the owner lacks would be
+    silently dropped. Fail closed naming the attribute."""
+    scalar_doc = {
+        **_doc_for(_REUSER_TABLE),
+        "gold_star": {
+            **_MAP["gold_star"],
+            "dimensions": [
+                {
+                    "name": "gold.dim_customer_rss",
+                    "surrogate_key": "customer_sk",
+                    "attributes": "customer_id",  # SCALAR, not a list
+                }
+            ],
+        },
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="customer_id"):
+        model_plan.build_scaffold_plan(
+            _source_with_map(
+                scalar_doc, _conformed_map(), _owner_view(attributes=["customer_ref"])
+            ),
+            _REUSER_TABLE,
+            _FACT,
+        )
+
+
+def test_reuse_refused_when_surrogate_key_diverges() -> None:
+    """#418 review HIGH: the reuser's fact FK is its surrogate name but ref()s the
+    OWNER's model; a divergent surrogate_key would emit an FK the owner does not
+    expose -> fail closed naming both keys."""
+    owner_view = {
+        _OWNER_TABLE: {
+            "dim_customer_rss": {
+                "name": "gold.dim_customer_rss",
+                "surrogate_key": "customer_key",  # differs from reuser's customer_sk
+                "attributes": ["customer_id"],
+            }
+        }
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="surrogate_key") as err:
+        model_plan.build_scaffold_plan(
+            _source_with_map(_doc_for(_REUSER_TABLE), _conformed_map(), owner_view),
+            _REUSER_TABLE,
+            _FACT,
+        )
+    assert "customer_key" in str(err.value) and "customer_sk" in str(err.value)
+
+
+def test_reuse_of_a_conformed_date_dimension_does_not_false_refuse() -> None:
+    """A reused DATE dimension (no ``attributes``, a real ``surrogate_key``) must
+    reconcile cleanly when the owner declares a matching date dim -- the attribute
+    and SK checks must not manufacture a false refusal on a date dim (#418 review
+    date-dim caveat)."""
+    date_conformed = {
+        "dimensions": {
+            "dim_date_rss": {
+                "status": "conformed",
+                "stars": [_OWNER_TABLE, _REUSER_TABLE],
+            }
+        }
+    }
+    owner_view = {
+        _OWNER_TABLE: {
+            "dim_date_rss": {"name": "gold.dim_date_rss", "surrogate_key": "date_sk"}
+        }
+    }
+    plan = model_plan.build_scaffold_plan(
+        _source_with_map(_doc_for(_REUSER_TABLE), date_conformed, owner_view),
+        _REUSER_TABLE,
+        _FACT,
+    )
+    assert plan.reused_dimensions == ("dim_date_rss",)
+    # the customer dim (not conformed here) is still owned/materialized
+    assert "dim_customer_rss" in {d.name for d in plan.dimensions}
+    assert "dim_date_rss" not in {d.name for d in plan.dimensions}

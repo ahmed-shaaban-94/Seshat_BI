@@ -47,17 +47,18 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from seshat.dbt import stars as _stars
+from seshat import star_discovery as _stars
 
 from ..core import Finding, RuleContext, Severity
 from ..registry import register
 
 RULE_ID = "HR1"
 
-# Star-discovery primitives live in seshat.dbt.stars so HR1 and `seshat dbt
-# scaffold` share ONE definition of star identity + dimension discovery (#418).
-# Aliased ``_stars`` so the module never collides with the many local ``stars``
-# dicts (discovered star_id -> data) this rule threads through its helpers.
+# Star-discovery primitives live in seshat.star_discovery (a top-level module, not
+# under seshat.dbt) so HR1 and `seshat dbt scaffold` share ONE definition of star
+# identity + dimension discovery WITHOUT dragging seshat.dbt onto the static-core
+# CLI import path (#418). Aliased ``_stars`` so the module never collides with the
+# many local ``stars`` dicts (discovered star_id -> data) this rule threads.
 _bare = _stars.bare_dim_name
 
 _MAP_FILE = "docs/quality/conformed-dimension-map.yaml"
@@ -185,7 +186,7 @@ def _discover_stars(ctx: RuleContext) -> dict[str, dict]:
     ``mappings/<table>/source-map.yaml`` that carries a ``gold_star.fact`` key.
 
     Worktree read via the ``RuleContext`` loader; the discovery logic itself lives
-    in ``seshat.dbt.stars`` so scaffold and HR1 agree on star identity (#418).
+    in ``seshat.star_discovery`` so scaffold and HR1 agree on star identity (#418).
     """
     return _stars.discover_stars(ctx.tracked_files, lambda rel: _load_yaml(ctx, rel))
 

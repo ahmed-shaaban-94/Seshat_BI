@@ -1,10 +1,10 @@
-"""Shared star-discovery primitives (seshat/dbt/stars.py) -- pure, driver-free."""
+"""Shared star-discovery primitives (seshat/star_discovery.py) -- pure, driver-free."""
 
 from __future__ import annotations
 
 import pytest
 
-from seshat.dbt import stars
+from seshat import star_discovery as stars
 
 pytestmark = pytest.mark.unit
 

@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from seshat.dbt import stars
+from seshat import star_discovery as _stars
 from seshat.dbt.contracts import FactBinding, GovernanceError
 
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -466,7 +466,7 @@ def _conformed_reuse(conformed_map: dict | None, star_id: str) -> dict[str, str]
     """Map each bare dim name ``star_id`` REUSES (does not own) to its OWNING star,
     read from the conformed-dimension map (#418-P1).
 
-    ``star_id`` is the GOVERNED star id (:func:`stars.star_id`), matching what
+    ``star_id`` is the GOVERNED star id (:func:`_stars.star_id`), matching what
     the map's ``stars`` entries and HR1 use -- NOT the raw CLI/directory table id.
     The owner is ``stars[0]`` -- carried so the operator note can name which star
     to build first. Fail-SAFE: an absent/malformed map (or any dim not meeting
@@ -704,13 +704,17 @@ class _PartitionedDimensions:
 
 
 def _dim_attributes(raw: dict | None) -> tuple[str, ...]:
-    """The string ``attributes`` a raw dim dict declares (empty if none/malformed)."""
+    """The string ``attributes`` a raw dim dict declares (empty if none/malformed).
+
+    Routes through the SAME ``_string_list`` the dimension MODEL builder
+    (:func:`_dimension_model`) uses, so a scalar ``attributes: customer_id`` (valid
+    YAML the model materializes as a real column) is seen identically by the
+    reconciler -- otherwise a scalar attribute would be materialized yet compared
+    as zero attributes, silently bypassing the attribute-divergence refusal (#418
+    review BLOCKER)."""
     if not isinstance(raw, dict):
         return ()
-    attrs = raw.get("attributes")
-    if not isinstance(attrs, list):
-        return ()
-    return tuple(a for a in attrs if isinstance(a, str))
+    return _string_list(raw.get("attributes"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -730,12 +734,47 @@ def _owner_dim_or_refuse(bare: str, ctx: _ReuseContext) -> dict:
     owner_dims = ctx.owner_view.get(owner)
     if owner_dims is None or bare not in owner_dims:
         raise ScaffoldError(
-            f"conformed dimension {bare!r} names owner star {owner!r}, but no "
-            f"committed governed star with that id materializes it. Fix the "
-            f"stars[] owner in the conformed-dimension map, or ensure the owner "
-            f"star's source-map declares {bare!r}."
+            f"conformed dimension {bare!r} names owner star {owner!r}, but that star "
+            f"is absent from the committed owner view (or its committed source-map "
+            f"could not be read) or does not declare {bare!r}. Fix the stars[] owner "
+            f"in the conformed-dimension map, or ensure the owner star's committed "
+            f"source-map declares {bare!r}."
         )
     return owner_dims[bare]
+
+
+def _dim_surrogate(raw: dict | None) -> str | None:
+    """The declared ``surrogate_key`` of a raw dim dict, if a non-empty string."""
+    if not isinstance(raw, dict):
+        return None
+    sk = raw.get("surrogate_key")
+    return sk if isinstance(sk, str) and sk else None
+
+
+def _require_surrogate_key_matches(
+    bare: str, owner_dim: dict, ctx: _ReuseContext
+) -> None:
+    """Fail closed if the reuser's declared ``surrogate_key`` for ``bare`` differs
+    from the owner's (#418 review).
+
+    The fact FK is the reuser's surrogate name (``<sk>``) but ``ref()``s the OWNER's
+    model; a divergent SK would emit a fact FK the owner's dim never exposes -- a
+    join that breaks at run, LATER than the dangling-ref class reconciliation
+    otherwise closes. Only compared when BOTH declare one (graceful, mirroring
+    HR1's ``_surrogate_key_divergence``)."""
+    owner_sk = _dim_surrogate(owner_dim)
+    reuser_sk = _dim_surrogate(ctx.reuser_dims.get(bare))
+    # Compare only when BOTH declare a key (graceful, like HR1); equal -> fine.
+    declared = {sk for sk in (owner_sk, reuser_sk) if sk is not None}
+    if len(declared) < 2:
+        return
+    raise ScaffoldError(
+        f"reuser star {ctx.star_id!r} declares surrogate_key {reuser_sk!r} for "
+        f"conformed dimension {bare!r}, but its owner star {ctx.owners[bare]!r} "
+        f"declares {owner_sk!r} -- the reuser's fact FK would reference a key the "
+        f"owner's model does not expose. Align the surrogate_key across the stars, "
+        f"or declare the dimension 'distinct' in the conformed-dimension map."
+    )
 
 
 def _require_attributes_covered(bare: str, owner_dim: dict, ctx: _ReuseContext) -> None:
@@ -760,13 +799,16 @@ def _reconcile_reused(reused: tuple[ModelSpec, ...], ctx: _ReuseContext) -> None
     """Validate each REUSED dim against its owner before its model is dropped (#418).
 
     Fails closed if the owner star is absent/does not declare the dim
-    (:func:`_owner_dim_or_refuse`) or lacks a reuser attribute
-    (:func:`_require_attributes_covered`). Never merges the reuser's attributes
-    into the owner and never mutates the owner's model.
+    (:func:`_owner_dim_or_refuse`), its surrogate_key diverges
+    (:func:`_require_surrogate_key_matches`), or it lacks a reuser attribute
+    (:func:`_require_attributes_covered`). Never merges the reuser's fields into the
+    owner and never mutates the owner's model.
     """
     for dim in reused:
         bare = _bare_dim_name(dim.name)
-        _require_attributes_covered(bare, _owner_dim_or_refuse(bare, ctx), ctx)
+        owner_dim = _owner_dim_or_refuse(bare, ctx)
+        _require_surrogate_key_matches(bare, owner_dim, ctx)
+        _require_attributes_covered(bare, owner_dim, ctx)
 
 
 def _partition_dimensions(
@@ -780,7 +822,7 @@ def _partition_dimensions(
     owned = tuple(dim for dim in declared if _bare_dim_name(dim.name) not in reuse)
     reused = tuple(dim for dim in declared if _bare_dim_name(dim.name) in reuse)
     # The reuser's own raw dims (bare -> raw dict), for the attribute comparison.
-    reuser_dims = stars.star_dimensions({"gold_star": inputs.gold_star})
+    reuser_dims = _stars.star_dimensions({"gold_star": inputs.gold_star})
     _reconcile_reused(
         reused,
         _ReuseContext(
@@ -807,7 +849,7 @@ def build_scaffold_plan(
     section, only the star's dimensions and the staging columns.
     """
     inputs = _plan_inputs(source, table_id, fact)
-    star_id = stars.star_id(source.document, table_id)
+    star_id = _stars.star_id(source.document, table_id)
     dims = _partition_dimensions(
         inputs, source.conformed_map, star_id, source.owner_view
     )

@@ -1,5 +1,12 @@
 """Shared star-discovery primitives (issue #418).
 
+A TOP-LEVEL module (sibling of ``seshat.core``), deliberately NOT under
+``seshat.dbt``: it is consumed by both the ``seshat.rules`` static-core gate
+(HR1) and the ``seshat.dbt`` scaffold, and importing it must never drag
+``seshat.dbt`` onto the base-CLI import path (spec 135 T003 / spec 134 FR-001 --
+``import seshat.cli`` loads no governed dbt adapter). Placing it here keeps both
+consumers above it and the CLI-laziness contract intact.
+
 Pure and dependency-free: NO database driver, NO ``seshat.rules`` /
 ``RuleContext`` import, and ``yaml`` is never needed here (callers parse YAML
 themselves and inject a ``load`` callable). Both HR1 (worktree read via its

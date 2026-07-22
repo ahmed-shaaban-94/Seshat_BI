@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-from seshat.dbt import stars
+from seshat import star_discovery as _stars
 from seshat.dbt.contracts import GovernanceError
 from seshat.dbt.fact_semantics import load_fact_semantics
 from seshat.dbt.gate import evaluate_mapping_gate, resolve_working_set
@@ -61,27 +61,44 @@ def _load_map_document(source_map: Path) -> dict:
 _CONFORMED_MAP = "docs/quality/conformed-dimension-map.yaml"
 
 
-def _committed_map_text(root: Path) -> str | None:
-    """The conformed-dimension map as committed at ``HEAD`` (or None).
-
-    The map is now an OWNERSHIP AUTHORITY that changes which dimension models get
-    emitted, so -- exactly like the source map, which resolves to its committed
-    blob (``source_map_revision``) -- reuse must be driven by COMMITTED governance
-    state, never an uncommitted worktree edit that could suppress models from
-    unreviewed content (#419 review). Reads ``git show HEAD:<map>``. Any failure
-    (git absent, file not committed, non-zero exit) returns None -> no reuse.
-    """
+def _git(root: Path, *args: str):
+    """Run a hardened, read-only git command (mirrors ``gate._git``): pins
+    ``safe.directory`` (so a dubious-ownership checkout does not silently fail this
+    read while the gate's read succeeds, #419-review), disables the fsmonitor,
+    hooks, and the ext protocol. Returns the CompletedProcess or raises OSError."""
+    import os
     import subprocess
 
+    return subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            f"core.hooksPath={os.devnull}",
+            "-c",
+            "protocol.ext.allow=never",
+            "-c",
+            f"safe.directory={root.as_posix()}",
+            *args,
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        shell=False,
+    )
+
+
+def _committed_blob(root: Path, rel: str) -> str | None:
+    """The text of ``rel`` as committed at ``HEAD`` (or None on any git failure).
+
+    COMMITTED state, never the worktree: an ownership authority (the conformed map,
+    an owner source-map) must not be driven by an uncommitted edit that could
+    suppress dimension models from unreviewed content (#419/#418 review)."""
     try:
-        result = subprocess.run(
-            ["git", "show", f"HEAD:{_CONFORMED_MAP}"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, ValueError):
+        result = _git(root, "show", f"HEAD:{rel}")
+    except OSError:
         return None
     return result.stdout if result.returncode == 0 else None
 
@@ -90,14 +107,13 @@ def _load_conformed_map(root: Path) -> dict | None:
     """The COMMITTED conformed-dimension map (or None), so a CONFORMED dim owned by
     another star is referenced, not re-emitted (#418-P1).
 
-    Read from ``HEAD`` (``_committed_map_text``), NOT the worktree: the map is an
-    ownership authority, and an uncommitted edit must not silently suppress
-    dimension models. Fail-SAFE, never fail-closed: an absent/uncommitted or
-    unreadable/malformed map disables reuse (every dim is owned) -- HR1 is the gate
-    that fails closed on a bad declaration, not scaffold. Returns the parsed
-    mapping, else None.
+    Read from ``HEAD``, NOT the worktree: the map is an ownership authority, and an
+    uncommitted edit must not silently suppress dimension models. Fail-SAFE, never
+    fail-closed: an absent/uncommitted or unreadable/malformed map disables reuse
+    (every dim is owned) -- HR1 is the gate that fails closed on a bad declaration,
+    not scaffold. Returns the parsed mapping, else None.
     """
-    text = _committed_map_text(root)
+    text = _committed_blob(root, _CONFORMED_MAP)
     if text is None:
         return None
     try:
@@ -107,40 +123,32 @@ def _load_conformed_map(root: Path) -> dict | None:
     return document if isinstance(document, dict) else None
 
 
-def _git_tracked_files(root: Path) -> list[str]:
-    """``git ls-files`` (posix rel paths) or ``[]`` on any failure (fail-safe)."""
-    import subprocess
+def _committed_tracked_files(root: Path) -> list[str]:
+    """Files present at ``HEAD`` (``git ls-tree -r --name-only HEAD``), or ``[]`` on
+    any git failure (fail-safe).
 
+    Enumerates the SAME committed snapshot the owner-view then reads from (#418
+    review): ``git ls-files`` would list index-staged-but-uncommitted files that
+    ``git show HEAD:`` cannot read, and would drop a file ``git rm --cached``'d yet
+    still present at HEAD -- both a false owner-absent verdict."""
     try:
-        result = subprocess.run(
-            ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=False
-        )
-    except (OSError, ValueError):
+        result = _git(root, "ls-tree", "-r", "--name-only", "HEAD")
+    except OSError:
         return []
     return result.stdout.splitlines() if result.returncode == 0 else []
 
 
 def _committed_source_map(root: Path):
-    """A ``load(rel) -> dict | None`` that reads ``rel`` from committed ``HEAD``, so
-    the owner-view reflects committed governance state -- never an uncommitted edit
-    that could suppress a dimension model (#418)."""
-    import subprocess
+    """A ``load(rel) -> dict | None`` reading ``rel`` from committed ``HEAD`` -- the
+    owner-view reflects committed governance state, never an uncommitted edit that
+    could suppress a dimension model (#418)."""
 
     def _load(rel: str) -> dict | None:
-        try:
-            result = subprocess.run(
-                ["git", "show", f"HEAD:{rel}"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-        except (OSError, ValueError):
-            return None
-        if result.returncode != 0:
+        text = _committed_blob(root, rel)
+        if text is None:
             return None
         try:
-            data = yaml.safe_load(result.stdout)
+            data = yaml.safe_load(text)
         except yaml.YAMLError:
             return None
         return data if isinstance(data, dict) else None
@@ -155,10 +163,10 @@ def _discover_owner_view(root: Path) -> dict[str, dict[str, dict]]:
     Fail-SAFE to ``{}`` (no git / no stars): reconciliation then treats every owner
     as absent and fails closed, rather than reusing against an unverifiable owner.
     """
-    discovered = stars.discover_stars(
-        _git_tracked_files(root), _committed_source_map(root)
+    discovered = _stars.discover_stars(
+        _committed_tracked_files(root), _committed_source_map(root)
     )
-    return {sid: stars.star_dimensions(doc) for sid, doc in discovered.items()}
+    return {sid: _stars.star_dimensions(doc) for sid, doc in discovered.items()}
 
 
 def _build_plan(root: Path, table_id: str) -> model_plan.ScaffoldPlan:
