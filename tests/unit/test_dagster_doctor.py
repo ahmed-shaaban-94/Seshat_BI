@@ -94,6 +94,17 @@ def test_open_gate_is_a_warning_not_a_blocker(tmp_path: Path) -> None:
     assert "demo_table" in gate_findings[0].message
 
 
+def test_no_mapped_tables_refuses_orchestration(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    (root / "mappings" / "demo_table" / "source-map.yaml").unlink()
+
+    findings = doctor.run_doctor(root)
+
+    no_tables = next(finding for finding in findings if finding.id == "DAG-TBL-01")
+    assert no_tables.severity == "blocker"
+    assert doctor.has_blockers(findings) is True
+
+
 def test_uncommitted_gate_artifact_names_the_commit_remedy(tmp_path: Path) -> None:
     """The `_repo` fixture is deliberately NOT a git repo, so its CLEARED
     mirror reads as UNCOMMITTED (#334): the doctor must name the commit
@@ -188,7 +199,7 @@ def test_live_readiness_reports_engine_driver_and_credentials_without_values(
 ) -> None:
     secret = "postgresql://reader:never-print@db.internal/warehouse"
     monkeypatch.setenv("DATABASE_URL", secret)
-    monkeypatch.setattr(doctor, "_driver_metadata_present", lambda engine: True)
+    monkeypatch.setattr(doctor, "_driver_metadata_present", lambda root, engine: True)
 
     findings = doctor.live_readiness_findings(_repo(tmp_path))
 
@@ -209,6 +220,32 @@ def test_live_readiness_is_pending_without_credentials_or_driver(
 
     assert next(f for f in findings if f.id == "DAG-LIVE-CRED-01").state == "missing"
     assert next(f for f in findings if f.id == "DAG-LIVE-00").state == "pending_live"
+
+
+def test_live_driver_probe_reads_only_the_dagster_venv_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repo(tmp_path)
+    metadata = (
+        root
+        / "orchestration"
+        / "dagster"
+        / ".venv"
+        / "Lib"
+        / "site-packages"
+        / "psycopg2_binary-2.9.10.dist-info"
+        / "METADATA"
+    )
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text("Name: psycopg2-binary\n", encoding="utf-8")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://reader:redacted@host/db")
+
+    findings = doctor.live_readiness_findings(root)
+
+    assert next(f for f in findings if f.id == "DAG-LIVE-DRIVER-00").state == (
+        "available"
+    )
+    assert next(f for f in findings if f.id == "DAG-LIVE-00").state == "available"
 
 
 def test_live_readiness_invalid_engine_never_connects(

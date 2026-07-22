@@ -423,6 +423,7 @@ def test_last_checked_before_latest_approval_is_a_warning_not_an_error(
     (
         'last_checked_at: "not-a-date"',
         "last_checked_at: null",
+        "last_checked_at: 2026-01-01T00:00:00Z",
     ),
 )
 def test_invalid_or_missing_last_checked_at_is_an_error(
@@ -441,4 +442,17 @@ def test_invalid_approval_date_is_an_error(tmp_path: Path) -> None:
         + _appr("publish_ready")
     )
     messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
+    assert any("approval" in message and "date" in message for message in messages)
+
+
+def test_unquoted_yaml_approval_datetime_is_rejected_as_a_date(tmp_path: Path) -> None:
+    approvals = (
+        _appr("mapping_ready").replace("'2026-01-01'", "2026-01-01T00:00:00Z")
+        + _appr("semantic_model_ready")
+        + _appr("dashboard_ready")
+        + _appr("publish_ready")
+    )
+
+    messages = _messages(_ctx(tmp_path, _status_yaml(approvals=approvals)))
+
     assert any("approval" in message and "date" in message for message in messages)

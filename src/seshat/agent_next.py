@@ -254,11 +254,19 @@ def _live_validation_next_override(
     from seshat.portfolio_watch import live_validation_state
 
     scope_id = str(response.get("table") or _dir_name(entry["source_path"]))
-    if live_validation_state(root, scope_id) != "pending_live":
+    live_state = live_validation_state(root, scope_id)
+    if live_state == "verified":
         return None
     scope_dir = _dir_name(entry["source_path"])
+    if live_state in {"stale", "blocked"}:
+        return (
+            f"STOP -- live validation evidence is {live_state}. Re-run `retail "
+            f"validate --source-map mappings/{scope_dir}/source-map.yaml` and "
+            "resolve every live finding before any semantic-model, dashboard, or "
+            "publish work."
+        )
     return (
-        "Run `retail validate --source-map mappings/"
+        "STOP -- run `retail validate --source-map mappings/"
         f"{scope_dir}/source-map.yaml`. [PENDING LIVE PROFILE]: install the db "
         "extra (`pipx inject seshat-bi psycopg2-binary` or `pip install "
         '"seshat-bi[db]"`), then set DATABASE_URL or ANALYTICS_DB_* in the '
@@ -342,7 +350,7 @@ def _compose(
         "evidence": _evidence(entry),
         "blocking_reasons": list(response.get("blocking_reasons", [])),
         "next_allowed_action": (
-            contract_override or live_override or _next_allowed_action(response)
+            live_override or contract_override or _next_allowed_action(response)
         ),
         "forbidden_scope": _forbidden_scope(stage, outcome),
         "validation_commands": _validation_commands(stage),

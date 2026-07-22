@@ -65,45 +65,44 @@ def test_metric_contracts_blocks_unapproved_contracts(tmp_path, monkeypatch) -> 
     assert _record(root, "metric_contracts")["outcome"] == "blocked"
 
 
-def test_semantic_failure_stops_before_approval_materializes(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize(
+    ("failed_command", "output", "failure_message", "expected_calls"),
+    (
+        (
+            commands.semantic_argv(),
+            "semantic bindings failed",
+            "semantic gate failed",
+            [commands.checker_argv(), commands.semantic_argv()],
+        ),
+        (
+            commands.checker_argv(),
+            "static failed",
+            "static governance gate failed",
+            [commands.checker_argv()],
+        ),
+    ),
+)
+def test_semantic_gate_failures_stop_before_approval_materializes(
+    tmp_path, monkeypatch, failed_command, output, failure_message, expected_calls
 ) -> None:
-    root = make_fixture_repo(tmp_path)
-    _setup(monkeypatch, root)
-    stub_green_db(monkeypatch)
-
-    def gate(argv, cwd):
-        if argv == commands.semantic_argv():
-            return 1, "semantic bindings failed"
-        return 0, ""
-
-    monkeypatch.setattr(commands, "run_gate_command", gate)
-    asset = _asset_by_name(build_table_assets(TABLE, root), "semantic_model")
-
-    with pytest.raises(Failure, match="semantic gate failed"):
-        asset(build_asset_context())
-
-    row = _record(root, "semantic_model")
-    assert row["outcome"] == "failed"
-    assert row["measured"]["output_tail"] == "semantic bindings failed"
-
-
-def test_static_check_failure_does_not_run_semantic_gate(tmp_path, monkeypatch) -> None:
     root = make_fixture_repo(tmp_path)
     _setup(monkeypatch, root)
     calls: list[list[str]] = []
 
     def gate(argv, cwd):
         calls.append(argv)
-        return 1, "static failed"
+        if argv == failed_command:
+            return 1, output
+        return 0, ""
 
     monkeypatch.setattr(commands, "run_gate_command", gate)
     asset = _asset_by_name(build_table_assets(TABLE, root), "semantic_model")
 
-    with pytest.raises(Failure, match="static governance gate failed"):
+    with pytest.raises(Failure, match=failure_message):
         asset(build_asset_context())
 
-    assert calls == [commands.checker_argv()]
+    assert calls == expected_calls
+    assert _record(root, "semantic_model")["measured"]["output_tail"] == output
 
 
 def test_green_machine_gates_and_approval_materialize_semantic_model(

@@ -107,6 +107,8 @@ def make_fixture_repo(
     (table_dir / "metrics").mkdir()
     (table_dir / "metrics" / "AMetric.yaml").write_text(
         'name: "AMetric"\n'
+        "owner: metric_owner\n"
+        f'binds_to: {{gold_table: "gold.{TABLE}"}}\n'
         "definition:\n"
         "  additive: true\n"
         "  numerator: {aggregation: sum, filter: []}\n"

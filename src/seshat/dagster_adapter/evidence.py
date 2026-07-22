@@ -106,44 +106,27 @@ def _contained_tracked_path(root: Path, relative: str) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
-def _input_artifact_digests(root: Path, tables: list[str]) -> dict[str, str]:
-    """Digest tracked inputs relevant to a run, with stable POSIX path keys.
-
-    Only approved metric contracts are included.  Invalid/unapproved contracts
-    remain gate blockers elsewhere; they are not silently promoted into evidence.
-    """
-    root = Path(root)
-    tracked = _tracked_paths(root)
-    selected: set[str] = set()
-    metric_candidates: list[tuple[str, Path]] = []
-    for table in sorted(set(tables)):
-        prefix = f"mappings/{table}/"
-        selected.update(
-            {
-                f"{prefix}source-map.yaml",
-                f"{prefix}readiness-status.yaml",
-            }
-        )
-        metric_prefix = f"{prefix}metrics/"
-        for relative in tracked:
-            if relative.startswith(metric_prefix) and relative.endswith(
-                (".yaml", ".yml")
-            ):
-                candidate = _contained_tracked_path(root, relative)
-                if candidate is not None:
-                    metric_candidates.append((relative, candidate))
-
-    inventory = load_contract_inventory(
-        (candidate for _, candidate in metric_candidates), root
-    )
-    approved_paths = {
-        contract.path.resolve() for contract in inventory.approved.values()
-    }
-    selected.update(
+def _metric_candidates(
+    root: Path, tracked: set[str], tables: list[str]
+) -> list[tuple[str, Path]]:
+    prefixes = tuple(f"mappings/{table}/metrics/" for table in sorted(set(tables)))
+    relatives = (
         relative
-        for relative, candidate in metric_candidates
-        if candidate.resolve() in approved_paths
+        for relative in tracked
+        if relative.startswith(prefixes) and relative.endswith((".yaml", ".yml"))
     )
+    candidates = (
+        (relative, _contained_tracked_path(root, relative)) for relative in relatives
+    )
+    return [(relative, path) for relative, path in candidates if path is not None]
+
+
+def _static_input_paths(tracked: set[str], tables: list[str]) -> set[str]:
+    selected = {
+        f"mappings/{table}/{filename}"
+        for table in set(tables)
+        for filename in ("source-map.yaml", "readiness-status.yaml")
+    }
     selected.update(
         relative
         for relative in tracked
@@ -154,13 +137,39 @@ def _input_artifact_digests(root: Path, tables: list[str]) -> dict[str, str]:
         for relative in tracked
         if relative.startswith("powerbi/") and relative.endswith(".tmdl")
     )
+    return selected
 
-    digests: dict[str, str] = {}
-    for relative in sorted(selected & tracked):
-        candidate = _contained_tracked_path(root, relative)
-        if candidate is not None:
-            digests[PurePosixPath(relative).as_posix()] = records_sha256(candidate)
-    return digests
+
+def _digest_paths(root: Path, paths: set[str]) -> dict[str, str]:
+    candidates = (
+        (relative, _contained_tracked_path(root, relative))
+        for relative in sorted(paths)
+    )
+    return {
+        PurePosixPath(relative).as_posix(): records_sha256(path)
+        for relative, path in candidates
+        if path is not None
+    }
+
+
+def _input_artifact_digests(root: Path, tables: list[str]) -> dict[str, str]:
+    """Digest tracked, contained inputs relevant to one governed run."""
+    root = Path(root)
+    tracked = _tracked_paths(root)
+    metric_candidates = _metric_candidates(root, tracked, tables)
+    inventory = load_contract_inventory(
+        (candidate for _, candidate in metric_candidates), root
+    )
+    approved_paths = {
+        contract.path.resolve() for contract in inventory.approved.values()
+    }
+    selected = _static_input_paths(tracked, tables)
+    selected.update(
+        relative
+        for relative, candidate in metric_candidates
+        if candidate.resolve() in approved_paths
+    )
+    return _digest_paths(root, selected & tracked)
 
 
 def _write_summary_atomically(path: Path, summary: dict) -> None:
@@ -327,6 +336,8 @@ def finalize_run(root: Path, run_id: str, tables: list[str], meta: RunMeta) -> d
     exact raw-record digest plus safely contained, tracked inputs; none of these
     execution facts decides a readiness state or human approval.
     """
+    if not tables:
+        raise ValueError("cannot finalize a Dagster run without mapped tables")
     writer = EvidenceWriter(root, run_id)
     _backfill_skipped(writer, tables)
     halted = any(row["outcome"] in {"failed", "blocked"} for row in writer.records())

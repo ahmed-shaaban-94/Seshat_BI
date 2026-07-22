@@ -63,22 +63,17 @@ def _dsn_present() -> bool:
     return resolve_dsn(dict(os.environ)) is not None
 
 
-def _driver_metadata_present(engine: str) -> bool:
-    """Inspect installed-distribution metadata without importing a DB driver."""
-    from importlib.metadata import PackageNotFoundError, version
-
-    for distribution in _DRIVER_DISTRIBUTIONS[engine]:
-        try:
-            version(distribution)
-        except PackageNotFoundError:
-            continue
-        return True
-    return False
+def _driver_metadata_present(root: Path, engine: str) -> bool:
+    """Inspect the Dagster venv metadata without importing or executing drivers."""
+    venv = orchestration_dir(root) / ".venv"
+    return any(
+        _distribution_metadata_present(venv, distribution)
+        for distribution in _DRIVER_DISTRIBUTIONS[engine]
+    )
 
 
 def live_readiness_findings(root: Path) -> list[DoctorFinding]:
     """Configuration-only DB diagnostics; never connect, query, or import drivers."""
-    del root  # configuration is intentionally read only from the scoped environment
     from seshat.dialect import get_dialect
 
     engine = os.environ.get("ANALYTICS_DB_ENGINE", "postgres").strip().lower()
@@ -136,7 +131,7 @@ def live_readiness_findings(root: Path) -> list[DoctorFinding]:
             state=credentials_state,
         )
     )
-    driver_present = _driver_metadata_present(engine)
+    driver_present = _driver_metadata_present(root, engine)
     findings.append(
         DoctorFinding(
             id="DAG-LIVE-DRIVER-00" if driver_present else "DAG-LIVE-DRIVER-01",
@@ -201,8 +196,8 @@ _VENV_ABSENT = DoctorFinding(
 
 _NO_TABLES = DoctorFinding(
     id="DAG-TBL-01",
-    severity="warning",
-    message="no mapped tables found under mappings/ (nothing to orchestrate)",
+    severity="blocker",
+    message="no mapped tables found under mappings/; orchestration is refused",
     remedy="onboard a table first (retail-onboard-table -> source-mapping)",
 )
 

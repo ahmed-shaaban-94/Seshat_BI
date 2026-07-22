@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable
+
+ContractKey = tuple[str, str]
+MeasureBinding = tuple[str, str]
+
+
+def normalize_table_binding(value: str) -> str:
+    """Normalize YAML ``schema.table`` and TMDL ``schema table`` identities."""
+    return " ".join(re.findall(r"[a-z0-9]+", value.lower()))
 
 
 @dataclass(frozen=True)
@@ -12,31 +21,152 @@ class MetricContract:
     """One approved contract, normalized for semantic and orchestration gates."""
 
     name: str
+    scope: str
+    gold_table: str
     path: Path
     definition: dict
     evidence: tuple[str, ...]
+
+    @property
+    def binding(self) -> MeasureBinding:
+        return normalize_table_binding(self.gold_table), self.name
 
 
 @dataclass(frozen=True)
 class ContractInventory:
     """Approved contracts plus concrete reasons every invalid input was refused."""
 
-    approved: dict[str, MetricContract]
+    approved: dict[ContractKey, MetricContract]
     errors: tuple[str, ...]
+
+    def for_scope(self, scope: str) -> dict[str, MetricContract]:
+        """Approved contracts for one governed mapping scope, keyed by measure."""
+        return {
+            name: contract
+            for (contract_scope, name), contract in self.approved.items()
+            if contract_scope == scope
+        }
+
+
+def _scope_from_path(relative: str) -> str | None:
+    parts = PurePosixPath(relative).parts
+    for index in range(len(parts) - 3):
+        if parts[index] == "mappings" and parts[index + 2] == "metrics":
+            return parts[index + 1]
+    return None
+
+
+def _read_mapping(path: Path, relative: str, yaml) -> tuple[dict | None, str | None]:
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        return None, f"{relative}: unreadable metric contract: {exc}"
+    if not isinstance(raw, dict):
+        return None, f"{relative}: metric contract must be a mapping"
+    return raw, None
+
+
+def _valid_evidence(value: object) -> bool:
+    if not isinstance(value, list) or not value:
+        return False
+    return all(isinstance(item, str) and item.strip() for item in value)
+
+
+def _named_semantic_approval(root: Path, scope: str, yaml) -> bool:
+    path = root / "mappings" / scope / "readiness-status.yaml"
+    try:
+        document = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return False
+    if not isinstance(document, dict):
+        return False
+    approvals = document.get("approvals")
+    if not isinstance(approvals, list):
+        return False
+    return any(_valid_semantic_approval(approval) for approval in approvals)
+
+
+def _valid_semantic_approval(approval: object) -> bool:
+    from seshat.rules.readiness_status import _owner_is_valid
+
+    if not isinstance(approval, dict):
+        return False
+    if approval.get("stage") != "semantic_model_ready":
+        return False
+    if not _owner_is_valid(approval.get("owner")):
+        return False
+    return bool(approval.get("at"))
+
+
+def _identity_error(raw: dict, path: Path, relative: str) -> str | None:
+    name = raw.get("name")
+    if not isinstance(name, str) or name != path.stem:
+        return f"{relative}: contract name must equal file stem"
+    return None
+
+
+def _readiness_error(raw: dict, relative: str) -> str | None:
+    readiness = raw.get("readiness")
+    if not isinstance(readiness, dict) or readiness.get("status") != "pass":
+        return f"{relative}: metric contract is not owner-approved pass"
+    if not _valid_evidence(readiness.get("evidence")):
+        return f"{relative}: approved contract requires evidence[]"
+    if readiness.get("blocking_reasons") != []:
+        return f"{relative}: approved contract requires empty blocking_reasons[]"
+    return None
+
+
+def _approval_error(raw: dict, relative: str, approved: bool) -> str | None:
+    owner = raw.get("owner")
+    if not isinstance(owner, str) or not owner.strip():
+        return f"{relative}: approved contract requires owner"
+    if not approved:
+        return f"{relative}: approved contract requires named-human approval"
+    return None
+
+
+def _definition_error(raw: dict, relative: str) -> str | None:
+    if not isinstance(raw.get("definition"), dict):
+        return f"{relative}: approved contract requires definition mapping"
+    binding = raw.get("binds_to")
+    if not isinstance(binding, dict):
+        return f"{relative}: approved contract requires binds_to.gold_table"
+    gold_table = binding.get("gold_table")
+    if not isinstance(gold_table, str) or not gold_table.strip():
+        return f"{relative}: approved contract requires binds_to.gold_table"
+    return None
+
+
+def _contract_error(
+    raw: dict, path: Path, relative: str, scope: str, root: Path, yaml
+) -> str | None:
+    errors = (
+        _identity_error(raw, path, relative),
+        _readiness_error(raw, relative),
+        _approval_error(raw, relative, _named_semantic_approval(root, scope, yaml)),
+        _definition_error(raw, relative),
+    )
+    return next((error for error in errors if error is not None), None)
+
+
+def _metric_contract(raw: dict, path: Path, scope: str) -> MetricContract:
+    readiness = raw["readiness"]
+    return MetricContract(
+        name=raw["name"],
+        scope=scope,
+        gold_table=raw["binds_to"]["gold_table"].strip(),
+        path=path,
+        definition=raw["definition"],
+        evidence=tuple(readiness["evidence"]),
+    )
 
 
 def load_contract_inventory(paths: Iterable[Path], root: Path) -> ContractInventory:
-    """Load only complete, owner-approved metric contracts below ``root``.
-
-    YAML stays a boundary dependency: importing this module does not require it.
-    Invalid files are collected as concrete errors so consumers can fail closed
-    without choosing an approval or silently skipping a contract.
-    """
+    """Load complete contracts backed by a named approval in their own scope."""
     import yaml
 
-    approved: dict[str, MetricContract] = {}
+    approved: dict[ContractKey, MetricContract] = {}
     errors: list[str] = []
-    seen_names: set[str] = set()
     resolved_root = Path(root).resolve()
     for path in sorted(Path(item) for item in paths):
         resolved_path = path.resolve()
@@ -45,37 +175,30 @@ def load_contract_inventory(paths: Iterable[Path], root: Path) -> ContractInvent
         except ValueError:
             errors.append(f"{path}: metric contract escapes repository root")
             continue
-        try:
-            raw = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
-        except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
-            errors.append(f"{relative}: unreadable metric contract: {exc}")
+        scope = _scope_from_path(relative)
+        if scope is None:
+            errors.append(
+                f"{relative}: metric contract is outside mappings/<scope>/metrics"
+            )
             continue
-        if not isinstance(raw, dict):
-            errors.append(f"{relative}: metric contract must be a mapping")
+        raw, read_error = _read_mapping(path, relative, yaml)
+        if read_error is not None:
+            errors.append(read_error)
             continue
-        name = raw.get("name")
-        readiness = raw.get("readiness")
-        definition = raw.get("definition")
-        if not isinstance(name, str) or name != path.stem:
-            errors.append(f"{relative}: contract name must equal file stem")
+        assert raw is not None
+        validation_error = _contract_error(
+            raw, path, relative, scope, resolved_root, yaml
+        )
+        if validation_error is not None:
+            errors.append(validation_error)
             continue
-        if name in seen_names:
-            errors.append(f"{relative}: duplicate metric contract name {name!r}")
+        contract = _metric_contract(raw, path, scope)
+        key = (scope, contract.name)
+        if key in approved:
+            errors.append(
+                f"{relative}: duplicate metric contract name {contract.name!r} "
+                f"within scope {scope!r}"
+            )
             continue
-        seen_names.add(name)
-        if not isinstance(readiness, dict) or readiness.get("status") != "pass":
-            errors.append(f"{relative}: metric contract is not owner-approved pass")
-            continue
-        evidence = readiness.get("evidence")
-        if (
-            not isinstance(evidence, list)
-            or not evidence
-            or not all(isinstance(item, str) and item.strip() for item in evidence)
-        ):
-            errors.append(f"{relative}: approved contract requires evidence[]")
-            continue
-        if not isinstance(definition, dict):
-            errors.append(f"{relative}: approved contract requires definition mapping")
-            continue
-        approved[name] = MetricContract(name, path, definition, tuple(evidence))
+        approved[key] = contract
     return ContractInventory(approved, tuple(errors))

@@ -28,6 +28,9 @@ _MEASURE_LINE = (
 _TMDL = f"table 'gold fct_sales_rss'\n\n{_MEASURE_LINE}\n\t\tdisplayFolder: Sales\n"
 
 _APPROVED_READINESS = """\
+owner: metric_owner
+binds_to:
+  gold_table: "gold.fct_sales_rss"
 readiness:
   status: pass
   evidence: ["approved by Metric Owner on 2026-07-22"]
@@ -101,6 +104,7 @@ def _make_repo(tmp_path: Path, contract: str) -> Path:
         _TMDL,
     )
     _write(tmp_path / "mappings/ds/metrics/AvgTransactionValue.yaml", contract)
+    _write_semantic_approval(tmp_path, "ds")
     return tmp_path
 
 
@@ -111,7 +115,18 @@ def _make_repo_tmdl(tmp_path: Path, tmdl: str, contract: str) -> Path:
         tmdl,
     )
     _write(tmp_path / "mappings/ds/metrics/AvgTransactionValue.yaml", contract)
+    _write_semantic_approval(tmp_path, "ds")
     return tmp_path
+
+
+def _write_semantic_approval(root: Path, scope: str) -> None:
+    _write(
+        root / "mappings" / scope / "readiness-status.yaml",
+        "approvals:\n"
+        "  - stage: semantic_model_ready\n"
+        '    owner: "Ada Lovelace (metric_owner)"\n'
+        '    at: "2026-07-22"\n',
+    )
 
 
 def test_semantic_check_clean_exits_zero(tmp_path: Path, capsys) -> None:
@@ -197,6 +212,43 @@ def test_semantic_check_approved_contract_without_measure_is_an_error(
 
     assert code == 1
     assert "UnusedMeasure" in capsys.readouterr().out
+
+
+def test_same_measure_name_in_different_tables_binds_by_scope(
+    tmp_path: Path, capsys
+) -> None:
+    contract = """\
+name: TotalSales
+owner: metric_owner
+binds_to: {gold_table: GOLD_TABLE}
+definition: {kind: base, aggregation: sum, filter: []}
+readiness:
+  status: pass
+  evidence: [approved by named metric owner]
+  blocking_reasons: []
+"""
+    for scope, gold_table in (("sales", "gold.sales"), ("returns", "gold.returns")):
+        _write_semantic_approval(tmp_path, scope)
+        _write(
+            tmp_path / "mappings" / scope / "metrics" / "TotalSales.yaml",
+            contract.replace("GOLD_TABLE", gold_table),
+        )
+        _write(
+            tmp_path
+            / "powerbi"
+            / f"{scope}.SemanticModel"
+            / "definition"
+            / "tables"
+            / f"gold {scope}.tmdl",
+            f"table 'gold {scope}'\n\tmeasure TotalSales = SUM({scope}[amount])\n",
+        )
+
+    code = main(
+        ["semantic-check", "--repo", str(tmp_path), "--metrics-dir", "mappings"]
+    )
+
+    assert code == 0
+    assert "no drift" in capsys.readouterr().err
 
 
 def test_semantic_check_rejects_unapproved_and_invalid_contracts(

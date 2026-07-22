@@ -362,19 +362,21 @@ def _scope_dir(root: Path, scope: GovernedScope) -> Path:
     return root / Path(scope.source_path).parent
 
 
-def _tmdl_measure_names(root: Path) -> set[str]:
-    """Names of committed-model measures, using the same parser as semantic-check."""
+def _tmdl_measure_bindings(root: Path) -> set[tuple[str, str]]:
+    """Table-scoped model measures, using the semantic-check identity."""
+    from .metric_contract_inventory import normalize_table_binding
     from .tmdl import parse_tmdl
 
-    names: set[str] = set()
+    bindings: set[tuple[str, str]] = set()
     for path in sorted((root / "powerbi").rglob("*.tmdl")):
         try:
             table = parse_tmdl(path.read_text(encoding="utf-8-sig"))
         except OSError:
             continue
         if table is not None:
-            names.update(measure.name for measure in table.measures)
-    return names
+            table_name = normalize_table_binding(table.name)
+            bindings.update((table_name, measure.name) for measure in table.measures)
+    return bindings
 
 
 def contract_binding_state(
@@ -400,8 +402,14 @@ def contract_binding_state(
     inventory = load_contract_inventory(paths, root)
     if inventory.errors or not inventory.approved:
         return "blocked"
-    measure_names = _tmdl_measure_names(root)
-    if not set(inventory.approved).issubset(measure_names):
+    contracts = inventory.for_scope(scope_dir)
+    contract_bindings = {contract.binding for contract in contracts.values()}
+    model_bindings = _tmdl_measure_bindings(root)
+    bound_tables = {table for table, _measure in contract_bindings}
+    scoped_model_bindings = {
+        binding for binding in model_bindings if binding[0] in bound_tables
+    }
+    if not contract_bindings or contract_bindings != scoped_model_bindings:
         return "blocked"
     if semantic_finding is not None and (
         semantic_finding.state != STATE_COVERED

@@ -56,7 +56,10 @@ def run_semantic_check(args: argparse.Namespace) -> int:
     L3 drift check. Git workspaces inspect tracked inputs by default; non-Git
     workspaces use a filesystem fallback.
     """
-    from seshat.metric_contract_inventory import load_contract_inventory
+    from seshat.metric_contract_inventory import (
+        load_contract_inventory,
+        normalize_table_binding,
+    )
     from seshat.runner import _format
     from seshat.semantic import MeasurePair, binding_error, run_semantic_pairs
     from seshat.tmdl import parse_tmdl
@@ -85,7 +88,10 @@ def run_semantic_check(args: argparse.Namespace) -> int:
 
     # Parse the tracked TMDL measures and pair their approved contract definitions.
     pairs: list[MeasurePair] = []
-    measure_locators: dict[str, str] = {}
+    measure_locators: dict[tuple[str, str], str] = {}
+    contracts_by_binding = {
+        contract.binding: contract for contract in inventory.approved.values()
+    }
     for tmdl_path in inputs:
         if tmdl_path.suffix != ".tmdl":
             continue
@@ -99,8 +105,9 @@ def run_semantic_check(args: argparse.Namespace) -> int:
             continue
         for measure in table.measures:
             locator = f"{rel}:{measure.line}"
-            measure_locators.setdefault(measure.name, locator)
-            contract = inventory.approved.get(measure.name)
+            binding = (normalize_table_binding(table.name), measure.name)
+            measure_locators.setdefault(binding, locator)
+            contract = contracts_by_binding.get(binding)
             if contract is not None:
                 pairs.append(
                     MeasurePair(
@@ -116,18 +123,18 @@ def run_semantic_check(args: argparse.Namespace) -> int:
         for error in inventory.errors
     ]
     findings.extend(
-        binding_error(name, locator, "no approved metric contract")
-        for name, locator in sorted(measure_locators.items())
-        if name not in inventory.approved
+        binding_error(binding[1], locator, "no approved metric contract")
+        for binding, locator in sorted(measure_locators.items())
+        if binding not in contracts_by_binding
     )
     findings.extend(
         binding_error(
-            name,
+            contract.name,
             contract.path.relative_to(repo).as_posix(),
             "approved metric contract has no corresponding TMDL measure",
         )
-        for name, contract in sorted(inventory.approved.items())
-        if name not in measure_locators
+        for _key, contract in sorted(inventory.approved.items())
+        if contract.binding not in measure_locators
     )
     drift_findings, _ = run_semantic_pairs(pairs)
     findings.extend(drift_findings)

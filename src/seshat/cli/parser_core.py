@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Callable
+from functools import partial
 
 
 def _add_init_project_parser(sub: argparse._SubParsersAction) -> None:
@@ -104,13 +105,16 @@ def _add_next_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
-def _add_approvals_parser(sub: argparse._SubParsersAction) -> None:
+def _add_readiness_report_parser(
+    sub: argparse._SubParsersAction,
+    *,
+    command: str,
+    description: str,
+    output_help: str,
+) -> None:
     p = sub.add_parser(
-        "approvals",
-        help=(
-            "read-only approval inbox over mappings/*/readiness-status.yaml; "
-            "reports missing or invalid named-human approvals"
-        ),
+        command,
+        help=description,
     )
     p.add_argument("--repo", default=".", help="repo root to read from")
     p.add_argument(
@@ -118,7 +122,7 @@ def _add_approvals_parser(sub: argparse._SubParsersAction) -> None:
         dest="output_format",
         choices=("text", "json"),
         default="text",
-        help="'text' (default) is human-readable; 'json' emits the inbox document.",
+        help=output_help,
     )
 
 
@@ -148,32 +152,34 @@ def _add_evidence_pack_parser(sub: argparse._SubParsersAction) -> None:
     )
 
 
-def _add_blockers_parser(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "blockers",
-        help=(
-            "read-only blocker explainer over mappings/*/readiness-status.yaml; "
-            "categorizes blockers and names the next surface"
-        ),
-    )
-    p.add_argument("--repo", default=".", help="repo root to read from")
-    p.add_argument(
-        "--format",
-        dest="output_format",
-        choices=("text", "json"),
-        default="text",
-        help="'text' (default) is human-readable; 'json' emits the blocker document.",
-    )
-
-
 _FAMILIES: dict[str, Callable[[argparse._SubParsersAction], None]] = {
     "first_arrival": _add_init_project_parser,
     "scaffold_source": _add_scaffold_source_parser,
     "status": _add_status_parser,
     "next": _add_next_parser,
-    "approvals": _add_approvals_parser,
+    "approvals": partial(
+        _add_readiness_report_parser,
+        command="approvals",
+        description=(
+            "read-only approval inbox over mappings/*/readiness-status.yaml; "
+            "reports missing or invalid named-human approvals"
+        ),
+        output_help=(
+            "'text' (default) is human-readable; 'json' emits the inbox document."
+        ),
+    ),
     "evidence_pack": _add_evidence_pack_parser,
-    "blockers": _add_blockers_parser,
+    "blockers": partial(
+        _add_readiness_report_parser,
+        command="blockers",
+        description=(
+            "read-only blocker explainer over mappings/*/readiness-status.yaml; "
+            "categorizes blockers and names the next surface"
+        ),
+        output_help=(
+            "'text' (default) is human-readable; 'json' emits the blocker document."
+        ),
+    ),
 }
 
 

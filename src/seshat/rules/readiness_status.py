@@ -211,7 +211,7 @@ def _check_approval_owners(approvals: list, rel: str) -> list[Finding]:
 
 
 def _parse_iso_date(value: object) -> date | None:
-    if isinstance(value, date):
+    if type(value) is date:
         return value
     if not isinstance(value, str):
         return None

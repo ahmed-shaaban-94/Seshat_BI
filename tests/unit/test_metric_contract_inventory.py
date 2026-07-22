@@ -1,4 +1,4 @@
-"""Tests for the owner-approved metric-contract inventory."""
+"""Tests for the scope-aware, owner-approved metric-contract inventory."""
 
 from __future__ import annotations
 
@@ -17,32 +17,49 @@ def _write(path: Path, text: str) -> Path:
     return path
 
 
-def _approved(name: str = "TotalSales") -> str:
+def _write_approval(root: Path, scope: str) -> None:
+    _write(
+        root / "mappings" / scope / "readiness-status.yaml",
+        "approvals:\n"
+        "  - stage: semantic_model_ready\n"
+        '    owner: "Ada Lovelace (metric_owner)"\n'
+        '    at: "2026-07-22"\n',
+    )
+
+
+def _contract_path(root: Path, scope: str, suffix: str = ".yaml") -> Path:
+    return root / "mappings" / scope / "metrics" / f"TotalSales{suffix}"
+
+
+def _approved(name: str = "TotalSales", gold_table: str = "gold.sales") -> str:
     return f'''\
 name: "{name}"
+owner: metric_owner
+binds_to:
+  gold_table: "{gold_table}"
 definition:
-  additive: true
-  numerator: {{aggregation: sum, filter: []}}
-  denominator: null
+  kind: base
+  aggregation: sum
+  filter: []
 readiness:
   status: pass
-  evidence: ["approved by Metric Owner on 2026-07-22"]
+  evidence: ["approved by the named metric owner on 2026-07-22"]
   blocking_reasons: []
 '''
 
 
-def test_approved_contract_is_indexed_with_definition_and_evidence(
-    tmp_path: Path,
-) -> None:
-    path = _write(tmp_path / "metrics" / "TotalSales.yaml", _approved())
+def test_approved_contract_is_indexed_by_scope_and_name(tmp_path: Path) -> None:
+    _write_approval(tmp_path, "sales")
+    path = _write(_contract_path(tmp_path, "sales"), _approved())
 
     inventory = load_contract_inventory([path], tmp_path)
 
     assert inventory.errors == ()
-    contract = inventory.approved["TotalSales"]
-    assert contract.path == path
-    assert contract.definition["additive"] is True
-    assert contract.evidence == ("approved by Metric Owner on 2026-07-22",)
+    contract = inventory.approved[("sales", "TotalSales")]
+    assert contract.scope == "sales"
+    assert contract.gold_table == "gold.sales"
+    assert contract.binding == ("gold sales", "TotalSales")
+    assert inventory.for_scope("sales") == {"TotalSales": contract}
 
 
 def test_zero_contracts_is_an_empty_valid_inventory(tmp_path: Path) -> None:
@@ -52,32 +69,45 @@ def test_zero_contracts_is_an_empty_valid_inventory(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("filename", "body", "expected"),
+    ("body", "expected"),
     [
-        ("Broken.yaml", "definition: [not valid", "unreadable metric contract"),
-        ("TotalSales.yaml", _approved("OtherName"), "name must equal file stem"),
+        ("definition: [not valid", "unreadable metric contract"),
+        (_approved("OtherName"), "name must equal file stem"),
         (
-            "TotalSales.yaml",
-            "name: TotalSales\nreadiness: {status: pass, evidence: [ok]}\n",
+            _approved().replace(
+                "definition:\n  kind: base\n  aggregation: sum\n  filter: []\n", ""
+            ),
             "requires definition mapping",
         ),
         (
-            "TotalSales.yaml",
-            "name: TotalSales\ndefinition: {}\nreadiness: {status: blocked}\n",
+            _approved().replace("status: pass", "status: blocked"),
             "not owner-approved pass",
         ),
         (
-            "TotalSales.yaml",
-            "name: TotalSales\ndefinition: {}\n"
-            "readiness: {status: pass, evidence: []}\n",
+            _approved().replace(
+                'evidence: ["approved by the named metric owner on 2026-07-22"]',
+                "evidence: []",
+            ),
             "requires evidence[]",
+        ),
+        (_approved().replace("owner: metric_owner\n", ""), "requires owner"),
+        (
+            _approved().replace(
+                "blocking_reasons: []", "blocking_reasons: [still blocked]"
+            ),
+            "empty blocking_reasons[]",
+        ),
+        (
+            _approved().replace('gold_table: "gold.sales"', 'gold_table: ""'),
+            "binds_to.gold_table",
         ),
     ],
 )
 def test_invalid_contract_never_enters_approved_inventory(
-    tmp_path: Path, filename: str, body: str, expected: str
+    tmp_path: Path, body: str, expected: str
 ) -> None:
-    path = _write(tmp_path / "metrics" / filename, body)
+    _write_approval(tmp_path, "sales")
+    path = _write(_contract_path(tmp_path, "sales"), body)
 
     inventory = load_contract_inventory([path], tmp_path)
 
@@ -85,14 +115,41 @@ def test_invalid_contract_never_enters_approved_inventory(
     assert any(expected in error for error in inventory.errors)
 
 
-def test_duplicate_contract_names_are_rejected(tmp_path: Path) -> None:
-    first = _write(tmp_path / "a" / "metrics" / "TotalSales.yaml", _approved())
-    second = _write(tmp_path / "b" / "metrics" / "TotalSales.yaml", _approved())
+def test_pass_contract_without_named_scope_approval_is_rejected(tmp_path: Path) -> None:
+    path = _write(_contract_path(tmp_path, "sales"), _approved())
+
+    inventory = load_contract_inventory([path], tmp_path)
+
+    assert inventory.approved == {}
+    assert any("named-human approval" in error for error in inventory.errors)
+
+
+def test_duplicate_name_within_one_scope_is_rejected(tmp_path: Path) -> None:
+    _write_approval(tmp_path, "sales")
+    first = _write(_contract_path(tmp_path, "sales"), _approved())
+    second = _write(_contract_path(tmp_path, "sales", ".yml"), _approved())
 
     inventory = load_contract_inventory([first, second], tmp_path)
 
-    assert set(inventory.approved) == {"TotalSales"}
-    assert any("duplicate metric contract name" in error for error in inventory.errors)
+    assert set(inventory.approved) == {("sales", "TotalSales")}
+    assert any("within scope 'sales'" in error for error in inventory.errors)
+
+
+def test_same_measure_name_in_different_scopes_is_valid(tmp_path: Path) -> None:
+    paths = []
+    for scope, table in (("sales", "gold.sales"), ("returns", "gold.returns")):
+        _write_approval(tmp_path, scope)
+        paths.append(
+            _write(_contract_path(tmp_path, scope), _approved(gold_table=table))
+        )
+
+    inventory = load_contract_inventory(paths, tmp_path)
+
+    assert inventory.errors == ()
+    assert set(inventory.approved) == {
+        ("sales", "TotalSales"),
+        ("returns", "TotalSales"),
+    }
 
 
 def test_contract_outside_the_repository_is_rejected(tmp_path: Path) -> None:

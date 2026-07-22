@@ -168,7 +168,7 @@ class TestWriteRunEvidence:
         runs = tmp_path / ".seshat" / "dagster" / "runs"
         runs.mkdir(parents=True)
         outside = tmp_path.parent / "outside"
-        outside.mkdir()
+        outside.mkdir(exist_ok=True)
         link = runs / "linked"
         try:
             link.symlink_to(outside, target_is_directory=True)
@@ -222,6 +222,15 @@ class TestWriteRunEvidence:
         records = evidence.EvidenceWriter(tmp_path, "run-crash").records()
         assert all(row["outcome"] == "skipped" for row in records)
 
+    def test_finalize_refuses_an_empty_table_selection(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="without mapped tables"):
+            evidence.finalize_run(
+                tmp_path,
+                "run-empty",
+                [],
+                evidence.RunMeta(started="2026-07-17T00:00:00Z"),
+            )
+
     def test_green_child_exit_keeps_succeeded(self, tmp_path: Path) -> None:
         summary = _finalized_green_run(tmp_path, "run-ok", child_exit_code=0)
         assert summary["run_status"] == "succeeded"
@@ -264,10 +273,18 @@ class TestEvidenceIntegrity:
         table = "demo_table"
         paths = {
             "mappings/demo_table/source-map.yaml": "table: demo_table\n",
-            "mappings/demo_table/readiness-status.yaml": "stages: {}\n",
+            "mappings/demo_table/readiness-status.yaml": (
+                "stages: {}\napprovals:\n"
+                "  - stage: semantic_model_ready\n"
+                '    owner: "Ada Lovelace (metric_owner)"\n'
+                '    at: "2026-07-22"\n'
+            ),
             "mappings/demo_table/metrics/TotalSales.yaml": (
-                "name: TotalSales\ndefinition: {}\nreadiness:\n"
+                "name: TotalSales\nowner: metric_owner\n"
+                "binds_to: {gold_table: gold.sales}\n"
+                "definition: {}\nreadiness:\n"
                 "  status: pass\n  evidence: [approved]\n"
+                "  blocking_reasons: []\n"
             ),
             "warehouse/migrations/001_gold.sql": "select 1;\n",
             "powerbi/Model.SemanticModel/definition/tables/sales.tmdl": (

@@ -23,8 +23,10 @@ def _write_bound_contract(root: Path, scope: str = "scope_alpha") -> None:
     contract = root / "mappings" / scope / "metrics" / "TotalSales.yaml"
     contract.parent.mkdir(parents=True, exist_ok=True)
     contract.write_text(
-        "name: TotalSales\ndefinition: {}\nreadiness:\n"
-        "  status: pass\n  evidence: [metric-owner-approved]\n",
+        "name: TotalSales\nowner: metric_owner\n"
+        "binds_to: {gold_table: gold.sales}\ndefinition: {}\nreadiness:\n"
+        "  status: pass\n  evidence: [metric-owner-approved]\n"
+        "  blocking_reasons: []\n",
         encoding="utf-8",
     )
     tmdl = (
@@ -37,8 +39,19 @@ def _write_bound_contract(root: Path, scope: str = "scope_alpha") -> None:
     )
     tmdl.parent.mkdir(parents=True, exist_ok=True)
     tmdl.write_text(
-        "table 'sales'\n\tmeasure TotalSales = SUM(Sales[amount])\n", encoding="utf-8"
+        "table 'gold sales'\n\tmeasure TotalSales = SUM(Sales[amount])\n",
+        encoding="utf-8",
     )
+
+
+def _semantic_approval() -> list[dict[str, str]]:
+    return [
+        {
+            "stage": "semantic_model_ready",
+            "owner": "Ada Lovelace (metric_owner)",
+            "at": "2026-07-22",
+        }
+    ]
 
 
 def _finalize_live_run(root: Path, scope: str = "scope_alpha") -> None:
@@ -81,7 +94,10 @@ def test_approved_bound_contract_and_current_live_run_are_verified(
     tmp_path: Path,
 ) -> None:
     write_readiness_status(
-        tmp_path, "scope_alpha", current_stage="semantic_model_ready"
+        tmp_path,
+        "scope_alpha",
+        current_stage="semantic_model_ready",
+        approvals=_semantic_approval(),
     )
     _write_bound_contract(tmp_path)
     write_json_artifact(
@@ -98,6 +114,29 @@ def test_approved_bound_contract_and_current_live_run_are_verified(
     assert scope["contract_binding_state"] == "verified"
     assert scope["live_validation_state"] == "verified"
     assert scope["last_dagster_run"] == "verified"
+
+
+def test_uncontracted_measure_on_bound_table_blocks_contract_state(
+    tmp_path: Path,
+) -> None:
+    write_readiness_status(
+        tmp_path,
+        "scope_alpha",
+        current_stage="semantic_model_ready",
+        approvals=_semantic_approval(),
+    )
+    _write_bound_contract(tmp_path)
+    tmdl = next((tmp_path / "powerbi").rglob("sales.tmdl"))
+    tmdl.write_text(
+        tmdl.read_text(encoding="utf-8")
+        + "\tmeasure UncontractedMargin = SUM(Sales[margin])\n",
+        encoding="utf-8",
+    )
+
+    scope = _scope(pw.build_portfolio_watch_summary(tmp_path))
+
+    assert scope["contract_binding_state"] == "blocked"
+    assert scope["contract_binding_owner"] == "metric owner"
 
 
 def test_unbound_contract_is_blocked_with_metric_owner_handoff(tmp_path: Path) -> None:
