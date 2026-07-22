@@ -121,6 +121,45 @@ guarantees matches the owner's).
 7. **owner-rule determinism**: reversing which table is passed flips owner/reuser
    deterministically from the SAME map.
 
+## Known limitation — a star must OWN at least one dimension
+
+If EVERY dimension a star declares is a conformed dimension owned by another
+star, `build_scaffold_plan` fails closed (`ScaffoldError`, actionable message):
+the star would materialize no dimension model of its own. The textbook fully-
+conformed reuser (a returns star whose only dims are the shared `dim_customer` +
+`dim_date`, both owned by the sales star) must therefore either own one of them
+or have a per-star dimension to scaffold end-to-end; otherwise the fact +
+staging models are authored, but the reuser owns no dim model. This is a
+deliberate, documented bound (the fail-closed message names it), not a silent
+refusal. Lifting it (allowing a zero-owned-dim plan — `_validate_parity_set`
+tolerates the empty dim-subject set) is a possible future enhancement, out of
+scope here.
+
+## Known limitation — reuser-only attributes are not merged
+
+HR1 permits a conformed dimension whose stars declare DIFFERENT attribute sets
+(it compares `silver_type` only for attributes present in ≥2 stars). When a
+reuser declares an attribute the OWNER's dim does not carry, dropping the
+reuser's dim spec here means that reuser-only attribute appears in neither the
+owner's model nor the reuser's (which emits no dim model) — a silently-lost
+governed field. Reuse does **not** currently merge or reconcile divergent
+attribute sets, and it does **not** refuse such a configuration (a cheap refusal
+would also reject the legitimate common case where the reuser re-declares the
+shared natural key). Correct handling needs the cross-table governed-star view
+(load the owner's `source-map.yaml` to compare/merge attributes) — the same
+capability the owner-existence and all-reused items below need. Tracked as the
+#418 follow-up; latent today (no conformed-dimension name collision exists in the
+committed tree — `test_hr1_clean_on_real_committed_tree`).
+
+## Owner-rule robustness
+
+The owner is `stars[0]`, compared directly (`table_id == stars[0]`), NOT
+"membership in `stars[1:]`". `stars` is an authority field HR1 does not validate
+beyond `status`, so a human may accidentally repeat the owner later in the list
+(`[owner, reuser, owner]`); comparing against `stars[0]` keeps the owner the
+owner (it never reuses its own dim, which would leave the dim materialized by
+nobody).
+
 ## Out of scope (YAGNI)
 
 - No change to HR1 or the conformed-dimension-map SHAPE.
