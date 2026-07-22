@@ -112,8 +112,7 @@ def _summary_value_errors(summary: dict) -> list[str]:
             "summary: workspace_dirty must be boolean",
         ),
         (
-            not isinstance(records_sha, str)
-            or not _SHA256_RE.fullmatch(records_sha),
+            not isinstance(records_sha, str) or not _SHA256_RE.fullmatch(records_sha),
             "summary: records_sha256 must be a 64 char lowercase hex sha",
         ),
     )
