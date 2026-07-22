@@ -27,6 +27,8 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+## [0.6.1] -- 2026-07-22
+
 ### Fixed
 
 - Release audit false positive that blocked the v0.6.0 PyPI publish: a
