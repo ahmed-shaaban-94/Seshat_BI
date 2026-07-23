@@ -80,3 +80,45 @@ seshat adopt-pbip scaffold --project <PBIP-project-directory> --accept-assessmen
 
 This writes at most `.seshat/adoption/pbip-adoption.yaml`; it never initializes
 Git, overwrites existing files, grants approval, or advances readiness.
+
+## Resetting / re-running a project
+
+There is no `seshat reset` verb yet (tracked separately). Until it ships, reset
+a single table's derived state by hand, preserving its bronze landing, then
+re-run readiness from Source.
+
+Remove the table's derived artifacts:
+
+```powershell
+Remove-Item -Recurse -Force mappings/<table>
+Remove-Item -Force warehouse/migrations/*_create_silver_<table>*.sql
+Remove-Item -Force warehouse/migrations/*_create_gold_<table>*.sql
+Remove-Item -Recurse -Force dbt/models/staging/<table>
+Remove-Item -Recurse -Force dbt/models/marts/<table>
+Remove-Item -Recurse -Force dbt/models/audit/<table>
+```
+
+This covers `mappings/<table>/` (including its nested `dbt-evidence/`
+subfolder -- it lives under the mapping directory, not as a separate
+top-level path), the silver and gold migration SQL for that table (plus any
+generated `warehouse/gold/` or `warehouse/schema/` outputs), and the three
+per-table dbt model folders. Do not touch the bronze landing.
+
+The materialized dagster project under `orchestration/dagster/` is
+regenerable rather than hand-edited; if it references the removed table,
+regenerate it with `seshat dagster init`.
+
+Stage the deletions before running `seshat check` -- an unstaged delete can
+leave the static gate reading stale tracked content. Then verify no residual
+state remains:
+
+```powershell
+git add -A
+Select-String -Path .seshat/manifest.yaml -Pattern "<table>"
+seshat next --format agent
+```
+
+A hit in `.seshat/manifest.yaml` after the deletions is a real residual-state
+risk -- the manifest still believes the table is onboarded even though its
+files are gone. `seshat next` should report a truthful fresh Source stage for
+the table; if it does not, the reset is incomplete.

@@ -669,28 +669,28 @@
     {
       "classification": "public_knowledge",
       "destination": "knowledge/bi-sql-knowledge/INDEX.md",
-      "output_sha256": "76f215768d675bb649b57e86df2a64d791ed4a5e4ef10bfd3e8df8086fcc2779",
+      "output_sha256": "30b9d04e4dc1e900b8bafc823e17a77d6917bf83862a8b73cd5f56eb911485e9",
       "source": "skills/bi-sql-knowledge/INDEX.md",
       "source_id": "kb-072",
-      "source_sha256": "76f215768d675bb649b57e86df2a64d791ed4a5e4ef10bfd3e8df8086fcc2779",
+      "source_sha256": "30b9d04e4dc1e900b8bafc823e17a77d6917bf83862a8b73cd5f56eb911485e9",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "public_knowledge",
       "destination": "knowledge/bi-sql-knowledge/README.md",
-      "output_sha256": "0a3a60f80c09b149d10e858d97dbe44a784c2e7b6fb6979d9f06051f19e239a5",
+      "output_sha256": "65b0c88b4efac095d36a3597d0db4fc255a919894809b6fcbd22fbfc433cb15d",
       "source": "skills/bi-sql-knowledge/README.md",
       "source_id": "kb-073",
-      "source_sha256": "0a3a60f80c09b149d10e858d97dbe44a784c2e7b6fb6979d9f06051f19e239a5",
+      "source_sha256": "65b0c88b4efac095d36a3597d0db4fc255a919894809b6fcbd22fbfc433cb15d",
       "transform": "copy-normalized-v1"
     },
     {
       "classification": "public_knowledge",
       "destination": "knowledge/bi-sql-knowledge/SKILL.md",
-      "output_sha256": "5261e30085605984562a90b7476bbfb404bc2dc29ae3f50470201ba54cc01948",
+      "output_sha256": "f52de712e3ec38c5cdbab4f5d56ff7bd37c40088530513112d8a961a6d0c5923",
       "source": "skills/bi-sql-knowledge/SKILL.md",
       "source_id": "kb-074",
-      "source_sha256": "5261e30085605984562a90b7476bbfb404bc2dc29ae3f50470201ba54cc01948",
+      "source_sha256": "f52de712e3ec38c5cdbab4f5d56ff7bd37c40088530513112d8a961a6d0c5923",
       "transform": "copy-normalized-v1"
     },
     {
@@ -732,10 +732,10 @@
     {
       "classification": "public_knowledge",
       "destination": "knowledge/bi-sql-knowledge/knowledge/sql-anti-patterns.md",
-      "output_sha256": "eafdb5bafc706b150eed95798e1c6776e3d30a9ccd4ed280f5c2d1db0673b5a5",
+      "output_sha256": "d94bdd034b42b75c763a3d3138d7d141171c763892a8551086d02a361049af52",
       "source": "skills/bi-sql-knowledge/knowledge/sql-anti-patterns.md",
       "source_id": "kb-079",
-      "source_sha256": "eafdb5bafc706b150eed95798e1c6776e3d30a9ccd4ed280f5c2d1db0673b5a5",
+      "source_sha256": "d94bdd034b42b75c763a3d3138d7d141171c763892a8551086d02a361049af52",
       "transform": "copy-normalized-v1"
     },
     {
@@ -885,10 +885,10 @@
     {
       "classification": "public_knowledge",
       "destination": "knowledge/bi-sql-knowledge/references/id-conventions.md",
-      "output_sha256": "6eaae1a233d0b45bec124b4c0203776851a85b5d96c64f3f8563ff28258bc0c0",
+      "output_sha256": "2652d404ed2cb94ed9e7b99eb7cfc44661c8d6a70b26d89293d41cd5c9094223",
       "source": "skills/bi-sql-knowledge/references/id-conventions.md",
       "source_id": "kb-096",
-      "source_sha256": "6eaae1a233d0b45bec124b4c0203776851a85b5d96c64f3f8563ff28258bc0c0",
+      "source_sha256": "2652d404ed2cb94ed9e7b99eb7cfc44661c8d6a70b26d89293d41cd5c9094223",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1506,10 +1506,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "1d306033d8d08269884cf8751d4154370daa3ee754f006745074a167ecfe6bc2",
+      "output_sha256": "412b4b0ee6dfe8001dfe513e3826248e36a586983c1862cfad9f2eb34b28eb24",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "1d306033d8d08269884cf8751d4154370daa3ee754f006745074a167ecfe6bc2",
+      "source_sha256": "412b4b0ee6dfe8001dfe513e3826248e36a586983c1862cfad9f2eb34b28eb24",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1532,10 +1532,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "0c86b76bfc9851d5eb1840eaf0954f136cef39e05d2be34f0ea492d777c4fe4c",
+  "manifest_digest": "add0deffc5d495c02f6d4691b8ecfc0f8a4d7b47deeedef46bfd277e66841828",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "6af0cca9bd9839da17666edd8a938b746b9d2cd2",
+  "source_revision": "e8a836665e02dd3f7d3e4e4f10b120e66f5f8514",
   "target": "codex",
   "version": "0.6.1"
 }

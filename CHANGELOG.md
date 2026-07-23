@@ -27,6 +27,15 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Docs
+- `bi-sql-knowledge`: added anti-pattern card SQL-AP-061 warning that matching a
+  non-ASCII/RTL literal directly on a shell command line silently mismatches (no
+  error); use an ASCII code column, an `E'\uXXXX'` escape, or `psql -f` a UTF-8 file.
+  (#438)
+- `seshat-bi` skill: added a "Resetting / re-running a project" section documenting
+  the interim manual reset file-set and the stage-deletions-before-`seshat check`
+  workaround (until a native `seshat reset` verb ships). (#439)
+
 ## [0.6.1] -- 2026-07-22
 
 ### Fixed
