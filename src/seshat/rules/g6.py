@@ -73,6 +73,15 @@ def _g6_finding_for_line(rel: str, lineno: int, line: str) -> Finding | None:
     )
 
 
+def _g6_findings_for_text(rel: str, text: str) -> list[Finding]:
+    """Every G6 finding in one parameter file's text (one per leaking line)."""
+    return [
+        finding
+        for lineno, line in enumerate(text.splitlines(), start=1)
+        if (finding := _g6_finding_for_line(rel, lineno, line)) is not None
+    ]
+
+
 @register("G6", "No real host/value in committed PBIP parameters")
 def check_pbip_param_no_real_value(ctx: RuleContext) -> Iterable[Finding]:
     findings: list[Finding] = []
@@ -81,10 +90,6 @@ def check_pbip_param_no_real_value(ctx: RuleContext) -> Iterable[Finding]:
         # scan for a leaked value; skip it rather than crash. This is a content
         # scan, not a presence check.
         text = read_tracked_text(ctx.repo_root / rel, encoding="utf-8-sig")
-        if text is None:
-            continue
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            finding = _g6_finding_for_line(rel, lineno, line)
-            if finding is not None:
-                findings.append(finding)
+        if text is not None:
+            findings.extend(_g6_findings_for_text(rel, text))
     return findings
