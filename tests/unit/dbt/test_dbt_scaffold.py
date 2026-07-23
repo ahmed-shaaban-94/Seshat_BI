@@ -868,6 +868,50 @@ def test_dimension_attribute_referencing_a_dropped_column_fails_closed() -> None
     assert "decision: drop" in str(err.value) or "decision 'drop'" in str(err.value)
 
 
+def test_dropped_name_shadowed_by_a_resolvable_derived_column_fails_closed() -> None:
+    """Codex #444 (P2): a name marked ``decision: drop`` in columns[] that is ALSO
+    declared as a same-named ``derived_columns`` entry with a filled, resolvable
+    ``derived_from`` must still fail closed -- the derivation path must never
+    resolve a dropped name to a real bronze citation ahead of the drop guard.
+
+    ``customer_segment`` is dropped in columns[] (present only as its own drop
+    row) AND re-declared in derived_columns with a derived_from that DOES resolve
+    to a real kept bronze column (``seg_src``). Pre-fix, ``_bronze_citation``
+    resolves through the derived_columns path and returns that citation BEFORE
+    ever consulting ``dropped_column_names`` -- silently un-dropping the column.
+    """
+    dropped_and_derived = {
+        **_MAP,
+        "columns": [
+            {"source_name": "seg_src", "decision": "keep", "rename_to": "seg_src"},
+            {"source_name": "customer_segment", "decision": "drop"},
+            *_MAP["columns"],
+        ],
+        "derived_columns": [
+            {
+                "name": "customer_segment",
+                "type": "text",
+                "derived_from": "seg_src",
+                "mapping_source": "templates/assumptions.md",
+                "unmapped_default": "UNMAPPED",
+            }
+        ],
+        "gold_star": {
+            **_MAP["gold_star"],
+            "dimensions": [
+                {
+                    "name": "gold.dim_customer_rss",
+                    "surrogate_key": "customer_sk",
+                    "attributes": ["customer_segment"],
+                },
+            ],
+        },
+    }
+    with pytest.raises(model_plan.ScaffoldError, match="customer_segment") as err:
+        model_plan.build_scaffold_plan(_source(dropped_and_derived), TABLE_ID, _FACT)
+    assert "decision: drop" in str(err.value) or "decision 'drop'" in str(err.value)
+
+
 def test_dropped_column_never_materializes_in_any_model_or_contract() -> None:
     """The issue-title guarantee (#434): a ``decision: drop`` column present only
     in ``columns[]`` (NOT referenced anywhere in gold_star) must be absent from

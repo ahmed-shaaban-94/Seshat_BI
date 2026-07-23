@@ -342,7 +342,22 @@ def _bronze_citation(inputs: _PlanInputs, silver_name: str, context: str) -> str
     A name that resolves to no real bronze column is a defect (never a fabricated
     citation): a rollup with an unfilled ``<placeholder>`` derived_from, or an
     attribute that is neither kept nor derived. The message distinguishes the
-    kept-column and derived_columns paths and points at the hand-completion path."""
+    kept-column and derived_columns paths and points at the hand-completion path.
+
+    The ``dropped_column_names`` check runs FIRST, before either resolution path:
+    a name can be BOTH marked ``decision: drop`` in columns[] AND re-declared as a
+    same-named ``derived_columns`` entry whose ``derived_from`` resolves to a real
+    bronze column. Checking drop only after both resolutions fail would let that
+    derived-columns path return a real citation for a name the map declares
+    dropped -- silently un-dropping it (Codex #444)."""
+    if silver_name in inputs.dropped_column_names:
+        raise ScaffoldError(
+            f"{context} references {silver_name!r}, which the map's columns[] "
+            "marks decision: drop. A dropped column can never be materialized "
+            "in a generated model (that would silently un-drop it, #434) -- "
+            "either change its decision to keep/derive in columns[] before "
+            "scaffolding, or remove this gold_star reference to it"
+        )
     source = _resolve_bronze_source(inputs, silver_name)
     if source is None:
         derived_from = inputs.derived_source_by_name.get(silver_name)
@@ -352,14 +367,6 @@ def _bronze_citation(inputs: _PlanInputs, silver_name: str, context: str) -> str
             resolved = _resolve_bronze_source(inputs, derived_from)
             if resolved is not None:
                 return f"bronze.{inputs.source_table}.{resolved}"
-        if silver_name in inputs.dropped_column_names:
-            raise ScaffoldError(
-                f"{context} references {silver_name!r}, which the map's columns[] "
-                "marks decision: drop. A dropped column can never be materialized "
-                "in a generated model (that would silently un-drop it, #434) -- "
-                "either change its decision to keep/derive in columns[] before "
-                "scaffolding, or remove this gold_star reference to it"
-            )
         raise ScaffoldError(
             f"{context} references {silver_name!r}, which resolves to no real "
             "bronze source column. If it is a direct source column, keep it in "

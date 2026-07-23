@@ -225,16 +225,19 @@ def _iter_sql_no_symlinks(models_root: Path, basename: str) -> Iterator[Path]:
 
     ``Path.rglob`` descends into symlinked subdirectories, which could scan an
     external tree (Codex #444); ``os.walk(followlinks=False)`` stays inside the
-    workspace. Symlinked directory entries are pruned from the descent, and a
-    symlinked file matching ``basename`` is skipped (its real dbt-model home, if
-    any, is found on its own non-symlinked path).
+    workspace, so symlinked directory entries are pruned from the descent
+    (never followed into). A symlinked FILE matching ``basename`` is still
+    yielded, not skipped: detecting it is a basename match on the directory
+    entry itself, which does not require following the link, and the model it
+    names is still a collision under ``dbt/models`` -- silently skipping it
+    would let the target model be written at a new path while the symlinked
+    duplicate remains a live model entry (Codex #444 follow-up). The caller's
+    same-path check still excludes the ordinary rerun case.
     """
     for dirpath, dirnames, filenames in os.walk(models_root, followlinks=False):
         dirnames[:] = [d for d in dirnames if not (Path(dirpath) / d).is_symlink()]
         if basename in filenames:
-            candidate = Path(dirpath) / basename
-            if not candidate.is_symlink():
-                yield candidate
+            yield Path(dirpath) / basename
 
 
 def _refuse_model_name_collision(root: Path, relative: str) -> None:

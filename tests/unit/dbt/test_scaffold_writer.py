@@ -282,3 +282,65 @@ def test_collision_scan_refuses_a_symlinked_models_root(tmp_path: Path) -> None:
             "dbt/models/audit/table_a/audit_table_a_parity.sql",
             "select 2\n",
         )
+
+
+# --------------------------------------------------------------------------- #
+# Codex #444 (P2) regression -- a matching SYMLINKED leaf .sql file (same
+# basename, different layout) is a collision, never silently skipped.
+# --------------------------------------------------------------------------- #
+def test_collision_scan_treats_a_symlinked_same_named_model_as_a_collision(
+    tmp_path: Path,
+) -> None:
+    """A pre-existing FLAT-layout audit_<t>_parity.sql that is itself a SYMLINK
+    (pointing elsewhere) must still block the scaffold's NESTED write -- the
+    walk must not silently skip a symlinked leaf file matching the basename.
+    Real ``os.symlink`` path; skipped where the OS/user forbids symlink
+    creation (see the monkeypatch variant below for unconditional local
+    coverage)."""
+    outside = tmp_path / "outside_audit_table_a_parity.sql"
+    outside.write_text("select 1\n", encoding="utf-8")
+    flat_dir = tmp_path / "dbt" / "models" / "audit"
+    flat_dir.mkdir(parents=True)
+    flat = flat_dir / "audit_table_a_parity.sql"
+    try:
+        os.symlink(outside, flat)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation not permitted in this environment")
+
+    nested = "dbt/models/audit/table_a/audit_table_a_parity.sql"
+
+    with pytest.raises(model_plan.ScaffoldError, match="audit_table_a_parity.sql"):
+        writer.write_model_file(tmp_path, nested, "select 2\n")
+
+    # Refused BEFORE any write -- the nested path was never created.
+    assert not (tmp_path / nested).exists()
+
+
+def test_collision_scan_treats_a_symlinked_same_named_model_as_a_collision_without_os_symlink_support(  # noqa: E501
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Prove the collision-not-skip fix even where the OS forbids creating real
+    symlinks (this Windows box): a REGULAR flat file whose ``is_symlink()``
+    reports True (for that exact path only, mirroring
+    ``test_merge_target_refusal_holds_without_os_symlink_support``) must still
+    be treated as a collision, not silently skipped."""
+    flat_dir = tmp_path / "dbt" / "models" / "audit"
+    flat_dir.mkdir(parents=True)
+    flat = flat_dir / "audit_table_a_parity.sql"
+    flat.write_text("select 1\n", encoding="utf-8")
+
+    real_is_symlink = Path.is_symlink
+
+    def fake_is_symlink(self: Path) -> bool:
+        if self == flat:
+            return True
+        return real_is_symlink(self)
+
+    monkeypatch.setattr(Path, "is_symlink", fake_is_symlink)
+
+    nested = "dbt/models/audit/table_a/audit_table_a_parity.sql"
+
+    with pytest.raises(model_plan.ScaffoldError, match="audit_table_a_parity.sql"):
+        writer.write_model_file(tmp_path, nested, "select 2\n")
+
+    assert not (tmp_path / nested).exists()
