@@ -380,3 +380,38 @@ def test_s4b_regression_gold_bare_outside_txn_warns(tmp_path: Path) -> None:
         "warehouse/fail_s4b_bare.sql:1",
         "warehouse/fail_s4b_bare.sql:2",
     }
+
+
+def test_s4b_qualified_alter_column_in_txn_no_finding(tmp_path: Path) -> None:
+    """#442 regression: a schema-qualified `ALTER TABLE gold.<t> ALTER COLUMN ...
+    SET NOT NULL` inside a BEGIN/COMMIT block must NOT warn. The inner `ALTER`
+    keyword of the ALTER COLUMN sub-clause was wrongly re-evaluated as a
+    top-level DDL verb whose (column) target had no schema qualifier, yielding a
+    spurious `target schema undetermined` warning even though the statement is
+    gold-qualified and txn-wrapped. The sibling ADD PRIMARY KEY never warned, so
+    the false positive was specific to the ALTER COLUMN variant."""
+    sql = (
+        "BEGIN;\n"
+        "ALTER TABLE gold.fct_sales_c086 ADD PRIMARY KEY (sale_id);\n"
+        "ALTER TABLE gold.fct_sales_c086 ALTER COLUMN date_sk SET NOT NULL;\n"
+        "COMMIT;\n"
+    )
+    rel = _write(tmp_path, "warehouse/gold/pass_s4b_alter_column.sql", sql)
+    findings = list(s4b_guard_form(_ctx(tmp_path, rel)))
+    s4b = [f for f in findings if f.rule_id == "S4b"]
+    assert s4b == [], (
+        f"Expected no S4b findings for a qualified txn ALTER COLUMN, got: {s4b}"
+    )
+
+
+def test_s4b_qualified_alter_column_outside_txn_still_warns(tmp_path: Path) -> None:
+    """The #442 fix must not over-suppress: a gold-qualified ALTER COLUMN NOT in
+    a transaction is still a WARNING (the txn requirement is unchanged), and the
+    inner ALTER sub-clause must not double-count it into a second finding."""
+    sql = "ALTER TABLE gold.fct_sales_c086 ALTER COLUMN date_sk SET NOT NULL;\n"
+    rel = _write(tmp_path, "warehouse/gold/warn_s4b_alter_column.sql", sql)
+    findings = list(s4b_guard_form(_ctx(tmp_path, rel)))
+    s4b = [f for f in findings if f.rule_id == "S4b"]
+    assert len(s4b) == 1
+    assert s4b[0].severity is Severity.WARNING
+    assert "gold.* bare ALTER not in a transaction" in s4b[0].message

@@ -279,6 +279,23 @@ def _s4b_finding_for_bare_ddl(
     )
 
 
+def _is_statement_start_verb(toks: list[SqlToken], idx: int) -> bool:
+    """True when the DDL verb at ``idx`` STARTS a statement, not a sub-clause.
+
+    A DDL keyword only introduces a statement whose target `schema_zone` must be
+    determined when it is the first token of a statement -- i.e. preceded by a
+    statement boundary (``;``) or a transaction-boundary keyword, or at the start
+    of the file. The same keyword appearing MID-statement is a sub-clause, not a
+    new statement: `ALTER TABLE gold.t ALTER COLUMN c ...` carries a SECOND
+    `ALTER` whose target (the column) has no schema qualifier, so re-evaluating it
+    as a top-level verb yielded a spurious "target schema undetermined" S4b
+    warning even though the statement is schema-qualified and txn-wrapped (#442).
+    Only the leading `ALTER` (which resolves to `gold`) governs the statement.
+    """
+    prev = toks[idx - 1].text.upper() if idx > 0 else ""
+    return idx == 0 or prev == ";" or prev in _TXN_BOUNDARY_VERBS
+
+
 def _s4b_findings_for_file(rel: str, toks: list[SqlToken]) -> list[Finding]:
     """S4b findings for one file's already-tokenized content."""
     findings: list[Finding] = []
@@ -293,6 +310,12 @@ def _s4b_findings_for_file(rel: str, toks: list[SqlToken]) -> list[Finding]:
             continue
 
         if upper not in _DDL_VERBS:
+            continue
+
+        # A DDL keyword mid-statement (e.g. the inner ALTER of `ALTER TABLE t
+        # ALTER COLUMN c ...`) is a sub-clause, not a new statement; only the
+        # statement-leading verb governs the target schema zone (#442).
+        if not _is_statement_start_verb(toks, idx):
             continue
 
         # Guarded forms pass unconditionally (any zone).
