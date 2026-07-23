@@ -27,6 +27,18 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Added
+- `seshat scaffold-design` materializes the Stage-6/7 design + handoff templates
+  (dashboard-page-blueprint, visual-spec, report-composition, the 16x9 grid, the
+  handoff pack + review checklist) into a workspace, so package-only (pipx /
+  marketplace) users reaching Dashboard/Publish Ready have templates to copy.
+  Non-destructive; wheel-data-first with a dev-checkout fallback. (#440, #441)
+
+### Fixed
+- The six Stage-6/7 design + handoff templates now ship in the wheel
+  (`force-include` + sdist) and the marketplace bundle (allowlist), instead of
+  existing only in the development tree. (#440, #441)
+
 ## [0.6.1] -- 2026-07-22
 
 ### Fixed
