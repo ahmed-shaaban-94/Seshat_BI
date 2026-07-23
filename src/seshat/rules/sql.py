@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from ..core import Finding, RuleContext, Severity, is_test_path, read_tracked_text
@@ -300,8 +301,20 @@ def _is_statement_start_verb(stmt_open: bool) -> bool:
     return not stmt_open
 
 
+@dataclass(frozen=True)
+class _S4bScanState:
+    """The two flags a single left-to-right S4b walk carries: whether a
+    BEGIN/COMMIT transaction is open, and whether a DDL statement is open
+    (a statement-starting DDL verb not yet closed by ``;``, #442). Bundled so
+    the per-verb evaluator receives the scan state as one value.
+    """
+
+    in_txn: bool
+    stmt_open: bool
+
+
 def _s4b_ddl_finding(
-    rel: str, toks: list[SqlToken], idx: int, *, in_txn: bool, stmt_open: bool
+    rel: str, toks: list[SqlToken], idx: int, state: _S4bScanState
 ) -> Finding | None:
     """The S4b finding for the DDL verb at ``idx``, or ``None`` when it passes.
 
@@ -312,7 +325,7 @@ def _s4b_ddl_finding(
     pattern). bronze bare DDL is an ERROR; everything else is the WARNING built by
     ``_s4b_finding_for_bare_ddl``.
     """
-    if not _is_statement_start_verb(stmt_open) or _is_guarded(toks, idx):
+    if not _is_statement_start_verb(state.stmt_open) or _is_guarded(toks, idx):
         return None
     upper = toks[idx].text.upper()
     tok = toks[idx]
@@ -327,7 +340,7 @@ def _s4b_ddl_finding(
             ),
             locator=f"{rel}:{tok.line}",
         )
-    if zone in ("silver", "gold") and in_txn:
+    if zone in ("silver", "gold") and state.in_txn:
         return None  # DROP+CREATE-in-transaction pattern: PASS (idempotent rebuild)
     return _s4b_finding_for_bare_ddl(rel, tok, upper, zone)
 
@@ -348,7 +361,8 @@ def _s4b_findings_for_file(rel: str, toks: list[SqlToken]) -> list[Finding]:
             continue
         if tok.text.upper() not in _DDL_VERBS:
             continue
-        finding = _s4b_ddl_finding(rel, toks, idx, in_txn=in_txn, stmt_open=stmt_open)
+        state = _S4bScanState(in_txn=in_txn, stmt_open=stmt_open)
+        finding = _s4b_ddl_finding(rel, toks, idx, state)
         if finding is not None:
             findings.append(finding)
         # A statement-starting DDL verb opens a statement (until its `;`); a
