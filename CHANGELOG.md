@@ -27,6 +27,12 @@ explicitly identifies a public release event.
 
 ## [Unreleased]
 
+### Changed
+- `seshat profile --format json` no longer prints the human progress banner to
+  stderr, so a merged-stream pipe (`seshat profile ... --format json 2>&1 | jq`)
+  receives pure JSON. The banner is retained in the default (text) output mode;
+  DB-boundary errors stay on stderr in both modes. (#436)
+
 ## [0.6.1] -- 2026-07-22
 
 ### Fixed
