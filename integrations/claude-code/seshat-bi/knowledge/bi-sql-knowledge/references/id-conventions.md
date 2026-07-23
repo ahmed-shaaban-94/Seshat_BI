@@ -8,7 +8,7 @@ each other precisely. Every ID is permanent once assigned; never renumber.
 | Prefix | Means | Range / form | Lives in |
 |---|---|---|---|
 | `SC-NNN` | **Concept card** | `SC-001` .. `SC-070` | `knowledge/*.md` (one `### SC-NNN` header) |
-| `SQL-AP-NNN` | **Anti-pattern** | `SQL-AP-001` .. `SQL-AP-060` | `knowledge/sql-anti-patterns.md` |
+| `SQL-AP-NNN` | **Anti-pattern** | `SQL-AP-001` .. `SQL-AP-061` | `knowledge/sql-anti-patterns.md` |
 | `VP-<NAME>` | **Validation / reconciliation gate** | named (e.g. `VP-UNIQUE`, `VP-DIFF`) | `patterns/sql-validation-patterns.json` |
 | `PB-SQL-NN` | **Diagnostic playbook** | `PB-SQL-01` .. `PB-SQL-19` | `knowledge/sql-diagnostics-playbook.md` |
 | `SP-<NAME>` | **Practical pattern card** | named (e.g. `SP-FANOUT-SAFE-AGG`) | `patterns/sql-patterns.json` |

@@ -28,7 +28,7 @@
 | **Use window functions** | `knowledge/sql-window-functions.md` (SC-015..020) | `patterns/sql-patterns.json` (window patterns) |
 | **Do date / time analysis** | `knowledge/sql-date-time-analysis.md` (SC-021..026), `knowledge/sql-cookbook-extension-notes.md` (SC-059..063 recipes) | `patterns/sql-patterns.json` (date patterns) |
 | **Write silver / gold SQL transformation logic** | `knowledge/sql-transformation-patterns.md` (SC-044..058), `knowledge/sql-reconciliation-playbook.md` (SC-032 idempotency) | `checklists/sql-review-checklist.md`; VP-DEDUP, VP-CONTROLTOTAL |
-| **Review SQL for anti-patterns** | `knowledge/sql-anti-patterns.md` (SQL-AP-001..060) | `patterns/sql-analyzer-rules.json` (SAR-*); `checklists/sql-review-checklist.md` |
+| **Review SQL for anti-patterns** | `knowledge/sql-anti-patterns.md` (SQL-AP-001..061) | `patterns/sql-analyzer-rules.json` (SAR-*); `checklists/sql-review-checklist.md` |
 | **Reason about performance** | `knowledge/sql-performance-notes.md` (SC-033..038) | `knowledge/sql-diagnostics-playbook.md` PB-SQL-11/12 |
 | **Run a diagnostic playbook** | `knowledge/sql-diagnostics-playbook.md` (PB-SQL-01..19) | the matching PB-SQL-* verdict + fix + stop rule |
 | **Get training questions** | `references/agent-training-set.json` (84 graded items) | a scored answer against the rubric |
@@ -75,7 +75,7 @@ bi-sql-knowledge/
   - sql-date-time-analysis.md                SC-021..026  truncation, date spine, ranges, YoY/MoM
   - sql-reconciliation-playbook.md           SC-027..032  validation gates, control totals, freshness, idempotency
   - sql-transformation-patterns.md           SC-044..058  silver/gold: DML/MERGE, reshaping, string cleaning
-  - sql-anti-patterns.md                     SQL-AP-001..060
+  - sql-anti-patterns.md                     SQL-AP-001..061
   - sql-performance-notes.md                 SC-033..038  sargability, SELECT *, cross joins, CTE grain
   - sql-diagnostics-playbook.md              PB-SQL-01..19  symptom -> cause -> checks -> fix -> stop rule
   - sql-cookbook-extension-notes.md          SC-039..043, 059..070  set ops, date recipes, gaps/islands, hierarchy, metadata

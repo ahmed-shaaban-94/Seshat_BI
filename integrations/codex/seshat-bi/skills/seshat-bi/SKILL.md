@@ -80,3 +80,100 @@ seshat adopt-pbip scaffold --project <PBIP-project-directory> --accept-assessmen
 
 This writes at most `.seshat/adoption/pbip-adoption.yaml`; it never initializes
 Git, overwrites existing files, grants approval, or advances readiness.
+
+## Resetting / re-running a project
+
+There is no `seshat reset` verb yet (tracked separately). Until it ships, reset
+a single table's derived state by hand, preserving its bronze landing, then
+re-run readiness from Source.
+
+**STOP first -- two cases this manual reset does NOT cover; hand them to the
+owner rather than deleting blindly:**
+
+1. **Shared conformed dimension.** If this table OWNS a conformed dimension that
+   another star reuses, its `dbt/models/marts/<table>/` holds the sole dbt model
+   the reuser resolves via `ref()` (the kit emits no duplicate model for
+   non-owners). Deleting the marts folder would break the other star's build.
+   Check `docs/quality/conformed-dimension-map.yaml`: if this table is the OWNER
+   of any dimension listed with other-star reusers, **do not run this manual
+   reset** -- ownership transfer / dependent regeneration is an owner decision.
+2. **Downstream Power BI artifacts.** If this table reached Semantic Model or
+   Dashboard, committed `powerbi/*.SemanticModel` / report artifacts still point
+   at the gold objects you are about to remove. This checklist does NOT rewrite
+   or quarantine them -- leaving them would let Power BI keep reading stale gold
+   while `seshat next` reports Source. If a `powerbi/` artifact references this
+   table's gold entities, **stop and hand the PBIP teardown to the owner** (a
+   shared semantic model especially must be handled explicitly, never bulk
+   deleted).
+
+If neither case applies (no conformed-dimension ownership, no downstream PBIP),
+this table's artifacts are table-local and the reset below is safe.
+
+First LIST what you are about to remove and confirm every path is for THIS
+table -- never delete by a bare `<table>*` wildcard. A prefix wildcard is
+dangerous when one table id is a prefix of another (e.g. `orders` also matches
+`orders_archive`): `*_create_silver_<table>*.sql` would sweep the other table's
+migrations too, and a later broad `git add` would then stage that unrelated data
+loss. Enumerate the exact migration files and eyeball them before removing:
+
+```powershell
+# 1. Enumerate the migration SQL for THIS table -- review the list first.
+Get-ChildItem warehouse/migrations |
+  Where-Object { $_.Name -match "_create_(silver|gold)_<table>(_|\.)" }
+```
+
+Once the list is confirmed to contain only this table's files, remove the
+derived artifacts (exact per-table paths, not prefix globs):
+
+```powershell
+Remove-Item -Recurse -Force mappings/<table>
+# remove ONLY the confirmed migration files from the list above, e.g.:
+Remove-Item -Force warehouse/migrations/0003_create_silver_<table>.sql
+Remove-Item -Force warehouse/migrations/0004_create_gold_<table>_star.sql
+Remove-Item -Recurse -Force dbt/models/staging/<table>
+Remove-Item -Recurse -Force dbt/models/marts/<table>
+Remove-Item -Recurse -Force dbt/models/audit/<table>
+```
+
+This covers `mappings/<table>/` (including its nested `dbt-evidence/`
+subfolder -- it lives under the mapping directory, not as a separate
+top-level path), the silver and gold migration SQL for that table (plus any
+generated `warehouse/gold/` or `warehouse/schema/` outputs), and the three
+per-table dbt model folders. Do not touch the bronze landing. In a multi-table
+workspace, also confirm the shared dbt files (`dbt/models/sources/_sources.yml`,
+`dbt/selectors.yml`) no longer reference this table's gold entities -- edit out
+only this table's rows, leaving other tables' rows intact.
+
+The materialized dagster project under `orchestration/dagster/` is
+regenerable rather than hand-edited; if it references the removed table,
+regenerate it with `seshat dagster init`.
+
+Stage the deletions before running `seshat check` -- an unstaged delete can
+leave the static gate reading stale tracked content. Stage the SPECIFIC paths
+you removed (and the shared-file edits), not a blanket `git add -A` -- a bare
+`-A` would also stage any unrelated working-tree change, including a mistaken
+deletion of another table's files:
+
+```powershell
+# stage exactly the paths reset above -- review `git status` first
+git add mappings/<table> `
+        warehouse/migrations/0003_create_silver_<table>.sql `
+        warehouse/migrations/0004_create_gold_<table>_star.sql `
+        dbt/models/staging/<table> dbt/models/marts/<table> `
+        dbt/models/audit/<table> `
+        dbt/models/sources/_sources.yml dbt/selectors.yml
+seshat check
+seshat next --format agent --table <table>
+```
+
+Then verify no residual state remains by inspecting the per-table and shared
+artifacts directly -- do NOT rely on `.seshat/manifest.yaml`, which records the
+kit's integrity fingerprint (kit-source / compass / integration receipts), not
+onboarded tables, so it never mentions a table and would give a false
+all-clear. A truthful reset means: `mappings/<table>/` is gone, no
+`*_<table>*.sql` migration remains, the three `dbt/models/*/<table>/` folders
+are gone, and the shared dbt files carry no rows for this table. Pass
+`--table <table>` to `seshat next` so it reports THIS table's stage (without it,
+`next` focuses the portfolio's most urgent OTHER table and cannot confirm the
+reset) -- it should now report a fresh Source stage; if it does not, the reset
+is incomplete.
