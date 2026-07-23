@@ -306,9 +306,11 @@ the value even reviewed fully by hand.
 - F009 (metric-contract store), F010 (semantic-model readiness), and F011
   (dashboard-design skill) remain the substrate; this feature only adds the
   judgment layer between F010's pass and F011's layout step.
-- The narrative check lives in the existing installed-helper family (extending
-  `dashboard-gaps` / `pbir-validate-blueprint` conventions) rather than a new
-  top-level verb; exact verb naming is a plan-time decision.
+- The narrative check follows the installed-helper family's conventions
+  (read-only, categorical findings, named blockers, fail-closed); the plan
+  settles its shape as a small dedicated verb (`seshat narrative-check`)
+  rather than overloading `dashboard-gaps`, whose page-intent surface is
+  under repair in #453.
 - The brief's location follows the mapping-artifact convention
   (`mappings/<table>/`); multi-table subject areas are out of scope for v1 and
   compose as one brief per table.
