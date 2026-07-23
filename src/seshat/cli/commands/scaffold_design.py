@@ -44,11 +44,16 @@ def scaffold_design_main(args: argparse.Namespace) -> int:
     # could start dashboard design before metric contracts, or Stage 7 before Stage
     # 6 passes (constitution hard-stops). Route the next step through the governed
     # `next`, which reports the table's actual stage and the allowed next action.
+    # Carry --repo into the follow-up so `next` inspects THIS workspace, not the
+    # caller's cwd (the next parser defaults --repo to '.'), mirroring
+    # scaffold-source (Codex #451).
+    repo_arg = f" --repo {args.repo}" if args.repo not in (".", "") else ""
     print(
         f"\nnext: the blank templates are ready to copy. Run "
-        f"`{prog} next --table <table>` for the governed next action -- fill a "
-        f"design/handoff template only when your table has reached that stage "
-        f"(dashboard authoring needs metric contracts; the publish pack needs "
-        f"Dashboard Ready). scaffold-design writes blanks only; it grants nothing."
+        f"`{prog} next{repo_arg} --table <table>` for the governed next action -- "
+        f"fill a design/handoff template only when your table has reached that "
+        f"stage (dashboard authoring needs metric contracts; the publish pack "
+        f"needs Dashboard Ready). scaffold-design writes blanks only; it grants "
+        f"nothing."
     )
     return 0

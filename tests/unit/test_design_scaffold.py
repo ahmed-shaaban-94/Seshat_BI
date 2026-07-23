@@ -159,6 +159,36 @@ def test_cli_scaffold_design_smoke(tmp_path: Path) -> None:
         assert (tmp_path / rel).is_file()
 
 
+def test_cli_scaffold_design_carries_repo_into_next_hint(
+    tmp_path: Path, capsys
+) -> None:
+    """Codex #451 P2: when `--repo` points elsewhere than the cwd, the governed
+    `next` follow-up must carry `--repo <dir>` (mirroring scaffold-source) so
+    `next` inspects THIS workspace, not the caller's cwd."""
+    from seshat.cli import main
+
+    exit_code = main(["scaffold-design", "--repo", str(tmp_path)])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert f"next --repo {tmp_path} --table" in out
+
+
+def test_cli_scaffold_design_omits_repo_flag_when_repo_is_cwd(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """When --repo is the default '.', the next hint omits the redundant flag."""
+    from seshat.cli import main
+
+    monkeypatch.chdir(tmp_path)
+    exit_code = main(["scaffold-design", "--repo", "."])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "next --table" in out
+    assert "--repo ." not in out
+
+
 def test_cli_scaffold_design_refuses_a_non_directory_repo(
     tmp_path: Path, capsys
 ) -> None:
