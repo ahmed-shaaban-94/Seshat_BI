@@ -87,11 +87,33 @@ There is no `seshat reset` verb yet (tracked separately). Until it ships, reset
 a single table's derived state by hand, preserving its bronze landing, then
 re-run readiness from Source.
 
+**STOP first -- two cases this manual reset does NOT cover; hand them to the
+owner rather than deleting blindly:**
+
+1. **Shared conformed dimension.** If this table OWNS a conformed dimension that
+   another star reuses, its `dbt/models/marts/<table>/` holds the sole dbt model
+   the reuser resolves via `ref()` (the kit emits no duplicate model for
+   non-owners). Deleting the marts folder would break the other star's build.
+   Check `docs/quality/conformed-dimension-map.yaml`: if this table is the OWNER
+   of any dimension listed with other-star reusers, **do not run this manual
+   reset** -- ownership transfer / dependent regeneration is an owner decision.
+2. **Downstream Power BI artifacts.** If this table reached Semantic Model or
+   Dashboard, committed `powerbi/*.SemanticModel` / report artifacts still point
+   at the gold objects you are about to remove. This checklist does NOT rewrite
+   or quarantine them -- leaving them would let Power BI keep reading stale gold
+   while `seshat next` reports Source. If a `powerbi/` artifact references this
+   table's gold entities, **stop and hand the PBIP teardown to the owner** (a
+   shared semantic model especially must be handled explicitly, never bulk
+   deleted).
+
+If neither case applies (no conformed-dimension ownership, no downstream PBIP),
+this table's artifacts are table-local and the reset below is safe.
+
 First LIST what you are about to remove and confirm every path is for THIS
 table -- never delete by a bare `<table>*` wildcard. A prefix wildcard is
 dangerous when one table id is a prefix of another (e.g. `orders` also matches
 `orders_archive`): `*_create_silver_<table>*.sql` would sweep the other table's
-migrations too, and the later `git add -A` would then stage that unrelated data
+migrations too, and a later broad `git add` would then stage that unrelated data
 loss. Enumerate the exact migration files and eyeball them before removing:
 
 ```powershell
@@ -127,10 +149,19 @@ regenerable rather than hand-edited; if it references the removed table,
 regenerate it with `seshat dagster init`.
 
 Stage the deletions before running `seshat check` -- an unstaged delete can
-leave the static gate reading stale tracked content:
+leave the static gate reading stale tracked content. Stage the SPECIFIC paths
+you removed (and the shared-file edits), not a blanket `git add -A` -- a bare
+`-A` would also stage any unrelated working-tree change, including a mistaken
+deletion of another table's files:
 
 ```powershell
-git add -A
+# stage exactly the paths reset above -- review `git status` first
+git add mappings/<table> `
+        warehouse/migrations/0003_create_silver_<table>.sql `
+        warehouse/migrations/0004_create_gold_<table>_star.sql `
+        dbt/models/staging/<table> dbt/models/marts/<table> `
+        dbt/models/audit/<table> `
+        dbt/models/sources/_sources.yml dbt/selectors.yml
 seshat check
 seshat next --format agent --table <table>
 ```
