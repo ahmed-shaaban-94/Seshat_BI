@@ -296,54 +296,52 @@ def _is_statement_start_verb(toks: list[SqlToken], idx: int) -> bool:
     return idx == 0 or prev == ";" or prev in _TXN_BOUNDARY_VERBS
 
 
+def _s4b_ddl_finding(
+    rel: str, toks: list[SqlToken], idx: int, *, in_txn: bool
+) -> Finding | None:
+    """The S4b finding for the DDL verb at ``idx``, or ``None`` when it passes.
+
+    Passes (returns ``None``) when the verb is not a statement-starting DDL verb
+    (a mid-statement sub-clause keyword like the inner ALTER of `ALTER COLUMN`,
+    #442), is a guarded form, or is a silver/gold statement inside a transaction
+    (the idempotent DROP+CREATE rebuild pattern). bronze bare DDL is an ERROR;
+    everything else is the WARNING built by ``_s4b_finding_for_bare_ddl``.
+    """
+    if not _is_statement_start_verb(toks, idx) or _is_guarded(toks, idx):
+        return None
+    upper = toks[idx].text.upper()
+    tok = toks[idx]
+    zone = schema_zone(toks, idx)
+    if zone == "bronze":
+        return Finding(
+            rule_id="S4b",
+            severity=Severity.ERROR,
+            message=(
+                f"S4b bronze.* bare {upper} destroys/clobbers source-of-truth; "
+                "use a guarded form (IF [NOT] EXISTS)"
+            ),
+            locator=f"{rel}:{tok.line}",
+        )
+    if zone in ("silver", "gold") and in_txn:
+        return None  # DROP+CREATE-in-transaction pattern: PASS (idempotent rebuild)
+    return _s4b_finding_for_bare_ddl(rel, tok, upper, zone)
+
+
 def _s4b_findings_for_file(rel: str, toks: list[SqlToken]) -> list[Finding]:
     """S4b findings for one file's already-tokenized content."""
     findings: list[Finding] = []
     in_txn = False  # stateful flag toggled by BEGIN / COMMIT / ROLLBACK
 
     for idx, tok in enumerate(toks):
-        upper = tok.text.upper()
-
         boundary_state = _txn_boundary_state(toks, idx, in_txn)
         if boundary_state is not None:
             in_txn = boundary_state
             continue
-
-        if upper not in _DDL_VERBS:
+        if tok.text.upper() not in _DDL_VERBS:
             continue
-
-        # A DDL keyword mid-statement (e.g. the inner ALTER of `ALTER TABLE t
-        # ALTER COLUMN c ...`) is a sub-clause, not a new statement; only the
-        # statement-leading verb governs the target schema zone (#442).
-        if not _is_statement_start_verb(toks, idx):
-            continue
-
-        # Guarded forms pass unconditionally (any zone).
-        if _is_guarded(toks, idx):
-            continue
-
-        zone = schema_zone(toks, idx)
-
-        if zone == "bronze":
-            findings.append(
-                Finding(
-                    rule_id="S4b",
-                    severity=Severity.ERROR,
-                    message=(
-                        f"S4b bronze.* bare {upper} destroys/clobbers "
-                        "source-of-truth; use a guarded form "
-                        "(IF [NOT] EXISTS)"
-                    ),
-                    locator=f"{rel}:{tok.line}",
-                )
-            )
-            continue
-
-        if zone in ("silver", "gold") and in_txn:
-            # DROP+CREATE-in-transaction pattern: PASS (idempotent rebuild).
-            continue
-
-        findings.append(_s4b_finding_for_bare_ddl(rel, tok, upper, zone))
+        finding = _s4b_ddl_finding(rel, toks, idx, in_txn=in_txn)
+        if finding is not None:
+            findings.append(finding)
 
     return findings
 
