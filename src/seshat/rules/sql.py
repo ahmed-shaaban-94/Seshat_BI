@@ -228,6 +228,18 @@ _DDL_VERBS = frozenset({"CREATE", "ALTER", "DROP"})
 _TXN_BOUNDARY_VERBS = frozenset({"BEGIN", "START", "COMMIT", "ROLLBACK"})
 
 
+# Tokens that CLOSE an open DDL statement. `;` is the SQL terminator; the psql
+# buffer-sending meta-commands `\g`, `\gx`, `\gexec` are documented as equivalent to
+# `;` (they send the current query buffer to the server) and a `psql -f` migration
+# may legitimately use them instead of `;`. The tokenizer preserves the backslash
+# (see sql.py::_scan_meta_command), so each is a distinct terminator token here and
+# an unguarded `DROP TABLE bronze.x \g` followed by another statement is NOT masked
+# as a sub-clause. Scope note: only the buffer-SENDING family terminates; `\set`,
+# `\i`, `\echo` etc. do not send the buffer and are (correctly) not terminators.
+# psql meta-command reference: https://www.postgresql.org/docs/current/app-psql.html
+_STATEMENT_TERMINATORS = frozenset({";", "\\g", "\\gx", "\\gexec"})
+
+
 def _txn_boundary_state(toks: list[SqlToken], idx: int, in_txn: bool) -> bool | None:
     """If toks[idx] is a transaction-boundary keyword, return the (possibly
     unchanged) `in_txn` state to carry forward; otherwise return None (not a
@@ -294,9 +306,14 @@ def _is_statement_start_verb(stmt_open: bool) -> bool:
     Tracking open-vs-closed (rather than the previous token) also closes a hole a
     naive `prev == ";"` check left: a line-oriented psql meta-command such as
     `\\set ON_ERROR_STOP on` carries no ``;`` (warehouse/README.md applies these
-    files with `psql -f`), and the tokenizer strips its leading backslash. With no
-    statement open, the following `DROP TABLE bronze.x` is correctly a NEW
-    statement start and still fires the bronze-source-of-truth ERROR.
+    files with `psql -f`). With no statement open, the following `DROP TABLE
+    bronze.x` is correctly a NEW statement start and still fires the
+    bronze-source-of-truth ERROR. The buffer-sending meta-commands `\\g`/`\\gx`/
+    `\\gexec` are the converse case: they DO close the current statement (they send
+    the query buffer, like ``;``), so they are members of `_STATEMENT_TERMINATORS`
+    and an unguarded `DROP TABLE bronze.x \\g` before another statement is not
+    masked as a sub-clause. The tokenizer preserves the backslash so `\\g` is a
+    distinct token, not an identifier `g`.
     """
     return not stmt_open
 
@@ -352,8 +369,8 @@ def _s4b_findings_for_file(rel: str, toks: list[SqlToken]) -> list[Finding]:
     stmt_open = False  # a DDL statement is open until its `;` (sub-clause tracking)
 
     for idx, tok in enumerate(toks):
-        if tok.text == ";":
-            stmt_open = False  # statement terminator closes the open DDL statement
+        if tok.text in _STATEMENT_TERMINATORS:
+            stmt_open = False  # `;` or a buffer-sending psql meta-command (\g/\gx)
             continue
         boundary_state = _txn_boundary_state(toks, idx, in_txn)
         if boundary_state is not None:

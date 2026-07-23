@@ -419,12 +419,13 @@ def test_s4b_qualified_alter_column_outside_txn_still_warns(tmp_path: Path) -> N
 
 def test_s4b_bronze_drop_after_psql_metacommand_still_errors(tmp_path: Path) -> None:
     """#442 follow-up (Codex P1): a line-oriented psql meta-command (`\set
-    ON_ERROR_STOP on`) carries no `;` and the tokenizer strips its backslash, so a
-    following `DROP TABLE bronze.<t>` must NOT be mistaken for a sub-clause and
-    skipped -- that would let an unguarded source-of-truth deletion pass the gate.
-    warehouse/README.md applies these files with `psql -f`, so meta-commands are a
-    valid context. The statement-open tracker treats the DROP as a new statement
-    (no DDL statement is open) and still fires the bronze ERROR."""
+    ON_ERROR_STOP on`) carries no `;`, so a following `DROP TABLE bronze.<t>` must
+    NOT be mistaken for a sub-clause and skipped -- that would let an unguarded
+    source-of-truth deletion pass the gate. warehouse/README.md applies these files
+    with `psql -f`, so meta-commands are a valid context. `\set` does NOT send the
+    query buffer, so it is not a terminator; the statement-open tracker treats the
+    DROP as a new statement (no DDL statement is open) and still fires the bronze
+    ERROR."""
     sql = "\set ON_ERROR_STOP on\nDROP TABLE bronze.raw_sales;\n"
     rel = _write(tmp_path, "warehouse/error_s4b_psql_bronze.sql", sql)
     findings = list(s4b_guard_form(_ctx(tmp_path, rel)))
@@ -432,6 +433,27 @@ def test_s4b_bronze_drop_after_psql_metacommand_still_errors(tmp_path: Path) -> 
     assert len(s4b) == 1
     assert s4b[0].severity is Severity.ERROR
     assert "bronze.* bare DROP" in s4b[0].message
+
+
+def test_s4b_bronze_drop_terminated_by_g_meta_command_still_errors(
+    tmp_path: Path,
+) -> None:
+    r"""#442/#448 follow-up (Codex P1): the psql buffer-sending meta-command `\g`
+    is documented as equivalent to `;` -- it terminates the statement. A `psql -f`
+    migration may write `DROP TABLE bronze.x \g` then a SECOND statement; because
+    the tokenizer preserves the backslash, `\g` closes the first statement so the
+    second bronze DDL is a NEW statement start and still fires the bronze ERROR --
+    it is not swallowed as a sub-clause of an (incorrectly) still-open statement.
+    `\gx` and `\gexec` are in the same buffer-sending family."""
+    sql = "DROP TABLE bronze.raw_sales \\g\nDROP TABLE bronze.raw_orders;\n"
+    rel = _write(tmp_path, "warehouse/error_s4b_g_meta_bronze.sql", sql)
+    findings = list(s4b_guard_form(_ctx(tmp_path, rel)))
+    s4b = [f for f in findings if f.rule_id == "S4b"]
+    # BOTH bronze DROPs must ERROR: the first is a statement start; `\g` closes it,
+    # so the second is a fresh statement start, not a masked sub-clause.
+    assert len(s4b) == 2, findings
+    assert all(f.severity is Severity.ERROR for f in s4b)
+    assert all("bronze.* bare DROP" in f.message for f in s4b)
 
 
 def test_s4b_alter_column_on_its_own_line_in_txn_no_finding(tmp_path: Path) -> None:
