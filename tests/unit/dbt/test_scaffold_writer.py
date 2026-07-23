@@ -258,3 +258,31 @@ def test_write_model_file_does_not_guard_models_yml_by_basename(
     written = writer.write_model_file(tmp_path, other_relative, "version: 2\n")
 
     assert written is True
+
+
+def test_collision_scan_refuses_a_symlinked_models_root(tmp_path: Path) -> None:
+    """Codex #444: the same-name-different-layout collision scan must not follow a
+    symlinked `dbt/models` (or component) and scan an external tree -- a hang/DoS
+    risk and a misleading out-of-workspace basename match. The scan refuses closed
+    with SafeWriteError before rglob-ing."""
+    import os
+
+    external = tmp_path / "external"
+    (external / "audit").mkdir(parents=True)
+    (external / "audit" / "audit_table_a_parity.sql").write_text(
+        "select 1\n", encoding="utf-8"
+    )
+    (tmp_path / "dbt").mkdir()
+    try:
+        os.symlink(external, tmp_path / "dbt" / "models", target_is_directory=True)
+    except (OSError, NotImplementedError):
+        import pytest
+
+        pytest.skip("symlink creation not permitted in this environment")
+
+    with pytest.raises(SafeWriteError, match="symlink"):
+        writer.write_model_file(
+            tmp_path,
+            "dbt/models/audit/table_a/audit_table_a_parity.sql",
+            "select 2\n",
+        )

@@ -11,6 +11,8 @@ or clobber another's rows. Both merges add only what is missing.
 
 from __future__ import annotations
 
+import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import yaml
@@ -218,6 +220,23 @@ def _model_dir(plan: ScaffoldPlan, model: ModelSpec) -> str:
     return f"dbt/models/{model.layer}/{plan.table_id}"
 
 
+def _iter_sql_no_symlinks(models_root: Path, basename: str) -> Iterator[Path]:
+    """Yield every ``basename`` under ``models_root`` WITHOUT following symlinks.
+
+    ``Path.rglob`` descends into symlinked subdirectories, which could scan an
+    external tree (Codex #444); ``os.walk(followlinks=False)`` stays inside the
+    workspace. Symlinked directory entries are pruned from the descent, and a
+    symlinked file matching ``basename`` is skipped (its real dbt-model home, if
+    any, is found on its own non-symlinked path).
+    """
+    for dirpath, dirnames, filenames in os.walk(models_root, followlinks=False):
+        dirnames[:] = [d for d in dirnames if not (Path(dirpath) / d).is_symlink()]
+        if basename in filenames:
+            candidate = Path(dirpath) / basename
+            if not candidate.is_symlink():
+                yield candidate
+
+
 def _refuse_model_name_collision(root: Path, relative: str) -> None:
     """Refuse a ``.sql`` model file whose dbt model NAME (its basename) already
     exists at a DIFFERENT path under ``dbt/models/`` -- e.g. a pre-existing
@@ -242,7 +261,13 @@ def _refuse_model_name_collision(root: Path, relative: str) -> None:
     models_root = root / "dbt" / "models"
     if not models_root.is_dir():
         return
-    for existing in models_root.rglob(target.name):
+    # Before scanning, refuse a symlinked `dbt/`, `dbt/models`, or any component
+    # up to the repo root: `rglob` would follow such a starting symlink and scan
+    # an EXTERNAL target (a hang/DoS risk, and a basename match outside the
+    # workspace would raise a misleading collision) -- Codex #444. The write
+    # itself is independently symlink-guarded by write_if_absent below.
+    _refuse_symlinked_components(root, models_root / target.name)
+    for existing in _iter_sql_no_symlinks(models_root, target.name):
         if existing.resolve() == (root / relative).resolve():
             continue  # the rerun/no-collision case: same path, not a collision
         raise ScaffoldError(
