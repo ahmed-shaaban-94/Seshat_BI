@@ -32,6 +32,12 @@ explicitly identifies a public release event.
   stderr, so a merged-stream pipe (`seshat profile ... --format json 2>&1 | jq`)
   receives pure JSON. The banner is retained in the default (text) output mode;
   DB-boundary errors stay on stderr in both modes. (#436)
+- `seshat generate` now accepts an inline aggregation-call denominator
+  (e.g. `DIVIDE(SUM(...), DISTINCTCOUNT(...))`) in a `kind: ratio` contract, verified
+  through the same L3 shape recognition the `kind: base` path uses, making Average
+  Transaction Value and similar ratios machine-generatable inside the
+  generate->verify guarantee. Genuinely unrecognized denominators still escalate.
+  (#432)
 
 ### Fixed
 - S4b no longer false-flags a schema-qualified `ALTER TABLE <schema>.<t> ALTER COLUMN
