@@ -50,6 +50,7 @@ from seshat.dbt.planning import (
 )
 from seshat.dbt.project import validate_project
 from seshat.dbt.redaction import (
+    DEFAULTED_DBT_ENVIRONMENT_KEYS,
     REQUIRED_DBT_ENVIRONMENT_KEYS,
     EnvironmentConfigError,
     load_child_environment,
@@ -212,6 +213,24 @@ def _verify_environment(root: Path) -> None:
     if missing_keys:
         raise _pending(
             "required dbt environment keys are missing: " + ", ".join(missing_keys)
+        )
+    # A defaulted key (port/schema/sslmode) may be ABSENT -- dbt's
+    # env_var(NAME, DEFAULT) supplies the documented default. But an EXPLICITLY
+    # EMPTY override (`SESHAT_DBT_PORT=` in .env) is forwarded verbatim by
+    # load_child_environment and does NOT trigger dbt's fallback, so dbt would
+    # receive an empty port/schema/sslmode -- a target inconsistent with static
+    # validation, or an outright failure. Reject present-but-empty (Codex #445);
+    # still allow absent.
+    empty_defaulted = [
+        key
+        for key in DEFAULTED_DBT_ENVIRONMENT_KEYS
+        if key in environment and not environment[key].strip()
+    ]
+    if empty_defaulted:
+        raise _pending(
+            "dbt environment keys are set but empty (unset them to use the "
+            "documented default, or give a value): "
+            + ", ".join(sorted(empty_defaulted))
         )
 
 

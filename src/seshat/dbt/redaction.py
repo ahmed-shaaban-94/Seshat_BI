@@ -51,11 +51,13 @@ _SECRET_ENVIRONMENT_KEYS = tuple(
 # and defaulted. `seshat dbt doctor` must not flag these as missing required
 # keys; the remaining keys (host/user/password/dbname) have no YAML default and
 # stay required.
-_DEFAULTED_ENVIRONMENT_KEYS = frozenset(
+# Public: `dbt doctor` (_verify_environment) reads this to treat these keys as
+# optional-when-absent but reject a present-but-empty override (#437, #445).
+DEFAULTED_DBT_ENVIRONMENT_KEYS = frozenset(
     {"SESHAT_DBT_PORT", "SESHAT_DBT_SCHEMA", "SESHAT_DBT_SSLMODE"}
 )
 REQUIRED_DBT_ENVIRONMENT_KEYS = tuple(
-    key for key in DBT_ENVIRONMENT_KEYS if key not in _DEFAULTED_ENVIRONMENT_KEYS
+    key for key in DBT_ENVIRONMENT_KEYS if key not in DEFAULTED_DBT_ENVIRONMENT_KEYS
 )
 
 _RUNTIME_ENVIRONMENT_KEYS = (

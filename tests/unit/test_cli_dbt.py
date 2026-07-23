@@ -243,6 +243,26 @@ def test_doctor_environment_check_still_requires_genuine_keys(
         module._verify_environment(tmp_path)
 
 
+def test_doctor_rejects_a_present_but_empty_defaulted_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex #445: a defaulted key may be ABSENT (dbt uses env_var's default), but
+    an explicitly EMPTY override (`SESHAT_DBT_PORT=`) is forwarded verbatim and does
+    NOT trigger dbt's fallback -- so doctor must reject it, not pass and let dbt
+    receive an empty port/schema/sslmode."""
+    import seshat.cli.commands.dbt as module
+
+    _clear_dbt_environment(monkeypatch)
+    monkeypatch.setenv("SESHAT_DBT_HOST", "db.example.com")
+    monkeypatch.setenv("SESHAT_DBT_USER", "seshat")
+    monkeypatch.setenv("SESHAT_DBT_PASSWORD", "hunter2")
+    monkeypatch.setenv("SESHAT_DBT_DBNAME", "ezaby_demo")
+    monkeypatch.setenv("SESHAT_DBT_SCHEMA", "")  # present but empty -> must reject
+
+    with pytest.raises(module.DbtUnavailable, match="SESHAT_DBT_SCHEMA"):
+        module._verify_environment(tmp_path)
+
+
 @pytest.mark.parametrize(
     "case",
     (
