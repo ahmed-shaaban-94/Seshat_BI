@@ -24,7 +24,7 @@ are grain errors; naming the grain usually reveals them.
 
 ## What is here
 
-- **`knowledge/`** -- concept cards (`SC-001..070`), anti-patterns (`SQL-AP-001..060`), the
+- **`knowledge/`** -- concept cards (`SC-001..070`), anti-patterns (`SQL-AP-001..061`), the
   consolidated diagnostics playbook (`PB-SQL-01..19`), and the transformation / Cookbook-extension
   notes. Markdown for reasoning.
 - **`patterns/`** -- structured JSON: practical pattern cards (`SP-*`), validation/reconciliation

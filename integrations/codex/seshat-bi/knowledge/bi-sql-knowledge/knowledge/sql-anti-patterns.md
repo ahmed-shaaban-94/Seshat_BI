@@ -1,6 +1,6 @@
 # SQL Anti-Patterns
 
-> The mistakes that produce wrong numbers, slow queries, or unmaintainable SQL (SQL-AP-001..060). Each entry: the mistake, why it's wrong, the fix, and links. Flag these on review; never emit them on generation. See `../references/source-map.md`.
+> The mistakes that produce wrong numbers, slow queries, or unmaintainable SQL (SQL-AP-001..061). Each entry: the mistake, why it's wrong, the fix, and links. Flag these on review; never emit them on generation. See `../references/source-map.md`.
 
 ## Slice 1 entries (grain, counts, aggregation, logical order)
 
@@ -462,3 +462,9 @@
 - **Why wrong.** Schema drift (added/renamed/dropped columns) silently breaks checks or leaves blind spots.
 - **Fix.** Read the live catalog (`information_schema`) and reconcile against expected schema; flag drift (SC-068).
 - **Links.** SC-068 - SARC-METADATA-DRIFT-01.
+
+### SQL-AP-061 -- Matching a non-ASCII/RTL literal on a shell command line
+- **Mistake.** Passing a non-ASCII/RTL literal (e.g. Arabic) straight into a `LIKE`/`=` filter on a shell command line, e.g. `psql -c "... WHERE billing_type LIKE 'literal%'"`.
+- **Why wrong.** The shell/terminal can mangle the UTF-8 bytes before `psql` ever sees them (encoding, locale, or RTL reordering); the query runs and returns a plausible-looking result with **no error**, just far fewer (or zero) matching rows. Real case: the mangled literal returned 376 rows instead of 12,365 -- a returns KPI silently off by 97%.
+- **Fix.** Key the flag/translation on an ASCII code column, not the RTL text, in a shared CTE (translate-then-flag on the code). If a literal is unavoidable, use a pure-ASCII unicode escape (`E'\uXXXX...'`) instead of typing the RTL text, or run it via `psql -f` against a UTF-8 file instead of `-c` on the command line.
+- **Links.** SC-054 - SARC-STR-NORMALIZE-01 (unaccent/canonicalize before matching); SQL-AP-050 (grouping/joining on un-normalized text); SQL-AP-005 (a wrong-but-plausible number with no error).

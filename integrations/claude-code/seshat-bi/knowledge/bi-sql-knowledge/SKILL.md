@@ -42,7 +42,8 @@ grain / keys / uniqueness; joins and **fan-out amplification**; aggregation corr
 (`COUNT` / `SUM` / `AVG`, `GROUP BY`); `COUNT` and `NULL` semantics; deduplication; **validation**
 and **reconciliation** queries; silver/gold transformation logic (DML, reshaping, cleaning,
 set operations, date recipes, gaps/islands, hierarchy, metadata-driven profiling); window and
-date/time analytics; SQL anti-patterns; and basic performance reasoning.
+date/time analytics; SQL anti-patterns (including shell/encoding pitfalls like matching a
+non-ASCII/RTL literal on a command line); and basic performance reasoning.
 
 ## What this skill is NOT for
 
@@ -87,7 +88,7 @@ A validated gold table with a known grain and verified unique keys is the hand-o
 
 ## ID conventions (full detail in `references/id-conventions.md`)
 
-Concepts `SC-001..070` - anti-patterns `SQL-AP-001..060` - validation gates `VP-*` -
+Concepts `SC-001..070` - anti-patterns `SQL-AP-001..061` - validation gates `VP-*` -
 diagnostic playbooks `PB-SQL-01..19` - analyzer-rule candidates `SARC-*` (staged) -
 promoted draft analyzer rules `SAR-*` (static draft, not runtime-enforced).
 
