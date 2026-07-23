@@ -28,7 +28,10 @@ def scaffold_design_main(args: argparse.Namespace) -> int:
     prog = cli._prog(args)  # brand the client typed (`seshat`/`retail`), #402
     try:
         report = scaffold_design(Path(args.repo))
-    except (FileNotFoundError, SafeWriteError) as exc:
+    except (OSError, SafeWriteError) as exc:
+        # OSError (incl. NotADirectoryError/PermissionError/FileNotFoundError from
+        # an unwritable/misnamed --repo) and SafeWriteError both surface as the
+        # documented [refused] line + exit 1, never a raw traceback (Codex #451).
         print(f"{prog} scaffold-design: [refused] {exc}", file=sys.stderr)
         return 1
 
@@ -36,9 +39,16 @@ def scaffold_design_main(args: argparse.Namespace) -> int:
         print(f"wrote {rel}")
     for rel in report.kept:
         print(f"kept {rel} (already present; not overwritten)")
+    # These are BLANK templates -- having them on disk grants nothing and advances
+    # no stage. Do NOT tell the agent to fill Dashboard/Publish artifacts here: that
+    # could start dashboard design before metric contracts, or Stage 7 before Stage
+    # 6 passes (constitution hard-stops). Route the next step through the governed
+    # `next`, which reports the table's actual stage and the allowed next action.
     print(
-        f"\nnext: fill the materialized templates under templates/ and "
-        f"design/grids/ for the table's Dashboard-Ready / Publish-Ready "
-        f"artifacts, then run `{prog} next`"
+        f"\nnext: the blank templates are ready to copy. Run "
+        f"`{prog} next --table <table>` for the governed next action -- fill a "
+        f"design/handoff template only when your table has reached that stage "
+        f"(dashboard authoring needs metric contracts; the publish pack needs "
+        f"Dashboard Ready). scaffold-design writes blanks only; it grants nothing."
     )
     return 0
