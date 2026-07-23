@@ -87,12 +87,27 @@ There is no `seshat reset` verb yet (tracked separately). Until it ships, reset
 a single table's derived state by hand, preserving its bronze landing, then
 re-run readiness from Source.
 
-Remove the table's derived artifacts:
+First LIST what you are about to remove and confirm every path is for THIS
+table -- never delete by a bare `<table>*` wildcard. A prefix wildcard is
+dangerous when one table id is a prefix of another (e.g. `orders` also matches
+`orders_archive`): `*_create_silver_<table>*.sql` would sweep the other table's
+migrations too, and the later `git add -A` would then stage that unrelated data
+loss. Enumerate the exact migration files and eyeball them before removing:
+
+```powershell
+# 1. Enumerate the migration SQL for THIS table -- review the list first.
+Get-ChildItem warehouse/migrations |
+  Where-Object { $_.Name -match "_create_(silver|gold)_<table>(_|\.)" }
+```
+
+Once the list is confirmed to contain only this table's files, remove the
+derived artifacts (exact per-table paths, not prefix globs):
 
 ```powershell
 Remove-Item -Recurse -Force mappings/<table>
-Remove-Item -Force warehouse/migrations/*_create_silver_<table>*.sql
-Remove-Item -Force warehouse/migrations/*_create_gold_<table>*.sql
+# remove ONLY the confirmed migration files from the list above, e.g.:
+Remove-Item -Force warehouse/migrations/0003_create_silver_<table>.sql
+Remove-Item -Force warehouse/migrations/0004_create_gold_<table>_star.sql
 Remove-Item -Recurse -Force dbt/models/staging/<table>
 Remove-Item -Recurse -Force dbt/models/marts/<table>
 Remove-Item -Recurse -Force dbt/models/audit/<table>
@@ -102,23 +117,32 @@ This covers `mappings/<table>/` (including its nested `dbt-evidence/`
 subfolder -- it lives under the mapping directory, not as a separate
 top-level path), the silver and gold migration SQL for that table (plus any
 generated `warehouse/gold/` or `warehouse/schema/` outputs), and the three
-per-table dbt model folders. Do not touch the bronze landing.
+per-table dbt model folders. Do not touch the bronze landing. In a multi-table
+workspace, also confirm the shared dbt files (`dbt/models/sources/_sources.yml`,
+`dbt/selectors.yml`) no longer reference this table's gold entities -- edit out
+only this table's rows, leaving other tables' rows intact.
 
 The materialized dagster project under `orchestration/dagster/` is
 regenerable rather than hand-edited; if it references the removed table,
 regenerate it with `seshat dagster init`.
 
 Stage the deletions before running `seshat check` -- an unstaged delete can
-leave the static gate reading stale tracked content. Then verify no residual
-state remains:
+leave the static gate reading stale tracked content:
 
 ```powershell
 git add -A
-Select-String -Path .seshat/manifest.yaml -Pattern "<table>"
-seshat next --format agent
+seshat check
+seshat next --format agent --table <table>
 ```
 
-A hit in `.seshat/manifest.yaml` after the deletions is a real residual-state
-risk -- the manifest still believes the table is onboarded even though its
-files are gone. `seshat next` should report a truthful fresh Source stage for
-the table; if it does not, the reset is incomplete.
+Then verify no residual state remains by inspecting the per-table and shared
+artifacts directly -- do NOT rely on `.seshat/manifest.yaml`, which records the
+kit's integrity fingerprint (kit-source / compass / integration receipts), not
+onboarded tables, so it never mentions a table and would give a false
+all-clear. A truthful reset means: `mappings/<table>/` is gone, no
+`*_<table>*.sql` migration remains, the three `dbt/models/*/<table>/` folders
+are gone, and the shared dbt files carry no rows for this table. Pass
+`--table <table>` to `seshat next` so it reports THIS table's stage (without it,
+`next` focuses the portfolio's most urgent OTHER table and cannot confirm the
+reset) -- it should now report a fresh Source stage; if it does not, the reset
+is incomplete.

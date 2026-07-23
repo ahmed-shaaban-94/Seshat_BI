@@ -1722,10 +1722,10 @@
     {
       "classification": "generated_wrapper",
       "destination": "skills/seshat-bi/SKILL.md",
-      "output_sha256": "412b4b0ee6dfe8001dfe513e3826248e36a586983c1862cfad9f2eb34b28eb24",
+      "output_sha256": "30aef6c433308c4abac8ddb66a7101af5f10b503a73f9cfa9f308908ac3e0735",
       "source": "distribution/bundle-templates/shared/skills/seshat-bi/SKILL.md",
       "source_id": "router",
-      "source_sha256": "412b4b0ee6dfe8001dfe513e3826248e36a586983c1862cfad9f2eb34b28eb24",
+      "source_sha256": "30aef6c433308c4abac8ddb66a7101af5f10b503a73f9cfa9f308908ac3e0735",
       "transform": "copy-normalized-v1"
     },
     {
@@ -1748,10 +1748,10 @@
     }
   ],
   "exporter_version": "1.0",
-  "manifest_digest": "5ae7b803a37056914379dbbfb34bdf3dd89c75c24895d723ded971f22bb38b36",
+  "manifest_digest": "f7bac271f1677ee64b3571e644650bd58201c4e20a1033f659b3fdd424ab622f",
   "plugin": "seshat-bi",
   "schema_version": "1.0",
-  "source_revision": "e8a836665e02dd3f7d3e4e4f10b120e66f5f8514",
+  "source_revision": "780eb78ee31aeab57c4fe9dc055aa9d117554431",
   "target": "claude",
   "version": "0.6.1"
 }
