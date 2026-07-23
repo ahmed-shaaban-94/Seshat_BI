@@ -49,6 +49,11 @@ explicitly identifies a public release event.
   (G3, S-family, B1, G6, R1, TMDL) skip the absent path gracefully, the
   presence-required governance-manifest rules (SC1/SC2, A1/A3, DF1, DR1) fail loud,
   and file-presence rules (AL1/AL2/HR11) still flag a deleted required artifact. (#430)
+- `seshat dbt doctor` no longer reports `SESHAT_DBT_PORT`, `SESHAT_DBT_SCHEMA`, and
+  `SESHAT_DBT_SSLMODE` as missing required keys; these carry documented
+  `env_var(NAME, DEFAULT)` defaults in `profiles.example.yml` and are optional. Only
+  the four keys with no default (host/user/password/dbname) are flagged when absent.
+  A present-but-empty override (`SESHAT_DBT_SCHEMA=`) is still rejected. (#437)
 - `seshat dbt scaffold` fails closed when a `gold_star` dimension attribute, fact
   measure, or degenerate dimension references a column marked `decision: drop` in
   the source map, naming the drop conflict instead of silently materializing (or
