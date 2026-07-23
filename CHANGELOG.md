@@ -34,6 +34,10 @@ explicitly identifies a public release event.
   DB-boundary errors stay on stderr in both modes. (#436)
 
 ### Fixed
+- S4b no longer false-flags a schema-qualified `ALTER TABLE <schema>.<t> ALTER COLUMN
+  ... SET NOT NULL` inside a `BEGIN/COMMIT` block as "target schema undetermined". The
+  inner `ALTER` keyword of the `ALTER COLUMN` sub-clause was re-evaluated as a
+  top-level DDL verb; S4b now only evaluates a DDL verb that starts a statement. (#442)
 - `seshat check` no longer crashes with `FileNotFoundError` when a git-tracked file
   is deleted from disk but the deletion is not yet staged; content-scanning rules
   (G3, S-family, B1, G6, R1, TMDL) skip the absent path gracefully, the
